@@ -42,3 +42,4 @@ package-lock.json
 
 # Misc
 src/enterprise_modules/*
+/env
