@@ -18,7 +18,7 @@ import {
 } from 'src/types/apiResponses';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { AuthenticatedUser } from 'src/types/auth/types';
-import { OrganizationLoggerService } from 'src/codeclarity_modules/organizations/organizationLogger.service';
+import { OrganizationLoggerService } from 'src/base_modules/organizations/organizationLogger.service';
 import { ApiTags } from '@nestjs/swagger';
 import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';

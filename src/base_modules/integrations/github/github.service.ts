@@ -15,7 +15,7 @@ import {
     NotAuthorized
 } from 'src/types/errors/types';
 import { GithubIntegrationToken } from '../Token';
-import { OrganizationsMemberService } from 'src/codeclarity_modules/organizations/organizationMember.service';
+import { OrganizationsMemberService } from 'src/base_modules/organizations/organizationMember.service';
 import {
     GithubTokenType,
     LinkGithubCreateBody,

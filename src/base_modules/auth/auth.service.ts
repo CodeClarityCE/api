@@ -16,7 +16,7 @@ import {
 } from 'src/types/errors/types';
 import { SocialType } from 'src/types/entities/frontend/User';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from 'src/codeclarity_modules/users/users.service';
+import { UsersService } from 'src/base_modules/users/users.service';
 import {
     CONST_JWT_TOKEN_EXPIRES_IN,
     CONST_PASSWORD_SALT_ROUNDS,
@@ -24,7 +24,7 @@ import {
 } from 'src/constants/constants';
 import * as bcrypt from 'bcrypt';
 import ms = require('ms');
-import { GitlabIntegrationTokenService } from 'src/codeclarity_modules/integrations/gitlab/gitlabToken.service';
+import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/gitlab/gitlabToken.service';
 import { User } from 'src/entity/codeclarity/User';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';

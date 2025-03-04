@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { FastifyMulterModule } from '@nest-lab/fastify-multer';
-import { AuthModule } from './codeclarity_modules/auth/auth.module';
+import { AuthModule } from './base_modules/auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { validate } from './env/validate';
 import { EnterpriseModule } from './enterprise_modules/enterprise.module';

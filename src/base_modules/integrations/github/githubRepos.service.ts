@@ -7,7 +7,7 @@ import {
     IntegrationInvalidToken,
     NotAuthorized
 } from 'src/types/errors/types';
-import { OrganizationsMemberService } from 'src/codeclarity_modules/organizations/organizationMember.service';
+import { OrganizationsMemberService } from 'src/base_modules/organizations/organizationMember.service';
 import { TypedPaginatedResponse } from 'src/types/apiResponses';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginated/types';
 import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from 'src/constants/constants';

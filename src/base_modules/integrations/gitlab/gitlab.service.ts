@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/types/auth/types';
 import { IntegrationsService } from '../integrations.service';
-import { GitlabIntegrationToken } from 'src/codeclarity_modules/integrations/Token';
+import { GitlabIntegrationToken } from 'src/base_modules/integrations/Token';
 import { IntegrationWrongTokenType, NotAuthorized } from 'src/types/errors/types';
 import { OrganizationsMemberService } from '../../organizations/organizationMember.service';
 import {

@@ -1,21 +1,21 @@
 import { Module } from '@nestjs/common';
 
-import { EmailModule } from './email/email.module';
-import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
+import { EmailModule } from '../base_modules/email/email.module';
+import { AuthModule } from '../base_modules/auth/auth.module';
+import { UsersModule } from '../base_modules/users/users.module';
 import { ResultsModule } from './results/results.module';
-import { ProjectsModule } from './projects/projects.module';
+import { ProjectsModule } from '../base_modules/projects/projects.module';
 import { PolicyModule } from './policies/policy.module';
-import { IntegrationsModule } from './integrations/integrations.module';
+import { IntegrationsModule } from '../base_modules/integrations/integrations.module';
 import { KnowledgeModule } from './knowledge/knowledge.module';
 import { DashboardModule } from './dashboard/dashboard.module';
-import { PluginModule } from './plugins/plugin.module';
-import { AnalysesModule } from './analyses/analyses.module';
-import { FileModule } from './file/file.module';
-import { NotificationsModule } from './notifications/notifications.module';
-import { AnalyzersModule } from './analyzers/analyzers.module';
-import { ApiKeysModule } from './apiKeys/apiKeys.module';
-import { OrganizationsModule } from './organizations/organizations.module';
+import { PluginModule } from '../base_modules/plugins/plugin.module';
+import { AnalysesModule } from '../base_modules/analyses/analyses.module';
+import { FileModule } from '../base_modules/file/file.module';
+import { NotificationsModule } from '../base_modules/notifications/notifications.module';
+import { AnalyzersModule } from '../base_modules/analyzers/analyzers.module';
+import { ApiKeysModule } from '../base_modules/apiKeys/apiKeys.module';
+import { OrganizationsModule } from '../base_modules/organizations/organizations.module';
 
 @Module({
     imports: [

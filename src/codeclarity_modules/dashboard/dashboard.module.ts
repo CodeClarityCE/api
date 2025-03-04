@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
 import { DashboardController } from './dashboard.controller';
-import { OrganizationsMemberService } from '../organizations/organizationMember.service';
+import { OrganizationsMemberService } from '../../base_modules/organizations/organizationMember.service';
 import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { OWASPRepository } from '../knowledge/OWASPRepository';
 import { TypeOrmModule } from '@nestjs/typeorm';

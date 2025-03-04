@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { OrganizationsMemberService } from 'src/codeclarity_modules/organizations/organizationMember.service';
+import { OrganizationsMemberService } from 'src/base_modules/organizations/organizationMember.service';
 import { AuthenticatedUser } from 'src/types/auth/types';
 import { PaginationConfig, TypedPaginatedData } from 'src/types/paginated/types';
 import {

@@ -4,7 +4,7 @@ import { GitlabRepositoriesService } from './gitlabRepos.service';
 import { GitlabIntegrationTokenService } from './gitlabToken.service';
 import { GitlabIntegrationController } from './gitlab.controller';
 import { IntegrationsService } from '../integrations.service';
-import { OrganizationsMemberService } from 'src/codeclarity_modules/organizations/organizationMember.service';
+import { OrganizationsMemberService } from 'src/base_modules/organizations/organizationMember.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Integration } from 'src/entity/codeclarity/Integration';
 import { Organization } from 'src/entity/codeclarity/Organization';

@@ -24,7 +24,7 @@ import {
 } from 'src/types/entities/frontend/User';
 import { EmailService } from '../email/email.service';
 import { genRandomString, hash } from 'src/utils/crypto';
-import { GitlabIntegrationTokenService } from 'src/codeclarity_modules/integrations/gitlab/gitlabToken.service';
+import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/gitlab/gitlabToken.service';
 import { AuthService } from '../auth/auth.service';
 import {
     EmailAction,

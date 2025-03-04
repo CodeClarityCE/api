@@ -10,7 +10,7 @@ import {
     SeverityInfoByWeek,
     Trend
 } from 'src/types/entities/frontend/Dashboard';
-import { OrganizationsMemberService } from '../organizations/organizationMember.service';
+import { OrganizationsMemberService } from '../../base_modules/organizations/organizationMember.service';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
 import {
     PaginationConfig,

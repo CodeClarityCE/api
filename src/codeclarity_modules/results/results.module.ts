@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { AnalysisResultsService } from './results.service';
-import { OrganizationsMemberService } from '../organizations/organizationMember.service';
-import { ProjectMemberService } from '../projects/projectMember.service';
-import { AnalysesMemberService } from '../analyses/analysesMembership.service';
+import { OrganizationsMemberService } from '../../base_modules/organizations/organizationMember.service';
+import { ProjectMemberService } from '../../base_modules/projects/projectMember.service';
+import { AnalysesMemberService } from '../../base_modules/analyses/analysesMembership.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Organization } from 'src/entity/codeclarity/Organization';
 import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemberships';

@@ -3,7 +3,7 @@ import { LicensePolicyController } from './license.controller';
 import { LicensePolicyService } from './license.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Organization } from 'src/entity/codeclarity/Organization';
-import { OrganizationsMemberService } from 'src/codeclarity_modules/organizations/organizationMember.service';
+import { OrganizationsMemberService } from 'src/base_modules/organizations/organizationMember.service';
 import { Policy } from 'src/entity/codeclarity/Policy';
 import { User } from 'src/entity/codeclarity/User';
 import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemberships';
