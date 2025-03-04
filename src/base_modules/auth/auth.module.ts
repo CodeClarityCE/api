@@ -8,7 +8,7 @@ import { RefreshJWTStrategy } from './strategies/refresh-token.strategy';
 import { ApiKeysService } from 'src/base_modules/apiKeys/apiKeys.service';
 import { UsersService } from 'src/base_modules/users/users.service';
 import { CombinedAuthGuard } from './guards/combined.guard';
-import { CONST_JWT_ALGORITHM, CONST_JWT_TOKEN_EXPIRES_IN } from 'src/constants/constants';
+import { CONST_JWT_ALGORITHM, CONST_JWT_TOKEN_EXPIRES_IN } from './constants';
 import { ConfigService } from '@nestjs/config';
 import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/gitlab/gitlabToken.service';
 import { GithubIntegrationTokenService } from 'src/base_modules/integrations/github/githubToken.service';

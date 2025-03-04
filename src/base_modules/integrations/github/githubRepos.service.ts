@@ -10,7 +10,7 @@ import {
 import { OrganizationsMemberService } from 'src/base_modules/organizations/organizationMember.service';
 import { TypedPaginatedResponse } from 'src/types/apiResponses';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginated/types';
-import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from 'src/constants/constants';
+import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from './constants';
 import { GithubRepositorySchema } from 'src/types/apis/github/types';
 import { SortDirection } from 'src/types/sort/types';
 import ms = require('ms');

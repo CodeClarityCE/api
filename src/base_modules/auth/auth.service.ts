@@ -21,7 +21,7 @@ import {
     CONST_JWT_TOKEN_EXPIRES_IN,
     CONST_PASSWORD_SALT_ROUNDS,
     CONST_REFRESH_JWT_TOKEN_EXPIRES_IN
-} from 'src/constants/constants';
+} from './constants';
 import * as bcrypt from 'bcrypt';
 import ms = require('ms');
 import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/gitlab/gitlabToken.service';
