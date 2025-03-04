@@ -7,7 +7,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import { InternalError, NotAuthenticated } from 'src/types/errors/types';
-import { Plugin } from 'src/entity/plugin/Plugin';
+import { Plugin } from './plugin.entity';
 
 @Controller('plugin')
 export class PluginController {

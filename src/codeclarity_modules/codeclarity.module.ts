@@ -1,40 +1,33 @@
 import { Module } from '@nestjs/common';
 
-import { EmailModule } from '../base_modules/email/email.module';
-import { AuthModule } from '../base_modules/auth/auth.module';
-import { UsersModule } from '../base_modules/users/users.module';
 import { ResultsModule } from './results/results.module';
-import { ProjectsModule } from '../base_modules/projects/projects.module';
 import { PolicyModule } from './policies/policy.module';
-import { IntegrationsModule } from '../base_modules/integrations/integrations.module';
 import { KnowledgeModule } from './knowledge/knowledge.module';
 import { DashboardModule } from './dashboard/dashboard.module';
-import { PluginModule } from '../base_modules/plugins/plugin.module';
-import { AnalysesModule } from '../base_modules/analyses/analyses.module';
-import { FileModule } from '../base_modules/file/file.module';
-import { NotificationsModule } from '../base_modules/notifications/notifications.module';
-import { AnalyzersModule } from '../base_modules/analyzers/analyzers.module';
-import { ApiKeysModule } from '../base_modules/apiKeys/apiKeys.module';
-import { OrganizationsModule } from '../base_modules/organizations/organizations.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
+import { defaultOptions } from 'src/app.module';
+import { CWE } from 'src/entity/knowledge/CWE';
+import { NVD } from 'src/entity/knowledge/NVD';
+import { OSV } from 'src/entity/knowledge/OSV';
+import { Package, Version } from 'src/entity/knowledge/Package';
+import { License } from 'src/entity/knowledge/License';
 
 @Module({
     imports: [
-        EmailModule,
-        AuthModule,
-        UsersModule,
         ResultsModule,
-        ProjectsModule,
         PolicyModule,
-        IntegrationsModule,
         KnowledgeModule,
         DashboardModule,
-        PluginModule,
-        AnalysesModule,
-        FileModule,
-        NotificationsModule,
-        AnalyzersModule,
-        ApiKeysModule,
-        OrganizationsModule
+        TypeOrmModule.forRootAsync({
+            imports: [ConfigModule],
+            name: 'knowledge',
+            useFactory: () => ({
+                ...defaultOptions,
+                database: 'knowledge',
+                entities: [CWE, NVD, OSV, Package, Version, License]
+            })
+        }),
     ],
     providers: [],
     controllers: []
