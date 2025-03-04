@@ -9,20 +9,19 @@ import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
 import { NotAuthorized } from 'src/types/errors/types';
 import { ActionType } from 'src/types/entities/frontend/OrgAuditLog';
 import { Analyzer } from 'src/entity/codeclarity/Analyzer';
-import { User } from 'src/entity/codeclarity/User';
 import { Organization } from 'src/entity/codeclarity/Organization';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { UsersRepository } from '../users/users.repository';
 
 @Injectable()
 export class AnalyzersService {
     constructor(
         private readonly organizationLoggerService: OrganizationLoggerService,
         private readonly organizationsMemberService: OrganizationsMemberService,
+        private readonly usersRepository: UsersRepository,
         @InjectRepository(Analyzer, 'codeclarity')
         private analyzerRepository: Repository<Analyzer>,
-        @InjectRepository(User, 'codeclarity')
-        private userRepository: Repository<User>,
         @InjectRepository(Organization, 'codeclarity')
         private organizationRepository: Repository<Organization>
     ) {}
@@ -35,7 +34,7 @@ export class AnalyzersService {
         // Check if the user is allowed to create a analyzer (is atleast admin)
         await this.organizationsMemberService.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
-        const creator = await this.userRepository.findOneBy({ id: user.userId });
+        const creator = await this.usersRepository.getUserById(user.userId)
         if (!creator) {
             throw new Error('User not found');
         }

@@ -8,7 +8,6 @@ import { OrganizationLoggerService } from '../organizations/organizationLogger.s
 import { OrganizationsMemberService } from '../organizations/organizationMember.service';
 import { GithubRepositoriesService } from '../integrations/github/githubRepos.service';
 import { GitlabRepositoriesService } from '../integrations/gitlab/gitlabRepos.service';
-import { User } from 'src/entity/codeclarity/User';
 import { Analysis } from 'src/entity/codeclarity/Analysis';
 import { Organization } from 'src/entity/codeclarity/Organization';
 import { Result } from 'src/entity/codeclarity/Result';
@@ -22,13 +21,14 @@ import { GitlabIntegrationService } from '../integrations/gitlab/gitlab.service'
 import { GithubIntegrationTokenService } from '../integrations/github/githubToken.service';
 import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
 import { File } from 'src/entity/codeclarity/File';
+import { UsersModule } from '../users/users.module';
 
 @Module({
     imports: [
+        UsersModule,
         TypeOrmModule.forFeature(
             [
                 Project,
-                User,
                 Analysis,
                 Organization,
                 Result,

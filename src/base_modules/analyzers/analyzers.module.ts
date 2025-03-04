@@ -6,14 +6,15 @@ import { Organization } from 'src/entity/codeclarity/Organization';
 import { OrganizationLoggerService } from '../organizations/organizationLogger.service';
 import { OrganizationsMemberService } from '../organizations/organizationMember.service';
 import { Analyzer } from 'src/entity/codeclarity/Analyzer';
-import { User } from 'src/entity/codeclarity/User';
 import { Log } from 'src/entity/codeclarity/Log';
 import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemberships';
+import { UsersModule } from '../users/users.module';
 
 @Module({
     imports: [
+        UsersModule,
         TypeOrmModule.forFeature(
-            [Organization, Analyzer, User, Log, OrganizationMemberships],
+            [Organization, Analyzer, Log, OrganizationMemberships],
             'codeclarity'
         )
     ],

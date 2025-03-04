@@ -7,16 +7,17 @@ import { ProjectMemberService } from '../projects/projectMember.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Project } from 'src/entity/codeclarity/Project';
 import { Analyzer } from 'src/entity/codeclarity/Analyzer';
-import { User } from 'src/entity/codeclarity/User';
 import { Analysis } from 'src/entity/codeclarity/Analysis';
 import { Organization } from 'src/entity/codeclarity/Organization';
 import { Result } from 'src/entity/codeclarity/Result';
 import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemberships';
+import { UsersModule } from '../users/users.module';
 
 @Module({
     imports: [
+        UsersModule,
         TypeOrmModule.forFeature(
-            [Project, Analyzer, User, Analysis, Organization, Result, OrganizationMemberships],
+            [Project, Analyzer, Analysis, Organization, Result, OrganizationMemberships],
             'codeclarity'
         )
     ],

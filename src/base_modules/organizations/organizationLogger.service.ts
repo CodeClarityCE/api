@@ -11,9 +11,9 @@ import {
 } from 'src/types/entities/frontend/OrgAuditLog';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
 import { Log } from 'src/entity/codeclarity/Log';
-import { User } from 'src/entity/codeclarity/User';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { UsersRepository } from '../users/users.repository';
 
 /**
  * This service provides methods for working with organization audit logs
@@ -22,8 +22,7 @@ import { Repository } from 'typeorm';
 export class OrganizationLoggerService {
     constructor(
         private readonly organizationsMemberService: OrganizationsMemberService,
-        @InjectRepository(User, 'codeclarity')
-        private userRepository: Repository<User>,
+        private readonly usersRepository: UsersRepository,
         @InjectRepository(Log, 'codeclarity')
         private logRepository: Repository<Log>
     ) {}
@@ -41,9 +40,7 @@ export class OrganizationLoggerService {
         organizationId: string,
         causedBy: string
     ): Promise<string> {
-        const user = await this.userRepository.findOneOrFail({
-            where: { id: causedBy }
-        });
+        const user = await this.usersRepository.getUserById(causedBy)
 
         const log = new Log();
         log.action = action;

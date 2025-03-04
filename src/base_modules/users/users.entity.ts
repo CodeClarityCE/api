@@ -10,18 +10,18 @@ import {
     JoinColumn,
     Index
 } from 'typeorm';
-import { Organization } from './Organization';
-import { Integration } from './Integration';
+import { Organization } from '../../entity/codeclarity/Organization';
+import { Integration } from '../../entity/codeclarity/Integration';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { OrganizationMemberships } from './OrganizationMemberships';
-import { Project } from './Project';
-import { Analyzer } from './Analyzer';
-import { Analysis } from './Analysis';
-import { Policy } from './Policy';
-import { File } from './File';
-import { Email } from './Email';
-import { Invitation } from './Invitation';
+import { OrganizationMemberships } from '../../entity/codeclarity/OrganizationMemberships';
+import { Project } from '../../entity/codeclarity/Project';
+import { Analyzer } from '../../entity/codeclarity/Analyzer';
+import { Analysis } from '../../entity/codeclarity/Analysis';
+import { Policy } from '../../entity/codeclarity/Policy';
+import { File } from '../../entity/codeclarity/File';
+import { Email } from '../../entity/codeclarity/Email';
+import { Invitation } from '../../entity/codeclarity/Invitation';
 
 export enum SocialType {
     GITHUB = 'GITHUB',

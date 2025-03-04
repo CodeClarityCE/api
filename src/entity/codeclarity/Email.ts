@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, Relation, ManyToOne } from 'typeorm';
-import { User } from './User';
+import { User } from '../../base_modules/users/users.entity';
 
 export enum EmailType {
     EMAILS_BLOCK_ALL_EMAILS = 'EMAILS_BLOCK_ALL_EMAILS',

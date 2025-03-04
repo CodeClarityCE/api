@@ -26,11 +26,11 @@ import { Output as LicensesOutput } from 'src/types/entities/services/Licenses';
 import { Analyzer } from 'src/entity/codeclarity/Analyzer';
 import { Analysis, AnalysisStage, AnalysisStatus } from 'src/entity/codeclarity/Analysis';
 import { Project } from 'src/entity/codeclarity/Project';
-import { User } from 'src/entity/codeclarity/User';
 import { Organization } from 'src/entity/codeclarity/Organization';
 import { Result } from 'src/entity/codeclarity/Result';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { UsersRepository } from '../users/users.repository';
 
 @Injectable()
 export class AnalysesService {
@@ -39,12 +39,11 @@ export class AnalysesService {
         private readonly projectMemberService: ProjectMemberService,
         private readonly analysesMemberService: AnalysesMemberService,
         private readonly configService: ConfigService,
+        private readonly usersRepository: UsersRepository,
         @InjectRepository(Project, 'codeclarity')
         private projectRepository: Repository<Project>,
         @InjectRepository(Analyzer, 'codeclarity')
         private analyzerRepository: Repository<Analyzer>,
-        @InjectRepository(User, 'codeclarity')
-        private userRepository: Repository<User>,
         @InjectRepository(Analysis, 'codeclarity')
         private analysisRepository: Repository<Analysis>,
         @InjectRepository(Organization, 'codeclarity')
@@ -97,9 +96,7 @@ export class AnalysesService {
             throw new EntityNotFound();
         }
 
-        const creator = await this.userRepository.findOne({
-            where: { id: user.userId }
-        });
+        const creator = await this.usersRepository.getUserById(user.userId)
         if (!creator) {
             throw new EntityNotFound();
         }

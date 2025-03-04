@@ -29,7 +29,7 @@ import {
     UserPasswordPatchBody,
     RegistrationConfirmationBody
 } from 'src/types/entities/frontend/User';
-import { User } from 'src/entity/codeclarity/User';
+import { User } from 'src/base_modules/users/users.entity';
 
 @Controller('users')
 export class UsersController {

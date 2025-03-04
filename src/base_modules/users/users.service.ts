@@ -43,7 +43,7 @@ import {
     GitlabTokenType
 } from 'src/types/entities/frontend/GitlabIntegration';
 import { IntegrationType, IntegrationProvider } from 'src/types/entities/frontend/Integration';
-import { User } from 'src/entity/codeclarity/User';
+import { User } from 'src/base_modules/users/users.entity';
 import { Organization } from 'src/entity/codeclarity/Organization';
 import {
     MemberRole,
@@ -63,6 +63,8 @@ export class UsersService {
         private readonly organizationMemberService: OrganizationsMemberService,
         private readonly emailService: EmailService,
         private readonly gitlabIntegrationTokenService: GitlabIntegrationTokenService,
+        @Inject(forwardRef(() => AuthService))
+        private readonly authService: AuthService,
         @InjectRepository(User, 'codeclarity')
         private userRepository: Repository<User>,
         @InjectRepository(Organization, 'codeclarity')
@@ -71,8 +73,6 @@ export class UsersService {
         private membershipRepository: Repository<OrganizationMemberships>,
         @InjectRepository(Email, 'codeclarity')
         private emailRepository: Repository<Email>,
-        @Inject(forwardRef(() => AuthService))
-        private readonly authService: AuthService
     ) {}
 
     /**

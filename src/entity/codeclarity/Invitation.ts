@@ -1,6 +1,6 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, Relation } from 'typeorm';
 import { Organization } from './Organization';
-import { User } from './User';
+import { User } from '../../base_modules/users/users.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 import { MemberRole } from './OrganizationMemberships';

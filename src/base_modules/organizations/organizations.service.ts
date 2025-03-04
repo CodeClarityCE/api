@@ -14,7 +14,7 @@ import {
 } from 'src/types/entities/frontend/Org';
 import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemberships';
 import { Organization } from 'src/entity/codeclarity/Organization';
-import { User } from 'src/entity/codeclarity/User';
+import { User } from 'src/base_modules/users/users.entity';
 import { Email, EmailType } from 'src/entity/codeclarity/Email';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -22,18 +22,18 @@ import { Invitation } from 'src/entity/codeclarity/Invitation';
 import { genRandomString } from 'src/utils/crypto';
 import { hash } from 'src/utils/crypto';
 import { EmailService } from '../email/email.service';
+import { UsersRepository } from '../users/users.repository';
 
 @Injectable()
 export class OrganizationsService {
     constructor(
         private readonly emailService: EmailService,
         private readonly organizationMemberService: OrganizationsMemberService,
+        private readonly usersRepository: UsersRepository,
         @InjectRepository(OrganizationMemberships, 'codeclarity')
         private membershipRepository: Repository<OrganizationMemberships>,
         @InjectRepository(Organization, 'codeclarity')
         private organizationRepository: Repository<Organization>,
-        @InjectRepository(User, 'codeclarity')
-        private userRepository: Repository<User>,
         @InjectRepository(Invitation, 'codeclarity')
         private invitationRepository: Repository<Invitation>,
         @InjectRepository(Email, 'codeclarity')
@@ -52,11 +52,7 @@ export class OrganizationsService {
         organizationData: OrganizationCreateBody,
         user: AuthenticatedUser
     ): Promise<string> {
-        const creator = await this.userRepository.findOne({
-            where: {
-                id: user.userId
-            }
-        });
+        const creator = await this.usersRepository.getUserById(user.userId, {})
         if (!creator) {
             throw new EntityNotFound();
         }
@@ -257,17 +253,13 @@ export class OrganizationsService {
     ): Promise<void> {
         await this.organizationMemberService.hasRequiredRole(orgId, user.userId, MemberRole.OWNER);
 
-        const invitedUser = await this.userRepository.findOneBy({
-            email: inviteBody.user_email
-        });
+        const invitedUser = await this.usersRepository.getUserByEmail(inviteBody.user_email)
 
         if (!invitedUser) {
             throw new UserDoesNotExist();
         }
 
-        const inviter = await this.userRepository.findOneByOrFail({
-            id: user.userId
-        });
+        const inviter = await this.usersRepository.getUserById(user.userId, {})
 
         const org = await this.organizationRepository.findOneByOrFail({
             id: orgId
@@ -459,9 +451,7 @@ export class OrganizationsService {
         emailDigest: string,
         user: AuthenticatedUser
     ): Promise<OrganizationInfoForInvitee> {
-        const invitee = await this.userRepository.findOne({
-            where: { id: user.userId }
-        });
+        const invitee = await this.usersRepository.getUserById(user.userId, {})
         if (!invitee) {
             throw new EntityNotFound();
         }

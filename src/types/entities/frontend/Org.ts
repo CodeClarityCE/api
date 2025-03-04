@@ -4,7 +4,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { OptionalTransform } from 'src/transformers/transformer';
 import { TeamMember } from './TeamMember';
 import { MemberRole } from './OrgMembership';
-import { User } from 'src/entity/codeclarity/User';
+import { User } from 'src/base_modules/users/users.entity';
 
 /********************************************/
 /*             Database entities            */

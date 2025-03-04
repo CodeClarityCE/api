@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
@@ -6,7 +6,6 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { RefreshJWTStrategy } from './strategies/refresh-token.strategy';
 import { ApiKeysService } from 'src/base_modules/apiKeys/apiKeys.service';
-import { UsersService } from 'src/base_modules/users/users.service';
 import { CombinedAuthGuard } from './guards/combined.guard';
 import { CONST_JWT_ALGORITHM, CONST_JWT_TOKEN_EXPIRES_IN } from './constants';
 import { ConfigService } from '@nestjs/config';
@@ -18,13 +17,12 @@ import { GithubAuthController } from './github.controller';
 import { GitlabAuthController } from './gitlab.controller';
 import { EmailModule } from '../email/email.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from 'src/entity/codeclarity/User';
 import { UsersModule } from '../users/users.module';
 import { Email } from 'src/entity/codeclarity/Email';
 import { Organization } from 'src/entity/codeclarity/Organization';
 import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemberships';
 import { Integration } from 'src/entity/codeclarity/Integration';
-import { DataSource } from 'typeorm';
+
 const fs = require('fs');
 
 /**
@@ -34,6 +32,7 @@ const fs = require('fs');
     imports: [
         PassportModule,
         EmailModule,
+        UsersModule,
         JwtModule.register({
             global: true,
             publicKey: fs.readFileSync('./jwt/public.pem', 'utf8'),
@@ -41,13 +40,12 @@ const fs = require('fs');
             signOptions: { expiresIn: CONST_JWT_TOKEN_EXPIRES_IN, algorithm: CONST_JWT_ALGORITHM }
         }),
         TypeOrmModule.forFeature(
-            [User, Email, Organization, OrganizationMemberships, Integration],
+            [Email, Organization, OrganizationMemberships, Integration],
             'codeclarity'
         )
     ],
     providers: [
         ApiKeysService,
-        UsersService,
         AuthService,
         RefreshJWTStrategy,
         ConfigService,

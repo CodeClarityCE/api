@@ -8,7 +8,7 @@ import {
     Relation,
     OneToMany
 } from 'typeorm';
-import { User } from './User';
+import { User } from '../../base_modules/users/users.entity';
 import { Notification } from './Notification';
 import { Integration } from './Integration';
 import { Log } from './Log';

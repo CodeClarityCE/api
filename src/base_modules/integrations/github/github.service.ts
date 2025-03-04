@@ -25,9 +25,9 @@ import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
 import { IntegrationProvider, IntegrationType } from 'src/types/entities/frontend/Integration';
 import { Organization } from 'src/entity/codeclarity/Organization';
 import { Integration } from 'src/entity/codeclarity/Integration';
-import { User } from 'src/entity/codeclarity/User';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { UsersRepository } from 'src/base_modules/users/users.repository';
 
 @Injectable()
 export class GithubIntegrationService {
@@ -35,8 +35,7 @@ export class GithubIntegrationService {
         private readonly integrationsService: IntegrationsService,
         private readonly githubIntegrationTokenService: GithubIntegrationTokenService,
         private readonly orgMemberShipService: OrganizationsMemberService,
-        @InjectRepository(User, 'codeclarity')
-        private userRepository: Repository<User>,
+        private readonly usersRepository: UsersRepository,
         @InjectRepository(Organization, 'codeclarity')
         private organizationRepository: Repository<Organization>,
         @InjectRepository(Integration, 'codeclarity')
@@ -106,11 +105,7 @@ export class GithubIntegrationService {
             {}
         );
 
-        const owner = await this.userRepository.findOneOrFail({
-            where: {
-                id: user.userId
-            }
-        });
+        const owner = await this.usersRepository.getUserById(user.userId)
 
         const integration: Integration = new Integration();
         integration.integration_type = IntegrationType.VCS;

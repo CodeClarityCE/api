@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
-import { User } from 'src/entity/codeclarity/User';
+import { User } from 'src/base_modules/users/users.entity';
 import { Email } from 'src/entity/codeclarity/Email';
 import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
 import { Organization } from 'src/entity/codeclarity/Organization';
@@ -10,6 +10,7 @@ import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemb
 import { AuthModule } from '../auth/auth.module';
 import { EmailModule } from '../email/email.module';
 import { OrganizationsMemberService } from '../organizations/organizationMember.service';
+import { UsersRepository } from './users.repository';
 
 @Module({
     imports: [
@@ -17,10 +18,11 @@ import { OrganizationsMemberService } from '../organizations/organizationMember.
             [User, Email, Organization, OrganizationMemberships],
             'codeclarity'
         ),
-        AuthModule,
+        forwardRef(() => AuthModule),
         EmailModule
     ],
-    providers: [UsersService, GitlabIntegrationTokenService, OrganizationsMemberService],
+    exports: [UsersRepository, UsersService],
+    providers: [UsersService, UsersRepository, GitlabIntegrationTokenService, OrganizationsMemberService],
     controllers: [UsersController]
 })
 export class UsersModule {}

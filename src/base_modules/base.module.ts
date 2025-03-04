@@ -15,7 +15,7 @@ import { OrganizationsModule } from '../base_modules/organizations/organizations
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { defaultOptions } from 'src/app.module';
-import { User } from 'src/entity/codeclarity/User';
+import { User } from 'src/base_modules/users/users.entity';
 import { Analysis } from 'src/entity/codeclarity/Analysis';
 import { Organization } from 'src/entity/codeclarity/Organization';
 import { Policy } from 'src/entity/codeclarity/Policy';

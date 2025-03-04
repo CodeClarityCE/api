@@ -13,7 +13,7 @@ import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
 import { PolicyType } from 'src/types/entities/frontend/Policy';
 import { Policy, PolicyFrontend } from 'src/entity/codeclarity/Policy';
 import { Organization } from 'src/entity/codeclarity/Organization';
-import { User } from 'src/entity/codeclarity/User';
+import { User } from 'src/base_modules/users/users.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 

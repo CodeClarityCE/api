@@ -31,7 +31,7 @@ import {
 } from 'src/types/errors/types';
 import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
 import { APIDocNoDataResponseDecorator } from 'src/decorators/NoDataResponse';
-import { User } from 'src/entity/codeclarity/User';
+import { User } from 'src/base_modules/users/users.entity';
 
 @Controller('auth')
 export class AuthController {

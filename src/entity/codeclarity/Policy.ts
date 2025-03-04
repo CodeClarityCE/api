@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { Organization } from './Organization';
 import { Analysis } from './Analysis';
-import { User } from './User';
+import { User } from '../../base_modules/users/users.entity';
 
 export enum PolicyType {
     LICENSE_POLICY = 'LICENSE_POLICY',

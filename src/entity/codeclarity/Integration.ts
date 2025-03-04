@@ -8,7 +8,7 @@ import {
     OneToMany
 } from 'typeorm';
 import { Organization } from './Organization';
-import { User } from './User';
+import { User } from '../../base_modules/users/users.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { RepositoryCache } from './RepositoryCache';

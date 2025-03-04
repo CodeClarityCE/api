@@ -12,7 +12,7 @@ import { Analysis } from './Analysis';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { Integration } from './Integration';
-import { User } from './User';
+import { User } from '../../base_modules/users/users.entity';
 import { File } from './File';
 
 export enum IntegrationType {

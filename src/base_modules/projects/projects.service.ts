@@ -16,7 +16,6 @@ import { ActionType } from 'src/types/entities/frontend/OrgAuditLog';
 import { Integration } from 'src/entity/codeclarity/Integration';
 import { RepositoryCache } from 'src/entity/codeclarity/RepositoryCache';
 import { IntegrationType, Project } from 'src/entity/codeclarity/Project';
-import { User } from 'src/entity/codeclarity/User';
 import { Organization } from 'src/entity/codeclarity/Organization';
 import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemberships';
 import { Analysis } from 'src/entity/codeclarity/Analysis';
@@ -27,6 +26,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { mkdir, rm } from 'fs/promises';
 import { File } from 'src/entity/codeclarity/File';
+import { UsersRepository } from '../users/users.repository';
 
 export enum AllowedOrderByGetProjects {
     IMPORTED_ON = 'imported_on',
@@ -41,10 +41,9 @@ export class ProjectService {
         private readonly projectMemberService: ProjectMemberService,
         private readonly githubRepositoriesService: GithubRepositoriesService,
         private readonly gitlabRepositoriesService: GitlabRepositoriesService,
+        private readonly usersRepository: UsersRepository,
         @InjectRepository(Project, 'codeclarity')
         private projectRepository: Repository<Project>,
-        @InjectRepository(User, 'codeclarity')
-        private userRepository: Repository<User>,
         @InjectRepository(Analysis, 'codeclarity')
         private analysisRepository: Repository<Analysis>,
         @InjectRepository(Organization, 'codeclarity')
@@ -178,11 +177,7 @@ export class ProjectService {
             project.integration_provider = IntegrationProvider.FILE;
         }
 
-        const user_adding = await this.userRepository.findOneOrFail({
-            where: {
-                id: user.userId
-            }
-        });
+        const user_adding = await this.usersRepository.getUserById(user.userId)
 
         const organization = await this.organizationRepository.findOneOrFail({
             where: {

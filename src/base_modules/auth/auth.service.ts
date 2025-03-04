@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import {
     AuthenticatedUser,
     GithubAuthenticatedUser,
@@ -25,18 +25,17 @@ import {
 import * as bcrypt from 'bcrypt';
 import ms = require('ms');
 import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/gitlab/gitlabToken.service';
-import { User } from 'src/entity/codeclarity/User';
-import { Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
+import { User } from 'src/base_modules/users/users.entity';
+import { UsersRepository } from '../users/users.repository';
 
 @Injectable()
 export class AuthService {
     constructor(
         private jwtService: JwtService,
-        private userService: UsersService,
         private gitlabIntegrationTokenService: GitlabIntegrationTokenService,
-        @InjectRepository(User, 'codeclarity')
-        private userRepository: Repository<User>
+        private userService: UsersService,
+        @Inject(forwardRef(() => UsersRepository))
+        private readonly usersRepository: UsersRepository,
     ) {}
 
     /**
@@ -50,9 +49,7 @@ export class AuthService {
      * @returns A JWT and Refresh token
      */
     async authenticate(email: string, password: string): Promise<TokenResponse> {
-        const user = await this.userRepository.findOneBy({
-            email: email
-        });
+        const user = await this.usersRepository.getUserByEmail(email)
 
         if (!user) {
             throw new WrongCredentials();
@@ -187,14 +184,9 @@ export class AuthService {
      * @returns the authenticated user
      */
     async getAuthenticatedUser(authenticatedUser: AuthenticatedUser): Promise<User> {
-        const user = await this.userRepository.findOne({
-            where: {
-                id: authenticatedUser.userId
-            },
-            relations: {
-                default_org: true
-            }
-        });
+        const user = await this.usersRepository.getUserById(authenticatedUser.userId, {
+            default_org: true
+        })
         if (!user) {
             throw new EntityNotFound();
         }
@@ -212,9 +204,7 @@ export class AuthService {
             throw new FailedToAuthenticateSocialAccount();
         }
 
-        const user = await this.userRepository.findOneBy({
-            id: githubUser.email
-        });
+        const user = await this.usersRepository.getUserByEmail(githubUser.email)
         if (!user) {
             throw new FailedToAuthenticateSocialAccount();
         }
@@ -232,9 +222,7 @@ export class AuthService {
             throw new FailedToAuthenticateSocialAccount();
         }
 
-        const user = await this.userRepository.findOneBy({
-            id: gitlabUser.email
-        });
+        const user = await this.usersRepository.getUserByEmail(gitlabUser.email)
         if (!user) {
             throw new FailedToAuthenticateSocialAccount();
         }
@@ -343,9 +331,7 @@ export class AuthService {
         email: string,
         password: string
     ): Promise<[boolean, User | undefined]> {
-        const user = await this.userRepository.findOneBy({
-            email: email
-        });
+        const user = await this.usersRepository.getUserByEmail(email)
 
         if (!user) {
             return [false, undefined];

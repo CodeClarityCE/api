@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { GitlabIntegration } from 'src/types/entities/frontend/GitlabIntegration';
-import { User } from 'src/entity/codeclarity/User';
+import { User } from 'src/base_modules/users/users.entity';
 
 @Injectable()
 export class GitlabIntegrationTokenService {

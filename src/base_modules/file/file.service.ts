@@ -3,7 +3,6 @@ import { File } from '@nest-lab/fastify-multer';
 import * as fs from 'fs';
 import { AuthenticatedUser } from 'src/types/auth/types';
 import { File as FileEntity } from 'src/entity/codeclarity/File';
-import { User } from 'src/entity/codeclarity/User';
 import { Project } from 'src/entity/codeclarity/Project';
 import { UploadData } from './file.controller';
 import { join } from 'path';
@@ -12,15 +11,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MemberRole } from 'src/entity/codeclarity/OrganizationMemberships';
 import { OrganizationsMemberService } from '../organizations/organizationMember.service';
+import { UsersRepository } from '../users/users.repository';
 
 @Injectable()
 export class FileService {
     constructor(
         private readonly organizationMemberService: OrganizationsMemberService,
+        private readonly usersRepository: UsersRepository,
         @InjectRepository(Project, 'codeclarity')
         private projectRepository: Repository<Project>,
-        @InjectRepository(User, 'codeclarity')
-        private userRepository: Repository<User>,
         @InjectRepository(FileEntity, 'codeclarity')
         private fileRepository: Repository<FileEntity>
     ) {}
@@ -55,11 +54,7 @@ export class FileService {
         const escapeProjectId = escapeString(project_id);
 
         // Retrieve the user who added the file
-        const added_by = await this.userRepository.findOne({
-            where: {
-                id: user.userId
-            }
-        });
+        const added_by = await this.usersRepository.getUserById(user.userId)
         if (!added_by) {
             throw new Error('User not found');
         }
@@ -214,11 +209,7 @@ export class FileService {
 
         const escapeProjectId = escapeString(project_id);
         // Retrieve the user who added the file
-        const added_by = await this.userRepository.findOne({
-            where: {
-                id: user.userId
-            }
-        });
+        const added_by = await this.usersRepository.getUserById(user.userId)
         if (!added_by) {
             throw new Error('User not found');
         }
