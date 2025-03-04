@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { FastifyMulterModule } from '@nest-lab/fastify-multer';
 import { AuthModule } from './base_modules/auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
-import { validate } from './env/validate';
+import { validate } from './utils/validate-env';
 import { EnterpriseModule } from './enterprise_modules/enterprise.module';
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions.js';
 import { CodeClarityModule } from './codeclarity_modules/codeclarity.module';
