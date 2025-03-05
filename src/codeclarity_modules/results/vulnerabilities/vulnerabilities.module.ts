@@ -17,7 +17,7 @@ import { FindingsRepository } from './vulnerabilities.repository';
 @Module({
     imports: [
         OrganizationsModule,
-        ProjectsModule,
+        forwardRef(() => ProjectsModule),
         forwardRef(() => AnalysesModule),
         KnowledgeModule,
         TypeOrmModule.forFeature(

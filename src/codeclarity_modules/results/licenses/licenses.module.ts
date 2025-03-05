@@ -14,7 +14,7 @@ import { LicensesRepository } from './licenses.repository';
 @Module({
     imports: [
         OrganizationsModule,
-        ProjectsModule,
+        forwardRef(() => ProjectsModule),
         forwardRef(() => AnalysesModule),
         TypeOrmModule.forFeature(
             [Result],

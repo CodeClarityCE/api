@@ -17,7 +17,7 @@ import { AnalysesRepository } from './analyses.repository';
     imports: [
         UsersModule,
         OrganizationsModule,
-        ProjectsModule,
+        forwardRef(() => ProjectsModule),
         AnalyzersModule,
         forwardRef(() => ResultsModule),
         forwardRef(() => SbomModule),

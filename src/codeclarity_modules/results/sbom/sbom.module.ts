@@ -14,7 +14,7 @@ import { SBOMRepository } from './sbom.repository';
     imports: [
         OrganizationsModule,
         forwardRef(() => AnalysesModule),
-        ProjectsModule,
+        forwardRef(() => ProjectsModule),
         TypeOrmModule.forFeature(
             [Result],
             'codeclarity'

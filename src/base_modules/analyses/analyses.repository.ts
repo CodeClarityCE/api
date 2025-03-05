@@ -40,6 +40,14 @@ export class AnalysesRepository {
     }
 
     /**
+     * Deletes an analysis from the database by its ID.
+     * @param analysisId The ID of the analysis to be deleted.
+     */
+    async removeAnalyses(analyses: Analysis[]) {
+        await this.analysisRepository.remove(analyses)
+    }
+
+    /**
      * Retrieves an analysis by its ID, optionally including related entities.
      * @param analysisId The ID of the analysis to retrieve.
      * @param relation An object specifying which relations to include in the result. Defaults to an empty object.

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { VulnerabilitiesModule } from './vulnerabilities/vulnerabilities.module';
 import { SbomModule } from './sbom/sbom.module';
 import { PatchingModule } from './patching/patching.module';
@@ -12,7 +12,7 @@ import { Result } from 'src/codeclarity_modules/results/result.entity';
 @Module({
     imports: [
         OrganizationsModule,
-        AnalysesModule,
+        forwardRef(() => AnalysesModule),
         VulnerabilitiesModule,
         SbomModule,
         PatchingModule,

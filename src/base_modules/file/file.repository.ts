@@ -13,4 +13,12 @@ export class FileRepository {
     async remove(file: FileEntity) {
         await this.fileRepository.remove(file)
     }
+
+    async deleteFiles(files: any[]) {
+        await this.fileRepository.delete(files)
+    }
+
+    async saveFile(file: FileEntity) {
+        await this.fileRepository.save(file)
+    }
 }

@@ -15,7 +15,7 @@ import { EmailModule } from 'src/base_modules/email/email.module';
         UsersModule,
         OrganizationsModule,
         forwardRef(() => AnalysesModule),
-        ProjectsModule,
+        forwardRef(() => ProjectsModule),
         EmailModule,
         TypeOrmModule.forFeature(
             [
