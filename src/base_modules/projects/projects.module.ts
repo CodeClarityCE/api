@@ -5,7 +5,7 @@ import { ProjectService } from './projects.service';
 import { Project } from 'src/base_modules/projects/project.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Analysis } from 'src/base_modules/analyses/analysis.entity';
-import { RepositoryCache } from 'src/base_modules/repository_cache/repositoryCache.entity';
+import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
 import { UsersModule } from '../users/users.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { ProjectsRepository } from './projects.repository';

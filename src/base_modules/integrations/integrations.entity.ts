@@ -11,7 +11,7 @@ import { Organization } from '../organizations/organization.entity';
 import { User } from '../users/users.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { RepositoryCache } from '../repository_cache/repositoryCache.entity';
+import { RepositoryCache } from '../projects/repositoryCache.entity';
 import { Project } from '../projects/project.entity';
 import { Analysis } from '../analyses/analysis.entity';
 

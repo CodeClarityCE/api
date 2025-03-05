@@ -15,7 +15,7 @@ import ms = require('ms');
 import { GithubIntegrationService } from './github.service';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
 import { Integration } from 'src/base_modules/integrations/integrations.entity';
-import { RepositoryCache, RepositoryType } from 'src/base_modules/repository_cache/repositoryCache.entity';
+import { RepositoryCache, RepositoryType } from 'src/base_modules/projects/repositoryCache.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';

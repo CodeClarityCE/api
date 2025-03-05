@@ -6,7 +6,7 @@ import { GithubIntegrationController } from './github.controller';
 import { IntegrationsService } from '../integrations.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Integration } from 'src/base_modules/integrations/integrations.entity';
-import { RepositoryCache } from 'src/base_modules/repository_cache/repositoryCache.entity';
+import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
 import { UsersModule } from 'src/base_modules/users/users.module';
 import { OrganizationsModule } from 'src/base_modules/organizations/organizations.module';
 
