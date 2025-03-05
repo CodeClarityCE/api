@@ -8,7 +8,7 @@ import { LicenseInfo, DepShortInfo } from 'src/types/entities/frontend/Licenses'
 import { filter } from 'src/codeclarity_modules/results/licenses/utils/filter';
 import { sort } from 'src/codeclarity_modules/results/licenses/utils/sort';
 import { Output as SbomOutput } from 'src/types/entities/services/Sbom';
-import { LicenseRepository } from 'src/codeclarity_modules/knowledge/LicenseRepository';
+import { LicenseRepository } from 'src/codeclarity_modules/knowledge/license/license.repository';
 import { getLicensesResult } from './utils/utils';
 import { UnknownWorkspace } from 'src/types/errors/types';
 import { getSbomResult } from '../sbom/utils/utils';

@@ -16,7 +16,7 @@ import {
     PaginationUserSuppliedConf,
     TypedPaginatedData
 } from 'src/types/paginated/types';
-import { OWASPRepository } from 'src/codeclarity_modules/knowledge/OWASPRepository';
+import { OWASPRepository } from 'src/codeclarity_modules/knowledge/owasp/owasp.repository';
 import moment from 'moment';
 import { SortDirection } from 'src/types/sort/types';
 import { Organization } from 'src/base_modules/organizations/organization.entity';

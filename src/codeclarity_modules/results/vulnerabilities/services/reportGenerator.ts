@@ -13,12 +13,12 @@ import {
 import { Vulnerability, AffectedInfo } from 'src/types/entities/services/Vulnerabilities';
 import { getVersionsSatisfyingConstraint } from 'src/codeclarity_modules/results/utils/utils';
 import { satisfies } from 'semver';
-import { VersionsRepository } from 'src/codeclarity_modules/knowledge/PackageVersionsRepository';
-import { OSVRepository } from 'src/codeclarity_modules/knowledge/OSVRepository';
-import { CWERepository } from 'src/codeclarity_modules/knowledge/CWERepository';
-import { NVDRepository } from 'src/codeclarity_modules/knowledge/NVDRepository';
-import { PackageRepository } from 'src/codeclarity_modules/knowledge/PackageRepository';
-import { OWASPRepository } from 'src/codeclarity_modules/knowledge/OWASPRepository';
+import { VersionsRepository } from 'src/codeclarity_modules/knowledge/package/packageVersions.repository';
+import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.repository';
+import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
+import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
+import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
+import { OWASPRepository } from 'src/codeclarity_modules/knowledge/owasp/owasp.repository';
 import { Dependency } from 'src/types/entities/services/Sbom';
 import { CVSS2, CVSS3, CVSS31 } from 'src/types/entities/knowledge/CVSS';
 import { PatchInfo } from 'src/types/entities/services/Patching';

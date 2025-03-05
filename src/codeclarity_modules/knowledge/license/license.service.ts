@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { License } from 'src/entity/knowledge/License';
-import { LicenseRepository } from 'src/codeclarity_modules/knowledge/LicenseRepository';
+import { LicenseRepository } from 'src/codeclarity_modules/knowledge/license/license.repository';
 
 @Injectable()
 export class LicenseService {
