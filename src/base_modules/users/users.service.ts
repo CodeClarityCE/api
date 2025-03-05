@@ -54,6 +54,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { EmailRepository } from '../email/email.repository';
+import { UsersRepository } from './users.repository';
 
 /**
  * This service offers methods for working with users
@@ -66,8 +67,7 @@ export class UsersService {
         private readonly emailRepository: EmailRepository,
         @Inject(forwardRef(() => AuthService))
         private readonly authService: AuthService,
-        @InjectRepository(User, 'codeclarity')
-        private userRepository: Repository<User>,
+        private readonly usersRepository: UsersRepository
     ) { }
 
     /**
@@ -83,15 +83,7 @@ export class UsersService {
             throw new NotAuthorized();
         }
 
-        const user = await this.userRepository.findOneBy({
-            id: userId
-        });
-
-        if (!user) {
-            throw new EntityNotFound();
-        }
-
-        return user;
+        return await this.usersRepository.getUserById(userId)
     }
 
     /**
@@ -115,23 +107,12 @@ export class UsersService {
             MemberRole.USER
         );
 
-        const user = await this.userRepository.findOne({
-            where: {
-                id: userId
-            }
-        });
-        if (!user) {
-            throw new EntityNotFound();
-        }
+        const user = await this.usersRepository.getUserById(userId)
 
         const organization = await this.organizationsRepository.getOrganizationById(orgId, {
             created_by: true,
             default: true
-        }
-    )
-        if (!organization) {
-            throw new EntityNotFound();
-        }
+        })
 
         // if (user.id != organization.created_by?.id) {
         //     throw new NotAuthorized('The user is not the owner of the organization');
@@ -181,7 +162,7 @@ export class UsersService {
         user.created_on = new Date();
         user.default_org = organization;
 
-        const user_created = await this.userRepository.save(user);
+        const user_created = await this.usersRepository.saveUser(user);
 
         org_created.created_by = user_created;
         org_created.owners = [user_created];
@@ -212,13 +193,7 @@ export class UsersService {
      * @param email The email address to which to send the email to
      */
     async sendUserRegistrationVerificationEmail(email: string): Promise<void> {
-        const user = await this.userRepository.findOneBy({
-            email: email
-        });
-
-        if (!user) {
-            throw new EntityNotFound();
-        }
+        const user = await this.usersRepository.getUserByEmail(email)
 
         // If the user's registration is already verified simply return
         if (user.registration_verified == true) {
@@ -277,7 +252,7 @@ export class UsersService {
         mail.user.activated = true;
         mail.user.registration_verified = true;
 
-        await this.userRepository.save(mail.user);
+        await this.usersRepository.saveUser(mail.user);
         await this.emailRepository.removeMail(mail)
     }
 
@@ -393,13 +368,7 @@ export class UsersService {
             throw new NotAuthorized();
         }
 
-        const user = await this.userRepository.findOneBy({
-            id: userId
-        });
-
-        if (!user) {
-            throw new EntityNotFound();
-        }
+        const user = await this.usersRepository.getUserById(userId)
 
         if (!user.social) {
             if (password == undefined) {
@@ -412,7 +381,7 @@ export class UsersService {
             }
         }
 
-        await this.userRepository.delete(user.id);
+        await this.usersRepository.deleteUser(user.id);
     }
 
     /**
