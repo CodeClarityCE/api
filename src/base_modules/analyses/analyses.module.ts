@@ -1,6 +1,5 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { AnalysesService } from './analyses.service';
-import { AnalysesMemberService } from './analysesMembership.service';
 import { AnalysesController } from './analyses.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Analysis } from 'src/base_modules/analyses/analysis.entity';
@@ -12,6 +11,7 @@ import { ResultsModule } from 'src/codeclarity_modules/results/results.module';
 import { SbomModule } from 'src/codeclarity_modules/results/sbom/sbom.module';
 import { LicenseModule } from 'src/codeclarity_modules/results/licenses/licenses.module';
 import { VulnerabilitiesModule } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.module';
+import { AnalysesRepository } from './analyses.repository';
 
 @Module({
     imports: [
@@ -30,11 +30,11 @@ import { VulnerabilitiesModule } from 'src/codeclarity_modules/results/vulnerabi
     ],
     exports: [
         AnalysesService,
-        AnalysesMemberService
+        AnalysesRepository
     ],
     providers: [
         AnalysesService,
-        AnalysesMemberService
+        AnalysesRepository
     ],
     controllers: [AnalysesController]
 })

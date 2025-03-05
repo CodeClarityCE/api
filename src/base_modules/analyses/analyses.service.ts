@@ -3,13 +3,11 @@ import { AnalysisCreateBody } from 'src/types/entities/frontend/Analysis';
 import { AuthenticatedUser } from 'src/types/auth/types';
 import {
     AnaylzerMissingConfigAttribute,
-    EntityNotFound,
     RabbitMQError
 } from 'src/types/errors/types';
 import { ProjectMemberService } from '../projects/projectMember.service';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginated/types';
 import { TypedPaginatedData } from 'src/types/paginated/types';
-import { AnalysesMemberService } from './analysesMembership.service';
 import * as amqp from 'amqplib';
 import { ConfigService } from '@nestjs/config';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
@@ -18,8 +16,6 @@ import { Output as VulnsOuptut } from 'src/types/entities/services/Vulnerabiliti
 import { Output as SbomOutput } from 'src/types/entities/services/Sbom';
 import { Output as LicensesOutput } from 'src/types/entities/services/Licenses';
 import { Analysis, AnalysisStage, AnalysisStatus } from 'src/base_modules/analyses/analysis.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { UsersRepository } from '../users/users.repository';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { ProjectsRepository } from '../projects/projects.repository';
@@ -28,12 +24,12 @@ import { AnalysisResultsRepository } from 'src/codeclarity_modules/results/resul
 import { SBOMRepository } from 'src/codeclarity_modules/results/sbom/sbom.repository';
 import { FindingsRepository } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.repository';
 import { LicensesRepository } from 'src/codeclarity_modules/results/licenses/licenses.repository';
+import { AnalysesRepository } from './analyses.repository';
 
 @Injectable()
 export class AnalysesService {
     constructor(
         private readonly projectMemberService: ProjectMemberService,
-        private readonly analysesMemberService: AnalysesMemberService,
         private readonly configService: ConfigService,
         private readonly usersRepository: UsersRepository,
         private readonly organizationsRepository: OrganizationsRepository,
@@ -43,9 +39,8 @@ export class AnalysesService {
         private readonly sbomRepository: SBOMRepository,
         private readonly findingsRepository: FindingsRepository,
         private readonly licensesRepository: LicensesRepository,
-        @InjectRepository(Analysis, 'codeclarity')
-        private analysisRepository: Repository<Analysis>,
-    ) {}
+        private readonly analysesRepository: AnalysesRepository,
+    ) { }
 
     /**
      * Create/start an analysis
@@ -91,12 +86,6 @@ export class AnalysesService {
                     result: undefined,
                     config: {}
                 });
-                // if (step.persistant_config) {
-                //     for (const [key, value] of Object.entries(step.persistant_config)) {
-                //         if (!config[step.name]) config[step.name] = {};
-                //         config[step.name][key] = value;
-                //     }
-                // }
                 if (step.config) {
                     for (const [key, value] of Object.entries(step.config)) {
                         if (!config_structure[step.name]) config_structure[step.name] = {};
@@ -139,17 +128,16 @@ export class AnalysesService {
         analysis.organization = organization;
         analysis.integration = project.integration;
 
-        const created_analysis = await this.analysisRepository.save(analysis);
+        const created_analysis = await this.analysesRepository.saveAnalysis(analysis);
 
         // Send message to aqmp to start the anaylsis
         const queue = this.configService.getOrThrow<string>('AMQP_ANALYSES_QUEUE');
         const amqpHost = `${this.configService.getOrThrow<string>(
             'AMQP_PROTOCOL'
-        )}://${this.configService.getOrThrow<string>('AMQP_USER')}:${
-            process.env.AMQP_PASSWORD
-        }@${this.configService.getOrThrow<string>(
-            'AMQP_HOST'
-        )}:${this.configService.getOrThrow<string>('AMQP_PORT')}`;
+        )}://${this.configService.getOrThrow<string>('AMQP_USER')}:${process.env.AMQP_PASSWORD
+            }@${this.configService.getOrThrow<string>(
+                'AMQP_HOST'
+            )}:${this.configService.getOrThrow<string>('AMQP_PORT')}`;
 
         try {
             const conn = await amqp.connect(amqpHost);
@@ -198,14 +186,9 @@ export class AnalysesService {
         await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
 
         // (3) Check if the analyses belongs to the project
-        await this.analysesMemberService.doesAnalysesBelongToProject(id, projectId);
+        await this.analysesRepository.doesAnalysesBelongToProject(id, projectId);
 
-        const analysis = await this.analysisRepository.findOne({
-            where: { id: id }
-        });
-        if (!analysis) {
-            throw new EntityNotFound();
-        }
+        const analysis = await this.analysesRepository.getAnalysisById(id)
 
         return analysis;
     }
@@ -232,7 +215,7 @@ export class AnalysesService {
         await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
 
         // (3) Check if the analyses belongs to the project
-        await this.analysesMemberService.doesAnalysesBelongToProject(id, projectId);
+        await this.analysesRepository.doesAnalysesBelongToProject(id, projectId);
 
         // const patchesOutput: PatchesOutput = await getPatchingResult(db, id);
         const sbomOutput: SbomOutput = await this.sbomRepository.getSbomResult(id);
@@ -321,28 +304,7 @@ export class AnalysesService {
         if (paginationUserSuppliedConf.currentPage)
             currentPage = Math.max(0, paginationUserSuppliedConf.currentPage);
 
-        const analysisQueryBuilder = this.analysisRepository
-            .createQueryBuilder('analysis')
-            .orderBy('analysis.created_on', 'DESC')
-            .where('analysis.projectId = :projectId', { projectId });
-
-        const fullCount = await analysisQueryBuilder.getCount();
-
-        const analyses = await analysisQueryBuilder
-            .skip(currentPage * entriesPerPage)
-            .take(entriesPerPage)
-            .getMany();
-
-        return {
-            data: analyses,
-            page: currentPage,
-            entry_count: analyses.length,
-            entries_per_page: entriesPerPage,
-            total_entries: fullCount,
-            total_pages: Math.ceil(fullCount / entriesPerPage),
-            matching_count: analyses.length,
-            filter_count: {}
-        };
+        return this.analysesRepository.getAnalysisByProjectId(projectId, currentPage, entriesPerPage)
     }
 
     /**
@@ -362,28 +324,17 @@ export class AnalysesService {
         // (1) Check if user has access to org
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
-        // TODO: additionally check who created the analysis, and if the role is USER, only allow the user who created the analysis to delete it
-        // obviously owners, admins and moderators can also delete it
-
         // (2) Check if the project belongs to the org
         await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
 
         // (3) Check if the analyses belongs to the project
-        await this.analysesMemberService.doesAnalysesBelongToProject(id, projectId);
+        await this.analysesRepository.doesAnalysesBelongToProject(id, projectId);
 
-        const analysis = await this.analysisRepository.findOne({
-            where: { id },
-            relations: {
-                results: true
-            }
-        });
-        if (!analysis) {
-            throw new EntityNotFound();
-        }
+        const analysis = await this.analysesRepository.getAnalysisById(id, { results: true })
 
         for (const result of analysis.results) {
             await this.resultsRepository.delete(result.id);
         }
-        await this.analysisRepository.delete(analysis.id);
+        await this.analysesRepository.deleteAnalysis(analysis.id);
     }
 }

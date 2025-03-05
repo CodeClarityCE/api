@@ -1,16 +1,16 @@
 import { AuthenticatedUser } from 'src/types/auth/types';
-import { AnalysesMemberService } from '../../base_modules/analyses/analysesMembership.service';
 import { ProjectMemberService } from '../../base_modules/projects/projectMember.service';
 import { Injectable } from '@nestjs/common';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import { AnalysesRepository } from 'src/base_modules/analyses/analyses.repository';
 
 @Injectable()
 export class AnalysisResultsService {
     constructor(
         private readonly projectMemberService: ProjectMemberService,
-        private readonly analysesMemberService: AnalysesMemberService,
-        private readonly organizationsRepository: OrganizationsRepository
+        private readonly organizationsRepository: OrganizationsRepository,
+        private readonly analysesRepository: AnalysesRepository
     ) {}
 
     /**
@@ -33,7 +33,7 @@ export class AnalysisResultsService {
         await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
 
         // (3) Check if the analyses belongs to the project
-        await this.analysesMemberService.doesAnalysesBelongToProject(
+        await this.analysesRepository.doesAnalysesBelongToProject(
             analysisId,
             projectId
         );
