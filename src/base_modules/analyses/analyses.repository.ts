@@ -8,29 +8,50 @@ import { Analysis } from 'src/base_modules/analyses/analysis.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+/**
+ * A repository for handling analysis-related database operations.
+ */
 @Injectable()
 export class AnalysesRepository {
+    /**
+     * Constructs a new instance of the AnalysesRepository class.
+     * @param analysisRepository The TypeORM repository for Analysis entities.
+     */
     constructor(
         @InjectRepository(Analysis, 'codeclarity')
         private analysisRepository: Repository<Analysis>,
     ) { }
 
+    /**
+     * Saves an analysis to the database.
+     * @param analysis The analysis to be saved.
+     * @returns A promise that resolves with the saved analysis.
+     */
     async saveAnalysis(analysis: Analysis): Promise<Analysis> {
         return await this.analysisRepository.save(analysis)
     }
 
+    /**
+     * Deletes an analysis from the database by its ID.
+     * @param analysisId The ID of the analysis to be deleted.
+     */
     async deleteAnalysis(analysisId: string) {
         await this.analysisRepository.delete(analysisId)
     }
 
+    /**
+     * Retrieves an analysis by its ID, optionally including related entities.
+     * @param analysisId The ID of the analysis to retrieve.
+     * @param relation An object specifying which relations to include in the result. Defaults to an empty object.
+     * @returns A promise that resolves with the retrieved analysis or throws an EntityNotFound error if not found.
+     */
     async getAnalysisById(analysisId: string, relation?: object): Promise<Analysis> {
         const analysis = await this.analysisRepository.findOne({
             where: {
                 id: analysisId
             },
-            relations: {}
+            relations: relation
         })
-
         if (!analysis) {
             throw new EntityNotFound()
         }
@@ -38,6 +59,13 @@ export class AnalysesRepository {
         return analysis
     }
 
+    /**
+     * Retrieves a paginated list of analyses for a given project, sorted by creation date in descending order.
+     * @param projectId The ID of the project to retrieve analyses for.
+     * @param currentPage The current page number (0-indexed).
+     * @param entriesPerPage The number of entries per page.
+     * @returns A promise that resolves with a paginated data object containing the list of analyses and pagination metadata.
+     */
     async getAnalysisByProjectId(projectId: string, currentPage: number, entriesPerPage: number): Promise<TypedPaginatedData<Analysis>> {
         const analysisQueryBuilder = this.analysisRepository
             .createQueryBuilder('analysis')
@@ -64,11 +92,11 @@ export class AnalysesRepository {
     }
 
     /**
-        * Checks whether the analyses, with the given id, belongs to the project, with the given id
-        * @param analysisId The id of the analyses
-        * @param projectId The id of the project
-        * @returns whether or not the project belongs to the org
-        */
+     * Checks whether an analysis belongs to a given project.
+     * @param analysisId The ID of the analysis to check.
+     * @param projectId The ID of the project to check against.
+     * @throws NotAuthorized if the analysis does not belong to the project.
+     */
     async doesAnalysesBelongToProject(analysisId: string, projectId: string) {
         const belongs = await this.analysisRepository.findOne({
             relations: ['project'],
