@@ -7,16 +7,16 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { Log } from 'src/entity/codeclarity/Log';
 import { Invitation } from 'src/entity/codeclarity/Invitation';
-import { Email } from 'src/entity/codeclarity/Email';
-import { EmailService } from '../email/email.service';
 import { UsersModule } from '../users/users.module';
 import { OrganizationsRepository } from './organizations.repository';
+import { EmailModule } from '../email/email.module';
 
 @Module({
     imports: [
         forwardRef(() => UsersModule),
+        EmailModule,
         TypeOrmModule.forFeature(
-            [OrganizationMemberships, Organization, Log, Invitation, Email],
+            [OrganizationMemberships, Organization, Log, Invitation],
             'codeclarity'
         )
     ],
@@ -24,8 +24,7 @@ import { OrganizationsRepository } from './organizations.repository';
     providers: [
         OrganizationsService,
         OrganizationLoggerService,
-        OrganizationsRepository,
-        EmailService
+        OrganizationsRepository
     ],
     controllers: [OrganizationsController]
 })

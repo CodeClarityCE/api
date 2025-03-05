@@ -23,6 +23,7 @@ import { hash } from 'src/utils/crypto';
 import { EmailService } from '../email/email.service';
 import { UsersRepository } from '../users/users.repository';
 import { OrganizationsRepository } from './organizations.repository';
+import { EmailRepository } from '../email/email.repository';
 
 @Injectable()
 export class OrganizationsService {
@@ -30,14 +31,13 @@ export class OrganizationsService {
         private readonly emailService: EmailService,
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly usersRepository: UsersRepository,
+        private readonly emailRepository: EmailRepository,
         @InjectRepository(OrganizationMemberships, 'codeclarity')
         private membershipRepository: Repository<OrganizationMemberships>,
         @InjectRepository(Organization, 'codeclarity')
         private organizationRepository: Repository<Organization>,
         @InjectRepository(Invitation, 'codeclarity')
         private invitationRepository: Repository<Invitation>,
-        @InjectRepository(Email, 'codeclarity')
-        private emailRepository: Repository<Email>
     ) {}
 
     /**
@@ -286,7 +286,7 @@ export class OrganizationsService {
         mail.ttl = new Date(new Date().getTime() + 30 * 60000); // Expires after 30 mins
         mail.user = invitedUser;
 
-        await this.emailRepository.save(mail);
+        await this.emailRepository.saveMail(mail);
 
         await this.emailService.sendOrganizationInvite({
             email: invitedUser.email,
@@ -428,13 +428,8 @@ export class OrganizationsService {
         await this.membershipRepository.save(membership);
         await this.invitationRepository.delete(invitation);
 
-        const mail = await this.emailRepository.findOneOrFail({
-            where: {
-                token_digest: inviteToken,
-                user_id_digest: emailDigest
-            }
-        });
-        await this.emailRepository.delete(mail);
+        const mail = await this.emailRepository.getActivationMail(inviteToken, emailDigest)
+        await this.emailRepository.deleteMail(mail);
     }
 
     /**

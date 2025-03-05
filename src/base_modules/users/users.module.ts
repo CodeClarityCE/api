@@ -12,11 +12,11 @@ import { OrganizationsModule } from '../organizations/organizations.module';
     imports: [
         OrganizationsModule,
         EmailModule,
+        forwardRef(() => AuthModule),
         TypeOrmModule.forFeature(
             [User],
             'codeclarity'
         ),
-        forwardRef(() => AuthModule),
     ],
     exports: [UsersRepository, UsersService],
     providers: [UsersService, UsersRepository],

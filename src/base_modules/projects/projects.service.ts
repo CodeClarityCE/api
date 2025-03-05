@@ -22,9 +22,9 @@ import { existsSync } from 'fs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { mkdir, rm } from 'fs/promises';
-import { File } from 'src/entity/codeclarity/File';
 import { UsersRepository } from '../users/users.repository';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
+import { FileRepository } from '../file/file.repository';
 
 export enum AllowedOrderByGetProjects {
     IMPORTED_ON = 'imported_on',
@@ -40,14 +40,13 @@ export class ProjectService {
         private readonly gitlabRepositoriesService: GitlabRepositoriesService,
         private readonly usersRepository: UsersRepository,
         private readonly organizationsRepository: OrganizationsRepository,
+        private readonly fileRepository: FileRepository,
         @InjectRepository(Project, 'codeclarity')
         private projectRepository: Repository<Project>,
         @InjectRepository(Analysis, 'codeclarity')
         private analysisRepository: Repository<Analysis>,
         @InjectRepository(Result, 'codeclarity')
         private resultRepository: Repository<Result>,
-        @InjectRepository(File, 'codeclarity')
-        private fileRepository: Repository<File>,
         @InjectRepository(Integration, 'codeclarity')
         private integrationRepository: Repository<Integration>,
     ) {}

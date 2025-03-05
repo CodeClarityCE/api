@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ProjectController } from './projects.controller';
 import { ProjectMemberService } from './projectMember.service';
 import { ProjectService } from './projects.service';
@@ -15,23 +15,23 @@ import { GithubIntegrationService } from '../integrations/github/github.service'
 import { GitlabIntegrationService } from '../integrations/gitlab/gitlab.service';
 import { GithubIntegrationTokenService } from '../integrations/github/githubToken.service';
 import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
-import { File } from 'src/entity/codeclarity/File';
 import { UsersModule } from '../users/users.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { ProjectsRepository } from './projects.repository';
+import { FileModule } from '../file/file.module';
 
 @Module({
     imports: [
         UsersModule,
         OrganizationsModule,
+        FileModule,
         TypeOrmModule.forFeature(
             [
                 Project,
                 Analysis,
                 Result,
                 Integration,
-                RepositoryCache,
-                File
+                RepositoryCache
             ],
             'codeclarity'
         )
