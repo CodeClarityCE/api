@@ -5,13 +5,11 @@ import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginate
 import { AuthenticatedUser } from 'src/types/auth/types';
 import { OrganizationLoggerService } from '../organizations/organizationLogger.service';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
-import { NotAuthorized } from 'src/types/errors/types';
 import { ActionType } from 'src/types/entities/frontend/OrgAuditLog';
 import { Analyzer } from 'src/base_modules/analyzers/analyzer.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { UsersRepository } from '../users/users.repository';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
+import { AnalyzersRepository } from './analyzers.repository';
 
 @Injectable()
 export class AnalyzersService {
@@ -19,28 +17,27 @@ export class AnalyzersService {
         private readonly organizationLoggerService: OrganizationLoggerService,
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly usersRepository: UsersRepository,
-        @InjectRepository(Analyzer, 'codeclarity')
-        private analyzerRepository: Repository<Analyzer>,
+        private readonly analyzersRepository: AnalyzersRepository
     ) {}
 
+    /**
+     * Create a new analyzer in the specified organization.
+     * @param orgId - ID of the organization to create the analyzer for.
+     * @param analyzerData - Data to populate the new analyzer with.
+     * @param user - Authenticated user creating the analyzer.
+     */
     async create(
         orgId: string,
         analyzerData: AnalyzerCreateBody,
         user: AuthenticatedUser
     ): Promise<string> {
-        // Check if the user is allowed to create a analyzer (is atleast admin)
+        // Check if the user is allowed to create an analyzer (is at least admin)
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
-        const creator = await this.usersRepository.getUserById(user.userId)
-        if (!creator) {
-            throw new Error('User not found');
-        }
+        const creator = await this.usersRepository.getUserById(user.userId);
+        const organization = await this.organizationsRepository.getOrganizationById(orgId);
 
-        const organization = await this.organizationsRepository.getOrganizationById(orgId)
-        if (!organization) {
-            throw new Error('Organization not found');
-        }
-
+        // Initialize and populate the Analyzer entity with provided data
         const analyzer = new Analyzer();
         analyzer.created_on = new Date();
         analyzer.created_by = creator;
@@ -50,94 +47,101 @@ export class AnalyzersService {
         analyzer.global = false;
         analyzer.organization = organization;
 
-        const created_analyzer = await this.analyzerRepository.save(analyzer);
+        // Save the newly created analyzer to the database
+        const createdAnalyzer = await this.analyzersRepository.saveAnalyzer(analyzer);
 
+        // Log the creation of the analyzer in the organization audit log
         await this.organizationLoggerService.addAuditLog(
             ActionType.AnalyzerCreate,
-            `The User added an analyzer ${analyzerData.name} to the organization.`,
+            `The user added an analyzer ${analyzerData.name} to the organization.`,
             orgId,
             user.userId
         );
 
-        return created_analyzer.id;
+        return createdAnalyzer.id;
     }
 
+    /**
+     * Update an existing analyzer in the specified organization.
+     * @param orgId - ID of the organization containing the analyzer to update.
+     * @param analyzerId - ID of the analyzer to be updated.
+     * @param analyzerData - Updated data for the analyzer.
+     * @param user - Authenticated user updating the analyzer.
+     */
     async update(
         orgId: string,
         analyzerId: string,
         analyzerData: AnalyzerCreateBody,
         user: AuthenticatedUser
     ) {
-        // Check if the user is allowed to create a analyzer (is atleast admin)
+        // Check if the user is allowed to update an analyzer (is at least admin)
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
-        const analyzer = await this.analyzerRepository.findOneBy({ id: analyzerId });
+        const analyzer = await this.analyzersRepository.getAnalyzerById(analyzerId);
 
-        if (!analyzer) {
-            throw new Error('Analyzer not found');
-        }
+        // Update the properties of the analyzer with new data
+        analyzer.name = analyzerData.name;
+        analyzer.description = analyzerData.description;
+        analyzer.steps = analyzerData.steps;
 
-        this.analyzerRepository.save(analyzer);
+        // Save the updated analyzer to the database
+        await this.analyzersRepository.saveAnalyzer(analyzer);
 
+        // Log the update of the analyzer in the organization audit log
         await this.organizationLoggerService.addAuditLog(
-            ActionType.AnalyzerCreate,
-            `The User added an analyzer ${analyzerData.name} to the organization.`,
+            ActionType.AnalyzerUpdate,
+            `The user updated an analyzer ${analyzerData.name} in the organization.`,
             orgId,
             user.userId
         );
-
-        return;
     }
 
+    /**
+     * Retrieve a specific analyzer by ID from the specified organization.
+     * @param orgId - ID of the organization containing the analyzer to retrieve.
+     * @param id - ID of the analyzer to be retrieved.
+     * @param user - Authenticated user retrieving the analyzer.
+     */
     async get(orgId: string, id: string, user: AuthenticatedUser): Promise<Analyzer> {
-        // (1) Check if the user is allowed to get a analyzer (is atleast USER)
+        // Check if the user is allowed to get an analyzer (is at least user)
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
-        // (2) Check that the analyzer belongs to the org
-        const belongs = await this.doesAnalyzerBelongToOrg(id, orgId);
-        if (!belongs) {
-            throw new NotAuthorized();
-        }
+        // Verify that the specified analyzer belongs to the organization
+        await this.analyzersRepository.doesAnalyzerBelongToOrg(id, orgId);
 
-        const analyzer = await this.analyzerRepository.findOneBy({ id: id });
-        if (!analyzer) {
-            throw new Error('Analyzer not found');
-        }
-
-        return analyzer;
+        return this.analyzersRepository.getAnalyzerById(id);
     }
 
+    /**
+     * Retrieve an analyzer by name from the specified organization.
+     * @param orgId - ID of the organization containing the analyzer to retrieve.
+     * @param name - Name of the analyzer to be retrieved.
+     * @param user - Authenticated user retrieving the analyzer.
+     */
     async getByName(orgId: string, name: string, user: AuthenticatedUser): Promise<Analyzer> {
-        // (1) Check if the user is allowed to get a analyzer (is atleast USER)
+        // Check if the user is allowed to get an analyzer (is at least user)
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
-        const analyzer = await this.analyzerRepository
-            .createQueryBuilder('analyzer')
-            .leftJoinAndSelect('analyzer.organization', 'organization')
-            .where('(organization.id = :orgId or analyzer.global = true)', { orgId })
-            // .orWhere('analyzer.global = true')
-            .andWhere('analyzer.name = :name', { name })
-            .getOne();
+        const analyzer = await this.analyzersRepository.getByNameAndOrganization(name, orgId);
 
-        if (!analyzer) {
-            throw new Error('Analyzer not found');
-        }
-
-        // (2) Check that the analyzer belongs to the org
-        const belongs = await this.doesAnalyzerBelongToOrg(analyzer.id, orgId);
-        if (!belongs) {
-            throw new NotAuthorized();
-        }
+        // Verify that the specified analyzer belongs to the organization
+        await this.analyzersRepository.doesAnalyzerBelongToOrg(analyzer.id, orgId);
 
         return analyzer;
     }
 
+    /**
+     * Retrieve multiple analyzers from the specified organization with pagination.
+     * @param orgId - ID of the organization containing the analyzers to retrieve.
+     * @param paginationConfUser - User-supplied pagination configuration.
+     * @param user - Authenticated user retrieving the analyzers.
+     */
     async getMany(
         orgId: string,
         paginationConfUser: PaginationUserSuppliedConf,
         user: AuthenticatedUser
     ): Promise<TypedPaginatedData<Analyzer>> {
-        // Check if the user is allowed to get a analyzer (is atleast USER)
+        // Check if the user is allowed to get analyzers (is at least user)
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const paginationConfig: PaginationConfig = {
@@ -145,89 +149,39 @@ export class AnalyzersService {
             defaultEntriesPerPage: 10
         };
 
+        // Determine the number of entries per page based on user input or default configuration
         let entriesPerPage = paginationConfig.defaultEntriesPerPage;
-        let currentPage = 0;
-
-        if (paginationConfUser.entriesPerPage)
+        if (paginationConfUser.entriesPerPage) {
             entriesPerPage = Math.min(
                 paginationConfig.maxEntriesPerPage,
                 paginationConfUser.entriesPerPage
             );
+        }
 
-        if (paginationConfUser.currentPage)
+        // Determine the current page number based on user input or default to 0
+        let currentPage = 0;
+        if (paginationConfUser.currentPage !== undefined) {
             currentPage = Math.max(0, paginationConfUser.currentPage);
-
-        const analyzersQueryBuilder = this.analyzerRepository
-            .createQueryBuilder('analyzer')
-            .leftJoinAndSelect('analyzer.organization', 'organization')
-            .where('organization.id = :orgId', { orgId })
-            .orWhere('analyzer.global = true');
-
-        const fullCount = await analyzersQueryBuilder.getCount();
-
-        const analyzers = await analyzersQueryBuilder
-            .skip(currentPage * entriesPerPage)
-            .take(entriesPerPage)
-            .getMany();
-
-        return {
-            data: analyzers,
-            page: currentPage,
-            entry_count: analyzers.length,
-            entries_per_page: entriesPerPage,
-            total_entries: fullCount,
-            total_pages: Math.ceil(fullCount / entriesPerPage),
-            matching_count: fullCount, // once you apply filters this needs to change
-            filter_count: {}
-        };
-    }
-
-    async delete(orgId: string, id: string, user: AuthenticatedUser): Promise<void> {
-        // (1) Check if the user is allowed to get a analyzer (is atleast ADMIN)
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
-
-        // (2) Check that the analyzer belongs to the org
-        const belongs = await this.doesAnalyzerBelongToOrg(id, orgId);
-        if (!belongs) {
-            throw new NotAuthorized();
         }
 
-        const analyzer = await this.analyzerRepository.findOneBy({ id });
-        if (!analyzer) {
-            throw new Error('Analyzer not found');
-        }
-        await this.analyzerRepository.delete(analyzer.id);
+        // Retrieve the paginated list of analyzers from the specified organization
+        return this.analyzersRepository.getManyAnalyzers(orgId, currentPage, entriesPerPage);
     }
 
     /**
-     * Checks whether the anaylzer, with the given id, belongs to the organization, with the given id
-     * @param analyzerId The id of the analyzer
-     * @param orgId The id of the organization
-     * @returns whether or not the analyzer belongs to the org
+     * Delete a specific analyzer by ID from the specified organization.
+     * @param orgId - ID of the organization containing the analyzer to delete.
+     * @param id - ID of the analyzer to be deleted.
+     * @param user - Authenticated user deleting the analyzer.
      */
-    private async doesAnalyzerBelongToOrg(analyzerId: string, orgId: string): Promise<boolean> {
-        // Check if analyzer is global
-        let analyzer = await this.analyzerRepository.findOne({
-            where: {
-                global: true,
-                id: analyzerId
-            }
-        });
+    async delete(orgId: string, id: string, user: AuthenticatedUser): Promise<void> {
+        // Check if the user is allowed to delete an analyzer (is at least admin)
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
-        if (analyzer) {
-            return true;
-        }
+        // Verify that the specified analyzer belongs to the organization
+        await this.analyzersRepository.doesAnalyzerBelongToOrg(id, orgId);
 
-        // Else check if it belongs to organization
-        analyzer = await this.analyzerRepository.findOne({
-            relations: {
-                organization: true
-            },
-            where: { id: analyzerId, organization: { id: orgId } }
-        });
-        if (!analyzer) {
-            return false;
-        }
-        return true;
+        // Delete the analyzer from the database
+        await this.analyzersRepository.deleteAnalyzer(id);
     }
 }
