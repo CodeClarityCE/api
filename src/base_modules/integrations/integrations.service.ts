@@ -4,7 +4,7 @@ import { AuthenticatedUser } from 'src/types/auth/types';
 import { EntityNotFound, NotAMember, NotAuthorized } from 'src/types/errors/types';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginated/types';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
-import { Integration } from 'src/entity/codeclarity/Integration';
+import { Integration } from 'src/base_modules/integrations/integrations.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OrganizationsRepository } from '../organizations/organizations.repository';

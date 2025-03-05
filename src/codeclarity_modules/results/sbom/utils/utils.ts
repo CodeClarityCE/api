@@ -15,7 +15,7 @@ import {
 } from 'src/types/errors/types';
 import { getLicensesResult } from '../../licenses/utils/utils';
 import { getVulnsResult } from '../../vulnerabilities/utils/utils';
-import { Result } from 'src/entity/codeclarity/Result';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { Package } from 'src/codeclarity_modules/knowledge/package/package.entity';
 import { Repository } from 'typeorm';
 

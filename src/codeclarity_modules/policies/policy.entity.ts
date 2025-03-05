@@ -8,7 +8,7 @@ import {
     ManyToOne
 } from 'typeorm';
 import { Organization } from '../../base_modules/organizations/organization.entity';
-import { Analysis } from './Analysis';
+import { Analysis } from '../../base_modules/analyses/analysis.entity';
 import { User } from '../../base_modules/users/users.entity';
 
 export enum PolicyType {

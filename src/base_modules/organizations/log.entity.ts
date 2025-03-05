@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, Relation } from 'typeorm';
-import { Organization } from '../../base_modules/organizations/organization.entity';
+import { Organization } from './organization.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 

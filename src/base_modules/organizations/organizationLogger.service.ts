@@ -9,7 +9,7 @@ import {
     getTypeClassOfAction
 } from 'src/types/entities/frontend/OrgAuditLog';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
-import { Log } from 'src/entity/codeclarity/Log';
+import { Log } from 'src/base_modules/organizations/log.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsersRepository } from '../users/users.repository';

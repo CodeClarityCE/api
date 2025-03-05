@@ -7,7 +7,7 @@ import { OrganizationsModule } from 'src/base_modules/organizations/organization
 import { AnalysesModule } from 'src/base_modules/analyses/analyses.module';
 import { AnalysisResultsRepository } from './results.repository';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Result } from 'src/entity/codeclarity/Result';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
 
 @Module({
     imports: [

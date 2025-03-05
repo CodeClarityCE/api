@@ -3,7 +3,7 @@ import { AnalysesService } from './analyses.service';
 import { AnalysesMemberService } from './analysesMembership.service';
 import { AnalysesController } from './analyses.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Analysis } from 'src/entity/codeclarity/Analysis';
+import { Analysis } from 'src/base_modules/analyses/analysis.entity';
 import { UsersModule } from '../users/users.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { ProjectsModule } from '../projects/projects.module';

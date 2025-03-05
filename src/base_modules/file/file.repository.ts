@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { File as FileEntity } from 'src/entity/codeclarity/File';
+import { File as FileEntity } from 'src/base_modules/file/file.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 

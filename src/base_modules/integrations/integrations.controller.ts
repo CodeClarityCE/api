@@ -7,7 +7,7 @@ import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPagin
 import { ApiTags } from '@nestjs/swagger';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import { InternalError, NotAuthenticated } from 'src/types/errors/types';
-import { Integration } from 'src/entity/codeclarity/Integration';
+import { Integration } from 'src/base_modules/integrations/integrations.entity';
 
 @Controller('org/:org_id/integrations')
 export class IntegrationsController {

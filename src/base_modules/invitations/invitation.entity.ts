@@ -1,9 +1,9 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, Relation } from 'typeorm';
-import { Organization } from '../../base_modules/organizations/organization.entity';
-import { User } from '../../base_modules/users/users.entity';
+import { Organization } from '../organizations/organization.entity';
+import { User } from '../users/users.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
-import { MemberRole } from '../../base_modules/organizations/organization.memberships.entity';
+import { MemberRole } from '../organizations/organization.memberships.entity';
 
 @Entity()
 export class Invitation {

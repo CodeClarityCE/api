@@ -2,7 +2,7 @@ import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LicensesService } from './licenses.service';
 import { LicensesController } from './licenses.controller';
-import { Result } from 'src/entity/codeclarity/Result';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { AnalysisResultsService } from '../results.service';
 import { LicenseRepository } from 'src/codeclarity_modules/knowledge/license/license.repository';
 import { Package } from 'src/codeclarity_modules/knowledge/package/package.entity';

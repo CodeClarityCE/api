@@ -5,7 +5,7 @@ import { IntegrationsController } from './integrations.controller';
 import { IntegrationsService } from './integrations.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrganizationsModule } from '../organizations/organizations.module';
-import { Integration } from 'src/entity/codeclarity/Integration';
+import { Integration } from 'src/base_modules/integrations/integrations.entity';
 import { IntegrationsRepository } from './integrations.repository';
 
 @Module({

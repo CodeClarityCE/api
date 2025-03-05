@@ -11,17 +11,17 @@ import {
     Index
 } from 'typeorm';
 import { Organization } from '../organizations/organization.entity';
-import { Integration } from '../../entity/codeclarity/Integration';
+import { Integration } from '../integrations/integrations.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { OrganizationMemberships } from '../organizations/organization.memberships.entity';
-import { Project } from '../../entity/codeclarity/Project';
-import { Analyzer } from '../../entity/codeclarity/Analyzer';
-import { Analysis } from '../../entity/codeclarity/Analysis';
-import { Policy } from '../../entity/codeclarity/Policy';
-import { File } from '../../entity/codeclarity/File';
-import { Email } from '../../entity/codeclarity/Email';
-import { Invitation } from '../../entity/codeclarity/Invitation';
+import { Project } from '../projects/project.entity';
+import { Analyzer } from '../analyzers/analyzer.entity';
+import { Analysis } from '../analyses/analysis.entity';
+import { Policy } from '../../codeclarity_modules/policies/policy.entity';
+import { File } from '../file/file.entity';
+import { Email } from '../email/email.entity';
+import { Invitation } from '../invitations/invitation.entity';
 
 export enum SocialType {
     GITHUB = 'GITHUB',

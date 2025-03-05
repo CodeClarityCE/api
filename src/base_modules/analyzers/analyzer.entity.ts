@@ -1,7 +1,7 @@
 import { Entity, Column, PrimaryGeneratedColumn, OneToMany, Relation, ManyToOne } from 'typeorm';
-import { Analysis, StageBase } from './Analysis';
-import { Organization } from '../../base_modules/organizations/organization.entity';
-import { User } from '../../base_modules/users/users.entity';
+import { Analysis, StageBase } from '../analyses/analysis.entity';
+import { Organization } from '../organizations/organization.entity';
+import { User } from '../users/users.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 

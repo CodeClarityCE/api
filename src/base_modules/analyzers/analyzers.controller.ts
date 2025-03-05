@@ -20,7 +20,7 @@ import {
 import { AnalyzerCreateBody } from 'src/types/entities/frontend/Analyzer';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { AuthenticatedUser } from 'src/types/auth/types';
-import { Analyzer } from 'src/entity/codeclarity/Analyzer';
+import { Analyzer } from 'src/base_modules/analyzers/analyzer.entity';
 
 @Controller('/org/:org_id/analyzers')
 export class AnalyzersController {

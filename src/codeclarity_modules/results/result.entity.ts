@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, Relation } from 'typeorm';
-import { Analysis } from './Analysis';
+import { Analysis } from '../../base_modules/analyses/analysis.entity';
 
 @Entity()
 export class Result {

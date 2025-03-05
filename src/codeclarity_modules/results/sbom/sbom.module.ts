@@ -3,7 +3,7 @@ import { SBOMController } from './sbom.controller';
 import { SBOMService } from './sbom.service';
 import { AnalysisResultsService } from '../results.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Result } from 'src/entity/codeclarity/Result';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { Package } from 'src/codeclarity_modules/knowledge/package/package.entity';
 import { OrganizationsModule } from 'src/base_modules/organizations/organizations.module';
 import { AnalysesModule } from 'src/base_modules/analyses/analyses.module';

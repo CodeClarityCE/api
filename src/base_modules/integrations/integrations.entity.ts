@@ -7,13 +7,13 @@ import {
     ManyToOne,
     OneToMany
 } from 'typeorm';
-import { Organization } from '../../base_modules/organizations/organization.entity';
-import { User } from '../../base_modules/users/users.entity';
+import { Organization } from '../organizations/organization.entity';
+import { User } from '../users/users.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { RepositoryCache } from './RepositoryCache';
-import { Project } from './Project';
-import { Analysis } from './Analysis';
+import { RepositoryCache } from '../repository_cache/repositoryCache.entity';
+import { Project } from '../projects/project.entity';
+import { Analysis } from '../analyses/analysis.entity';
 
 export enum IntegrationType {
     VCS = 'VCS'

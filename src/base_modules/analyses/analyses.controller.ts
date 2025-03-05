@@ -31,7 +31,7 @@ import {
 } from 'src/types/errors/types';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Analysis } from 'src/entity/codeclarity/Analysis';
+import { Analysis } from 'src/base_modules/analyses/analysis.entity';
 
 @Controller('/org/:org_id/projects/:project_id/analyses')
 export class AnalysesController {

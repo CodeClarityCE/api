@@ -4,7 +4,7 @@ import {
     Status,
 } from 'src/types/entities/services/Sbom';
 import { PluginFailed, PluginResultNotAvailable} from 'src/types/errors/types';
-import { Result } from 'src/entity/codeclarity/Result';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 

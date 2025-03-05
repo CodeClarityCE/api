@@ -33,7 +33,7 @@ import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPagin
 import { APIDocNoDataResponseDecorator } from 'src/decorators/NoDataResponse';
 import { SortDirection } from 'src/types/sort/types';
 import { ProjectImportBody } from 'src/types/entities/frontend/Project';
-import { Project } from 'src/entity/codeclarity/Project';
+import { Project } from 'src/base_modules/projects/project.entity';
 
 @Controller('org/:org_id/projects')
 export class ProjectController {

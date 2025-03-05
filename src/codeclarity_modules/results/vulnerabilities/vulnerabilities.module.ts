@@ -1,7 +1,7 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { FindingsService } from './vulnerabilities.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Result } from 'src/entity/codeclarity/Result';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { AnalysisResultsService } from '../results.service';
 import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
 import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';

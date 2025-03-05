@@ -7,7 +7,7 @@ import { OrganizationLoggerService } from '../organizations/organizationLogger.s
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
 import { NotAuthorized } from 'src/types/errors/types';
 import { ActionType } from 'src/types/entities/frontend/OrgAuditLog';
-import { Analyzer } from 'src/entity/codeclarity/Analyzer';
+import { Analyzer } from 'src/base_modules/analyzers/analyzer.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsersRepository } from '../users/users.repository';

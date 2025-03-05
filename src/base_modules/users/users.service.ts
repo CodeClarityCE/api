@@ -49,7 +49,7 @@ import {
     MemberRole,
     OrganizationMemberships
 } from 'src/base_modules/organizations/organization.memberships.entity';
-import { Email, EmailType } from 'src/entity/codeclarity/Email';
+import { Email, EmailType } from 'src/base_modules/email/email.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OrganizationsRepository } from '../organizations/organizations.repository';

@@ -16,7 +16,7 @@ import { StatusResponse } from 'src/types/entities/services/Status';
 import { Package, Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Result } from 'src/entity/codeclarity/Result';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
 
 @Injectable()
 export class LicensesService {

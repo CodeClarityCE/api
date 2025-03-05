@@ -6,7 +6,7 @@ import { PluginFailed, PluginResultNotAvailable } from 'src/types/errors/types';
 import { Output as VulnsOutput } from 'src/types/entities/services/Vulnerabilities';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Result } from 'src/entity/codeclarity/Result';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
 
 @Injectable()
 export class FindingsRepository {

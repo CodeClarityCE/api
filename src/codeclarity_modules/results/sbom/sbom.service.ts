@@ -16,7 +16,7 @@ import { sort } from './utils/sort';
 import { EntityNotFound, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/errors/types';
 import { StatusResponse } from 'src/types/entities/services/Status';
 import { AnalysisStats, newAnalysisStats } from 'src/types/entities/frontend/Sbom';
-import { Result } from 'src/entity/codeclarity/Result';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { Package } from 'src/codeclarity_modules/knowledge/package/package.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';

@@ -17,7 +17,7 @@ import { AnalysisStartMessageCreate } from 'src/types/rabbitMqMessages';
 import { Output as VulnsOuptut } from 'src/types/entities/services/Vulnerabilities';
 import { Output as SbomOutput } from 'src/types/entities/services/Sbom';
 import { Output as LicensesOutput } from 'src/types/entities/services/Licenses';
-import { Analysis, AnalysisStage, AnalysisStatus } from 'src/entity/codeclarity/Analysis';
+import { Analysis, AnalysisStage, AnalysisStatus } from 'src/base_modules/analyses/analysis.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsersRepository } from '../users/users.repository';

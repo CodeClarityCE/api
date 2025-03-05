@@ -32,7 +32,7 @@ import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
 import { CWE } from 'src/codeclarity_modules/knowledge/cwe/cwe.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Result } from 'src/entity/codeclarity/Result';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
 
 @Injectable()
 export class FindingsService {

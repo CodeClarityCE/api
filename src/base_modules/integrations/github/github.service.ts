@@ -22,7 +22,7 @@ import {
 } from 'src/types/entities/frontend/GithubIntegration';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
 import { IntegrationProvider, IntegrationType } from 'src/types/entities/frontend/Integration';
-import { Integration } from 'src/entity/codeclarity/Integration';
+import { Integration } from 'src/base_modules/integrations/integrations.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsersRepository } from 'src/base_modules/users/users.repository';

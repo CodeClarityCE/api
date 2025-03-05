@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EntityNotFound, NotAuthorized } from 'src/types/errors/types';
-import { Integration } from 'src/entity/codeclarity/Integration';
+import { Integration } from 'src/base_modules/integrations/integrations.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 

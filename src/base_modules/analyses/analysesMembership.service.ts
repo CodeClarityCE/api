@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Analysis } from 'src/entity/codeclarity/Analysis';
+import { Analysis } from 'src/base_modules/analyses/analysis.entity';
 import { NotAuthorized } from 'src/types/errors/types';
 import { Repository } from 'typeorm';
 

@@ -4,7 +4,7 @@ import { AuthenticatedUser } from 'src/types/auth/types';
 import { PaginationUserSuppliedConf } from 'src/types/paginated/types';
 import { SortDirection } from 'src/types/sort/types';
 import { Repository } from 'src/types/entities/frontend/Integration';
-import { RepositoryCache } from 'src/entity/codeclarity/RepositoryCache';
+import { RepositoryCache } from 'src/base_modules/repository_cache/repositoryCache.entity';
 
 @Injectable()
 export class GitlabRepositoriesService {

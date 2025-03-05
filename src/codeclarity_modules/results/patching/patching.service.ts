@@ -12,7 +12,7 @@ import { AnalysisStats, newAnalysisStats } from 'src/types/entities/frontend/Pat
 import { StatusResponse } from 'src/types/entities/services/Status';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Result } from 'src/entity/codeclarity/Result';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
 
 @Injectable()
 export class PatchingService {

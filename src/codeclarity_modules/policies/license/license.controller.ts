@@ -23,7 +23,7 @@ import {
     LicensePolicyCreateBody,
     LicensePolicyPatchBody
 } from 'src/types/entities/frontend/LicensePolicy';
-import { Policy, PolicyFrontend } from 'src/entity/codeclarity/Policy';
+import { Policy, PolicyFrontend } from 'src/codeclarity_modules/policies/policy.entity';
 
 @Controller('org/:org_id/policies/license_policy')
 export class LicensePolicyController {

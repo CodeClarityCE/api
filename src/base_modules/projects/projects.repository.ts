@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Project } from 'src/entity/codeclarity/Project';
+import { Project } from 'src/base_modules/projects/project.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EntityNotFound } from 'src/types/errors/types';

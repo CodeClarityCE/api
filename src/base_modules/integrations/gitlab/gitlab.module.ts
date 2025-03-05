@@ -5,7 +5,7 @@ import { GitlabIntegrationTokenService } from './gitlabToken.service';
 import { GitlabIntegrationController } from './gitlab.controller';
 import { IntegrationsService } from '../integrations.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Integration } from 'src/entity/codeclarity/Integration';
+import { Integration } from 'src/base_modules/integrations/integrations.entity';
 import { OrganizationsModule } from 'src/base_modules/organizations/organizations.module';
 
 @Module({

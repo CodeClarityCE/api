@@ -8,7 +8,7 @@ import { EmailUnsubscriptionController } from './emailUnsubscriptions/emailUnsub
 import { EmailUnsubscriptionService } from './emailUnsubscriptions/emailUnsubscriptions.service';
 import { EmailRepository } from './email.repository';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Email } from 'src/entity/codeclarity/Email';
+import { Email } from 'src/base_modules/email/email.entity';
 
 @Module({
     imports: [
