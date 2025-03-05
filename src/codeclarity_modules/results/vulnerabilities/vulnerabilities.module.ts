@@ -24,7 +24,7 @@ import { KnowledgeModule } from 'src/codeclarity_modules/knowledge/knowledge.mod
             [Result],
             'codeclarity'
         ),
-        TypeOrmModule.forFeature([NVD, OSV, CWE, Package, Version], 'knowledge')
+        TypeOrmModule.forFeature([NVD, OSV, CWE], 'knowledge')
     ],
     providers: [
         FindingService,
