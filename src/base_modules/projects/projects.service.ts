@@ -25,6 +25,7 @@ import { UsersRepository } from '../users/users.repository';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { FileRepository } from '../file/file.repository';
 import { IntegrationsRepository } from '../integrations/integrations.repository';
+import { AnalysisResultsRepository } from 'src/codeclarity_modules/results/results.repository';
 
 export enum AllowedOrderByGetProjects {
     IMPORTED_ON = 'imported_on',
@@ -42,12 +43,11 @@ export class ProjectService {
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly fileRepository: FileRepository,
         private readonly integrationsRepository: IntegrationsRepository,
+        private readonly resultsRepository: AnalysisResultsRepository,
         @InjectRepository(Project, 'codeclarity')
         private projectRepository: Repository<Project>,
         @InjectRepository(Analysis, 'codeclarity')
         private analysisRepository: Repository<Analysis>,
-        @InjectRepository(Result, 'codeclarity')
-        private resultRepository: Repository<Result>,
     ) {}
 
     /**
@@ -363,7 +363,7 @@ export class ProjectService {
         });
         for (const analysis of analyses) {
             for (const result of analysis.results) {
-                await this.resultRepository.remove(result);
+                await this.resultsRepository.remove(result);
             }
 
             await this.analysisRepository.remove(analysis);

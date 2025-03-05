@@ -14,4 +14,8 @@ export class AnalysisResultsRepository {
     async delete(resultId: string) {
         await this.resultRepository.delete(resultId)
     }
+
+    async remove(result: Result) {
+        await this.resultRepository.remove(result)
+    }
 }
