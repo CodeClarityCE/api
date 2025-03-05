@@ -10,6 +10,8 @@ import { Invitation } from 'src/base_modules/organizations/invitation.entity';
 import { UsersModule } from '../users/users.module';
 import { OrganizationsRepository } from './organizations.repository';
 import { EmailModule } from '../email/email.module';
+import { InvitationsRepository } from './invitations.repository';
+import { LogsRepository } from './logs.repository';
 
 @Module({
     imports: [
@@ -24,7 +26,9 @@ import { EmailModule } from '../email/email.module';
     providers: [
         OrganizationsService,
         OrganizationLoggerService,
-        OrganizationsRepository
+        OrganizationsRepository,
+        InvitationsRepository,
+        LogsRepository
     ],
     controllers: [OrganizationsController]
 })

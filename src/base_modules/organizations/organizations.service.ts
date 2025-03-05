@@ -13,10 +13,7 @@ import {
 } from 'src/types/entities/frontend/Org';
 import { OrganizationMemberships } from 'src/base_modules/organizations/organization.memberships.entity';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
-import { User } from 'src/base_modules/users/users.entity';
 import { Email, EmailType } from 'src/base_modules/email/email.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { Invitation } from 'src/base_modules/organizations/invitation.entity';
 import { genRandomString } from 'src/utils/crypto';
 import { hash } from 'src/utils/crypto';
@@ -24,6 +21,7 @@ import { EmailService } from '../email/email.service';
 import { UsersRepository } from '../users/users.repository';
 import { OrganizationsRepository } from './organizations.repository';
 import { EmailRepository } from '../email/email.repository';
+import { InvitationsRepository } from './invitations.repository';
 
 @Injectable()
 export class OrganizationsService {
@@ -32,13 +30,8 @@ export class OrganizationsService {
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly usersRepository: UsersRepository,
         private readonly emailRepository: EmailRepository,
-        @InjectRepository(OrganizationMemberships, 'codeclarity')
-        private membershipRepository: Repository<OrganizationMemberships>,
-        @InjectRepository(Organization, 'codeclarity')
-        private organizationRepository: Repository<Organization>,
-        @InjectRepository(Invitation, 'codeclarity')
-        private invitationRepository: Repository<Invitation>,
-    ) {}
+        private readonly invitationsRepository: InvitationsRepository
+    ) { }
 
     /**
      * Creates an organization
@@ -65,14 +58,14 @@ export class OrganizationsService {
         organization.created_on = new Date();
         organization.created_by = creator;
 
-        organization = await this.organizationRepository.save(organization);
+        organization = await this.organizationsRepository.saveOrganization(organization);
 
         let membership = new OrganizationMemberships();
         membership.role = MemberRole.OWNER;
         membership.joined_on = new Date();
         membership.user = creator;
         membership.organization = organization;
-        membership = await this.membershipRepository.save(membership);
+        membership = await this.organizationsRepository.saveMembership(membership);
 
         return organization.id;
     }
@@ -88,32 +81,14 @@ export class OrganizationsService {
      */
     async get(orgId: string, user: AuthenticatedUser): Promise<Object> {
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
-        const membership = await this.membershipRepository.findOne({
-            where: {
-                organization: {
-                    id: orgId
-                },
-                user: {
-                    id: user.userId
-                }
-            },
-            relations: {
-                organization: true,
-                user: false
-            }
-        });
-
-        const number_of_members = await this.membershipRepository.count({
-            where: {
-                organization: {
-                    id: orgId
-                }
-            }
-        });
-
-        if (!membership) {
-            throw new EntityNotFound();
+        const membership = await this.organizationsRepository.getMembershipByOrganizationAndUser(
+            orgId, user.userId, {
+            organization: true,
+            user: false
         }
+        )
+
+        const number_of_members = await this.organizationsRepository.countMembers(orgId)
 
         const organizationInfo: Object = {
             ...membership.organization,
@@ -136,23 +111,12 @@ export class OrganizationsService {
     async getOrgMetaData(orgId: string, user: AuthenticatedUser): Promise<Organization> {
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
-        const organization = await this.organizationRepository.findOne({
-            where: {
-                id: orgId
+        return await this.organizationsRepository.getOrganizationById(orgId, {
+            projects: {
+                analyses: true
             },
-            relations: {
-                projects: {
-                    analyses: true
-                },
-                integrations: true
-            }
-        });
-
-        if (!organization) {
-            throw new EntityNotFound();
-        }
-
-        return organization;
+            integrations: true
+        })
     }
 
     /**
@@ -171,42 +135,7 @@ export class OrganizationsService {
         sortBy?: string,
         sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<Object>> {
-        const memberships = await this.membershipRepository.find({
-            where: {
-                user: {
-                    id: user.userId
-                }
-            },
-            relations: {
-                organization: {
-                    owners: true
-                },
-                user: true
-            }
-        });
-
-        const res = await this.membershipRepository
-            .createQueryBuilder('membership')
-            .leftJoinAndSelect(
-                Organization,
-                'organization',
-                'organization.id = membership.organization.id'
-            )
-            .leftJoinAndSelect(User, 'user', 'user.id = membership.user')
-            // .select('SUM(membership.user)', 'sum')
-            .where('user.id = :userId', { userId: user.userId })
-            .getMany();
-
-        return {
-            data: memberships,
-            page: 1,
-            entry_count: 1,
-            entries_per_page: 1,
-            total_entries: 1,
-            total_pages: 1,
-            matching_count: 1,
-            filter_count: {}
-        };
+        return this.organizationsRepository.getOrganizationsOfUser(user.userId)
     }
 
     /**
@@ -261,9 +190,7 @@ export class OrganizationsService {
 
         const inviter = await this.usersRepository.getUserById(user.userId, {})
 
-        const org = await this.organizationRepository.findOneByOrFail({
-            id: orgId
-        });
+        const org = await this.organizationsRepository.getOrganizationById(orgId)
 
         const activationToken = await genRandomString(64);
         const activationTokenhash = await hash(activationToken, {});
@@ -277,7 +204,7 @@ export class OrganizationsService {
         invitation.user = invitedUser;
         invitation.organization = org;
         invitation.ttl = new Date(new Date().getTime() + 30 * 60000);
-        await this.invitationRepository.save(invitation);
+        await this.invitationsRepository.saveInvitation(invitation);
 
         const mail = new Email();
         mail.email_type = EmailType.ORGANIZATION_INVITE;
@@ -363,12 +290,7 @@ export class OrganizationsService {
         //     }
         // });
 
-        const invitations = await this.invitationRepository.find({
-            where: {
-                organization: { id: orgId },
-                user: { id: user.userId }
-            }
-        });
+        const invitations = await this.invitationsRepository.getInvitationsByOrganizationAndUser(orgId, user.userId)
 
         // for (const org of organizations) {
         //     const invitation = new Invitation();
@@ -402,22 +324,19 @@ export class OrganizationsService {
         emailDigest: string,
         user: AuthenticatedUser
     ): Promise<void> {
-        const invitation = await this.invitationRepository.findOne({
-            where: {
+        const invitation = await this.invitationsRepository.getInvitationBy(
+            {
                 token_digest: inviteToken,
                 user_email_digest: emailDigest
             },
-            relations: {
+            {
                 organization: {
                     organizationMemberships: true,
                     created_by: true
                 },
                 user: true
             }
-        });
-        if (!invitation) {
-            throw new EntityNotFound();
-        }
+        )
 
         const membership = new OrganizationMemberships();
         membership.joined_on = new Date();
@@ -425,8 +344,8 @@ export class OrganizationsService {
         membership.role = invitation.role;
         membership.user = invitation.user;
 
-        await this.membershipRepository.save(membership);
-        await this.invitationRepository.delete(invitation);
+        await this.organizationsRepository.saveMembership(membership);
+        await this.invitationsRepository.deleteInvitation(invitation);
 
         const mail = await this.emailRepository.getActivationMail(inviteToken, emailDigest)
         await this.emailRepository.deleteMail(mail);
@@ -452,23 +371,20 @@ export class OrganizationsService {
         }
 
         const info = new OrganizationInfoForInvitee();
-        const invitation = await this.invitationRepository.findOne({
-            where: {
+        const invitation = await this.invitationsRepository.getInvitationBy(
+            {
                 token_digest: inviteToken,
                 user_email_digest: emailDigest,
                 user: invitee
             },
-            relations: {
+            {
                 organization: {
                     organizationMemberships: true,
                     created_by: true
                 },
                 user: true
             }
-        });
-        if (!invitation) {
-            throw new EntityNotFound();
-        }
+        )
 
         info.id = invitation.id;
         info.name = invitation.organization.name;
@@ -530,15 +446,9 @@ export class OrganizationsService {
     async deleteOrg(orgId: string, user: AuthenticatedUser): Promise<void> {
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
-        const memberships = await this.membershipRepository.find({
-            where: {
-                organization: {
-                    id: orgId
-                }
-            }
-        });
-        await this.membershipRepository.remove(memberships);
-        await this.organizationRepository.delete({ id: orgId });
+        const memberships = await this.organizationsRepository.getMembershipsByOrganizationId(orgId)
+        await this.organizationsRepository.removeMemberships(memberships);
+        await this.organizationsRepository.deleteOrganization(orgId)
     }
 
     /**
@@ -559,3 +469,4 @@ export class OrganizationsService {
         throw new Error('Method not implemented.');
     }
 }
+

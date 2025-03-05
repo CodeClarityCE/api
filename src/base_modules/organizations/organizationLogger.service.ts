@@ -14,6 +14,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsersRepository } from '../users/users.repository';
 import { OrganizationsRepository } from './organizations.repository';
+import { LogsRepository } from './logs.repository';
 
 /**
  * This service provides methods for working with organization audit logs
@@ -23,8 +24,7 @@ export class OrganizationLoggerService {
     constructor(
         private readonly usersRepository: UsersRepository,
         private readonly organizationsRepository: OrganizationsRepository,
-        @InjectRepository(Log, 'codeclarity')
-        private logRepository: Repository<Log>
+        private readonly logsRepository: LogsRepository
     ) {}
 
     /**
@@ -52,7 +52,7 @@ export class OrganizationLoggerService {
         log.action_class = getTypeClassOfAction(action);
         log.action_severity = getSeverityOfAction(action);
 
-        const log_created = await this.logRepository.save(log);
+        const log_created = await this.logsRepository.saveLog(log);
 
         return log_created.id;
     }
