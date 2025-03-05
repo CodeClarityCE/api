@@ -17,7 +17,6 @@ import { OrganizationsRepository } from 'src/base_modules/organizations/organiza
 @Injectable()
 export class GitlabIntegrationService {
     constructor(
-        private readonly integrationsService: IntegrationsService,
         private readonly organizationsRepository: OrganizationsRepository
     ) {}
 

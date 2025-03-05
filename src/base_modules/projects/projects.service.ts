@@ -72,7 +72,7 @@ export class ProjectService {
         const project = new Project();
 
         if (projectData.integration_id) {
-            const integration = await this.integrationsRepository.getIntegrationById(projectData.integration_id, orgId, user.userId)
+            const integration = await this.integrationsRepository.getIntegrationByIdAndOrganizationAndUser(projectData.integration_id, orgId, user.userId)
 
             let repo: RepositoryCache;
 

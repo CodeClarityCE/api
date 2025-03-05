@@ -49,6 +49,7 @@ import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entit
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import { IntegrationsRepository } from '../integrations.repository';
 
 @Controller('org/:org_id/integrations/github')
 export class GithubIntegrationController {
@@ -56,8 +57,7 @@ export class GithubIntegrationController {
         private readonly githubIntegrationService: GithubIntegrationService,
         private readonly githubReposService: GithubRepositoriesService,
         private readonly organizationsRepository: OrganizationsRepository,
-        @InjectRepository(Integration, 'codeclarity')
-        private integrationRepository: Repository<Integration>
+        private readonly integrationsRepository: IntegrationsRepository
     ) {}
 
     @ApiTags('Integrations')
@@ -132,7 +132,7 @@ export class GithubIntegrationController {
 
         await this.organizationsRepository.saveOrganization(organization);
 
-        await this.integrationRepository.delete(integration_id);
+        await this.integrationsRepository.deleteIntegration(integration_id);
         return {};
     }
 

@@ -19,16 +19,16 @@ import { RepositoryCache, RepositoryType } from 'src/base_modules/projects/repos
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import { IntegrationsRepository } from '../integrations.repository';
 
 @Injectable()
 export class GithubRepositoriesService {
     constructor(
         private readonly githubIntegrationService: GithubIntegrationService,
         private readonly organizationsRepository: OrganizationsRepository,
+        private readonly integrationsRepository: IntegrationsRepository,
         @InjectRepository(RepositoryCache, 'codeclarity')
         private repositoryCacheRepository: Repository<RepositoryCache>,
-        @InjectRepository(Integration, 'codeclarity')
-        private integrationRepository: Repository<Integration>
     ) {}
 
     /**
@@ -38,14 +38,7 @@ export class GithubRepositoriesService {
      * @returns a boolean indicating whether the repos of the integration are synced
      */
     async areGithubReposSynced(integrationId: string): Promise<boolean> {
-        const integration = await this.integrationRepository.findOne({
-            where: {
-                id: integrationId
-            }
-        });
-        if (!integration) {
-            throw new EntityNotFound();
-        }
+        const integration = await this.integrationsRepository.getIntegrationById(integrationId)
 
         const lastUpdated: Date | undefined = integration.last_repository_sync;
 
@@ -284,14 +277,7 @@ export class GithubRepositoriesService {
         const githubToken = await this.githubIntegrationService.getToken(integrationId);
         const rawToken = githubToken.getToken();
 
-        const integration = await this.integrationRepository.findOne({
-            where: {
-                id: integrationId
-            }
-        });
-        if (!integration) {
-            throw new EntityNotFound();
-        }
+        const integration = await this.integrationsRepository.getIntegrationById(integrationId)
 
         const entriesPerPage = 100;
 
@@ -318,7 +304,7 @@ export class GithubRepositoriesService {
         }
 
         integration.last_repository_sync = new Date();
-        await this.integrationRepository.save(integration);
+        await this.integrationsRepository.saveIntegration(integration);
     }
 
     /**
@@ -329,15 +315,7 @@ export class GithubRepositoriesService {
      */
     private async saveRepos(repos: GithubRepositorySchema[], integrationId: string): Promise<void> {
         for (const rawRepo of repos) {
-            const integration = await this.integrationRepository.findOne({
-                where: {
-                    id: integrationId
-                }
-            });
-
-            if (!integration) {
-                throw new EntityNotFound();
-            }
+            const integration = await this.integrationsRepository.getIntegrationById(integrationId)
 
             const repository = new RepositoryCache();
             repository.repository_type = RepositoryType.GITHUB;
