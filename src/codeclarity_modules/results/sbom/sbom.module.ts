@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { SBOMController } from './sbom.controller';
 import { SBOMService } from './sbom.service';
 import { AnalysisResultsService } from '../results.service';
@@ -8,11 +8,12 @@ import { Package } from 'src/entity/knowledge/Package';
 import { OrganizationsModule } from 'src/base_modules/organizations/organizations.module';
 import { AnalysesModule } from 'src/base_modules/analyses/analyses.module';
 import { ProjectsModule } from 'src/base_modules/projects/projects.module';
+import { SBOMRepository } from './sbom.repository';
 
 @Module({
     imports: [
         OrganizationsModule,
-        AnalysesModule,
+        forwardRef(() => AnalysesModule),
         ProjectsModule,
         TypeOrmModule.forFeature(
             [Result],
@@ -20,9 +21,11 @@ import { ProjectsModule } from 'src/base_modules/projects/projects.module';
         ),
         TypeOrmModule.forFeature([Package], 'knowledge')
     ],
+    exports: [SBOMRepository],
     providers: [
         SBOMService,
         AnalysisResultsService,
+        SBOMRepository,
     ],
     controllers: [SBOMController]
 })

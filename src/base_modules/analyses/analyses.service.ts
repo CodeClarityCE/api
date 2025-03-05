@@ -1,11 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { AnalysisCreateBody } from 'src/types/entities/frontend/Analysis';
 import { AuthenticatedUser } from 'src/types/auth/types';
 import {
-    AnalyzerDoesNotExist,
     AnaylzerMissingConfigAttribute,
     EntityNotFound,
-    NotAuthorized,
     RabbitMQError
 } from 'src/types/errors/types';
 import { ProjectMemberService } from '../projects/projectMember.service';
@@ -16,20 +14,20 @@ import * as amqp from 'amqplib';
 import { ConfigService } from '@nestjs/config';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
 import { AnalysisStartMessageCreate } from 'src/types/rabbitMqMessages';
-import { getSbomResult } from '../../codeclarity_modules/results/sbom/utils/utils';
-import { getVulnsResult } from '../../codeclarity_modules/results/vulnerabilities/utils/utils';
-import { getLicensesResult } from '../../codeclarity_modules/results/licenses/utils/utils';
 import { Output as VulnsOuptut } from 'src/types/entities/services/Vulnerabilities';
 import { Output as SbomOutput } from 'src/types/entities/services/Sbom';
 import { Output as LicensesOutput } from 'src/types/entities/services/Licenses';
-import { Analyzer } from 'src/entity/codeclarity/Analyzer';
 import { Analysis, AnalysisStage, AnalysisStatus } from 'src/entity/codeclarity/Analysis';
-import { Project } from 'src/entity/codeclarity/Project';
-import { Result } from 'src/entity/codeclarity/Result';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsersRepository } from '../users/users.repository';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
+import { ProjectsRepository } from '../projects/projects.repository';
+import { AnalyzersRepository } from '../analyzers/analyzers.repository';
+import { AnalysisResultsRepository } from 'src/codeclarity_modules/results/results.repository';
+import { SBOMRepository } from 'src/codeclarity_modules/results/sbom/sbom.repository';
+import { FindingsRepository } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.repository';
+import { LicensesRepository } from 'src/codeclarity_modules/results/licenses/licenses.repository';
 
 @Injectable()
 export class AnalysesService {
@@ -39,14 +37,14 @@ export class AnalysesService {
         private readonly configService: ConfigService,
         private readonly usersRepository: UsersRepository,
         private readonly organizationsRepository: OrganizationsRepository,
-        @InjectRepository(Project, 'codeclarity')
-        private projectRepository: Repository<Project>,
-        @InjectRepository(Analyzer, 'codeclarity')
-        private analyzerRepository: Repository<Analyzer>,
+        private readonly projectsRepository: ProjectsRepository,
+        private readonly analyzersRepository: AnalyzersRepository,
+        private readonly resultsRepository: AnalysisResultsRepository,
+        private readonly sbomRepository: SBOMRepository,
+        private readonly findingsRepository: FindingsRepository,
+        private readonly licensesRepository: LicensesRepository,
         @InjectRepository(Analysis, 'codeclarity')
         private analysisRepository: Repository<Analysis>,
-        @InjectRepository(Result, 'codeclarity')
-        private resultRepository: Repository<Result>
     ) {}
 
     /**
@@ -70,38 +68,15 @@ export class AnalysesService {
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check if the project belongs to the org
-        const belongs = await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
-        if (!belongs) {
-            throw new NotAuthorized();
-        }
+        await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
 
-        const analyzer = await this.analyzerRepository.findOneBy({
-            id: analysisData.analyzer_id
-        });
+        const analyzer = await this.analyzersRepository.getAnalyzerById(analysisData.analyzer_id)
 
-        if (!analyzer) {
-            throw new AnalyzerDoesNotExist();
-        }
-
-        const project = await this.projectRepository.findOne({
-            relations: {
-                integration: true
-            },
-            where: { id: projectId }
-        });
-        if (!project) {
-            throw new EntityNotFound();
-        }
+        const project = await this.projectsRepository.getProjectById(projectId)
 
         const creator = await this.usersRepository.getUserById(user.userId)
-        if (!creator) {
-            throw new EntityNotFound();
-        }
 
         const organization = await this.organizationsRepository.getOrganizationById(orgId)
-        if (!organization) {
-            throw new EntityNotFound();
-        }
 
         const config_structure: { [key: string]: any } = {};
         const config: { [key: string]: any } = {};
@@ -220,16 +195,10 @@ export class AnalysesService {
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check if the project belongs to the org
-        let belongs = await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
-        if (!belongs) {
-            throw new NotAuthorized();
-        }
+        await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
 
         // (3) Check if the analyses belongs to the project
-        belongs = await this.analysesMemberService.doesAnalysesBelongToProject(id, projectId);
-        if (!belongs) {
-            throw new NotAuthorized();
-        }
+        await this.analysesMemberService.doesAnalysesBelongToProject(id, projectId);
 
         const analysis = await this.analysisRepository.findOne({
             where: { id: id }
@@ -260,21 +229,15 @@ export class AnalysesService {
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check if the project belongs to the org
-        let belongs = await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
-        if (!belongs) {
-            throw new NotAuthorized();
-        }
+        await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
 
         // (3) Check if the analyses belongs to the project
-        belongs = await this.analysesMemberService.doesAnalysesBelongToProject(id, projectId);
-        if (!belongs) {
-            throw new NotAuthorized();
-        }
+        await this.analysesMemberService.doesAnalysesBelongToProject(id, projectId);
 
         // const patchesOutput: PatchesOutput = await getPatchingResult(db, id);
-        const sbomOutput: SbomOutput = await getSbomResult(id, this.resultRepository);
-        const vulnOutput: VulnsOuptut = await getVulnsResult(id, this.resultRepository);
-        const licensesOutput: LicensesOutput = await getLicensesResult(id, this.resultRepository);
+        const sbomOutput: SbomOutput = await this.sbomRepository.getSbomResult(id);
+        const vulnOutput: VulnsOuptut = await this.findingsRepository.getVulnsResult(id);
+        const licensesOutput: LicensesOutput = await this.licensesRepository.getLicensesResult(id);
 
         return [
             {
@@ -336,13 +299,10 @@ export class AnalysesService {
         );
 
         // (2) Check if the project belongs to the org
-        const belongs = await this.projectMemberService.doesProjectBelongToOrg(
+        await this.projectMemberService.doesProjectBelongToOrg(
             projectId,
             organizationId
         );
-        if (!belongs) {
-            throw new NotAuthorized();
-        }
 
         const paginationConfig: PaginationConfig = {
             maxEntriesPerPage: 100,
@@ -406,16 +366,10 @@ export class AnalysesService {
         // obviously owners, admins and moderators can also delete it
 
         // (2) Check if the project belongs to the org
-        let belongs = await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
-        if (!belongs) {
-            throw new NotAuthorized();
-        }
+        await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
 
         // (3) Check if the analyses belongs to the project
-        belongs = await this.analysesMemberService.doesAnalysesBelongToProject(id, projectId);
-        if (!belongs) {
-            throw new NotAuthorized();
-        }
+        await this.analysesMemberService.doesAnalysesBelongToProject(id, projectId);
 
         const analysis = await this.analysisRepository.findOne({
             where: { id },
@@ -428,7 +382,7 @@ export class AnalysesService {
         }
 
         for (const result of analysis.results) {
-            await this.resultRepository.delete(result.id);
+            await this.resultsRepository.delete(result.id);
         }
         await this.analysisRepository.delete(analysis.id);
     }

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { PatchingService } from './patching.service';
 import { PatchingController } from './patching.controller';
 import { AnalysisResultsService } from '../results.service';
@@ -14,7 +14,7 @@ import { EmailModule } from 'src/base_modules/email/email.module';
     imports: [
         UsersModule,
         OrganizationsModule,
-        AnalysesModule,
+        forwardRef(() => AnalysesModule),
         ProjectsModule,
         EmailModule,
         TypeOrmModule.forFeature(

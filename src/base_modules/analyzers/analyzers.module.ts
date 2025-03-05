@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Analyzer } from 'src/entity/codeclarity/Analyzer';
 import { UsersModule } from '../users/users.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
+import { AnalyzersRepository } from './analyzers.repository';
 
 @Module({
     imports: [
@@ -15,8 +16,8 @@ import { OrganizationsModule } from '../organizations/organizations.module';
             'codeclarity'
         )
     ],
-    exports: [AnalyzersService],
-    providers: [AnalyzersService],
+    exports: [AnalyzersService, AnalyzersRepository],
+    providers: [AnalyzersService, AnalyzersRepository],
     controllers: [AnalyzersController]
 })
 export class AnalyzersModule {}

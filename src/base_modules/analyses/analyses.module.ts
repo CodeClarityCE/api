@@ -1,22 +1,30 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AnalysesService } from './analyses.service';
 import { AnalysesMemberService } from './analysesMembership.service';
 import { AnalysesController } from './analyses.controller';
-import { ProjectMemberService } from '../projects/projectMember.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Project } from 'src/entity/codeclarity/Project';
-import { Analyzer } from 'src/entity/codeclarity/Analyzer';
 import { Analysis } from 'src/entity/codeclarity/Analysis';
-import { Result } from 'src/entity/codeclarity/Result';
 import { UsersModule } from '../users/users.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
+import { ProjectsModule } from '../projects/projects.module';
+import { AnalyzersModule } from '../analyzers/analyzers.module';
+import { ResultsModule } from 'src/codeclarity_modules/results/results.module';
+import { SbomModule } from 'src/codeclarity_modules/results/sbom/sbom.module';
+import { LicenseModule } from 'src/codeclarity_modules/results/licenses/licenses.module';
+import { VulnerabilitiesModule } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.module';
 
 @Module({
     imports: [
         UsersModule,
         OrganizationsModule,
+        ProjectsModule,
+        AnalyzersModule,
+        forwardRef(() => ResultsModule),
+        forwardRef(() => SbomModule),
+        forwardRef(() => LicenseModule),
+        forwardRef(() => VulnerabilitiesModule),
         TypeOrmModule.forFeature(
-            [Project, Analyzer, Analysis, Result],
+            [Analysis],
             'codeclarity'
         )
     ],
@@ -26,8 +34,7 @@ import { OrganizationsModule } from '../organizations/organizations.module';
     ],
     providers: [
         AnalysesService,
-        AnalysesMemberService,
-        ProjectMemberService
+        AnalysesMemberService
     ],
     controllers: [AnalysesController]
 })

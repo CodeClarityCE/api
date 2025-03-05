@@ -18,6 +18,7 @@ import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToke
 import { File } from 'src/entity/codeclarity/File';
 import { UsersModule } from '../users/users.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
+import { ProjectsRepository } from './projects.repository';
 
 @Module({
     imports: [
@@ -35,17 +36,18 @@ import { OrganizationsModule } from '../organizations/organizations.module';
             'codeclarity'
         )
     ],
-    exports: [ProjectService, ProjectMemberService],
+    exports: [ProjectService, ProjectMemberService, ProjectsRepository],
     providers: [
         ProjectMemberService,
         ProjectService,
+        ProjectsRepository,
         GithubRepositoriesService,
         GitlabRepositoriesService,
         GithubIntegrationService,
         GitlabIntegrationService,
         GithubIntegrationTokenService,
         GitlabIntegrationTokenService,
-        IntegrationsService
+        IntegrationsService,
     ],
     controllers: [ProjectController]
 })

@@ -216,13 +216,10 @@ export class ProjectService {
         );
 
         // (2) Check if project belongs to org
-        const isProjectOfOrg = await this.projectMemberService.doesProjectBelongToOrg(
+        await this.projectMemberService.doesProjectBelongToOrg(
             id,
             organizationId
         );
-        if (!isProjectOfOrg) {
-            throw new NotAuthorized();
-        }
 
         const project = await this.projectRepository.findOneOrFail({
             where: {

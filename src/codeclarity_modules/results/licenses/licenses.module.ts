@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LicensesService } from './licenses.service';
 import { LicensesController } from './licenses.controller';
@@ -10,12 +10,13 @@ import { License } from 'src/entity/knowledge/License';
 import { OrganizationsModule } from 'src/base_modules/organizations/organizations.module';
 import { ProjectsModule } from 'src/base_modules/projects/projects.module';
 import { AnalysesModule } from 'src/base_modules/analyses/analyses.module';
+import { LicensesRepository } from './licenses.repository';
 
 @Module({
     imports: [
         OrganizationsModule,
         ProjectsModule,
-        AnalysesModule,
+        forwardRef(() => AnalysesModule),
         TypeOrmModule.forFeature(
             [Result],
             'codeclarity'
@@ -26,7 +27,9 @@ import { AnalysesModule } from 'src/base_modules/analyses/analyses.module';
         LicensesService,
         AnalysisResultsService,
         LicenseRepository,
+        LicensesRepository,
     ],
+    exports: [LicensesRepository],
     controllers: [LicensesController]
 })
 export class LicenseModule {}

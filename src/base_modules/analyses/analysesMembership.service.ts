@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Analysis } from 'src/entity/codeclarity/Analysis';
+import { NotAuthorized } from 'src/types/errors/types';
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -16,7 +17,7 @@ export class AnalysesMemberService {
      * @param projectId The id of the project
      * @returns whether or not the project belongs to the org
      */
-    async doesAnalysesBelongToProject(analysisId: string, projectId: string): Promise<boolean> {
+    async doesAnalysesBelongToProject(analysisId: string, projectId: string) {
         const belongs = await this.analysisRepository.findOne({
             relations: ['project'],
             where: {
@@ -26,10 +27,8 @@ export class AnalysesMemberService {
                 }
             }
         });
-        if (belongs) {
-            return true;
+        if (!belongs) {
+            throw new NotAuthorized();
         }
-
-        return false;
     }
 }
