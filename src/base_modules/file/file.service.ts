@@ -6,12 +6,11 @@ import { File as FileEntity } from 'src/base_modules/file/file.entity';
 import { UploadData } from './file.controller';
 import { join } from 'path';
 import { escapeString } from 'src/utils/cleaner';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { MemberRole } from 'src/base_modules/organizations/organization.memberships.entity';
 import { UsersRepository } from '../users/users.repository';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { ProjectsRepository } from '../projects/projects.repository';
+import { FileRepository } from './file.repository';
 
 @Injectable()
 export class FileService {
@@ -19,10 +18,18 @@ export class FileService {
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly usersRepository: UsersRepository,
         private readonly projectsRepository: ProjectsRepository,
-        @InjectRepository(FileEntity, 'codeclarity')
-        private fileRepository: Repository<FileEntity>
+        private readonly fileRepository: FileRepository
     ) {}
 
+    /**
+     * Uploads a file to the server, checking user permissions and handling file chunks.
+     *
+     * @param user - The authenticated user uploading the file.
+     * @param file - The file being uploaded.
+     * @param project_id - The ID of the project to which the file belongs.
+     * @param organization_id - The ID of the organization to which the project belongs.
+     * @param queryParams - Additional data about the upload, such as file name, chunk information, etc.
+     */
     async uploadFile(
         user: AuthenticatedUser,
         file: File,
@@ -30,38 +37,44 @@ export class FileService {
         organization_id: string,
         queryParams: UploadData
     ): Promise<void> {
+        // Check if the user has the required role in the organization
         await this.organizationsRepository.hasRequiredRole(
             organization_id,
             user.userId,
             MemberRole.USER
         );
-        // retrieve files from project
-        const project = await this.projectsRepository.getProjectByIdAndOrganization(project_id, organization_id)
-    
+
+        // Retrieve the project by ID and organization ID
+        const project = await this.projectsRepository.getProjectByIdAndOrganization(project_id, organization_id);
+
+        // Escape the project ID to prevent any potential issues with file paths
         const escapeProjectId = escapeString(project_id);
 
         // Retrieve the user who added the file
-        const added_by = await this.usersRepository.getUserById(user.userId)
-        if (!added_by) {
-            throw new Error('User not found');
-        }
+        const added_by = await this.usersRepository.getUserById(user.userId);
 
-        // Write the file to the file system
+        // Define the folder path where the file will be saved
         const folderPath = join('/private', project.added_by.id, escapeProjectId);
+
+        // Create the folder path if it doesn't exist
         if (!fs.existsSync(folderPath)) {
             fs.mkdirSync(folderPath, { recursive: true });
         }
 
+        // Escape the file name to prevent any potential issues with file paths
         const escapedFileName = escapeString(queryParams.file_name);
         const baseName = escapedFileName.split(".", 1)[0];
         // Pad the id with zeros until it is 5 characters long
         const paddedId = queryParams.id.toString().padStart(5, '0');
         const fileNameWithSuffix = `${baseName}.part${paddedId}`;
 
+        // If this is not the last chunk of the file
         if (queryParams.last == "false") {
-            const filePath = join(folderPath, fileNameWithSuffix); // Replace with the desired file path
-            const fileStream = fs.createWriteStream(filePath, {flags: "a+"});
-    
+            const filePath = join(folderPath, fileNameWithSuffix); // Define the file path
+
+            // Create a write stream for appending to the file
+            const fileStream = fs.createWriteStream(filePath, { flags: "a+" });
+
             // Handle errors during writing or opening the file
             fileStream.on('error', (err) => {
                 console.error('File stream error:', err);
@@ -78,27 +91,35 @@ export class FileService {
                     }
                 });
             }
+
+            // Write the file buffer to the file stream
             fileStream.write(file.buffer);
+
             await new Promise((resolve, reject) => {
                 fileStream.end();  // This automatically calls resolve on finish
-        
+
                 fileStream.on('finish', resolve);
                 fileStream.on('error', reject);
             });
         } else {
-            const filePath = join(folderPath, fileNameWithSuffix); // Replace with the desired file path
-            const fileStream = fs.createWriteStream(filePath, {flags: "a+"});
-    
+            const filePath = join(folderPath, fileNameWithSuffix); // Define the file path
+
+            // Create a write stream for appending to the file
+            const fileStream = fs.createWriteStream(filePath, { flags: "a+" });
+
+            // Write the file buffer to the file stream
             fileStream.write(file.buffer);
+
             await new Promise((resolve, reject) => {
                 fileStream.end();  // This automatically calls resolve on finish
-        
+
                 fileStream.on('finish', resolve);
                 fileStream.on('error', reject);
             });
 
             // Get all files in folderPath and sort them alphabetically by name
             const files = fs.readdirSync(folderPath).sort();
+
             // Remove any files that don't match the expected pattern (e.g., .part01)
             const validFiles = [];
             for (const file of files) {
@@ -119,11 +140,13 @@ export class FileService {
                 }
             }
 
-
             // Concatenate their content to finalFileStream
             for (let i = 0; i < validFiles.length; i++) {
-                const finalFilePath = join(folderPath, escapedFileName); // Replace with the desired file path
-                const finalFileStream = fs.createWriteStream(finalFilePath, {flags: "a+"});
+                const finalFilePath = join(folderPath, escapedFileName); // Define the final file path
+
+                // Create a write stream for appending to the final file
+                const finalFileStream = fs.createWriteStream(finalFilePath, { flags: "a+" });
+
                 // Handle errors during writing or opening the file
                 finalFileStream.on('error', (err) => {
                     console.error('File stream error:', err);
@@ -151,66 +174,78 @@ export class FileService {
                     finalFileStream.on('error', reject);
                 });
             }
-            
         }
 
+        // If this is not a chunked upload or if it's the last chunk
         if (queryParams.chunk == "false" || queryParams.last == "true") {
             // Save the file to the database
             const file_entity = new FileEntity();
             file_entity.added_by = added_by;
-            file_entity.added_on = new Date();  
+            file_entity.added_on = new Date();
             file_entity.project = project;
             file_entity.type = queryParams.type;
             file_entity.name = escapedFileName;
 
-            this.fileRepository.save(file_entity);
+            this.fileRepository.saveFile(file_entity);
         }
     }
 
+    /**
+     * Deletes a file from the server, checking user permissions.
+     *
+     * @param file_id - The ID of the file to be deleted.
+     * @param organization_id - The ID of the organization to which the file belongs.
+     * @param project_id - The ID of the project to which the file belongs.
+     * @param user - The authenticated user deleting the file.
+     */
     async delete(
         file_id: string,
         organization_id: string,
         project_id: string,
         user: AuthenticatedUser
     ): Promise<void> {
+        // Check if the user has the required role in the organization
         await this.organizationsRepository.hasRequiredRole(
             organization_id,
             user.userId,
             MemberRole.USER
         );
-        // retrieve files from project
-        const project = await this.projectsRepository.getProjectByIdAndOrganization(project_id, organization_id)
 
+        // Retrieve the project by ID and organization ID
+        const project = await this.projectsRepository.getProjectByIdAndOrganization(project_id, organization_id);
+
+        // Escape the project ID to prevent any potential issues with file paths
         const escapeProjectId = escapeString(project_id);
+
         // Retrieve the user who added the file
-        const added_by = await this.usersRepository.getUserById(user.userId)
-        if (!added_by) {
-            throw new Error('User not found');
-        }
+        const added_by = await this.usersRepository.getUserById(user.userId);
 
-        // Retrieve the file
-        const file = await this.fileRepository.findOne({
-            where: {
-                id: file_id,
-                added_by: added_by
-            }
-        });
-        if (!file) {
-            throw new Error('File not found');
-        }
+        // Retrieve the file by ID and the user who added it
+        const file = await this.fileRepository.getById(file_id, added_by);
 
-        // Delete the file from the file system
+        // Define the file path
         const filePath = join('/private', project.added_by.id, escapeProjectId, file.name);
+
+        // Delete the file from the file system if it exists
         if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
         }
 
         // Delete the file from the database
-        await this.fileRepository.delete(file.id);
+        await this.fileRepository.deleteFiles(file.id);
     }
 
+    /**
+     * Assembles chunks of a file into a single file.
+     *
+     * @param filename - The name of the final file to be created.
+     * @param totalChunks - The total number of chunks that make up the file.
+     */
     async assembleChunks(filename: string, totalChunks: number) {
+        // Create a write stream for the final file
         const writer = fs.createWriteStream(`./uploads/${filename}`);
+
+        // Iterate over each chunk and append its content to the final file
         // for (let i = 1; i <= totalChunks; i++) {
         //   const chunkPath = `${CHUNKS_DIR}/${filename}.${i}`;
         //   await pipeline(pump(fs.createReadStream(chunkPath)), pump(writer));
@@ -220,5 +255,5 @@ export class FileService {
         //     }
         //   });
         // }
-      }
+    }
 }
