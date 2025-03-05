@@ -5,12 +5,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Policy } from 'src/entity/codeclarity/Policy';
 import { User } from 'src/base_modules/users/users.entity';
 import { OrganizationsModule } from 'src/base_modules/organizations/organizations.module';
+import { UsersModule } from 'src/base_modules/users/users.module';
 
 @Module({
     imports: [
         OrganizationsModule,
+        UsersModule,
         TypeOrmModule.forFeature(
-            [Policy, User],
+            [Policy],
             'codeclarity'
         )
     ],

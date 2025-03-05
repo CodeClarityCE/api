@@ -14,15 +14,15 @@ import { User } from 'src/base_modules/users/users.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import { UsersRepository } from 'src/base_modules/users/users.repository';
 
 @Injectable()
 export class LicensePolicyService {
     constructor(
         private readonly organizationsRepository: OrganizationsRepository,
+        private readonly usersRepository: UsersRepository,
         @InjectRepository(Policy, 'codeclarity')
         private policyRepository: Repository<Policy>,
-        @InjectRepository(User, 'codeclarity')
-        private userRepository: Repository<User>,
     ) {}
 
     /**
@@ -45,11 +45,7 @@ export class LicensePolicyService {
             throw new Error('EntityNotFound');
         }
 
-        const creator = await this.userRepository.findOne({
-            where: {
-                id: user.userId
-            }
-        });
+        const creator = await this.usersRepository.getUserById(user.userId)
         if (!creator) {
             throw new Error('EntityNotFound');
         }
