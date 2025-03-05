@@ -12,7 +12,6 @@ import { ProjectImportBody } from 'src/types/entities/frontend/Project';
 import { IntegrationProvider } from 'src/types/entities/frontend/Integration';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
 import { ActionType } from 'src/types/entities/frontend/OrgAuditLog';
-import { Integration } from 'src/entity/codeclarity/Integration';
 import { RepositoryCache } from 'src/entity/codeclarity/RepositoryCache';
 import { IntegrationType, Project } from 'src/entity/codeclarity/Project';
 import { Analysis } from 'src/entity/codeclarity/Analysis';
@@ -25,6 +24,7 @@ import { mkdir, rm } from 'fs/promises';
 import { UsersRepository } from '../users/users.repository';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { FileRepository } from '../file/file.repository';
+import { IntegrationsRepository } from '../integrations/integrations.repository';
 
 export enum AllowedOrderByGetProjects {
     IMPORTED_ON = 'imported_on',
@@ -41,14 +41,13 @@ export class ProjectService {
         private readonly usersRepository: UsersRepository,
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly fileRepository: FileRepository,
+        private readonly integrationsRepository: IntegrationsRepository,
         @InjectRepository(Project, 'codeclarity')
         private projectRepository: Repository<Project>,
         @InjectRepository(Analysis, 'codeclarity')
         private analysisRepository: Repository<Analysis>,
         @InjectRepository(Result, 'codeclarity')
         private resultRepository: Repository<Result>,
-        @InjectRepository(Integration, 'codeclarity')
-        private integrationRepository: Repository<Integration>,
     ) {}
 
     /**
@@ -74,30 +73,7 @@ export class ProjectService {
         const project = new Project();
 
         if (projectData.integration_id) {
-            const integration = await this.integrationRepository.findOne({
-                relations: {
-                    organizations: true,
-                    users: true
-                },
-                where: {
-                    id: projectData.integration_id,
-                    organizations: {
-                        id: orgId
-                    },
-                    users: {
-                        id: user.userId
-                    }
-                }
-            });
-
-            if (!integration) {
-                throw new EntityNotFound();
-            }
-
-            // (2) Check that the integration belongs to the org
-            if (integration.organizations.find((org) => org.id == orgId) == undefined) {
-                throw new NotAuthorized();
-            }
+            const integration = await this.integrationsRepository.getIntegrationById(projectData.integration_id, orgId, user.userId)
 
             let repo: RepositoryCache;
 

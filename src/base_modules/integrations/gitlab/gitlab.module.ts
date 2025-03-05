@@ -16,6 +16,7 @@ import { OrganizationsModule } from 'src/base_modules/organizations/organization
             'codeclarity'
         )
     ],
+    exports:[GitlabRepositoriesService],
     providers: [
         GitlabIntegrationService,
         GitlabRepositoriesService,

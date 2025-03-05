@@ -19,6 +19,7 @@ import { OrganizationsModule } from 'src/base_modules/organizations/organization
             'codeclarity'
         )
     ],
+    exports:[GithubRepositoriesService],
     providers: [
         GithubIntegrationService,
         GithubRepositoriesService,

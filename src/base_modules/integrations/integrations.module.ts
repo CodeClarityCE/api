@@ -6,6 +6,7 @@ import { IntegrationsService } from './integrations.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { Integration } from 'src/entity/codeclarity/Integration';
+import { IntegrationsRepository } from './integrations.repository';
 
 @Module({
     imports: [
@@ -17,7 +18,8 @@ import { Integration } from 'src/entity/codeclarity/Integration';
         GithubModule,
         OrganizationsModule
     ],
-    providers: [IntegrationsService],
+    exports: [IntegrationsRepository, IntegrationsService],
+    providers: [IntegrationsService, IntegrationsRepository],
     controllers: [IntegrationsController]
 })
 export class IntegrationsModule {}
