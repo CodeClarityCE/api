@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/types/auth/types';
-import { IntegrationsService } from '../integrations.service';
 import { GithubIntegrationTokenService } from './githubToken.service';
 import {
     DuplicateIntegration,
@@ -31,7 +30,6 @@ import { OrganizationsRepository } from 'src/base_modules/organizations/organiza
 @Injectable()
 export class GithubIntegrationService {
     constructor(
-        private readonly integrationsService: IntegrationsService,
         private readonly githubIntegrationTokenService: GithubIntegrationTokenService,
         private readonly usersRepository: UsersRepository,
         private readonly organizationsRepository: OrganizationsRepository,

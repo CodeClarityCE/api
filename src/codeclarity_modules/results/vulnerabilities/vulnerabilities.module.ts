@@ -8,7 +8,6 @@ import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
 import { CWE } from 'src/codeclarity_modules/knowledge/cwe/cwe.entity';
 import { FindingsController } from './vulnerabilities.controller';
 import { FindingService } from './vulnerability.service';
-import { Package, Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
 import { OrganizationsModule } from 'src/base_modules/organizations/organizations.module';
 import { ProjectsModule } from 'src/base_modules/projects/projects.module';
 import { AnalysesModule } from 'src/base_modules/analyses/analyses.module';

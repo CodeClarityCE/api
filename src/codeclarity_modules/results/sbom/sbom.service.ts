@@ -3,7 +3,6 @@ import { PaginatedResponse } from 'src/types/apiResponses';
 import { AnalysisResultsService } from '../results.service';
 import { AuthenticatedUser } from 'src/types/auth/types';
 import {
-    Dependency,
     DependencyDetails,
     Output as SBOMOutput,
     SbomDependency,

@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AnalysisCreateBody } from 'src/types/entities/frontend/Analysis';
 import { AuthenticatedUser } from 'src/types/auth/types';
 import {

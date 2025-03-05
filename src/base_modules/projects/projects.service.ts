@@ -15,7 +15,6 @@ import { ActionType } from 'src/types/entities/frontend/OrgAuditLog';
 import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
 import { IntegrationType, Project } from 'src/base_modules/projects/project.entity';
 import { Analysis } from 'src/base_modules/analyses/analysis.entity';
-import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { InjectRepository } from '@nestjs/typeorm';

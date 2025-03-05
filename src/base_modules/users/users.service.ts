@@ -289,93 +289,6 @@ export class UsersService {
      */
     async requestPasswordReset(email: string): Promise<void> {
         throw new Error('Method not implemented.');
-        // let transaction: RepositoryTransaction | undefined;
-        // try {
-        //     const userRepository = CodeclarityDB.getRepository(User);
-        //     const user = await userRepository.findOneBy({
-        //         email: email
-        //     });
-
-        //     if (!user) {
-        //         throw new EntityNotFound();
-        //     }
-
-        //     if (user.social) {
-        //         throw new CannotPerformActionOnSocialAccount();
-        //     }
-
-        //     transaction = await this.emailActionsRepository.withTransaction();
-        //     await transaction.start();
-        //     let action: EmailAction | undefined;
-        //     try {
-        //         action = await this.emailActionsRepository.findOne<PasswordResetAction>(
-        //             {
-        //                 junction: 'AND',
-        //                 criteria: [
-        //                     {
-        //                         field: 'action_type',
-        //                         value: EmailActionType.USERS_PASSWORD_RESET,
-        //                         operator: 'eq'
-        //                     },
-        //                     {
-        //                         field: 'user_id',
-        //                         value: user.id,
-        //                         operator: 'eq'
-        //                     }
-        //                 ]
-        //             },
-        //             { t: transaction }
-        //         );
-        //     } catch (err) {
-        //         action = undefined;
-        //     }
-
-        //     const resetToken = await genRandomString(64);
-        //     const userId = user.id;
-        //     const resetTokenhash = await hash(resetToken, {});
-        //     const userIdHash = await hash(userId, {});
-
-        //     if (!action) {
-        //         // Create a new one
-        //         const userPasswordReset: PasswordResetCreate = {
-        //             token_digest: resetTokenhash,
-        //             action_type: EmailActionType.USERS_PASSWORD_RESET,
-        //             user_id_digest: userIdHash,
-        //             user_id: userId,
-        //             ttl: new Date(new Date().getTime() + 5 * 60000) // Expires after 5 mins
-        //         };
-
-        //         await this.emailActionsRepository.create(userPasswordReset, {
-        //             t: transaction
-        //         });
-        //     } else {
-        //         // Refresh the old one
-        //         await this.emailActionsRepository.refreshAction(
-        //             action.id,
-        //             resetTokenhash,
-        //             new Date(new Date().getTime() + 30 * 60000),
-        //             {
-        //                 t: transaction
-        //             }
-        //         );
-        //     }
-
-        //     try {
-        //         // attempt send the email
-        //         await this.emailService.sendPasswordReset({
-        //             email: user.email,
-        //             token: resetToken,
-        //             userIdDigest: userIdHash
-        //         });
-        //     } catch (err) {
-        //         throw new FailedToSendPasswordResetEmail(err);
-        //     }
-
-        //     await transaction.commit();
-        // } catch (err) {
-        //     if (transaction) await transaction.abort();
-        //     throw err;
-        // }
     }
 
     /**
@@ -395,63 +308,6 @@ export class UsersService {
         newPasswordConfirmation: string
     ): Promise<void> {
         throw new Error('Method not implemented.');
-        // let transaction: RepositoryTransaction | undefined;
-        // try {
-        //     const resetTokenhash = await hash(token, {});
-
-        //     if (newPassword != newPasswordConfirmation) {
-        //         throw new PasswordsDoNotMatch();
-        //     }
-
-        //     transaction = await this.emailActionsRepository.withTransaction();
-        //     await this.emailActionsRepository.withTransactionDelete({ t: transaction });
-        //     await this.usersRepository.withTransaction({ t: transaction });
-        //     await transaction.start();
-
-        //     let resetAction: PasswordResetAction;
-        //     try {
-        //         resetAction = await this.emailActionsRepository.findOnePasswordResetAction(
-        //             {
-        //                 junction: 'AND',
-        //                 criteria: [
-        //                     {
-        //                         field: 'token_digest',
-        //                         value: resetTokenhash,
-        //                         operator: 'eq'
-        //                     },
-        //                     { field: 'user_id_digest', value: userIdHash, operator: 'eq' }
-        //                 ]
-        //             },
-        //             { t: transaction }
-        //         );
-        //     } catch (err) {
-        //         if (err instanceof EntityNotFound) {
-        //             throw new PasswordResetTokenInvalidOrExpired();
-        //         }
-        //         throw err;
-        //     }
-
-        //     const passwordHash = await this.authService.hashPassword(newPassword);
-
-        //     try {
-        //         await this.usersRepository.update(
-        //             resetAction.user_id,
-        //             { password: passwordHash },
-        //             { t: transaction }
-        //         );
-        //     } catch (err) {
-        //         if (!(err instanceof EntityNotFound)) {
-        //             throw err;
-        //         }
-        //     }
-
-        //     await this.emailActionsRepository.delete(resetAction.id, { t: transaction });
-
-        //     await transaction.commit();
-        // } catch (err) {
-        //     if (transaction) await transaction.abort();
-        //     throw err;
-        // }
     }
 
     /**
@@ -477,114 +333,6 @@ export class UsersService {
         integrationBaseUrl?: string
     ): Promise<string> {
         throw new Error('Method not implemented.');
-        // let transaction: RepositoryTransaction | undefined;
-        // try {
-        //     if (socialType != SocialType.GITHUB && socialType != SocialType.GITLAB) {
-        //         throw new SocialConnectionTypeNotSupported();
-        //     }
-
-        //     // Create a 'personal organization', which is an org that belongs to the user upon sign-up
-        //     // This org cannot be deleted, nor can other users be invited to join this org
-        //     const createOrg = (userKey: string): OrganizationCreate => {
-        //         return {
-        //             name: 'Personal Org',
-        //             description: `Your Personal Organization`,
-        //             created_on: new Date(),
-        //             created_by: userKey,
-        //             personal: true,
-        //             color_scheme: '1'
-        //         };
-        //     };
-
-        //     const user: UserCreateSocial = {
-        //         email: email,
-        //         social: true,
-        //         setup_done: false,
-        //         activated: false,
-        //         social_register_type: socialType,
-        //         social_id: socialId,
-        //         avatar_url: avatarUrl,
-        //         created_on: new Date()
-        //     };
-
-        //     transaction = await this.usersRepository.withTransaction();
-        //     await this.orgsRepository.withTransaction({ t: transaction });
-        //     if (socialType == SocialType.GITHUB) {
-        //         await this.githubRepo.withTransaction({ t: transaction });
-        //     } else if (socialType == SocialType.GITLAB) {
-        //         await this.gitlabRepo.withTransaction({ t: transaction });
-        //     }
-        //     await this.orgsRepository.withTransaction();
-        //     await transaction.start();
-
-        //     const userId = await this.usersRepository.createSocial(user, { t: transaction });
-        //     const orgId = await this.orgsRepository.create(createOrg(userId), userId, {
-        //         t: transaction
-        //     });
-
-        //     let integrationId;
-        //     if (socialType == SocialType.GITHUB) {
-        //         const integ: GithubIntegrationCreate = {
-        //             integration_type: IntegrationType.VCS,
-        //             integration_provider: IntegrationProvider.GITHUB,
-        //             access_token: accessToken, // TODO: encrypt
-        //             refresh_token: refreshToken, // TODO: encrypt
-        //             token_type: GithubTokenType.OAUTH_TOKEN,
-        //             invalid: false,
-        //             added_on: new Date(),
-        //             added_by: userId,
-        //             service_domain: 'github.com',
-        //             organization_id: orgId,
-        //             meta_data: {}
-        //         };
-        //         integrationId = await this.githubRepo.create(integ, orgId, { t: transaction });
-        //     } else if (socialType == SocialType.GITLAB) {
-        //         if (!integrationBaseUrl) {
-        //             await transaction.abort();
-        //             throw new Error(
-        //                 'Integration base url must be defined when creating gitlab social account.'
-        //             );
-        //         }
-
-        //         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        //         const [_, expiryDate] =
-        //             await this.gitlabIntegrationTokenService.getOAuthTokenExpiryRemote(accessToken);
-        //         const integ: GitLabIntegrationCreate = {
-        //             integration_type: IntegrationType.VCS,
-        //             integration_provider: IntegrationProvider.GITLAB,
-        //             access_token: accessToken, // TODO: encrypt
-        //             refresh_token: refreshToken, // TODO: encrypt
-        //             service_base_url: integrationBaseUrl,
-        //             token_type: GitlabTokenType.OAUTH_TOKEN,
-        //             expiry_date: expiryDate,
-        //             invalid: false,
-        //             added_on: new Date(),
-        //             added_by: userId,
-        //             service_domain: new URL(integrationBaseUrl).hostname,
-        //             organization_id: orgId,
-        //             meta_data: {}
-        //         };
-        //         integrationId = await this.gitlabRepo.create(integ, orgId, { t: transaction });
-        //     } else {
-        //         await transaction.abort();
-        //         throw new SocialConnectionTypeNotSupported();
-        //     }
-
-        //     await this.usersRepository.update(
-        //         userId,
-        //         {
-        //             default_org: orgId,
-        //             personal_org: orgId,
-        //             oauth_integration: integrationId
-        //         },
-        //         { t: transaction }
-        //     );
-        //     await transaction.commit();
-        //     return userId;
-        // } catch (err) {
-        //     if (transaction) await transaction.abort();
-        //     throw err;
-        // }
     }
 
     /**
@@ -602,33 +350,6 @@ export class UsersService {
         authenticatedUser: AuthenticatedUser
     ): Promise<string> {
         throw new Error('Method not implemented.');
-        // const userRepository = CodeclarityDB.getRepository(User);
-        // const user = await userRepository.findOneBy({
-        //     id: authenticatedUser.userId
-        // });
-
-        // if (!user) {
-        //     throw new EntityNotFound();
-        // }
-
-        // if (!user.social) {
-        //     throw new CannotPerformActionOnNormalAccount();
-        // }
-
-        // if (user.setup_done) {
-        //     throw new SetupAlreadyDone();
-        // }
-
-        // const userUpdate: UserCompleteSocialCreate = {
-        //     first_name: userCompleteSocial.first_name,
-        //     last_name: userCompleteSocial.last_name,
-        //     handle: userCompleteSocial.handle,
-        //     setup_done: true
-        // };
-
-        // await this.usersRepository.update(user.id, userUpdate);
-
-        // return user.id;
     }
 
     /**
@@ -648,76 +369,7 @@ export class UsersService {
         authenticatedUser: AuthenticatedUser
     ): Promise<void> {
         throw new Error('Method not implemented.');
-        // if (userId == '@self') {
-        //     userId = authenticatedUser.userId;
-        // }
-
-        // if (authenticatedUser.userId != userId) {
-        //     throw new NotAuthorized();
-        // }
-
-        // if (passwordPatchBody.password != passwordPatchBody.password_confirmation) {
-        //     throw new PasswordsDoNotMatch();
-        // }
-
-        // const userRepository = CodeclarityDB.getRepository(User);
-        // const user = await userRepository.findOneBy({
-        //     id: userId
-        // });
-
-        // if (!user) {
-        //     throw new EntityNotFound();
-        // }
-
-        // if (user.social) {
-        //     throw new CannotPerformActionOnSocialAccount();
-        // }
-
-        // const authorized = await this.authService.validateCredentials(
-        //     user.email,
-        //     passwordPatchBody.old_password
-        // );
-        // if (!authorized) {
-        //     throw new NotAuthorized();
-        // }
-
-        // const passwordHash = await this.authService.hashPassword(passwordPatchBody.password);
-
-        // await this.usersRepository.update(userId, { password: passwordHash });
     }
-
-    // /**
-    //  * Update a user's personal information
-    //  * @throws {EntityNotFound} If the user does not exist
-    //  * @throws {NotAuthorized} If the user is not authorized to perform the action on the indicated userId
-    //  *
-    //  * @param userId The id of the user to update
-    //  * @param userPatchBody The personal info update data
-    //  * @param authenticatedUser The authenticated user
-    //  */
-    // async updatePersonalInfo(
-    //     userId: string,
-    //     userPatchBody: UserPatchBody,
-    //     authenticatedUser: AuthenticatedUser
-    // ): Promise<void> {
-    //     if (Object.keys(userPatchBody).length == 0) return;
-
-    //     if (userId == '@self') {
-    //         userId = authenticatedUser.userId;
-    //     }
-
-    //     if (authenticatedUser.userId != userId) {
-    //         throw new NotAuthorized();
-    //     }
-
-    //     const patch: Partial<User> = {};
-
-    //     // Only assign those fields which we allow to be changed
-    //     if (userPatchBody.last_name) patch.last_name = userPatchBody.last_name;
-    //     if (userPatchBody.first_name) patch.first_name = userPatchBody.first_name;
-
-    //     await this.usersRepository.update(userId, patch);
-    // }
 
     /**
      * Deletes a user
@@ -769,7 +421,6 @@ export class UsersService {
      */
     async existsUser(id: string): Promise<boolean> {
         throw new Error('Method not implemented.');
-        // return await this.usersRepository.exists(id);
     }
 
     /**
@@ -779,27 +430,6 @@ export class UsersService {
      */
     async existsSocialUser(socialId: string, socialType: SocialType): Promise<boolean> {
         throw new Error('Method not implemented.');
-        // try {
-        //     await this.usersRepository.findOne({
-        //         junction: 'AND',
-        //         criteria: [
-        //             {
-        //                 field: 'social_id',
-        //                 value: socialId,
-        //                 operator: 'eq'
-        //             },
-        //             {
-        //                 field: 'social_register_type',
-        //                 value: socialType,
-        //                 operator: 'eq'
-        //             }
-        //         ]
-        //     });
-        //     return true;
-        // } catch (err) {
-        //     if (err instanceof EntityNotFound) return false;
-        //     throw err;
-        // }
     }
 
     /**
@@ -808,16 +438,5 @@ export class UsersService {
      */
     async existsUserEmail(email: string): Promise<boolean> {
         throw new Error('Method not implemented.');
-        // try {
-        //     await this.usersRepository.findOne({
-        //         field: 'email',
-        //         value: email,
-        //         operator: 'eq'
-        //     });
-        //     return true;
-        // } catch (err) {
-        //     if (err instanceof EntityNotFound) return false;
-        //     throw err;
-        // }
     }
 }

@@ -16,7 +16,6 @@ import {
     PaginationUserSuppliedConf,
     TypedPaginatedData
 } from 'src/types/paginated/types';
-import { OWASPRepository } from 'src/codeclarity_modules/knowledge/owasp/owasp.repository';
 import moment from 'moment';
 import { SortDirection } from 'src/types/sort/types';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
@@ -29,7 +28,6 @@ import { OrganizationsRepository } from 'src/base_modules/organizations/organiza
 @Injectable()
 export class DashboardService {
     constructor(
-        private readonly owaspRepository: OWASPRepository,
         private readonly organizationsRepository: OrganizationsRepository,
         @InjectRepository(Organization, 'codeclarity')
         private organizationRepository: Repository<Organization>

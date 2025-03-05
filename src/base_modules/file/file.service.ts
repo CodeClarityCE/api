@@ -3,7 +3,6 @@ import { File } from '@nest-lab/fastify-multer';
 import * as fs from 'fs';
 import { AuthenticatedUser } from 'src/types/auth/types';
 import { File as FileEntity } from 'src/base_modules/file/file.entity';
-import { Project } from 'src/base_modules/projects/project.entity';
 import { UploadData } from './file.controller';
 import { join } from 'path';
 import { escapeString } from 'src/utils/cleaner';

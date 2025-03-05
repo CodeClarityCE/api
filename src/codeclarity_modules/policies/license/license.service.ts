@@ -10,7 +10,6 @@ import { SortDirection } from 'src/types/sort/types';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
 import { PolicyType } from 'src/types/entities/frontend/Policy';
 import { Policy, PolicyFrontend } from 'src/codeclarity_modules/policies/policy.entity';
-import { User } from 'src/base_modules/users/users.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';

@@ -5,7 +5,6 @@ import { LicensesController } from './licenses.controller';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { AnalysisResultsService } from '../results.service';
 import { LicenseRepository } from 'src/codeclarity_modules/knowledge/license/license.repository';
-import { Package } from 'src/codeclarity_modules/knowledge/package/package.entity';
 import { License } from 'src/codeclarity_modules/knowledge/license/license.entity';
 import { OrganizationsModule } from 'src/base_modules/organizations/organizations.module';
 import { ProjectsModule } from 'src/base_modules/projects/projects.module';

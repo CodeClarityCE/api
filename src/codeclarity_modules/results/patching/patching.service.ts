@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AnalysisResultsService } from '../results.service';
 import { AuthenticatedUser } from 'src/types/auth/types';
 import { Output as PatchesOutput, Workspace } from 'src/types/entities/services/Patching';
@@ -16,7 +16,6 @@ import { Result } from 'src/codeclarity_modules/results/result.entity';
 
 @Injectable()
 export class PatchingService {
-    private readonly logger = new Logger(PatchingService.name);
 
     constructor(
         private readonly analysisResultsService: AnalysisResultsService,
