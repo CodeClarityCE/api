@@ -3,13 +3,21 @@ import { ConfigService } from '@nestjs/config';
 import { MailerService } from '@nestjs-modules/mailer';
 import { User } from 'src/base_modules/users/users.entity';
 
+/**
+ * Email service for sending emails to users.
+ */
 @Injectable()
 export class EmailService {
-    private webHost;
-    private env;
-    private testEmail;
-    private platformName;
-
+    private webHost: string;
+    private env: string;
+    private testEmail?: string;
+    private platformName: string;
+    /**
+     * Constructs the email service with necessary dependencies and configuration values.
+     *
+     * @param mailerService - Service for sending emails.
+     * @param configService - Service for reading configuration values.
+     */
     constructor(
         private readonly mailerService: MailerService,
         private readonly configService: ConfigService
@@ -19,13 +27,13 @@ export class EmailService {
         this.env = process.env.ENV ?? 'dev';
         this.testEmail = process.env.TEST_EMAIL;
     }
-
     /**
-     * Send a registration confirmation email to a newly signedup user
-     * @param params
-     * @param params.email The recipient of the email
-     * @param params.token The token that is to be used to join the org
-     * @param params.userIdDigest The hash of the userId
+     * Sends a registration confirmation email to a newly signed-up user.
+     *
+     * @param params - Parameters for sending the email.
+     * @param params.email - The recipient's email address.
+     * @param params.token - The token used for confirming the registration.
+     * @param params.userIdDigest - The hashed userId.
      */
     async sendRegistrationConfirmation({
         email,
@@ -37,7 +45,6 @@ export class EmailService {
         userIdDigest: string;
     }) {
         const url = `${this.webHost}/email_action/confirm_registration?token=${token}&userid=${userIdDigest}`;
-
         await this.sendEmail({
             to: email,
             subject: `Welcome to ${this.platformName} - Please confirm your registration`,
@@ -48,20 +55,17 @@ export class EmailService {
                 web_host: this.webHost.split('//')[1]
             }
         })
-            .then(() => {
-                console.log('Mail successfully sent');
-            })
-            .catch((error) => {
-                console.log(error);
-            });
+            .then(() => console.log('Mail successfully sent'))
+            .catch((error) => console.error(error));
     }
 
     /**
-     * Send a password reset email to a newly signedup user
-     * @param params
-     * @param params.email The recipient of the email
-     * @param params.token The token that is to be used to join the org
-     * @param params.userIdDigest The hash of the userId
+     * Sends a password reset email to the user.
+     *
+     * @param params - Parameters for sending the email.
+     * @param params.email - The recipient's email address.
+     * @param params.token - The token used for resetting the password.
+     * @param params.userIdDigest - The hashed userId.
      */
     async sendPasswordReset({
         email,
@@ -73,7 +77,6 @@ export class EmailService {
         userIdDigest: string;
     }) {
         const url = `${this.webHost}/email_action/reset_password?token=${token}&userid=${userIdDigest}`;
-
         await this.sendEmail({
             to: email,
             subject: `${this.platformName} - Password reset`,
@@ -87,14 +90,17 @@ export class EmailService {
     }
 
     /**
-     * Send an invitation to an existing user to join an organization
-     * @param params
-     * @param params.email The recipient of the email
-     * @param params.inviteToken The token that is to be used to join the org
-     * @param params.blockOrgInvitesToken The token that is to be used to block future email invites from this org
-     * @param params.blockAllOrgInvitesToken The token that is to be used to block all future email invites
-     * @param params.userEmailDigest The email hash
-     * @param params.organizationName The organization to which the user was invited
+     * Sends an invitation to an existing user to join an organization.
+     *
+     * @param params - Parameters for sending the email.
+     * @param params.email - The recipient's email address.
+     * @param params.inviteToken - The token used for joining the organization.
+     * @param params.blockOrgInvitesToken - The token used for blocking future invites from this organization.
+     * @param params.blockAllOrgInvitesToken - The token used for blocking all future invites.
+     * @param params.userEmailDigest - The hashed user email.
+     * @param params.organizationName - The name of the organization to which the user was invited.
+     * @param params.inviter - The inviter's details.
+     * @param params.orgId - The ID of the organization.
      */
     async sendOrganizationInvite({
         email,
@@ -116,20 +122,20 @@ export class EmailService {
         orgId: string;
     }) {
         const url = `${this.webHost}/email_action/join_org?token=${inviteToken}&useremail=${userEmailDigest}&orgId=${orgId}`;
-        const orgInvitesBlockurl = `${this.webHost}/email_action/unsubscribe/block_org_invites?token=${blockOrgInvitesToken}&useremail=${userEmailDigest}&orgId=${orgId}`;
-        const allOrgInvitesBlockurl = `${this.webHost}/email_action/unsubscribe/block_all_org_invites?token=${blockAllOrgInvitesToken}&useremail=${userEmailDigest}`;
+        const orgInvitesBlockUrl = `${this.webHost}/email_action/unsubscribe/block_org_invites?token=${blockOrgInvitesToken}&useremail=${userEmailDigest}&orgId=${orgId}`;
+        const allOrgInvitesBlockUrl = `${this.webHost}/email_action/unsubscribe/block_all_org_invites?token=${blockAllOrgInvitesToken}&useremail=${userEmailDigest}`;
 
         await this.sendEmail({
             to: email,
-            subject: `${this.platformName} - Invited to join Org`,
+            subject: `${this.platformName} - Invited to join ${organizationName}`,
             template: './organization_invite',
             templateData: {
-                inviter_last_name: inviter.last_name,
                 inviter_first_name: inviter.first_name,
+                inviter_last_name: inviter.last_name,
                 organization_name: organizationName,
                 organization_invite_url: url,
-                organization_block_invites_url: orgInvitesBlockurl,
-                block_all_invites_url: allOrgInvitesBlockurl,
+                organization_block_invites_url: orgInvitesBlockUrl,
+                block_all_invites_url: allOrgInvitesBlockUrl,
                 platform_name: this.platformName,
                 web_host: this.webHost.split('//')[1]
             }
@@ -137,13 +143,16 @@ export class EmailService {
     }
 
     /**
-     * Send an invitation to an email - that is not yet linked to user on our platform - to join an organization
-     * @param params
-     * @param params.email The recipient of the email
-     * @param params.inviteToken The token that is to be used to join the org
-     * @param params.blockEmailsToken The token that is to be used to block email invites
-     * @param params.userEmailDigest The email hash
-     * @param params.organizationName The organization to which the user was invited
+     * Sends an invitation to a non-user (an email that is not yet linked to a user on our platform) to join an organization.
+     *
+     * @param params - Parameters for sending the email.
+     * @param params.email - The recipient's email address.
+     * @param params.inviteToken - The token used for joining the organization.
+     * @param params.blockEmailsToken - The token used for blocking all future invites to this email.
+     * @param params.userEmailDigest - The hashed user email.
+     * @param params.organizationName - The name of the organization to which the user was invited.
+     * @param params.inviter - The inviter's details.
+     * @param params.orgId - The ID of the organization.
      */
     async sendOrganizationInviteForNonUser({
         email,
@@ -164,14 +173,13 @@ export class EmailService {
     }) {
         const url = `${this.webHost}/email_action/join_org?token=${inviteToken}&useremail=${userEmailDigest}&orgId=${orgId}`;
         const unsubscribeUrl = `${this.webHost}/email_action/unsubscribe/block_all_emails?token=${blockEmailsToken}&useremail=${userEmailDigest}`;
-
         await this.sendEmail({
             to: email,
-            subject: `${this.platformName} - Invited to join Org`,
+            subject: `${this.platformName} - Invited to join ${organizationName}`,
             template: './organization_invite_non_user',
             templateData: {
+                inviter_first_name: inviter.first_name,
                 inviter_last_name: inviter.last_name,
-                inviter_first_name: inviter.last_name,
                 organization_name: organizationName,
                 organization_invite_url: url,
                 block_email_url: unsubscribeUrl,
@@ -182,12 +190,13 @@ export class EmailService {
     }
 
     /**
-     * Send an email
-     * @param params
-     * @param params.to The recipient of the email
-     * @param params.subject The subject of the email
-     * @param params.template The template of the email
-     * @param params.templateData The template data of the email
+     * Sends an email using the mailer service.
+     *
+     * @param params - Parameters for sending the email.
+     * @param params.to - The recipient's email address.
+     * @param params.subject - The subject of the email.
+     * @param params.template - The template used for rendering the email content.
+     * @param params.templateData - The data passed to the template engine.
      */
     private async sendEmail({
         to,
