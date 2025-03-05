@@ -5,17 +5,17 @@ import { AnalysisResultsService } from '../results.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Result } from 'src/entity/codeclarity/Result';
 import { Package } from 'src/entity/knowledge/Package';
-import { ProjectMemberService } from 'src/base_modules/projects/projectMember.service';
-import { AnalysesMemberService } from 'src/base_modules/analyses/analysesMembership.service';
-import { Project } from 'src/entity/codeclarity/Project';
-import { Analysis } from 'src/entity/codeclarity/Analysis';
 import { OrganizationsModule } from 'src/base_modules/organizations/organizations.module';
+import { AnalysesModule } from 'src/base_modules/analyses/analyses.module';
+import { ProjectsModule } from 'src/base_modules/projects/projects.module';
 
 @Module({
     imports: [
         OrganizationsModule,
+        AnalysesModule,
+        ProjectsModule,
         TypeOrmModule.forFeature(
-            [Result, Project, Analysis],
+            [Result],
             'codeclarity'
         ),
         TypeOrmModule.forFeature([Package], 'knowledge')
@@ -23,8 +23,6 @@ import { OrganizationsModule } from 'src/base_modules/organizations/organization
     providers: [
         SBOMService,
         AnalysisResultsService,
-        ProjectMemberService,
-        AnalysesMemberService
     ],
     controllers: [SBOMController]
 })
