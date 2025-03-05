@@ -22,6 +22,19 @@ import {
 
 @Module({
     imports: [TypeOrmModule.forFeature([License, CWE, Package, NVD, OSV, Version], 'knowledge')],
+    exports: [
+        LicenseService,
+        LicenseRepository,
+        CWERepository,
+        NPMPackageRepository,
+        NVDRepository,
+        OSVRepository,
+        OWASPRepository,
+        PackageRepository,
+        VersionsRepository,
+        NVDReportGenerator,
+        OSVReportGenerator
+    ],
     providers: [
         LicenseService,
         LicenseRepository,
