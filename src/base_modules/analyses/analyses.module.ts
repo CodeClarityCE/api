@@ -21,7 +21,8 @@ import { OrganizationsModule } from '../organizations/organizations.module';
         )
     ],
     exports: [
-        AnalysesService
+        AnalysesService,
+        AnalysesMemberService
     ],
     providers: [
         AnalysesService,
