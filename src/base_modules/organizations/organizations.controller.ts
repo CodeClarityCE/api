@@ -51,7 +51,7 @@ import { InviteCreateBody } from 'src/types/entities/frontend/OrgInvitation';
 import { OrganizationAuditLog } from 'src/types/entities/frontend/OrgAuditLog';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { Log } from 'src/base_modules/organizations/log.entity';
-import { Invitation } from 'src/base_modules/invitations/invitation.entity';
+import { Invitation } from 'src/base_modules/organizations/invitation.entity';
 
 @Controller('org')
 export class OrganizationsController {

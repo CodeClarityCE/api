@@ -21,7 +21,7 @@ import { Analysis } from '../analyses/analysis.entity';
 import { Policy } from '../../codeclarity_modules/policies/policy.entity';
 import { File } from '../file/file.entity';
 import { Email } from '../email/email.entity';
-import { Invitation } from '../invitations/invitation.entity';
+import { Invitation } from '../organizations/invitation.entity';
 
 export enum SocialType {
     GITHUB = 'GITHUB',

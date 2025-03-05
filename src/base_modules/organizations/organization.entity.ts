@@ -19,7 +19,7 @@ import { Expose } from 'class-transformer';
 import { OrganizationMemberships } from './organization.memberships.entity';
 import { Analyzer } from '../analyzers/analyzer.entity';
 import { Analysis } from '../analyses/analysis.entity';
-import { Invitation } from '../invitations/invitation.entity';
+import { Invitation } from './invitation.entity';
 
 @Entity()
 export class Organization {

@@ -22,4 +22,4 @@ import { OrganizationsModule } from '../organizations/organizations.module';
     providers: [UsersService, UsersRepository],
     controllers: [UsersController]
 })
-export class UsersModule {}
+export class UsersModule { }

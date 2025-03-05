@@ -31,7 +31,7 @@ import { ResultsModule } from 'src/codeclarity_modules/results/results.module';
                 RepositoryCache
             ],
             'codeclarity'
-        )
+        ),
     ],
     exports: [ProjectService, ProjectMemberService, ProjectsRepository],
     providers: [
@@ -41,4 +41,4 @@ import { ResultsModule } from 'src/codeclarity_modules/results/results.module';
     ],
     controllers: [ProjectController]
 })
-export class ProjectsModule {}
+export class ProjectsModule { }

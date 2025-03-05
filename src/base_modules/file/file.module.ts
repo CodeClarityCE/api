@@ -19,4 +19,4 @@ import { FileRepository } from './file.repository';
     providers: [FileService, FileRepository],
     controllers: [FileController]
 })
-export class FileModule {}
+export class FileModule { }

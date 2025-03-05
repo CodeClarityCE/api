@@ -6,7 +6,7 @@ import { OrganizationMemberships } from 'src/base_modules/organizations/organiza
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { Log } from 'src/base_modules/organizations/log.entity';
-import { Invitation } from 'src/base_modules/invitations/invitation.entity';
+import { Invitation } from 'src/base_modules/organizations/invitation.entity';
 import { UsersModule } from '../users/users.module';
 import { OrganizationsRepository } from './organizations.repository';
 import { EmailModule } from '../email/email.module';
@@ -18,7 +18,7 @@ import { EmailModule } from '../email/email.module';
         TypeOrmModule.forFeature(
             [OrganizationMemberships, Organization, Log, Invitation],
             'codeclarity'
-        )
+        ),
     ],
     exports: [OrganizationsRepository, OrganizationLoggerService],
     providers: [
@@ -28,4 +28,4 @@ import { EmailModule } from '../email/email.module';
     ],
     controllers: [OrganizationsController]
 })
-export class OrganizationsModule {}
+export class OrganizationsModule { }

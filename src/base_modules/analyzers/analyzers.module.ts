@@ -20,4 +20,4 @@ import { AnalyzersRepository } from './analyzers.repository';
     providers: [AnalyzersService, AnalyzersRepository],
     controllers: [AnalyzersController]
 })
-export class AnalyzersModule {}
+export class AnalyzersModule { }

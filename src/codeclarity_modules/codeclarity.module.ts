@@ -7,11 +7,6 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { defaultOptions } from 'src/app.module';
-import { CWE } from 'src/codeclarity_modules/knowledge/cwe/cwe.entity';
-import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
-import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
-import { Package, Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
-import { License } from 'src/codeclarity_modules/knowledge/license/license.entity';
 
 @Module({
     imports: [
@@ -24,12 +19,21 @@ import { License } from 'src/codeclarity_modules/knowledge/license/license.entit
             name: 'knowledge',
             useFactory: () => ({
                 ...defaultOptions,
-                database: 'knowledge',
-                entities: [CWE, NVD, OSV, Package, Version, License]
+                autoLoadEntities: true,
+                database: 'knowledge'
+            })
+        }),
+        TypeOrmModule.forRootAsync({
+            imports: [ConfigModule],
+            name: 'codeclarity',
+            useFactory: () => ({
+                ...defaultOptions,
+                autoLoadEntities: true,
+                database: 'codeclarity'
             })
         }),
     ],
     providers: [],
     controllers: []
 })
-export class CodeClarityModule {}
+export class CodeClarityModule { }

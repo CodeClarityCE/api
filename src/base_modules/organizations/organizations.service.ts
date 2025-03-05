@@ -17,7 +17,7 @@ import { User } from 'src/base_modules/users/users.entity';
 import { Email, EmailType } from 'src/base_modules/email/email.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Invitation } from 'src/base_modules/invitations/invitation.entity';
+import { Invitation } from 'src/base_modules/organizations/invitation.entity';
 import { genRandomString } from 'src/utils/crypto';
 import { hash } from 'src/utils/crypto';
 import { EmailService } from '../email/email.service';

@@ -22,4 +22,4 @@ import { IntegrationsRepository } from './integrations.repository';
     providers: [IntegrationsService, IntegrationsRepository],
     controllers: [IntegrationsController]
 })
-export class IntegrationsModule {}
+export class IntegrationsModule { }

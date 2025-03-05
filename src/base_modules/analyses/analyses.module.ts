@@ -38,4 +38,4 @@ import { VulnerabilitiesModule } from 'src/codeclarity_modules/results/vulnerabi
     ],
     controllers: [AnalysesController]
 })
-export class AnalysesModule {}
+export class AnalysesModule { }
