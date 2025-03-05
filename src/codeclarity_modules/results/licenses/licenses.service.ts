@@ -23,8 +23,6 @@ export class LicensesService {
     constructor(
         private readonly analysisResultsService: AnalysisResultsService,
         private readonly licenseRepository: LicenseRepository,
-        @InjectRepository(Package, 'knowledge')
-        private packageRepository: Repository<Package>,
         @InjectRepository(Result, 'codeclarity')
         private resultRepository: Repository<Result>
     ) {}

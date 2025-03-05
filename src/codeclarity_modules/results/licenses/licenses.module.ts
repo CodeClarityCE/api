@@ -20,7 +20,7 @@ import { AnalysesModule } from 'src/base_modules/analyses/analyses.module';
             [Result],
             'codeclarity'
         ),
-        TypeOrmModule.forFeature([Package, License], 'knowledge')
+        TypeOrmModule.forFeature([License], 'knowledge')
     ],
     providers: [
         LicensesService,
