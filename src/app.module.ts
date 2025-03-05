@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-// import { TypeOrmModule } from '@nestjs/typeorm';
 import { FastifyMulterModule } from '@nest-lab/fastify-multer';
 import { AuthModule } from './base_modules/auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
@@ -25,33 +24,32 @@ export const defaultOptions: PostgresConnectionOptions = {
     logging: false,
     // dropSchema: true
 };
+
+/**
+ * The main application module, responsible for importing and configuring all other modules.
+ */
 @Module({
+    /**
+     * List of imported modules.
+     */
     imports: [
+        // Module for handling authentication-related functionality.
         AuthModule,
+        // Module for handling file uploads using Fastify Multer.
         FastifyMulterModule,
-        BaseModule,
-        CodeClarityModule,
-        EnterpriseModule,
-        // TypeOrmModule.forRootAsync({
-        //     imports: [ConfigModule],
-        //     name: 'codeclarity',
-        //     useFactory: () => ({
-        //         ...defaultOptions,
-        //         autoLoadEntities: true,
-        //         database: 'codeclarity',
-        //         entities: [
-        //             __dirname + '/enterprise_modules/**/*.entity.{js,ts}'
-        //         ]
-        //     })
-        // }),
+        // Module for managing application configuration, including environment variables and validation.
         ConfigModule.forRoot({
             validate,
             isGlobal: true,
             envFilePath: !ENV ? 'env/.env.dev' : `env/.env.${ENV}`,
             expandVariables: true
         }),
-    ],
-    controllers: [],
-    providers: []
+        // Base module that provides core functionality such as user management, project management, etc.
+        BaseModule,
+        // Module for handling CodeClarity-related functionality, including SBOM and vulnerability reporting.
+        CodeClarityModule,
+        // Enterprise module that extends the platform's functionality with additional features.
+        EnterpriseModule,
+    ]
 })
 export class AppModule { }
