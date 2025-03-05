@@ -10,7 +10,6 @@ import { Notification } from './notification.entity';
             'codeclarity'
         )
     ],
-    providers: [],
     controllers: [NotificationsController]
 })
 export class NotificationsModule { }

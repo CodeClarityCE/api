@@ -12,8 +12,6 @@ import { Policy } from './policy.entity';
             [Policy],
             'codeclarity'
         ),
-    ],
-    providers: [],
-    controllers: []
+    ]
 })
 export class PolicyModule { }

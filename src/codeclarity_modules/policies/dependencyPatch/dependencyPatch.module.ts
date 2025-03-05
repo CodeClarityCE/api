@@ -3,7 +3,6 @@ import { DependencyPatchPolicyController } from './dependencyPatch.controller';
 import { DependencyPatchPolicyService } from './dependencyPatch.service';
 
 @Module({
-    imports: [],
     providers: [DependencyPatchPolicyService],
     controllers: [DependencyPatchPolicyController]
 })

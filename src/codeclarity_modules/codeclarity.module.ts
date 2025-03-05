@@ -32,8 +32,6 @@ import { defaultOptions } from 'src/app.module';
                 database: 'codeclarity'
             })
         }),
-    ],
-    providers: [],
-    controllers: []
+    ]
 })
 export class CodeClarityModule { }
