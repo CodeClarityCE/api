@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { Plugin } from './plugin.entity';
 import { defaultOptions } from 'src/app.module';
+import { PluginsRepository } from './plugin.repository';
 
 @Module({
     imports: [
@@ -19,7 +20,7 @@ import { defaultOptions } from 'src/app.module';
         }),
         TypeOrmModule.forFeature([Plugin], 'plugin')
     ],
-    providers: [PluginService],
+    providers: [PluginService, PluginsRepository],
     controllers: [PluginController]
 })
 export class PluginModule { }

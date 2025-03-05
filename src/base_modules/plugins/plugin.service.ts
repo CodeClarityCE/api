@@ -2,11 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Plugin } from './plugin.entity';
+import { PluginsRepository } from './plugin.repository';
 @Injectable()
 export class PluginService {
     constructor(
-        @InjectRepository(Plugin, 'plugin')
-        private pluginRepository: Repository<Plugin>
+        private readonly pluginsRepository: PluginsRepository
     ) {}
 
     /**
@@ -15,11 +15,7 @@ export class PluginService {
      * @returns the plugin
      */
     async get(pluginId: string): Promise<Plugin> {
-        const plugin = await this.pluginRepository.findOne({ where: { id: pluginId } });
-        if (!plugin) {
-            throw new Error('No plugins found');
-        }
-        return plugin;
+        return this.pluginsRepository.getById(pluginId)
     }
 
     /**
@@ -27,10 +23,6 @@ export class PluginService {
      * @returns all plugins
      */
     async getAll(): Promise<Array<Plugin>> {
-        const plugins = await this.pluginRepository.find();
-        if (!plugins) {
-            throw new Error('No plugins found');
-        }
-        return plugins;
+        return this.pluginsRepository.getAll()
     }
 }
