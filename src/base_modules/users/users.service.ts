@@ -53,6 +53,7 @@ import { Email, EmailType } from 'src/entity/codeclarity/Email';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
+import { EmailRepository } from '../email/email.repository';
 
 /**
  * This service offers methods for working with users
@@ -61,14 +62,12 @@ import { OrganizationsRepository } from '../organizations/organizations.reposito
 export class UsersService {
     constructor(
         private readonly emailService: EmailService,
-        private readonly gitlabIntegrationTokenService: GitlabIntegrationTokenService,
         private readonly organizationsRepository: OrganizationsRepository,
+        private readonly emailRepository: EmailRepository,
         @Inject(forwardRef(() => AuthService))
         private readonly authService: AuthService,
         @InjectRepository(User, 'codeclarity')
         private userRepository: Repository<User>,
-        @InjectRepository(Email, 'codeclarity')
-        private emailRepository: Repository<Email>,
     ) { }
 
     /**
@@ -227,17 +226,7 @@ export class UsersService {
         }
 
         // Find one registration action where EmailActionType.USERS_REGISTRATION_VERIFICATION, and user id
-        const mail = await this.emailRepository.findOne({
-            where: {
-                email_type: EmailType.USERS_REGISTRATION_VERIFICATION,
-                user: {
-                    id: user.id
-                }
-            },
-            relations: {
-                user: true
-            }
-        });
+        const mail = await this.emailRepository.getMailByType(EmailType.USERS_REGISTRATION_VERIFICATION, user.id)
 
         const activationToken = await genRandomString(64);
         const activationTokenhash = await hash(activationToken, {});
@@ -251,11 +240,11 @@ export class UsersService {
             mail.ttl = new Date(new Date().getTime() + 30 * 60000); // Expires after 30 mins
             mail.user = user;
 
-            await this.emailRepository.save(mail);
+            await this.emailRepository.saveMail(mail);
         } else {
             mail.ttl = new Date(new Date().getTime() + 30 * 60000); // Expires after 30 mins
             mail.token_digest = activationTokenhash;
-            await this.emailRepository.save(mail);
+            await this.emailRepository.saveMail(mail);
         }
 
         try {
@@ -279,15 +268,7 @@ export class UsersService {
      */
     async confirmRegistration(token: string, userIdHash: string): Promise<void> {
         const activationTokenhash = await hash(token, {});
-        const mail = await this.emailRepository.findOne({
-            where: {
-                token_digest: activationTokenhash,
-                user_id_digest: userIdHash
-            },
-            relations: {
-                user: true
-            }
-        });
+        const mail = await this.emailRepository.getActivationMail(activationTokenhash, userIdHash)
 
         if (!mail) {
             throw new AccountRegistrationVerificationTokenInvalidOrExpired();
@@ -297,7 +278,7 @@ export class UsersService {
         mail.user.registration_verified = true;
 
         await this.userRepository.save(mail.user);
-        await this.emailRepository.remove(mail);
+        await this.emailRepository.removeMail(mail)
     }
 
     /**

@@ -6,9 +6,16 @@ import { join } from 'path';
 import { ConfigService } from '@nestjs/config';
 import { EmailUnsubscriptionController } from './emailUnsubscriptions/emailUnsubscriptions.controller';
 import { EmailUnsubscriptionService } from './emailUnsubscriptions/emailUnsubscriptions.service';
+import { EmailRepository } from './email.repository';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Email } from 'src/entity/codeclarity/Email';
 
 @Module({
     imports: [
+        TypeOrmModule.forFeature(
+            [Email],
+            'codeclarity'
+        ),
         MailerModule.forRootAsync({
             useFactory: (config: ConfigService) => ({
                 transport: {
@@ -43,8 +50,8 @@ import { EmailUnsubscriptionService } from './emailUnsubscriptions/emailUnsubscr
             inject: [ConfigService]
         })
     ],
-    providers: [EmailService, EmailUnsubscriptionService],
-    exports: [EmailService],
+    providers: [EmailService, EmailUnsubscriptionService, EmailRepository],
+    exports: [EmailService, EmailRepository],
     controllers: [EmailUnsubscriptionController]
 })
-export class EmailModule {}
+export class EmailModule { }
