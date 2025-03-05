@@ -25,4 +25,24 @@ export class ProjectsRepository {
 
         return project
     }
+
+    async getProjectByIdAndOrganization(projectId: string, organizationId: string): Promise<Project> {
+        const project = await this.projectRepository.findOne({
+            where: {
+                id: projectId,
+                organizations: {
+                    id: organizationId
+                }
+            },
+            relations: {
+                added_by: true
+            }
+        });
+
+        if (!project) {
+            throw new EntityNotFound();
+        }
+
+        return project
+    }
 }

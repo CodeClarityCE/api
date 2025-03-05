@@ -12,14 +12,14 @@ import { Repository } from 'typeorm';
 import { MemberRole } from 'src/base_modules/organizations/organization.memberships.entity';
 import { UsersRepository } from '../users/users.repository';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
+import { ProjectsRepository } from '../projects/projects.repository';
 
 @Injectable()
 export class FileService {
     constructor(
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly usersRepository: UsersRepository,
-        @InjectRepository(Project, 'codeclarity')
-        private projectRepository: Repository<Project>,
+        private readonly projectsRepository: ProjectsRepository,
         @InjectRepository(FileEntity, 'codeclarity')
         private fileRepository: Repository<FileEntity>
     ) {}
@@ -37,20 +37,8 @@ export class FileService {
             MemberRole.USER
         );
         // retrieve files from project
-        const project = await this.projectRepository.findOne({
-            where: {
-                id: project_id,
-                organizations: {
-                    id: organization_id
-                }
-            },
-            relations: {
-                added_by: true
-            }
-        });
-        if (!project) {
-            throw new Error('Project not found');
-        }
+        const project = await this.projectsRepository.getProjectByIdAndOrganization(project_id, organization_id)
+    
         const escapeProjectId = escapeString(project_id);
 
         // Retrieve the user who added the file
@@ -192,20 +180,7 @@ export class FileService {
             MemberRole.USER
         );
         // retrieve files from project
-        const project = await this.projectRepository.findOne({
-            where: {
-                id: project_id,
-                organizations: {
-                    id: organization_id
-                }
-            },
-            relations: {
-                added_by: true
-            }
-        });
-        if (!project) {
-            throw new Error('Project not found');
-        }
+        const project = await this.projectsRepository.getProjectByIdAndOrganization(project_id, organization_id)
 
         const escapeProjectId = escapeString(project_id);
         // Retrieve the user who added the file
