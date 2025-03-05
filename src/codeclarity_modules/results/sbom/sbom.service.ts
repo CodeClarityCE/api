@@ -17,7 +17,7 @@ import { EntityNotFound, PluginResultNotAvailable, UnknownWorkspace } from 'src/
 import { StatusResponse } from 'src/types/entities/services/Status';
 import { AnalysisStats, newAnalysisStats } from 'src/types/entities/frontend/Sbom';
 import { Result } from 'src/entity/codeclarity/Result';
-import { Package } from 'src/entity/knowledge/Package';
+import { Package } from 'src/codeclarity_modules/knowledge/package/package.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 

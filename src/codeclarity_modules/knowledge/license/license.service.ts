@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { License } from 'src/entity/knowledge/License';
+import { License } from 'src/codeclarity_modules/knowledge/license/license.entity';
 import { LicenseRepository } from 'src/codeclarity_modules/knowledge/license/license.repository';
 
 @Injectable()

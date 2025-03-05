@@ -7,11 +7,11 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { defaultOptions } from 'src/app.module';
-import { CWE } from 'src/entity/knowledge/CWE';
-import { NVD } from 'src/entity/knowledge/NVD';
-import { OSV } from 'src/entity/knowledge/OSV';
-import { Package, Version } from 'src/entity/knowledge/Package';
-import { License } from 'src/entity/knowledge/License';
+import { CWE } from 'src/codeclarity_modules/knowledge/cwe/cwe.entity';
+import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
+import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
+import { Package, Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
+import { License } from 'src/codeclarity_modules/knowledge/license/license.entity';
 
 @Module({
     imports: [

@@ -4,7 +4,7 @@ import { SBOMService } from './sbom.service';
 import { AnalysisResultsService } from '../results.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Result } from 'src/entity/codeclarity/Result';
-import { Package } from 'src/entity/knowledge/Package';
+import { Package } from 'src/codeclarity_modules/knowledge/package/package.entity';
 import { OrganizationsModule } from 'src/base_modules/organizations/organizations.module';
 import { AnalysesModule } from 'src/base_modules/analyses/analyses.module';
 import { ProjectsModule } from 'src/base_modules/projects/projects.module';

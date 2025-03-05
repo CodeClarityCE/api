@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CWE } from 'src/entity/knowledge/CWE';
+import { CWE } from 'src/codeclarity_modules/knowledge/cwe/cwe.entity';
 import { EntityNotFound } from 'src/types/errors/types';
 import { Repository } from 'typeorm';
 

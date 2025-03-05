@@ -1,4 +1,4 @@
-import { Package, Source, LicenseNpm, Version } from 'src/entity/knowledge/Package';
+import { Package, Source, LicenseNpm, Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
 
 export interface SeverityDist {
     critical: number;

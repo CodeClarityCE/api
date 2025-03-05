@@ -23,9 +23,9 @@ import { Dependency } from 'src/types/entities/services/Sbom';
 import { CVSS2, CVSS3, CVSS31 } from 'src/types/entities/knowledge/CVSS';
 import { PatchInfo } from 'src/types/entities/services/Patching';
 import { OwaspTop10Info } from 'src/types/entities/knowledge/OWASP';
-import { NVD } from 'src/entity/knowledge/NVD';
-import { OSV } from 'src/entity/knowledge/OSV';
-import { Version } from 'src/entity/knowledge/Package';
+import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
+import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
+import { Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
 
 abstract class BaseReportGenerator {
     patchesData: PatchInfo;

@@ -16,7 +16,7 @@ import {
 import { getLicensesResult } from '../../licenses/utils/utils';
 import { getVulnsResult } from '../../vulnerabilities/utils/utils';
 import { Result } from 'src/entity/codeclarity/Result';
-import { Package } from 'src/entity/knowledge/Package';
+import { Package } from 'src/codeclarity_modules/knowledge/package/package.entity';
 import { Repository } from 'typeorm';
 
 export async function getSbomData(

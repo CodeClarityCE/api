@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EntityNotFound } from 'src/types/errors/types';
-import { OSV } from 'src/entity/knowledge/OSV';
+import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 

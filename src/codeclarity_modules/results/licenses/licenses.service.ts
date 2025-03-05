@@ -13,7 +13,7 @@ import { getLicensesResult } from './utils/utils';
 import { UnknownWorkspace } from 'src/types/errors/types';
 import { getSbomResult } from '../sbom/utils/utils';
 import { StatusResponse } from 'src/types/entities/services/Status';
-import { Package, Version } from 'src/entity/knowledge/Package';
+import { Package, Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Result } from 'src/entity/codeclarity/Result';
