@@ -4,16 +4,15 @@ import { GitlabRepositoriesService } from './gitlabRepos.service';
 import { GitlabIntegrationTokenService } from './gitlabToken.service';
 import { GitlabIntegrationController } from './gitlab.controller';
 import { IntegrationsService } from '../integrations.service';
-import { OrganizationsMemberService } from 'src/base_modules/organizations/organizationMember.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Integration } from 'src/entity/codeclarity/Integration';
-import { Organization } from 'src/entity/codeclarity/Organization';
-import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemberships';
+import { OrganizationsModule } from 'src/base_modules/organizations/organizations.module';
 
 @Module({
     imports: [
+        OrganizationsModule,
         TypeOrmModule.forFeature(
-            [Integration, Organization, OrganizationMemberships],
+            [Integration],
             'codeclarity'
         )
     ],
@@ -22,7 +21,6 @@ import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemb
         GitlabRepositoriesService,
         GitlabIntegrationTokenService,
         IntegrationsService,
-        OrganizationsMemberService
     ],
     controllers: [GitlabIntegrationController]
 })

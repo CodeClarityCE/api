@@ -8,18 +8,18 @@ import {
     Relation,
     OneToMany
 } from 'typeorm';
-import { User } from '../../base_modules/users/users.entity';
-import { Notification } from './Notification';
-import { Integration } from './Integration';
-import { Log } from './Log';
-import { Policy } from './Policy';
-import { Project } from './Project';
+import { User } from '../users/users.entity';
+import { Notification } from '../../entity/codeclarity/Notification';
+import { Integration } from '../../entity/codeclarity/Integration';
+import { Log } from '../../entity/codeclarity/Log';
+import { Policy } from '../../entity/codeclarity/Policy';
+import { Project } from '../../entity/codeclarity/Project';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { OrganizationMemberships } from './OrganizationMemberships';
-import { Analyzer } from './Analyzer';
-import { Analysis } from './Analysis';
-import { Invitation } from './Invitation';
+import { OrganizationMemberships } from './organization.memberships.entity';
+import { Analyzer } from '../../entity/codeclarity/Analyzer';
+import { Analysis } from '../../entity/codeclarity/Analysis';
+import { Invitation } from '../../entity/codeclarity/Invitation';
 
 @Entity()
 export class Organization {

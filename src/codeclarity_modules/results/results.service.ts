@@ -1,17 +1,17 @@
 import { AuthenticatedUser } from 'src/types/auth/types';
 import { AnalysesMemberService } from '../../base_modules/analyses/analysesMembership.service';
-import { OrganizationsMemberService } from '../../base_modules/organizations/organizationMember.service';
 import { ProjectMemberService } from '../../base_modules/projects/projectMember.service';
 import { NotAuthorized } from 'src/types/errors/types';
 import { Injectable } from '@nestjs/common';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
+import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 
 @Injectable()
 export class AnalysisResultsService {
     constructor(
-        private readonly organizationMemberService: OrganizationsMemberService,
         private readonly projectMemberService: ProjectMemberService,
-        private readonly analysesMemberService: AnalysesMemberService
+        private readonly analysesMemberService: AnalysesMemberService,
+        private readonly organizationsRepository: OrganizationsRepository
     ) {}
 
     /**
@@ -28,7 +28,7 @@ export class AnalysisResultsService {
         user: AuthenticatedUser
     ) {
         // (1) Check if user has access to org
-        await this.organizationMemberService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check if the project belongs to the org
         let belongs = await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);

@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/types/auth/types';
 import { TypedPaginatedData } from 'src/types/paginated/types';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginated/types';
-import { OrganizationsMemberService } from './organizationMember.service';
 import { SortDirection } from 'src/types/sort/types';
 import {
     ActionType,
@@ -14,6 +13,7 @@ import { Log } from 'src/entity/codeclarity/Log';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsersRepository } from '../users/users.repository';
+import { OrganizationsRepository } from './organizations.repository';
 
 /**
  * This service provides methods for working with organization audit logs
@@ -21,8 +21,8 @@ import { UsersRepository } from '../users/users.repository';
 @Injectable()
 export class OrganizationLoggerService {
     constructor(
-        private readonly organizationsMemberService: OrganizationsMemberService,
         private readonly usersRepository: UsersRepository,
+        private readonly organizationsRepository: OrganizationsRepository,
         @InjectRepository(Log, 'codeclarity')
         private logRepository: Repository<Log>
     ) {}
@@ -83,7 +83,7 @@ export class OrganizationLoggerService {
         }
 
         // Only owners and admins can view audit logs
-        await this.organizationsMemberService.hasRequiredRole(
+        await this.organizationsRepository.hasRequiredRole(
             organizationId,
             user.userId,
             MemberRole.ADMIN

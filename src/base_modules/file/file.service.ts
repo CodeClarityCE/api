@@ -9,14 +9,14 @@ import { join } from 'path';
 import { escapeString } from 'src/utils/cleaner';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { MemberRole } from 'src/entity/codeclarity/OrganizationMemberships';
-import { OrganizationsMemberService } from '../organizations/organizationMember.service';
+import { MemberRole } from 'src/base_modules/organizations/organization.memberships.entity';
 import { UsersRepository } from '../users/users.repository';
+import { OrganizationsRepository } from '../organizations/organizations.repository';
 
 @Injectable()
 export class FileService {
     constructor(
-        private readonly organizationMemberService: OrganizationsMemberService,
+        private readonly organizationsRepository: OrganizationsRepository,
         private readonly usersRepository: UsersRepository,
         @InjectRepository(Project, 'codeclarity')
         private projectRepository: Repository<Project>,
@@ -31,7 +31,7 @@ export class FileService {
         organization_id: string,
         queryParams: UploadData
     ): Promise<void> {
-        await this.organizationMemberService.hasRequiredRole(
+        await this.organizationsRepository.hasRequiredRole(
             organization_id,
             user.userId,
             MemberRole.USER
@@ -186,7 +186,7 @@ export class FileService {
         project_id: string,
         user: AuthenticatedUser
     ): Promise<void> {
-        await this.organizationMemberService.hasRequiredRole(
+        await this.organizationsRepository.hasRequiredRole(
             organization_id,
             user.userId,
             MemberRole.USER

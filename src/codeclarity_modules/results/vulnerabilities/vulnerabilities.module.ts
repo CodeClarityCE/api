@@ -6,10 +6,9 @@ import { AnalysisResultsService } from '../results.service';
 import { NVD } from 'src/entity/knowledge/NVD';
 import { OSV } from 'src/entity/knowledge/OSV';
 import { CWE } from 'src/entity/knowledge/CWE';
-import { OrganizationsMemberService } from 'src/base_modules/organizations/organizationMember.service';
 import { ProjectMemberService } from 'src/base_modules/projects/projectMember.service';
 import { AnalysesMemberService } from 'src/base_modules/analyses/analysesMembership.service';
-import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemberships';
+import { OrganizationMemberships } from 'src/base_modules/organizations/organization.memberships.entity';
 import { Project } from 'src/entity/codeclarity/Project';
 import { Analysis } from 'src/entity/codeclarity/Analysis';
 import { FindingsController } from './vulnerabilities.controller';
@@ -22,11 +21,13 @@ import { CWERepository } from 'src/codeclarity_modules/knowledge/CWERepository';
 import { PackageRepository } from 'src/codeclarity_modules/knowledge/PackageRepository';
 import { OWASPRepository } from 'src/codeclarity_modules/knowledge/OWASPRepository';
 import { Package, Version } from 'src/entity/knowledge/Package';
+import { OrganizationsModule } from 'src/base_modules/organizations/organizations.module';
 
 @Module({
     imports: [
+        OrganizationsModule,
         TypeOrmModule.forFeature(
-            [Result, OrganizationMemberships, Project, Analysis],
+            [Result, Project, Analysis],
             'codeclarity'
         ),
         TypeOrmModule.forFeature([NVD, OSV, CWE, Package, Version], 'knowledge')
@@ -41,7 +42,6 @@ import { Package, Version } from 'src/entity/knowledge/Package';
         NVDReportGenerator,
         VersionsRepository,
         CWERepository,
-        OrganizationsMemberService,
         ProjectMemberService,
         AnalysesMemberService,
         PackageRepository,

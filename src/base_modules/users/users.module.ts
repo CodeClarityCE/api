@@ -5,24 +5,23 @@ import { UsersController } from './users.controller';
 import { User } from 'src/base_modules/users/users.entity';
 import { Email } from 'src/entity/codeclarity/Email';
 import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
-import { Organization } from 'src/entity/codeclarity/Organization';
-import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemberships';
 import { AuthModule } from '../auth/auth.module';
 import { EmailModule } from '../email/email.module';
-import { OrganizationsMemberService } from '../organizations/organizationMember.service';
 import { UsersRepository } from './users.repository';
+import { OrganizationsModule } from '../organizations/organizations.module';
 
 @Module({
     imports: [
+        OrganizationsModule,
         TypeOrmModule.forFeature(
-            [User, Email, Organization, OrganizationMemberships],
+            [User, Email],
             'codeclarity'
         ),
         forwardRef(() => AuthModule),
         EmailModule
     ],
     exports: [UsersRepository, UsersService],
-    providers: [UsersService, UsersRepository, GitlabIntegrationTokenService, OrganizationsMemberService],
+    providers: [UsersService, UsersRepository, GitlabIntegrationTokenService],
     controllers: [UsersController]
 })
 export class UsersModule {}

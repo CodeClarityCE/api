@@ -49,7 +49,7 @@ import {
 import { TeamMember } from 'src/types/entities/frontend/TeamMember';
 import { InviteCreateBody } from 'src/types/entities/frontend/OrgInvitation';
 import { OrganizationAuditLog } from 'src/types/entities/frontend/OrgAuditLog';
-import { Organization } from 'src/entity/codeclarity/Organization';
+import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { Log } from 'src/entity/codeclarity/Log';
 import { Invitation } from 'src/entity/codeclarity/Invitation';
 

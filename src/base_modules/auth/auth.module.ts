@@ -12,16 +12,14 @@ import { ConfigService } from '@nestjs/config';
 import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/gitlab/gitlabToken.service';
 import { GithubIntegrationTokenService } from 'src/base_modules/integrations/github/githubToken.service';
 import { IntegrationsService } from '../integrations/integrations.service';
-import { OrganizationsMemberService } from '../organizations/organizationMember.service';
 import { GithubAuthController } from './github.controller';
 import { GitlabAuthController } from './gitlab.controller';
 import { EmailModule } from '../email/email.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from '../users/users.module';
 import { Email } from 'src/entity/codeclarity/Email';
-import { Organization } from 'src/entity/codeclarity/Organization';
-import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemberships';
 import { Integration } from 'src/entity/codeclarity/Integration';
+import { OrganizationsModule } from '../organizations/organizations.module';
 
 const fs = require('fs');
 
@@ -33,6 +31,7 @@ const fs = require('fs');
         PassportModule,
         EmailModule,
         UsersModule,
+        OrganizationsModule,
         JwtModule.register({
             global: true,
             publicKey: fs.readFileSync('./jwt/public.pem', 'utf8'),
@@ -40,7 +39,7 @@ const fs = require('fs');
             signOptions: { expiresIn: CONST_JWT_TOKEN_EXPIRES_IN, algorithm: CONST_JWT_ALGORITHM }
         }),
         TypeOrmModule.forFeature(
-            [Email, Organization, OrganizationMemberships, Integration],
+            [Email, Integration],
             'codeclarity'
         )
     ],
@@ -52,7 +51,6 @@ const fs = require('fs');
         GitlabIntegrationTokenService,
         GithubIntegrationTokenService,
         IntegrationsService,
-        OrganizationsMemberService,
 
         // Globally enable the JWT & API key authentication
         {

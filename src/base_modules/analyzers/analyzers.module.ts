@@ -2,24 +2,21 @@ import { Module } from '@nestjs/common';
 import { AnalyzersController } from './analyzers.controller';
 import { AnalyzersService } from './analyzers.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Organization } from 'src/entity/codeclarity/Organization';
-import { OrganizationLoggerService } from '../organizations/organizationLogger.service';
-import { OrganizationsMemberService } from '../organizations/organizationMember.service';
 import { Analyzer } from 'src/entity/codeclarity/Analyzer';
-import { Log } from 'src/entity/codeclarity/Log';
-import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemberships';
 import { UsersModule } from '../users/users.module';
+import { OrganizationsModule } from '../organizations/organizations.module';
 
 @Module({
     imports: [
         UsersModule,
+        OrganizationsModule,
         TypeOrmModule.forFeature(
-            [Organization, Analyzer, Log, OrganizationMemberships],
+            [Analyzer],
             'codeclarity'
         )
     ],
     exports: [AnalyzersService],
-    providers: [AnalyzersService, OrganizationLoggerService, OrganizationsMemberService],
+    providers: [AnalyzersService],
     controllers: [AnalyzersController]
 })
 export class AnalyzersModule {}

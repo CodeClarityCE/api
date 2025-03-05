@@ -4,16 +4,16 @@ import { FileService } from './file.service';
 import { File } from 'src/entity/codeclarity/File';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Project } from 'src/entity/codeclarity/Project';
-import { OrganizationsMemberService } from '../../base_modules/organizations/organizationMember.service';
-import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemberships';
 import { UsersModule } from '../users/users.module';
+import { OrganizationsModule } from '../organizations/organizations.module';
 
 @Module({
     imports: [
         UsersModule,
-        TypeOrmModule.forFeature([File, Project, OrganizationMemberships], 'codeclarity')
+        OrganizationsModule,
+        TypeOrmModule.forFeature([File, Project], 'codeclarity')
     ],
-    providers: [FileService, OrganizationsMemberService],
+    providers: [FileService],
     controllers: [FileController]
 })
 export class FileModule {}

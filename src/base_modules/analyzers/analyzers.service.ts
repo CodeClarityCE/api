@@ -4,26 +4,23 @@ import { TypedPaginatedData } from 'src/types/paginated/types';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginated/types';
 import { AuthenticatedUser } from 'src/types/auth/types';
 import { OrganizationLoggerService } from '../organizations/organizationLogger.service';
-import { OrganizationsMemberService } from '../organizations/organizationMember.service';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
 import { NotAuthorized } from 'src/types/errors/types';
 import { ActionType } from 'src/types/entities/frontend/OrgAuditLog';
 import { Analyzer } from 'src/entity/codeclarity/Analyzer';
-import { Organization } from 'src/entity/codeclarity/Organization';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsersRepository } from '../users/users.repository';
+import { OrganizationsRepository } from '../organizations/organizations.repository';
 
 @Injectable()
 export class AnalyzersService {
     constructor(
         private readonly organizationLoggerService: OrganizationLoggerService,
-        private readonly organizationsMemberService: OrganizationsMemberService,
+        private readonly organizationsRepository: OrganizationsRepository,
         private readonly usersRepository: UsersRepository,
         @InjectRepository(Analyzer, 'codeclarity')
         private analyzerRepository: Repository<Analyzer>,
-        @InjectRepository(Organization, 'codeclarity')
-        private organizationRepository: Repository<Organization>
     ) {}
 
     async create(
@@ -32,14 +29,14 @@ export class AnalyzersService {
         user: AuthenticatedUser
     ): Promise<string> {
         // Check if the user is allowed to create a analyzer (is atleast admin)
-        await this.organizationsMemberService.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
         const creator = await this.usersRepository.getUserById(user.userId)
         if (!creator) {
             throw new Error('User not found');
         }
 
-        const organization = await this.organizationRepository.findOneBy({ id: orgId });
+        const organization = await this.organizationsRepository.getOrganizationById(orgId)
         if (!organization) {
             throw new Error('Organization not found');
         }
@@ -72,7 +69,7 @@ export class AnalyzersService {
         user: AuthenticatedUser
     ) {
         // Check if the user is allowed to create a analyzer (is atleast admin)
-        await this.organizationsMemberService.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
         const analyzer = await this.analyzerRepository.findOneBy({ id: analyzerId });
 
@@ -94,7 +91,7 @@ export class AnalyzersService {
 
     async get(orgId: string, id: string, user: AuthenticatedUser): Promise<Analyzer> {
         // (1) Check if the user is allowed to get a analyzer (is atleast USER)
-        await this.organizationsMemberService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check that the analyzer belongs to the org
         const belongs = await this.doesAnalyzerBelongToOrg(id, orgId);
@@ -112,7 +109,7 @@ export class AnalyzersService {
 
     async getByName(orgId: string, name: string, user: AuthenticatedUser): Promise<Analyzer> {
         // (1) Check if the user is allowed to get a analyzer (is atleast USER)
-        await this.organizationsMemberService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const analyzer = await this.analyzerRepository
             .createQueryBuilder('analyzer')
@@ -141,7 +138,7 @@ export class AnalyzersService {
         user: AuthenticatedUser
     ): Promise<TypedPaginatedData<Analyzer>> {
         // Check if the user is allowed to get a analyzer (is atleast USER)
-        await this.organizationsMemberService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const paginationConfig: PaginationConfig = {
             maxEntriesPerPage: 100,
@@ -187,7 +184,7 @@ export class AnalyzersService {
 
     async delete(orgId: string, id: string, user: AuthenticatedUser): Promise<void> {
         // (1) Check if the user is allowed to get a analyzer (is atleast ADMIN)
-        await this.organizationsMemberService.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
         // (2) Check that the analyzer belongs to the org
         const belongs = await this.doesAnalyzerBelongToOrg(id, orgId);

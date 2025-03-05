@@ -2,22 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { TypedPaginatedResponse } from 'src/types/apiResponses';
 import { AuthenticatedUser } from 'src/types/auth/types';
 import { EntityNotFound, NotAMember, NotAuthorized } from 'src/types/errors/types';
-import { OrganizationsMemberService } from '../organizations/organizationMember.service';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginated/types';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
 import { Integration } from 'src/entity/codeclarity/Integration';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Organization } from 'src/entity/codeclarity/Organization';
+import { OrganizationsRepository } from '../organizations/organizations.repository';
 
 @Injectable()
 export class IntegrationsService {
     constructor(
-        private readonly organizationMemberService: OrganizationsMemberService,
+        private readonly organizationsRepository: OrganizationsRepository,
         @InjectRepository(Integration, 'codeclarity')
         private integrationRepository: Repository<Integration>,
-        @InjectRepository(Organization, 'codeclarity')
-        private organizationRepository: Repository<Organization>
     ) {}
 
     /**
@@ -33,7 +30,7 @@ export class IntegrationsService {
         paginationUserSuppliedConf: PaginationUserSuppliedConf,
         user: AuthenticatedUser
     ): Promise<TypedPaginatedResponse<Integration>> {
-        await this.organizationMemberService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const paginationConfig: PaginationConfig = {
             maxEntriesPerPage: 100,
@@ -98,11 +95,11 @@ export class IntegrationsService {
         orgId: string,
         user: AuthenticatedUser
     ): Promise<Integration> {
-        if (!(await this.doesIntegrationBelongToOrg(integrationId, orgId))) {
+        if (!(await this.organizationsRepository.doesIntegrationBelongToOrg(integrationId, orgId))) {
             throw new NotAuthorized();
         }
 
-        await this.organizationMemberService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const integration = await this.integrationRepository.findOneBy({
             id: integrationId
@@ -130,13 +127,13 @@ export class IntegrationsService {
     ): Promise<void> {
         try {
             // Only owners and admins can remove an integration from the org
-            await this.organizationMemberService.hasRequiredRole(
+            await this.organizationsRepository.hasRequiredRole(
                 orgId,
                 user.userId,
                 MemberRole.ADMIN
             );
 
-            if (!(await this.doesIntegrationBelongToOrg(integrationId, orgId))) {
+            if (!(await this.organizationsRepository.doesIntegrationBelongToOrg(integrationId, orgId))) {
                 throw new NotAuthorized();
             }
 
@@ -149,27 +146,6 @@ export class IntegrationsService {
             }
             throw err;
         }
-    }
-
-    /**
-     * Checks whether the integration, with the given id, belongs to the organization, with the given id
-     * @param integrationId The id of the integration
-     * @param orgId The id of the organization
-     * @returns whether or not the integration belongs to the org
-     */
-    async doesIntegrationBelongToOrg(integrationId: string, orgId: string): Promise<boolean> {
-        const belongs = await this.organizationRepository.exists({
-            relations: {
-                integrations: true
-            },
-            where: {
-                id: orgId,
-                integrations: {
-                    id: integrationId
-                }
-            }
-        });
-        return belongs;
     }
 
     /**

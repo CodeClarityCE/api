@@ -11,7 +11,7 @@ import { Policy } from './Policy';
 import { Project } from './Project';
 import { Result } from './Result';
 import { Analyzer } from './Analyzer';
-import { Organization } from './Organization';
+import { Organization } from '../../base_modules/organizations/organization.entity';
 import { Integration } from './Integration';
 import { User } from '../../base_modules/users/users.entity';
 import { ApiProperty } from '@nestjs/swagger';

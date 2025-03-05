@@ -4,7 +4,6 @@ import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginate
 import { EntityNotFound, IntegrationNotSupported, NotAuthorized } from 'src/types/errors/types';
 import { AuthenticatedUser } from 'src/types/auth/types';
 import { OrganizationLoggerService } from 'src/base_modules/organizations/organizationLogger.service';
-import { OrganizationsMemberService } from 'src/base_modules/organizations/organizationMember.service';
 import { ProjectMemberService } from './projectMember.service';
 import { SortDirection } from 'src/types/sort/types';
 import { GithubRepositoriesService } from '../integrations/github/githubRepos.service';
@@ -16,8 +15,6 @@ import { ActionType } from 'src/types/entities/frontend/OrgAuditLog';
 import { Integration } from 'src/entity/codeclarity/Integration';
 import { RepositoryCache } from 'src/entity/codeclarity/RepositoryCache';
 import { IntegrationType, Project } from 'src/entity/codeclarity/Project';
-import { Organization } from 'src/entity/codeclarity/Organization';
-import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemberships';
 import { Analysis } from 'src/entity/codeclarity/Analysis';
 import { Result } from 'src/entity/codeclarity/Result';
 import { join } from 'path';
@@ -27,6 +24,7 @@ import { Repository } from 'typeorm';
 import { mkdir, rm } from 'fs/promises';
 import { File } from 'src/entity/codeclarity/File';
 import { UsersRepository } from '../users/users.repository';
+import { OrganizationsRepository } from '../organizations/organizations.repository';
 
 export enum AllowedOrderByGetProjects {
     IMPORTED_ON = 'imported_on',
@@ -37,25 +35,21 @@ export enum AllowedOrderByGetProjects {
 export class ProjectService {
     constructor(
         private readonly organizationLoggerService: OrganizationLoggerService,
-        private readonly organizationsMemberService: OrganizationsMemberService,
         private readonly projectMemberService: ProjectMemberService,
         private readonly githubRepositoriesService: GithubRepositoriesService,
         private readonly gitlabRepositoriesService: GitlabRepositoriesService,
         private readonly usersRepository: UsersRepository,
+        private readonly organizationsRepository: OrganizationsRepository,
         @InjectRepository(Project, 'codeclarity')
         private projectRepository: Repository<Project>,
         @InjectRepository(Analysis, 'codeclarity')
         private analysisRepository: Repository<Analysis>,
-        @InjectRepository(Organization, 'codeclarity')
-        private organizationRepository: Repository<Organization>,
         @InjectRepository(Result, 'codeclarity')
         private resultRepository: Repository<Result>,
         @InjectRepository(File, 'codeclarity')
         private fileRepository: Repository<File>,
         @InjectRepository(Integration, 'codeclarity')
         private integrationRepository: Repository<Integration>,
-        @InjectRepository(OrganizationMemberships, 'codeclarity')
-        private membershipRepository: Repository<OrganizationMemberships>
     ) {}
 
     /**
@@ -76,7 +70,7 @@ export class ProjectService {
         user: AuthenticatedUser
     ): Promise<string> {
         // (1) Check that the user is a member of the org
-        await this.organizationsMemberService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const project = new Project();
 
@@ -179,11 +173,7 @@ export class ProjectService {
 
         const user_adding = await this.usersRepository.getUserById(user.userId)
 
-        const organization = await this.organizationRepository.findOneOrFail({
-            where: {
-                id: orgId
-            }
-        });
+        const organization = await this.organizationsRepository.getOrganizationById(orgId)
 
         project.downloaded = false;
         project.added_on = new Date();
@@ -219,7 +209,7 @@ export class ProjectService {
      */
     async get(organizationId: string, id: string, user: AuthenticatedUser): Promise<Project> {
         // (1) Every member of an org can retrieve a project
-        await this.organizationsMemberService.hasRequiredRole(
+        await this.organizationsRepository.hasRequiredRole(
             organizationId,
             user.userId,
             MemberRole.USER
@@ -268,7 +258,7 @@ export class ProjectService {
         sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<Project>> {
         // Every member of an org can retrieve all project
-        await this.organizationsMemberService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const paginationConfig: PaginationConfig = {
             maxEntriesPerPage: 100,
@@ -342,7 +332,7 @@ export class ProjectService {
      */
     async delete(orgId: string, id: string, user: AuthenticatedUser): Promise<void> {
         // (1) Check that member is at least a user
-        await this.organizationsMemberService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check if project belongs to org
 
@@ -360,23 +350,7 @@ export class ProjectService {
             throw new NotAuthorized();
         }
 
-        const membership = await this.membershipRepository.findOne({
-            relations: {
-                organization: true
-            },
-            where: {
-                organization: {
-                    id: orgId
-                },
-                user: {
-                    id: user.userId
-                }
-            },
-            select: {
-                role: true,
-                organizationMembershipId: true
-            }
-        });
+        const membership = await this.organizationsRepository.getMembershipRole(orgId, user.userId)
 
         if (!membership) {
             throw new EntityNotFound();
@@ -403,14 +377,9 @@ export class ProjectService {
             }
         }
 
-        const organization = await this.organizationRepository.findOneOrFail({
-            relations: ['projects'],
-            where: {
-                id: orgId
-            }
-        });
+        const organization = await this.organizationsRepository.getOrganizationById(orgId, {projects:true})
         organization.projects = organization.projects.filter((p) => p.id != id);
-        await this.organizationRepository.save(organization);
+        await this.organizationsRepository.saveOrganization(organization);
 
         const analyses = await this.analysisRepository.find({
             where: {

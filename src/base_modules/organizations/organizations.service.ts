@@ -3,7 +3,6 @@ import { AuthenticatedUser } from 'src/types/auth/types';
 import { EntityNotFound, UserDoesNotExist } from 'src/types/errors/types';
 import { TypedPaginatedData } from 'src/types/paginated/types';
 import { PaginationUserSuppliedConf } from 'src/types/paginated/types';
-import { OrganizationsMemberService } from './organizationMember.service';
 import { SortDirection } from 'src/types/sort/types';
 import { TeamMember } from 'src/types/entities/frontend/TeamMember';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
@@ -12,8 +11,8 @@ import {
     OrganizationCreateBody,
     OrganizationInfoForInvitee
 } from 'src/types/entities/frontend/Org';
-import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemberships';
-import { Organization } from 'src/entity/codeclarity/Organization';
+import { OrganizationMemberships } from 'src/base_modules/organizations/organization.memberships.entity';
+import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { User } from 'src/base_modules/users/users.entity';
 import { Email, EmailType } from 'src/entity/codeclarity/Email';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -23,12 +22,13 @@ import { genRandomString } from 'src/utils/crypto';
 import { hash } from 'src/utils/crypto';
 import { EmailService } from '../email/email.service';
 import { UsersRepository } from '../users/users.repository';
+import { OrganizationsRepository } from './organizations.repository';
 
 @Injectable()
 export class OrganizationsService {
     constructor(
         private readonly emailService: EmailService,
-        private readonly organizationMemberService: OrganizationsMemberService,
+        private readonly organizationsRepository: OrganizationsRepository,
         private readonly usersRepository: UsersRepository,
         @InjectRepository(OrganizationMemberships, 'codeclarity')
         private membershipRepository: Repository<OrganizationMemberships>,
@@ -87,7 +87,7 @@ export class OrganizationsService {
      * @returns the organization information
      */
     async get(orgId: string, user: AuthenticatedUser): Promise<Object> {
-        await this.organizationMemberService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
         const membership = await this.membershipRepository.findOne({
             where: {
                 organization: {
@@ -134,7 +134,7 @@ export class OrganizationsService {
      * @returns the organization metadata information
      */
     async getOrgMetaData(orgId: string, user: AuthenticatedUser): Promise<Organization> {
-        await this.organizationMemberService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const organization = await this.organizationRepository.findOne({
             where: {
@@ -251,7 +251,7 @@ export class OrganizationsService {
         inviteBody: InviteCreateBody,
         user: AuthenticatedUser
     ): Promise<void> {
-        await this.organizationMemberService.hasRequiredRole(orgId, user.userId, MemberRole.OWNER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.OWNER);
 
         const invitedUser = await this.usersRepository.getUserByEmail(inviteBody.user_email)
 
@@ -533,7 +533,7 @@ export class OrganizationsService {
      * @param user The authenticated user
      */
     async deleteOrg(orgId: string, user: AuthenticatedUser): Promise<void> {
-        await this.organizationMemberService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const memberships = await this.membershipRepository.find({
             where: {

@@ -1,9 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { OrganizationsMemberService } from 'src/base_modules/organizations/organizationMember.service';
 import { AuthenticatedUser } from 'src/types/auth/types';
 import { PaginationConfig, TypedPaginatedData } from 'src/types/paginated/types';
 import {
-    LicensePolicy,
     LicensePolicyCreateBody,
     LicensePolicyPatchBody
 } from 'src/types/entities/frontend/LicensePolicy';
@@ -12,21 +10,19 @@ import { SortDirection } from 'src/types/sort/types';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
 import { PolicyType } from 'src/types/entities/frontend/Policy';
 import { Policy, PolicyFrontend } from 'src/entity/codeclarity/Policy';
-import { Organization } from 'src/entity/codeclarity/Organization';
 import { User } from 'src/base_modules/users/users.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
+import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 
 @Injectable()
 export class LicensePolicyService {
     constructor(
-        private readonly organizationMemberService: OrganizationsMemberService,
+        private readonly organizationsRepository: OrganizationsRepository,
         @InjectRepository(Policy, 'codeclarity')
         private policyRepository: Repository<Policy>,
         @InjectRepository(User, 'codeclarity')
         private userRepository: Repository<User>,
-        @InjectRepository(Organization, 'codeclarity')
-        private organizationRepository: Repository<Organization>
     ) {}
 
     /**
@@ -42,13 +38,9 @@ export class LicensePolicyService {
         user: AuthenticatedUser
     ): Promise<string> {
         // Only owners and admins can add an policy to the org
-        await this.organizationMemberService.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
-        const organization = await this.organizationRepository.findOne({
-            where: {
-                id: orgId
-            }
-        });
+        const organization = await this.organizationsRepository.getOrganizationById(orgId)
         if (!organization) {
             throw new Error('EntityNotFound');
         }
@@ -86,7 +78,7 @@ export class LicensePolicyService {
      */
     async get(orgId: string, licensePolicyId: string, user: AuthenticatedUser): Promise<Policy> {
         // (1) Check if user has access to org
-        await this.organizationMemberService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const policy = await this.policyRepository.findOne({
             where: {
@@ -120,7 +112,7 @@ export class LicensePolicyService {
         sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<PolicyFrontend>> {
         // Check if user has access to org
-        await this.organizationMemberService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const paginationConfig: PaginationConfig = {
             maxEntriesPerPage: 100,
@@ -192,7 +184,7 @@ export class LicensePolicyService {
         user: AuthenticatedUser
     ): Promise<void> {
         // Only owners and admins can update an policy to the org
-        await this.organizationMemberService.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
         throw new Error('Method not implemented.');
     }
 
@@ -206,7 +198,7 @@ export class LicensePolicyService {
      */
     async remove(orgId: string, licensePolicyId: string, user: AuthenticatedUser): Promise<void> {
         // Only owners and admins can remove an policy to the org
-        await this.organizationMemberService.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
         throw new Error('Method not implemented.');
     }
 }

@@ -1,13 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/types/auth/types';
-import { IntegrationsService } from '../integrations.service';
 import {
     EntityNotFound,
     FailedToRetrieveReposFromProvider,
     IntegrationInvalidToken,
     NotAuthorized
 } from 'src/types/errors/types';
-import { OrganizationsMemberService } from 'src/base_modules/organizations/organizationMember.service';
 import { TypedPaginatedResponse } from 'src/types/apiResponses';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginated/types';
 import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from './constants';
@@ -20,13 +18,13 @@ import { Integration } from 'src/entity/codeclarity/Integration';
 import { RepositoryCache, RepositoryType } from 'src/entity/codeclarity/RepositoryCache';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 
 @Injectable()
 export class GithubRepositoriesService {
     constructor(
-        private readonly integrationsService: IntegrationsService,
-        private readonly orgMemberShipService: OrganizationsMemberService,
         private readonly githubIntegrationService: GithubIntegrationService,
+        private readonly organizationsRepository: OrganizationsRepository,
         @InjectRepository(RepositoryCache, 'codeclarity')
         private repositoryCacheRepository: Repository<RepositoryCache>,
         @InjectRepository(Integration, 'codeclarity')
@@ -121,10 +119,10 @@ export class GithubRepositoriesService {
         }
 
         // (1) Check that the user has the right to access the org
-        await this.orgMemberShipService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check that the integration belongs to the org
-        if (!(await this.integrationsService.doesIntegrationBelongToOrg(integrationId, orgId))) {
+        if (!(await this.organizationsRepository.doesIntegrationBelongToOrg(integrationId, orgId))) {
             throw new NotAuthorized();
         }
 
@@ -232,10 +230,10 @@ export class GithubRepositoriesService {
         forceRefresh?: boolean
     ): Promise<RepositoryCache> {
         // (1) Check that the user has the right to access the org
-        await this.orgMemberShipService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check that the integration belongs to the org
-        if (!(await this.integrationsService.doesIntegrationBelongToOrg(integrationId, orgId))) {
+        if (!(await this.organizationsRepository.doesIntegrationBelongToOrg(integrationId, orgId))) {
             throw new NotAuthorized();
         }
 

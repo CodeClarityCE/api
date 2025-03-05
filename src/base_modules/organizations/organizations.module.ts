@@ -1,30 +1,30 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { OrganizationsService } from './organizations.service';
 import { OrganizationsController } from './organizations.controller';
-import { OrganizationsMemberService } from './organizationMember.service';
 import { OrganizationLoggerService } from './organizationLogger.service';
-import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemberships';
+import { OrganizationMemberships } from 'src/base_modules/organizations/organization.memberships.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Organization } from 'src/entity/codeclarity/Organization';
-import { User } from 'src/base_modules/users/users.entity';
+import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { Log } from 'src/entity/codeclarity/Log';
 import { Invitation } from 'src/entity/codeclarity/Invitation';
 import { Email } from 'src/entity/codeclarity/Email';
 import { EmailService } from '../email/email.service';
 import { UsersModule } from '../users/users.module';
+import { OrganizationsRepository } from './organizations.repository';
 
 @Module({
     imports: [
-        UsersModule,
+        forwardRef(() => UsersModule),
         TypeOrmModule.forFeature(
             [OrganizationMemberships, Organization, Log, Invitation, Email],
             'codeclarity'
         )
     ],
+    exports: [OrganizationsRepository, OrganizationLoggerService],
     providers: [
         OrganizationsService,
-        OrganizationsMemberService,
         OrganizationLoggerService,
+        OrganizationsRepository,
         EmailService
     ],
     controllers: [OrganizationsController]

@@ -3,7 +3,6 @@ import { AuthenticatedUser } from 'src/types/auth/types';
 import { IntegrationsService } from '../integrations.service';
 import { GitlabIntegrationToken } from 'src/base_modules/integrations/Token';
 import { IntegrationWrongTokenType, NotAuthorized } from 'src/types/errors/types';
-import { OrganizationsMemberService } from '../../organizations/organizationMember.service';
 import {
     GitlabIntegration,
     GitlabTokenType,
@@ -11,6 +10,7 @@ import {
     LinkGitlabPatchBody
 } from 'src/types/entities/frontend/GitlabIntegration';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
+import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 
 // https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#prefill-personal-access-token-name-and-scopes
 
@@ -18,8 +18,7 @@ import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
 export class GitlabIntegrationService {
     constructor(
         private readonly integrationsService: IntegrationsService,
-        private readonly orgMemberShipService: OrganizationsMemberService,
-        private readonly organizationMemberService: OrganizationsMemberService
+        private readonly organizationsRepository: OrganizationsRepository
     ) {}
 
     /**
@@ -37,12 +36,12 @@ export class GitlabIntegrationService {
         user: AuthenticatedUser
     ): Promise<GitlabIntegration> {
         // (1) Check that the integration belongs to the org
-        if (!(await this.integrationsService.doesIntegrationBelongToOrg(integrationId, orgId))) {
+        if (!(await this.organizationsRepository.doesIntegrationBelongToOrg(integrationId, orgId))) {
             throw new NotAuthorized();
         }
 
         // (2) Check that the user has the right to access the org
-        await this.orgMemberShipService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // return await this.gitlabRepo.get(integrationId);
         throw new Error('Method not implemented.');
@@ -107,10 +106,10 @@ export class GitlabIntegrationService {
         linkGitlabCreate: LinkGitlabPatchBody,
         user: AuthenticatedUser
     ): Promise<void> {
-        if (!(await this.integrationsService.doesIntegrationBelongToOrg(integrationId, orgId))) {
+        if (!(await this.organizationsRepository.doesIntegrationBelongToOrg(integrationId, orgId))) {
             throw new NotAuthorized();
         }
-        await this.organizationMemberService.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
         if (linkGitlabCreate.token_type != GitlabTokenType.PERSONAL_ACCESS_TOKEN) {
             throw new IntegrationWrongTokenType();

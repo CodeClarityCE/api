@@ -45,18 +45,18 @@ import {
     LinkGithubPatchBody
 } from 'src/types/entities/frontend/GithubIntegration';
 import { Integration } from 'src/entity/codeclarity/Integration';
-import { Organization } from 'src/entity/codeclarity/Organization';
+import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { RepositoryCache } from 'src/entity/codeclarity/RepositoryCache';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
+import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 
 @Controller('org/:org_id/integrations/github')
 export class GithubIntegrationController {
     constructor(
         private readonly githubIntegrationService: GithubIntegrationService,
         private readonly githubReposService: GithubRepositoriesService,
-        @InjectRepository(Organization, 'codeclarity')
-        private organizationRepository: Repository<Organization>,
+        private readonly organizationsRepository: OrganizationsRepository,
         @InjectRepository(Integration, 'codeclarity')
         private integrationRepository: Repository<Integration>
     ) {}
@@ -123,10 +123,7 @@ export class GithubIntegrationController {
         @Param('org_id') org_id: string,
         @Param('integration_id') integration_id: string
     ): Promise<NoDataResponse> {
-        const organization = await this.organizationRepository.findOne({
-            where: { id: org_id },
-            relations: ['integrations']
-        });
+        const organization = await this.organizationsRepository.getOrganizationById(org_id, {integrations: true})
         if (!organization) {
             throw new EntityNotFound();
         }
@@ -134,7 +131,7 @@ export class GithubIntegrationController {
             (integration) => integration.id !== integration_id
         );
 
-        await this.organizationRepository.save(organization);
+        await this.organizationsRepository.saveOrganization(organization);
 
         await this.integrationRepository.delete(integration_id);
         return {};

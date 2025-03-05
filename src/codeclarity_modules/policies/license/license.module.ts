@@ -2,20 +2,19 @@ import { Module } from '@nestjs/common';
 import { LicensePolicyController } from './license.controller';
 import { LicensePolicyService } from './license.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Organization } from 'src/entity/codeclarity/Organization';
-import { OrganizationsMemberService } from 'src/base_modules/organizations/organizationMember.service';
 import { Policy } from 'src/entity/codeclarity/Policy';
 import { User } from 'src/base_modules/users/users.entity';
-import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemberships';
+import { OrganizationsModule } from 'src/base_modules/organizations/organizations.module';
 
 @Module({
     imports: [
+        OrganizationsModule,
         TypeOrmModule.forFeature(
-            [Organization, Policy, User, OrganizationMemberships],
+            [Policy, User],
             'codeclarity'
         )
     ],
-    providers: [LicensePolicyService, OrganizationsMemberService],
+    providers: [LicensePolicyService],
     controllers: [LicensePolicyController]
 })
 export class LicensePolicyModule {}

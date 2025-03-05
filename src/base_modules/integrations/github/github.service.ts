@@ -15,7 +15,6 @@ import {
     NotAuthorized
 } from 'src/types/errors/types';
 import { GithubIntegrationToken } from '../Token';
-import { OrganizationsMemberService } from 'src/base_modules/organizations/organizationMember.service';
 import {
     GithubTokenType,
     LinkGithubCreateBody,
@@ -23,24 +22,22 @@ import {
 } from 'src/types/entities/frontend/GithubIntegration';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
 import { IntegrationProvider, IntegrationType } from 'src/types/entities/frontend/Integration';
-import { Organization } from 'src/entity/codeclarity/Organization';
 import { Integration } from 'src/entity/codeclarity/Integration';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsersRepository } from 'src/base_modules/users/users.repository';
+import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 
 @Injectable()
 export class GithubIntegrationService {
     constructor(
         private readonly integrationsService: IntegrationsService,
         private readonly githubIntegrationTokenService: GithubIntegrationTokenService,
-        private readonly orgMemberShipService: OrganizationsMemberService,
         private readonly usersRepository: UsersRepository,
-        @InjectRepository(Organization, 'codeclarity')
-        private organizationRepository: Repository<Organization>,
+        private readonly organizationsRepository: OrganizationsRepository,
         @InjectRepository(Integration, 'codeclarity')
         private integrationRepository: Repository<Integration>
-    ) {}
+    ) { }
 
     /**
      * Add a github integration to the organization
@@ -73,12 +70,7 @@ export class GithubIntegrationService {
             throw new IntegrationWrongTokenType();
         }
 
-        const organization = await this.organizationRepository.findOne({
-            where: {
-                id: orgId
-            },
-            relations: ['integrations']
-        });
+        const organization = await this.organizationsRepository.getOrganizationById(orgId, { integrations: true })
         if (!organization) {
             throw new EntityNotFound();
         }
@@ -125,7 +117,7 @@ export class GithubIntegrationService {
         const added_organization = await this.integrationRepository.save(integration);
 
         organization.integrations.push(integration);
-        await this.organizationRepository.save(organization);
+        await this.organizationsRepository.saveOrganization(organization);
 
         return added_organization.id;
     }
@@ -149,10 +141,10 @@ export class GithubIntegrationService {
         linkGithubPatch: LinkGithubPatchBody,
         user: AuthenticatedUser
     ): Promise<void> {
-        if (!(await this.integrationsService.doesIntegrationBelongToOrg(integrationId, orgId))) {
+        if (!(await this.organizationsRepository.doesIntegrationBelongToOrg(integrationId, orgId))) {
             throw new NotAuthorized();
         }
-        await this.orgMemberShipService.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
         if (linkGithubPatch.token_type != GithubTokenType.CLASSIC_TOKEN) {
             throw new IntegrationWrongTokenType();
@@ -204,12 +196,12 @@ export class GithubIntegrationService {
         user: AuthenticatedUser
     ): Promise<Integration> {
         // (1) Check that the integration belongs to the org
-        if (!(await this.integrationsService.doesIntegrationBelongToOrg(integrationId, orgId))) {
+        if (!(await this.organizationsRepository.doesIntegrationBelongToOrg(integrationId, orgId))) {
             throw new NotAuthorized();
         }
 
         // (2) Check that the user has the right to access the org
-        await this.orgMemberShipService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const integration = await this.integrationRepository.findOne({
             where: {
@@ -233,12 +225,12 @@ export class GithubIntegrationService {
      */
     async removeGithubIntegration(orgId: string, integrationId: string, user: AuthenticatedUser) {
         // (1) Check that the integration belongs to the org
-        if (!(await this.integrationsService.doesIntegrationBelongToOrg(integrationId, orgId))) {
+        if (!(await this.organizationsRepository.doesIntegrationBelongToOrg(integrationId, orgId))) {
             throw new NotAuthorized();
         }
 
         // (2) Check that the user has the right to access the org
-        await this.orgMemberShipService.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
         // await this.githubRepo.delete(integrationId);
         throw new Error('Not implemented');
     }

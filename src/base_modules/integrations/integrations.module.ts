@@ -4,23 +4,21 @@ import { GithubModule } from './github/github.module';
 import { IntegrationsController } from './integrations.controller';
 import { IntegrationsService } from './integrations.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { OrganizationMemberships } from 'src/entity/codeclarity/OrganizationMemberships';
+import { OrganizationMemberships } from 'src/base_modules/organizations/organization.memberships.entity';
 import { OrganizationsModule } from '../organizations/organizations.module';
-import { OrganizationsMemberService } from '../organizations/organizationMember.service';
 import { Integration } from 'src/entity/codeclarity/Integration';
-import { Organization } from 'src/entity/codeclarity/Organization';
 
 @Module({
     imports: [
         TypeOrmModule.forFeature(
-            [OrganizationMemberships, Integration, Organization],
+            [Integration],
             'codeclarity'
         ),
         GitlabModule,
         GithubModule,
         OrganizationsModule
     ],
-    providers: [IntegrationsService, OrganizationsMemberService],
+    providers: [IntegrationsService],
     controllers: [IntegrationsController]
 })
 export class IntegrationsModule {}

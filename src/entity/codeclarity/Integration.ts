@@ -7,7 +7,7 @@ import {
     ManyToOne,
     OneToMany
 } from 'typeorm';
-import { Organization } from './Organization';
+import { Organization } from '../../base_modules/organizations/organization.entity';
 import { User } from '../../base_modules/users/users.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';

@@ -8,7 +8,6 @@ import {
     NotAuthorized,
     RabbitMQError
 } from 'src/types/errors/types';
-import { OrganizationsMemberService } from '../organizations/organizationMember.service';
 import { ProjectMemberService } from '../projects/projectMember.service';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginated/types';
 import { TypedPaginatedData } from 'src/types/paginated/types';
@@ -26,28 +25,26 @@ import { Output as LicensesOutput } from 'src/types/entities/services/Licenses';
 import { Analyzer } from 'src/entity/codeclarity/Analyzer';
 import { Analysis, AnalysisStage, AnalysisStatus } from 'src/entity/codeclarity/Analysis';
 import { Project } from 'src/entity/codeclarity/Project';
-import { Organization } from 'src/entity/codeclarity/Organization';
 import { Result } from 'src/entity/codeclarity/Result';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsersRepository } from '../users/users.repository';
+import { OrganizationsRepository } from '../organizations/organizations.repository';
 
 @Injectable()
 export class AnalysesService {
     constructor(
-        private readonly organizationMemberService: OrganizationsMemberService,
         private readonly projectMemberService: ProjectMemberService,
         private readonly analysesMemberService: AnalysesMemberService,
         private readonly configService: ConfigService,
         private readonly usersRepository: UsersRepository,
+        private readonly organizationsRepository: OrganizationsRepository,
         @InjectRepository(Project, 'codeclarity')
         private projectRepository: Repository<Project>,
         @InjectRepository(Analyzer, 'codeclarity')
         private analyzerRepository: Repository<Analyzer>,
         @InjectRepository(Analysis, 'codeclarity')
         private analysisRepository: Repository<Analysis>,
-        @InjectRepository(Organization, 'codeclarity')
-        private organizationRepository: Repository<Organization>,
         @InjectRepository(Result, 'codeclarity')
         private resultRepository: Repository<Result>
     ) {}
@@ -70,7 +67,7 @@ export class AnalysesService {
         user: AuthenticatedUser
     ): Promise<string> {
         // (1) Check if user has access to org
-        await this.organizationMemberService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check if the project belongs to the org
         const belongs = await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
@@ -101,9 +98,7 @@ export class AnalysesService {
             throw new EntityNotFound();
         }
 
-        const organization = await this.organizationRepository.findOne({
-            where: { id: orgId }
-        });
+        const organization = await this.organizationsRepository.getOrganizationById(orgId)
         if (!organization) {
             throw new EntityNotFound();
         }
@@ -222,7 +217,7 @@ export class AnalysesService {
         user: AuthenticatedUser
     ): Promise<Analysis> {
         // (1) Check if user has access to org
-        await this.organizationMemberService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check if the project belongs to the org
         let belongs = await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
@@ -262,7 +257,7 @@ export class AnalysesService {
         user: AuthenticatedUser
     ): Promise<Array<object>> {
         // (1) Check if user has access to org
-        await this.organizationMemberService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check if the project belongs to the org
         let belongs = await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
@@ -334,7 +329,7 @@ export class AnalysesService {
         user: AuthenticatedUser
     ): Promise<TypedPaginatedData<Analysis>> {
         // (1) Check if the user is allowed to create a analyzer (is atleast user)
-        await this.organizationMemberService.hasRequiredRole(
+        await this.organizationsRepository.hasRequiredRole(
             organizationId,
             user.userId,
             MemberRole.USER
@@ -405,7 +400,7 @@ export class AnalysesService {
         user: AuthenticatedUser
     ): Promise<void> {
         // (1) Check if user has access to org
-        await this.organizationMemberService.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // TODO: additionally check who created the analysis, and if the role is USER, only allow the user who created the analysis to delete it
         // obviously owners, admins and moderators can also delete it

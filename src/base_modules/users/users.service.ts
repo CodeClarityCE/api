@@ -44,15 +44,15 @@ import {
 } from 'src/types/entities/frontend/GitlabIntegration';
 import { IntegrationType, IntegrationProvider } from 'src/types/entities/frontend/Integration';
 import { User } from 'src/base_modules/users/users.entity';
-import { Organization } from 'src/entity/codeclarity/Organization';
+import { Organization } from 'src/base_modules/organizations/organization.entity';
 import {
     MemberRole,
     OrganizationMemberships
-} from 'src/entity/codeclarity/OrganizationMemberships';
+} from 'src/base_modules/organizations/organization.memberships.entity';
 import { Email, EmailType } from 'src/entity/codeclarity/Email';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { OrganizationsMemberService } from '../organizations/organizationMember.service';
+import { OrganizationsRepository } from '../organizations/organizations.repository';
 
 /**
  * This service offers methods for working with users
@@ -60,20 +60,16 @@ import { OrganizationsMemberService } from '../organizations/organizationMember.
 @Injectable()
 export class UsersService {
     constructor(
-        private readonly organizationMemberService: OrganizationsMemberService,
         private readonly emailService: EmailService,
         private readonly gitlabIntegrationTokenService: GitlabIntegrationTokenService,
+        private readonly organizationsRepository: OrganizationsRepository,
         @Inject(forwardRef(() => AuthService))
         private readonly authService: AuthService,
         @InjectRepository(User, 'codeclarity')
         private userRepository: Repository<User>,
-        @InjectRepository(Organization, 'codeclarity')
-        private organizationRepository: Repository<Organization>,
-        @InjectRepository(OrganizationMemberships, 'codeclarity')
-        private membershipRepository: Repository<OrganizationMemberships>,
         @InjectRepository(Email, 'codeclarity')
         private emailRepository: Repository<Email>,
-    ) {}
+    ) { }
 
     /**
      * Return the user with the given id.
@@ -114,7 +110,7 @@ export class UsersService {
         orgId: string,
         authenticatedUser: AuthenticatedUser
     ): Promise<void> {
-        await this.organizationMemberService.hasRequiredRole(
+        await this.organizationsRepository.hasRequiredRole(
             orgId,
             authenticatedUser.userId,
             MemberRole.USER
@@ -129,15 +125,11 @@ export class UsersService {
             throw new EntityNotFound();
         }
 
-        const organization = await this.organizationRepository.findOne({
-            where: {
-                id: orgId
-            },
-            relations: {
-                created_by: true,
-                default: true
-            }
-        });
+        const organization = await this.organizationsRepository.getOrganizationById(orgId, {
+            created_by: true,
+            default: true
+        }
+    )
         if (!organization) {
             throw new EntityNotFound();
         }
@@ -148,7 +140,7 @@ export class UsersService {
 
         organization.default.push(user);
 
-        await this.organizationRepository.save(organization);
+        await this.organizationsRepository.saveOrganization(organization);
     }
 
     /**
@@ -174,7 +166,7 @@ export class UsersService {
         organization.personal = true;
         organization.color_scheme = '1';
 
-        const org_created = await this.organizationRepository.save(organization);
+        const org_created = await this.organizationsRepository.saveOrganization(organization);
 
         const user = new User();
         user.first_name = userData.first_name;
@@ -195,7 +187,7 @@ export class UsersService {
         org_created.created_by = user_created;
         org_created.owners = [user_created];
 
-        await this.organizationRepository.save(org_created);
+        await this.organizationsRepository.saveOrganization(org_created);
 
         const orgMember = new OrganizationMemberships();
         orgMember.organization = org_created;
@@ -203,7 +195,7 @@ export class UsersService {
         orgMember.role = 0;
         orgMember.joined_on = new Date();
 
-        await this.membershipRepository.save(orgMember);
+        await this.organizationsRepository.saveMembership(orgMember);
 
         try {
             await this.sendUserRegistrationVerificationEmail(userData.email);

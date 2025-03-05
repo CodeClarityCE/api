@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToMany, Relation } from 'typeorm';
-import { Organization } from './Organization';
+import { Organization } from '../../base_modules/organizations/organization.entity';
 
 enum NotificationType {
     Info = 'info',

@@ -10,11 +10,11 @@ import {
     JoinColumn,
     Index
 } from 'typeorm';
-import { Organization } from '../../entity/codeclarity/Organization';
+import { Organization } from '../organizations/organization.entity';
 import { Integration } from '../../entity/codeclarity/Integration';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { OrganizationMemberships } from '../../entity/codeclarity/OrganizationMemberships';
+import { OrganizationMemberships } from '../organizations/organization.memberships.entity';
 import { Project } from '../../entity/codeclarity/Project';
 import { Analyzer } from '../../entity/codeclarity/Analyzer';
 import { Analysis } from '../../entity/codeclarity/Analysis';
