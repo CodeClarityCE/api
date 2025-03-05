@@ -35,7 +35,7 @@ import { OrganizationsModule } from '../organizations/organizations.module';
             'codeclarity'
         )
     ],
-    exports: [ProjectService],
+    exports: [ProjectService, ProjectMemberService],
     providers: [
         ProjectMemberService,
         ProjectService,
