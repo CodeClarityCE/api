@@ -1,6 +1,6 @@
 import { Expose, Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import { TeamMember } from '../users/teamMember.types';
+import { TeamMember } from '../../users/teamMember.types';
 
 /********************************************/
 /*                  Enums                   */

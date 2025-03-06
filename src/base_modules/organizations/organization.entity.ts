@@ -11,15 +11,15 @@ import {
 import { User } from '../users/users.entity';
 import { Notification } from '../notifications/notification.entity';
 import { Integration } from '../integrations/integrations.entity';
-import { Log } from './log.entity';
+import { Log } from './log/log.entity';
 import { Policy } from '../../codeclarity_modules/policies/policy.entity';
 import { Project } from '../projects/project.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { OrganizationMemberships } from './organization.memberships.entity';
+import { OrganizationMemberships } from './memberships/organization.memberships.entity';
 import { Analyzer } from '../analyzers/analyzer.entity';
 import { Analysis } from '../analyses/analysis.entity';
-import { Invitation } from './invitation.entity';
+import { Invitation } from './invitations/invitation.entity';
 
 @Entity()
 export class Organization {

@@ -20,7 +20,7 @@ import { Organization } from 'src/base_modules/organizations/organization.entity
 import {
     MemberRole,
     OrganizationMemberships
-} from 'src/base_modules/organizations/organization.memberships.entity';
+} from 'src/base_modules/organizations/memberships/organization.memberships.entity';
 import { Email, EmailType } from 'src/base_modules/email/email.entity';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { EmailRepository } from '../email/email.repository';

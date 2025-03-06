@@ -550,20 +550,6 @@ export class PersonalOrgCannotBeModified extends PublicAPIError {
     }
 }
 
-export class InvitationOrgAlreadyExists extends PublicAPIError {
-    static errorCode = 'InvitationOrgAlreadyExists';
-    static errorMessage = errorMessages[InvitationOrgAlreadyExists.errorCode];
-    static statusCode = 400;
-    constructor(cause?: unknown) {
-        super(
-            InvitationOrgAlreadyExists.errorCode,
-            InvitationOrgAlreadyExists.errorMessage,
-            InvitationOrgAlreadyExists.statusCode,
-            cause
-        );
-    }
-}
-
 export class FailedToCreateApiKey extends PublicAPIError {
     static errorCode = 'FailedToCreateApiKey';
     static errorMessage = errorMessages[FailedToCreateApiKey.errorCode];

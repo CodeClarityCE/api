@@ -5,23 +5,23 @@ import { TypedPaginatedData } from 'src/types/pagination.types';
 import { PaginationUserSuppliedConf } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
 import { TeamMember } from 'src/base_modules/users/teamMember.types';
-import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
-import { InviteCreateBody } from 'src/base_modules/organizations/orgInvitation.types';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
+import { InviteCreateBody } from 'src/base_modules/organizations/invitations/orgInvitation.types';
 import {
     OrganizationCreateBody,
     OrganizationInfoForInvitee
 } from 'src/base_modules/organizations/org.types';
-import { OrganizationMemberships } from 'src/base_modules/organizations/organization.memberships.entity';
+import { OrganizationMemberships } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { Email, EmailType } from 'src/base_modules/email/email.entity';
-import { Invitation } from 'src/base_modules/organizations/invitation.entity';
+import { Invitation } from 'src/base_modules/organizations/invitations/invitation.entity';
 import { genRandomString } from 'src/utils/crypto';
 import { hash } from 'src/utils/crypto';
 import { EmailService } from '../email/email.service';
 import { UsersRepository } from '../users/users.repository';
 import { OrganizationsRepository } from './organizations.repository';
 import { EmailRepository } from '../email/email.repository';
-import { InvitationsRepository } from './invitations.repository';
+import { InvitationsRepository } from './invitations/invitations.repository';
 
 @Injectable()
 export class OrganizationsService {

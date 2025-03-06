@@ -6,7 +6,7 @@ import { File as FileEntity } from 'src/base_modules/file/file.entity';
 import { UploadData } from './file.controller';
 import { join } from 'path';
 import { escapeString } from 'src/utils/cleaner';
-import { MemberRole } from 'src/base_modules/organizations/organization.memberships.entity';
+import { MemberRole } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
 import { UsersRepository } from '../users/users.repository';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { ProjectsRepository } from '../projects/projects.repository';

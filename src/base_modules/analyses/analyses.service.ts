@@ -10,7 +10,7 @@ import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginati
 import { TypedPaginatedData } from 'src/types/pagination.types';
 import * as amqp from 'amqplib';
 import { ConfigService } from '@nestjs/config';
-import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { AnalysisStartMessageCreate } from 'src/types/rabbitMqMessages.types';
 import { Output as VulnsOuptut } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';

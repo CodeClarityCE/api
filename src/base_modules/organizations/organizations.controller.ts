@@ -18,7 +18,7 @@ import {
 } from 'src/types/apiResponses.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { OrganizationLoggerService } from 'src/base_modules/organizations/organizationLogger.service';
+import { OrganizationLoggerService } from 'src/base_modules/organizations/log/organizationLogger.service';
 import { ApiTags } from '@nestjs/swagger';
 import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
@@ -29,7 +29,6 @@ import {
     EntityNotFound,
     InternalError,
     InvitationInvalidOrExpired,
-    InvitationOrgAlreadyExists,
     NotAMember,
     NotAuthenticated,
     NotAuthorized,
@@ -47,11 +46,12 @@ import {
     OrganizationMetaData
 } from 'src/base_modules/organizations/org.types';
 import { TeamMember } from 'src/base_modules/users/teamMember.types';
-import { InviteCreateBody } from 'src/base_modules/organizations/orgInvitation.types';
-import { OrganizationAuditLog } from 'src/base_modules/organizations/orgAuditLog.types';
+import { InviteCreateBody } from 'src/base_modules/organizations/invitations/orgInvitation.types';
+import { OrganizationAuditLog } from 'src/base_modules/organizations/log/orgAuditLog.types';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
-import { Log } from 'src/base_modules/organizations/log.entity';
-import { Invitation } from 'src/base_modules/organizations/invitation.entity';
+import { Log } from 'src/base_modules/organizations/log/log.entity';
+import { Invitation } from 'src/base_modules/organizations/invitations/invitation.entity';
+import { InvitationOrgAlreadyExists } from './organizations.errors';
 
 @Controller('org')
 export class OrganizationsController {

@@ -13,7 +13,7 @@ import { GithubRepositorySchema } from 'src/base_modules/integrations/github/git
 import { SortDirection } from 'src/types/sort.types';
 import ms = require('ms');
 import { GithubIntegrationService } from './github.service';
-import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { Integration } from 'src/base_modules/integrations/integrations.entity';
 import { RepositoryCache, RepositoryType } from 'src/base_modules/projects/repositoryCache.entity';
 import { InjectRepository } from '@nestjs/typeorm';

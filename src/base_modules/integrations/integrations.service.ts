@@ -3,7 +3,7 @@ import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { NotAMember, NotAuthorized } from 'src/types/error.types';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
-import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { Integration } from 'src/base_modules/integrations/integrations.entity';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { IntegrationsRepository } from './integrations.repository';

@@ -9,7 +9,7 @@ import {
     LinkGitlabCreateBody,
     LinkGitlabPatchBody
 } from 'src/base_modules/integrations/gitlab/gitlabIntegration.types';
-import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 
 // https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#prefill-personal-access-token-name-and-scopes

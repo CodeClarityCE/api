@@ -10,7 +10,7 @@ import {
     SeverityInfoByWeek,
     Trend
 } from 'src/codeclarity_modules/dashboard/dashboard.types';
-import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import {
     PaginationConfig,
     PaginationUserSuppliedConf,

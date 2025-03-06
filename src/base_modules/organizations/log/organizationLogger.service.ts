@@ -7,13 +7,11 @@ import {
     ActionType,
     getSeverityOfAction,
     getTypeClassOfAction
-} from 'src/base_modules/organizations/orgAuditLog.types';
-import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
-import { Log } from 'src/base_modules/organizations/log.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { UsersRepository } from '../users/users.repository';
-import { OrganizationsRepository } from './organizations.repository';
+} from 'src/base_modules/organizations/log/orgAuditLog.types';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
+import { Log } from './log.entity';
+import { UsersRepository } from '../../users/users.repository';
+import { OrganizationsRepository } from '../organizations.repository';
 import { LogsRepository } from './logs.repository';
 
 /**

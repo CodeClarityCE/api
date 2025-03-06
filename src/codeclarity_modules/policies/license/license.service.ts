@@ -7,7 +7,7 @@ import {
 } from 'src/codeclarity_modules/policies/license/licensePolicy.types';
 import { PaginationUserSuppliedConf } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
-import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { PolicyType } from 'src/codeclarity_modules/policies/policy.types';
 import { Policy, PolicyFrontend } from 'src/codeclarity_modules/policies/policy.entity';
 import { Repository } from 'typeorm';

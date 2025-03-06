@@ -19,7 +19,7 @@ import {
     LinkGithubCreateBody,
     LinkGithubPatchBody
 } from 'src/base_modules/integrations/github/githubIntegration.types';
-import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { IntegrationProvider, IntegrationType } from 'src/base_modules/integrations/integration.types';
 import { Integration } from 'src/base_modules/integrations/integrations.entity';
 import { InjectRepository } from '@nestjs/typeorm';

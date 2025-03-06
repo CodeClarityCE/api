@@ -14,14 +14,14 @@ import { Organization } from '../organizations/organization.entity';
 import { Integration } from '../integrations/integrations.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { OrganizationMemberships } from '../organizations/organization.memberships.entity';
+import { OrganizationMemberships } from '../organizations/memberships/organization.memberships.entity';
 import { Project } from '../projects/project.entity';
 import { Analyzer } from '../analyzers/analyzer.entity';
 import { Analysis } from '../analyses/analysis.entity';
 import { Policy } from '../../codeclarity_modules/policies/policy.entity';
 import { File } from '../file/file.entity';
 import { Email } from '../email/email.entity';
-import { Invitation } from '../organizations/invitation.entity';
+import { Invitation } from '../organizations/invitations/invitation.entity';
 
 export enum SocialType {
     GITHUB = 'GITHUB',
