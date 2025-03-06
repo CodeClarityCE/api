@@ -8,7 +8,6 @@ import {
 } from 'src/base_modules/auth/auth.types';
 import {
     AlreadyExists,
-    CannotPerformActionOnSocialAccount,
     EntityNotFound,
     RegistrationNotVerified,
     WrongCredentials,
@@ -27,6 +26,7 @@ import ms = require('ms');
 import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/gitlab/gitlabToken.service';
 import { User } from 'src/base_modules/users/users.entity';
 import { UsersRepository } from '../users/users.repository';
+import { CannotPerformActionOnSocialAccount } from '../users/users.errors';
 
 @Injectable()
 export class AuthService {

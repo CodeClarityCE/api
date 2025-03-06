@@ -1,8 +1,6 @@
 import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
-    AccountRegistrationVerificationTokenInvalidOrExpired,
-    FailedToSendAccountRegistrationVerificationEmail,
     NotAuthorized,
     PasswordsDoNotMatch,
 } from 'src/types/error.types';
@@ -25,6 +23,8 @@ import { Email, EmailType } from 'src/base_modules/email/email.entity';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { EmailRepository } from '../email/email.repository';
 import { UsersRepository } from './users.repository';
+import { FailedToSendAccountRegistrationVerificationEmail } from './users.errors';
+import { AccountRegistrationVerificationTokenInvalidOrExpired } from '../auth/auth.errors';
 
 /**
  * This service offers methods for working with users

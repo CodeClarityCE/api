@@ -19,11 +19,8 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import {
-    AccountRegistrationVerificationTokenInvalidOrExpired,
-    CannotPerformActionOnSocialAccount,
     EmailAlreadyExists,
     EntityNotFound,
-    HandleAlreadyExists,
     PasswordResetTokenInvalidOrExpired,
     PasswordsDoNotMatch,
     RegistrationNotVerified,
@@ -32,6 +29,8 @@ import {
 import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
 import { APIDocNoDataResponseDecorator } from 'src/decorators/NoDataResponse';
 import { User } from 'src/base_modules/users/users.entity';
+import { CannotPerformActionOnSocialAccount } from '../users/users.errors';
+import { AccountRegistrationVerificationTokenInvalidOrExpired, HandleAlreadyExists } from './auth.errors';
 
 @Controller('auth')
 export class AuthController {

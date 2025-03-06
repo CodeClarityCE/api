@@ -86,27 +86,15 @@ export const errorMessages: { [key: string]: string } = {
         'The requested action cannot be performed because the token is not valid or has been revoked.',
     RegistrationNotVerified:
         'Before being able to use our platform, verify your registration via the email send to your inbox.',
-    CannotPerformActionOnSocialAccount:
-        'The requested action cannot be performed on a social account.',
-    SetupAlreadyDone:
-        'The requested action cannot be performed on the social account because it is already setup.',
-    CannotPerformActionOnNormalAccount:
-        'The requested action cannot be performed on a normal account.',
     PersonalOrgCannotBeModified: 'A personal org cannot be modified.',
-    InvitationOrgAlreadyExists:
-        'An invitation for the user to join the organization already exists.',
     FailedToCreateApiKey: 'Failed to generate the api key.',
     FailedToAuthenticateSocialAccount: 'Failed to authenticate social account.',
     WrongCredentials: 'You have entered the wrong credentials.',
     InvitationExpired: 'Invitation expired.',
-    HandleAlreadyExists:
-        'The requested user could not be created because a different user with the same handle already exists.',
     EmailAlreadyExists:
         'The requested user could not be created because a different user with the same email already exists.',
     AlreadyExists: 'The requested entity could not be created because it already exists.',
     UserDoesNotExist: 'The referenced user does not exists.',
-    AccountRegistrationVerificationTokenInvalidOrExpired:
-        'The account registration verification token does not exist or has expired.',
     UnsubscriptionTokenInvalidOrExpired: 'The unsubscription link is invalid or has expired.',
     PasswordResetTokenInvalidOrExpired: 'The password reset token does not exist or has expired.',
     NotAMember: 'The user is not a member of the referenced organization.',
@@ -115,8 +103,6 @@ export const errorMessages: { [key: string]: string } = {
     InvitationInvalidOrExpired: 'The invitation does not exist or has expired.',
     EntityNotFound: 'The requested entity could not be found.',
     IntegrationIntegrationTokenMissingPermissions: 'An integration token has missing permissions.',
-    FailedToSendAccountRegistrationVerificationEmail:
-        'An error occured while trying to send the account registration verficiation email.',
     FailedToSendPasswordResetEmail:
         'An error occured while trying to send the password reset email.',
     FailedToSendOrganizationInviteEmail:
@@ -480,48 +466,6 @@ export class AccountNotActivated extends PublicAPIError {
     }
 }
 
-export class CannotPerformActionOnSocialAccount extends PublicAPIError {
-    static errorCode = 'CannotPerformActionOnSocialAccount';
-    static errorMessage = errorMessages[CannotPerformActionOnSocialAccount.errorCode];
-    static statusCode = 400;
-    constructor(cause?: unknown) {
-        super(
-            CannotPerformActionOnSocialAccount.errorCode,
-            CannotPerformActionOnSocialAccount.errorMessage,
-            CannotPerformActionOnSocialAccount.statusCode,
-            cause
-        );
-    }
-}
-
-export class SetupAlreadyDone extends PublicAPIError {
-    static errorCode = 'SetupAlreadyDone';
-    static errorMessage = errorMessages[SetupAlreadyDone.errorCode];
-    static statusCode = 400;
-    constructor(cause?: unknown) {
-        super(
-            SetupAlreadyDone.errorCode,
-            SetupAlreadyDone.errorMessage,
-            SetupAlreadyDone.statusCode,
-            cause
-        );
-    }
-}
-
-export class CannotPerformActionOnNormalAccount extends PublicAPIError {
-    static errorCode = 'CannotPerformActionOnNormalAccount';
-    static errorMessage = errorMessages[CannotPerformActionOnNormalAccount.errorCode];
-    static statusCode = 400;
-    constructor(cause?: unknown) {
-        super(
-            CannotPerformActionOnNormalAccount.errorCode,
-            CannotPerformActionOnNormalAccount.errorMessage,
-            CannotPerformActionOnNormalAccount.statusCode,
-            cause
-        );
-    }
-}
-
 export class SocialConnectionTypeNotSupported extends PublicAPIError {
     static errorCode = 'SocialConnectionTypeNotSupported';
     static errorMessage = errorMessages[SocialConnectionTypeNotSupported.errorCode];
@@ -606,20 +550,6 @@ export class InvitationExpired extends PublicAPIError {
     }
 }
 
-export class HandleAlreadyExists extends PublicAPIError {
-    static errorCode = 'HandleAlreadyExists';
-    static errorMessage = errorMessages[HandleAlreadyExists.errorCode];
-    static statusCode = 409;
-    constructor(cause?: unknown) {
-        super(
-            HandleAlreadyExists.errorCode,
-            HandleAlreadyExists.errorMessage,
-            HandleAlreadyExists.statusCode,
-            cause
-        );
-    }
-}
-
 export class EmailAlreadyExists extends PublicAPIError {
     static errorCode = 'EmailAlreadyExists';
     static errorMessage = errorMessages[EmailAlreadyExists.errorCode];
@@ -652,21 +582,6 @@ export class UserDoesNotExist extends PublicAPIError {
             UserDoesNotExist.errorCode,
             UserDoesNotExist.errorMessage,
             UserDoesNotExist.statusCode,
-            cause
-        );
-    }
-}
-
-export class AccountRegistrationVerificationTokenInvalidOrExpired extends PublicAPIError {
-    static errorCode = 'AccountRegistrationVerificationTokenInvalidOrExpired';
-    static errorMessage =
-        errorMessages[AccountRegistrationVerificationTokenInvalidOrExpired.errorCode];
-    static statusCode = 400;
-    constructor(cause?: unknown) {
-        super(
-            AccountRegistrationVerificationTokenInvalidOrExpired.errorCode,
-            AccountRegistrationVerificationTokenInvalidOrExpired.errorMessage,
-            AccountRegistrationVerificationTokenInvalidOrExpired.statusCode,
             cause
         );
     }
@@ -774,20 +689,6 @@ export class IntegrationTokenMissingPermissions extends PublicAPIError {
             IntegrationTokenMissingPermissions.errorCode,
             IntegrationTokenMissingPermissions.errorMessage,
             IntegrationTokenMissingPermissions.statusCode,
-            cause
-        );
-    }
-}
-
-export class FailedToSendAccountRegistrationVerificationEmail extends PublicAPIError {
-    static errorCode = 'FailedToSendAccountRegistrationVerificationEmail';
-    static errorMessage = errorMessages[FailedToSendAccountRegistrationVerificationEmail.errorCode];
-    static statusCode = 500;
-    constructor(cause?: unknown) {
-        super(
-            FailedToSendAccountRegistrationVerificationEmail.errorCode,
-            FailedToSendAccountRegistrationVerificationEmail.errorMessage,
-            FailedToSendAccountRegistrationVerificationEmail.statusCode,
             cause
         );
     }
