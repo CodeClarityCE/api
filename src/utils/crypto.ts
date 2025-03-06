@@ -1,11 +1,12 @@
 const crypto = require('crypto');
 
 /**
- * Generate a hash of a given string (default SHA-256)
- * @param string
- * @param options
- * @param options.algorithm The algorithm to use, defaults to SHA-256
- * @returns the hexadecimal string respresentation of the hash
+ * Generate a hash of a given string using SHA-256 by default.
+ *
+ * @param {string} string The input string to be hashed.
+ * @param {object} [options] Optional configuration options.
+ * @param {string} [options.algorithm='SHA-256'] The algorithm to use for hashing. Defaults to 'SHA-256'.
+ * @returns {Promise<string>} A promise that resolves with the hexadecimal representation of the hash.
  */
 export async function hash(
     string: string,
@@ -20,8 +21,10 @@ export async function hash(
 }
 
 /**
- * Creates a cryptographically secure pseudo-random number and returns a hexadecimal string representation of it
- * @returns the hexadecimal string representation
+ * Generates a cryptographically secure pseudo-random number and returns its hexadecimal string representation.
+ *
+ * @param {number} size The size of the random number in bytes.
+ * @returns {Promise<string>} A promise that resolves with the hexadecimal string representation of the random number.
  */
 export async function genRandomString(size: number): Promise<string> {
     return new Promise((resolve, reject) => {

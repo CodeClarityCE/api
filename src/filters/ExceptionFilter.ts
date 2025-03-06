@@ -10,6 +10,12 @@ import { PrivateAPIError, PublicAPIError } from 'src/types/error.types';
  */
 @Catch(Error)
 export class ErrorFilter implements ExceptionFilter {
+    /**
+     * Catches and processes exceptions thrown by routes.
+     *
+     * The goal of this method is to filter out sensitive information from error responses,
+     * as well as convert them to snake_case format (underscores instead of camel case).
+     */
     catch(exception: Error, host: ArgumentsHost) {
         const ctx = host.switchToHttp();
         const response = ctx.getResponse<FastifyReply>();
@@ -18,6 +24,7 @@ export class ErrorFilter implements ExceptionFilter {
         let errorCode = 'InternalError';
         let message = 'We encountered a problem while processing your request.';
 
+        // Check if the exception is an instance of PublicAPIError
         if (exception instanceof PublicAPIError) {
             const error: PublicAPIError = exception;
             status = error.getHttpStatusCode();
@@ -27,17 +34,20 @@ export class ErrorFilter implements ExceptionFilter {
             response.status(status).send(JSON.stringify(object));
             return;
         } else if (exception instanceof PrivateAPIError) {
+            // Check if the exception is an instance of PrivateAPIError
             const error: PrivateAPIError = exception;
             status = error.getHttpStatusCode();
             errorCode = error.getErrorCode();
             message = error.getMessage();
-            // TODO: log
+            // TODO: log this exception for debugging purposes
         } else if (exception instanceof HttpException) {
+            // Check if the exception is an instance of HttpException
             const error: HttpException = exception;
             status = error.getStatus();
             message = error.message;
-            // TODO: log
+            // TODO: log this exception for debugging purposes
         } else {
+            // Catch any other unexpected exceptions and return a generic InternalError response
             if ('name' in exception && exception['name'] == 'FastifyError') {
                 const fastifyException: any = exception;
                 if (fastifyException['statusCode'] >= 400 && fastifyException['statusCode'] < 500) {
@@ -59,10 +69,15 @@ export class ErrorFilter implements ExceptionFilter {
     }
 }
 
+/**
+ * Converts a JavaScript object with camelCase property names to an object with snake_case property names.
+ *
+ * This function is used to convert the error objects returned in API responses from NestJS's default camel case format to snake case, which is what our API clients expect.
+ */
 function snakeCase(fields: any) {
     for (const key in fields) {
         if (fields[key] instanceof Object) {
-            // recurse
+            // Recursively call this function on nested objects
             fields[key] = snakeCase(fields[key]);
         }
 
@@ -72,13 +87,14 @@ function snakeCase(fields: any) {
             })
             .replace(/^_/, '');
 
-        // put new snakecase key
+        // Put the new snake_case property name into the object
         fields[snakeKey] = fields[key];
 
-        // remove old cameCase key
+        // Remove the old camelCase property name from the object
         if (snakeKey !== key) {
             delete fields[key];
         }
     }
+
     return fields;
 }
