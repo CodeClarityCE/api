@@ -3,6 +3,9 @@ import { Project } from 'src/base_modules/projects/project.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EntityNotFound, NotAuthorized, ProjectDoesNotExist } from 'src/types/errors/types';
+import { TypedPaginatedData } from 'src/types/paginated/types';
+import { AllowedOrderByGetProjects } from './projects.service';
+import { SortDirection } from 'src/types/sort/types';
 
 @Injectable()
 export class ProjectsRepository {
@@ -67,5 +70,53 @@ export class ProjectsRepository {
 
     async deleteProject(projectId: string) {
         await this.projectRepository.delete(projectId)
+    }
+
+    async saveProject(project: Project): Promise<Project> {
+        return this.projectRepository.save(project)
+    }
+
+    async getManyProjects(orgId: string, currentPage: number, entriesPerPage: number, searchKey?: string, sortBy?: AllowedOrderByGetProjects, sortDirection?: SortDirection): Promise<TypedPaginatedData<Project>> {
+        let queryBuilder = await this.projectRepository.createQueryBuilder('project')
+            .leftJoin('project.organizations', 'organizations')
+            .where('organizations.id = :orgId', { orgId: orgId })
+            .leftJoinAndSelect('project.analyses', 'analyses')
+            .orderBy('analyses.created_on', 'DESC')
+            .leftJoinAndSelect('analyses.analyzer', 'analyzer')
+            .leftJoinAndSelect('project.files', 'files')
+            .leftJoinAndSelect('project.added_by', 'added_by');
+
+        // if (sortBy && sortDirection) {
+        //     if (sortBy == AllowedOrderByGetProjects.NAME)
+        //         queryBuilder = queryBuilder.orderBy('name', sortDirection);
+        //     else if (sortBy == AllowedOrderByGetProjects.IMPORTED_ON)
+        //         queryBuilder = queryBuilder.orderBy('added_on', sortDirection);
+        // }
+
+        if (searchKey) {
+            queryBuilder = queryBuilder.andWhere(
+                '(project.name LIKE :searchKey OR project.description LIKE :searchKey)',
+                { searchKey: `%${searchKey}%` }
+            );
+        }
+
+        const fullCount = await queryBuilder.getCount();
+
+        queryBuilder = queryBuilder
+            .limit(entriesPerPage)
+            .offset(currentPage * entriesPerPage);
+
+        const projects = await queryBuilder.getMany();
+
+        return {
+            data: projects,
+            page: currentPage,
+            entry_count: projects.length,
+            entries_per_page: entriesPerPage,
+            total_entries: fullCount,
+            total_pages: Math.ceil(fullCount / entriesPerPage),
+            matching_count: fullCount, // once you apply filters this needs to change
+            filter_count: {}
+        };
     }
 }

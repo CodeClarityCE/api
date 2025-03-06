@@ -99,6 +99,15 @@ export class AnalysesRepository {
         };
     }
 
+    async getAnalysesByProjectId(projectId: string, relations?: object): Promise<Analysis[]> {
+        return this.analysisRepository.find({
+            where: {
+                project: {id: projectId}
+            },
+            relations: relations
+        });
+    }
+
     /**
      * Checks whether an analysis belongs to a given project.
      * @param analysisId The ID of the analysis to check.

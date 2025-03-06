@@ -14,17 +14,16 @@ import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
 import { ActionType } from 'src/types/entities/frontend/OrgAuditLog';
 import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
 import { IntegrationType, Project } from 'src/base_modules/projects/project.entity';
-import { Analysis } from 'src/base_modules/analyses/analysis.entity';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { mkdir, rm } from 'fs/promises';
 import { UsersRepository } from '../users/users.repository';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { FileRepository } from '../file/file.repository';
 import { IntegrationsRepository } from '../integrations/integrations.repository';
 import { AnalysisResultsRepository } from 'src/codeclarity_modules/results/results.repository';
+import { AnalysesRepository } from '../analyses/analyses.repository';
+import { ProjectsRepository } from './projects.repository';
 
 export enum AllowedOrderByGetProjects {
     IMPORTED_ON = 'imported_on',
@@ -43,10 +42,8 @@ export class ProjectService {
         private readonly fileRepository: FileRepository,
         private readonly integrationsRepository: IntegrationsRepository,
         private readonly resultsRepository: AnalysisResultsRepository,
-        @InjectRepository(Project, 'codeclarity')
-        private projectRepository: Repository<Project>,
-        @InjectRepository(Analysis, 'codeclarity')
-        private analysisRepository: Repository<Analysis>,
+        private readonly analysesRepository: AnalysesRepository,
+        private readonly projectsRepository: ProjectsRepository
     ) {}
 
     /**
@@ -156,7 +153,7 @@ export class ProjectService {
         project.integration_type = IntegrationType.VCS;
         project.invalid = false;
 
-        const added_project = await this.projectRepository.save(project);
+        const added_project = await this.projectsRepository.saveProject(project);
 
         const folderPath = join('/private', organization.id, "projects", added_project.id);
         await mkdir(folderPath, { recursive: true });
@@ -195,17 +192,10 @@ export class ProjectService {
             organizationId
         );
 
-        const project = await this.projectRepository.findOneOrFail({
-            where: {
-                id: id
-            },
-            relations: {
-                files: true,
-                added_by: true
-            }
-        });
-
-        return project;
+        return  this.projectsRepository.getProjectById(id,  {
+            files: true,
+            added_by: true
+        })
     }
 
     /**
@@ -248,48 +238,7 @@ export class ProjectService {
         if (paginationUserSuppliedConf.currentPage)
             currentPage = Math.max(0, paginationUserSuppliedConf.currentPage);
 
-        let projectRepository = await this.projectRepository.createQueryBuilder('project');
-        projectRepository = projectRepository
-            .leftJoin('project.organizations', 'organizations')
-            .where('organizations.id = :orgId', { orgId: orgId })
-            .leftJoinAndSelect('project.analyses', 'analyses')
-            .orderBy('analyses.created_on', 'DESC')
-            .leftJoinAndSelect('analyses.analyzer', 'analyzer')
-            .leftJoinAndSelect('project.files', 'files')
-            .leftJoinAndSelect('project.added_by', 'added_by');
-
-        if (sortBy) {
-            if (sortBy == AllowedOrderByGetProjects.NAME)
-                projectRepository = projectRepository.orderBy('name', sortDirection);
-            else if (sortBy == AllowedOrderByGetProjects.IMPORTED_ON)
-                projectRepository = projectRepository.orderBy('added_on', sortDirection);
-        }
-
-        if (searchKey) {
-            projectRepository = projectRepository.andWhere(
-                '(project.name LIKE :searchKey OR project.description LIKE :searchKey)',
-                { searchKey: `%${searchKey}%` }
-            );
-        }
-
-        const fullCount = await projectRepository.getCount();
-
-        projectRepository = projectRepository
-            .limit(entriesPerPage)
-            .offset(currentPage * entriesPerPage);
-
-        const projects = await projectRepository.getMany();
-
-        return {
-            data: projects,
-            page: currentPage,
-            entry_count: projects.length,
-            entries_per_page: entriesPerPage,
-            total_entries: fullCount,
-            total_pages: Math.ceil(fullCount / entriesPerPage),
-            matching_count: fullCount, // once you apply filters this needs to change
-            filter_count: {}
-        };
+        return this.projectsRepository.getManyProjects(orgId, currentPage, entriesPerPage, searchKey)
     }
 
     /**
@@ -306,20 +255,7 @@ export class ProjectService {
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check if project belongs to org
-
-        const isProjectOfOrg = await this.projectRepository.exists({
-            relations: ['organizations'],
-            where: {
-                id: id,
-                organizations: {
-                    id: orgId
-                }
-            }
-        });
-
-        if (!isProjectOfOrg) {
-            throw new NotAuthorized();
-        }
+        await this.projectsRepository.doesProjectBelongToOrg(id, orgId)
 
         const membership = await this.organizationsRepository.getMembershipRole(orgId, user.userId)
 
@@ -329,15 +265,10 @@ export class ProjectService {
 
         const memberRole = membership.role;
 
-        const project = await this.projectRepository.findOneOrFail({
-            where: {
-                id: id
-            },
-            relations: {
-                files: true,
-                added_by: true
-            }
-        });
+        const project = await this.projectsRepository.getProjectById(id, {
+            files: true,
+            added_by: true
+        })
 
         // Every moderator, admin or owner can remove a project.
         // a normal user can also delete it, iff he is the one that added the project
@@ -352,20 +283,15 @@ export class ProjectService {
         organization.projects = organization.projects.filter((p) => p.id != id);
         await this.organizationsRepository.saveOrganization(organization);
 
-        const analyses = await this.analysisRepository.find({
-            where: {
-                project: project
-            },
-            relations: {
-                results: true
-            }
-        });
+        const analyses = await this.analysesRepository.getAnalysesByProjectId(project.id, {
+            results: true
+        })
         for (const analysis of analyses) {
             for (const result of analysis.results) {
                 await this.resultsRepository.remove(result);
             }
 
-            await this.analysisRepository.remove(analysis);
+            await this.analysesRepository.deleteAnalysis(analysis.id);
         }
 
         // Remove project folder
@@ -378,7 +304,7 @@ export class ProjectService {
             await this.fileRepository.remove(file)
         }
 
-        await this.projectRepository.delete(id);
+        await this.projectsRepository.deleteProject(id);
 
         await this.organizationLoggerService.addAuditLog(
             ActionType.ProjectDelete,
