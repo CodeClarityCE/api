@@ -4,7 +4,7 @@ import {
     AffectedVuln,
     Vulnerability,
     VulnerabilityMerged
-} from 'src/types/entities/services/Vulnerabilities';
+} from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { AnalysisResultsService } from '../results.service';
 import {
@@ -22,10 +22,10 @@ import {
 import { filter } from 'src/codeclarity_modules/results/vulnerabilities/utils/filter';
 import { sort } from 'src/codeclarity_modules/results/vulnerabilities/utils/sort';
 import { UnknownWorkspace } from 'src/types/errors/types';
-import { Output as SBOMOutput } from 'src/types/entities/services/Sbom';
+import { Output as SBOMOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { getSbomResult } from '../sbom/utils/utils';
-import { Output as VulnsOutput } from 'src/types/entities/services/Vulnerabilities';
-import { StatusResponse } from 'src/types/entities/services/Status';
+import { Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
+import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
 import { AnalysisStats, newAnalysisStats } from 'src/types/entities/frontend/Vulnerability';
 import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
 import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';

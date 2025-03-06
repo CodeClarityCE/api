@@ -1,5 +1,5 @@
 import { PluginFailed, PluginResultNotAvailable } from 'src/types/errors/types';
-import { Output as PatchesOutput } from 'src/types/entities/services/Patching';
+import { Output as PatchesOutput } from 'src/codeclarity_modules/results/patching/patching.types';
 import { Status } from 'src/types/apiResponses';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { Repository } from 'typeorm';

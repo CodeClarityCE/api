@@ -2,8 +2,8 @@ import {
     Output as VulnsOutput,
     Vulnerability,
     Status
-} from 'src/types/entities/services/Vulnerabilities';
-import { Dependency } from 'src/types/entities/services/Sbom';
+} from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
+import { Dependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { PluginFailed, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/errors/types';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { Repository } from 'typeorm';

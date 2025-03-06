@@ -1,4 +1,4 @@
-import { SbomDependency } from 'src/types/entities/services/Sbom';
+import { SbomDependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { compare } from 'compare-versions';
 
 function sort(

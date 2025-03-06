@@ -1,4 +1,4 @@
-import { Dependency } from './Sbom';
+import { Dependency } from '../sbom/sbom.types';
 
 export interface License {
     reference: string;

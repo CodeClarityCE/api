@@ -1,6 +1,6 @@
-import { CVSS2, CVSS3, CVSS31 } from '../../../codeclarity_modules/knowledge/cvss.types';
-import { PatchInfo } from '../frontend/Patching';
-import { ParsedGitUrl } from './Sbom';
+import { CVSS2, CVSS3, CVSS31 } from '../../knowledge/cvss.types';
+import { PatchInfo } from '../../../types/entities/frontend/Patching';
+import { ParsedGitUrl } from '../sbom/sbom.types';
 
 export interface VulnSourceInfo {
     name: string;

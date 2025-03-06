@@ -1,5 +1,5 @@
 import { Status } from 'src/types/apiResponses';
-import { Vulnerability } from './Vulnerabilities';
+import { Vulnerability } from '../vulnerabilities/vulnerabilities.types';
 
 export interface Output {
     workspaces: { [key: string]: Workspace };

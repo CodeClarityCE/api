@@ -7,13 +7,13 @@ import {
     Output as SBOMOutput,
     SbomDependency,
     WorkspacesOutput
-} from 'src/types/entities/services/Sbom';
+} from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { paginate } from 'src/codeclarity_modules/results/utils/utils';
 import { getDependencyData, getSbomResult } from 'src/codeclarity_modules/results/sbom/utils/utils';
 import { filter } from './utils/filter';
 import { sort } from './utils/sort';
 import { EntityNotFound, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/errors/types';
-import { StatusResponse } from 'src/types/entities/services/Status';
+import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
 import { AnalysisStats, newAnalysisStats } from 'src/types/entities/frontend/Sbom';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { Package } from 'src/codeclarity_modules/knowledge/package/package.entity';

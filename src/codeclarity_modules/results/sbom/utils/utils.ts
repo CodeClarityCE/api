@@ -4,9 +4,9 @@ import {
     SbomDependency,
     Output as SBOMOutput,
     Status
-} from 'src/types/entities/services/Sbom';
-import { Output as LicenseOutput } from 'src/types/entities/services/Licenses';
-import { Output as VulnsOutput } from 'src/types/entities/services/Vulnerabilities';
+} from 'src/codeclarity_modules/results/sbom/sbom.types';
+import { Output as LicenseOutput } from 'src/codeclarity_modules/results/licenses/licenses.types';
+import { Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import {
     EntityNotFound,
     PluginFailed,

@@ -10,7 +10,7 @@ import {
     SeverityInfo,
     OtherInfo
 } from 'src/types/entities/frontend/Vulnerability';
-import { Vulnerability, AffectedInfo } from 'src/types/entities/services/Vulnerabilities';
+import { Vulnerability, AffectedInfo } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { getVersionsSatisfyingConstraint } from 'src/codeclarity_modules/results/utils/utils';
 import { satisfies } from 'semver';
 import { VersionsRepository } from 'src/codeclarity_modules/knowledge/package/packageVersions.repository';
@@ -19,9 +19,9 @@ import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.reposit
 import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
 import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
 import { OWASPRepository } from 'src/codeclarity_modules/knowledge/owasp/owasp.repository';
-import { Dependency } from 'src/types/entities/services/Sbom';
+import { Dependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { CVSS2, CVSS3, CVSS31 } from 'src/codeclarity_modules/knowledge/cvss.types';
-import { PatchInfo } from 'src/types/entities/services/Patching';
+import { PatchInfo } from 'src/codeclarity_modules/results/patching/patching.types';
 import { OwaspTop10Info } from 'src/codeclarity_modules/knowledge/owasp/owasp.types';
 import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
 import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';

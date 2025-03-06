@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Output as LicensesOutput, Status } from 'src/types/entities/services/Licenses';
+import { Output as LicensesOutput, Status } from 'src/codeclarity_modules/results/licenses/licenses.types';
 import { PluginFailed, PluginResultNotAvailable } from 'src/types/errors/types';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';

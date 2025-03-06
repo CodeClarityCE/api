@@ -24,7 +24,7 @@ import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
 import { InternalError, NotAuthenticated, NotAuthorized } from 'src/types/errors/types';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
-import { LicenseDist } from 'src/types/entities/services/Sbom';
+import { LicenseDist } from 'src/codeclarity_modules/results/sbom/sbom.types';
 
 @Controller('/org/:org_id/dashboard')
 export class DashboardController {

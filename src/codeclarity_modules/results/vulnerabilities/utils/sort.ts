@@ -1,5 +1,5 @@
 // import { compare } from 'compare-versions';
-import { VulnerabilityMerged } from 'src/types/entities/services/Vulnerabilities';
+import { VulnerabilityMerged } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 
 function sort(
     vulnerabilities: VulnerabilityMerged[],

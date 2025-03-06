@@ -1,5 +1,5 @@
 import { PluginFailed, PluginResultNotAvailable } from 'src/types/errors/types';
-import { Output as LicensesOutput } from 'src/types/entities/services/Licenses';
+import { Output as LicensesOutput } from 'src/codeclarity_modules/results/licenses/licenses.types';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { Status } from 'src/types/apiResponses';
 import { Repository } from 'typeorm';

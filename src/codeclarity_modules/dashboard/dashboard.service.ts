@@ -19,8 +19,8 @@ import {
 import moment from 'moment';
 import { SortDirection } from 'src/types/sort/types';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
-import { LicenseDist, Output as SbomOutput } from 'src/types/entities/services/Sbom';
-import { Output as VulnsOutput } from 'src/types/entities/services/Vulnerabilities';
+import { LicenseDist, Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
+import { Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';

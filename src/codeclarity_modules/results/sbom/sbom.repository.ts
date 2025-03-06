@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
     Output as SBOMOutput,
     Status,
-} from 'src/types/entities/services/Sbom';
+} from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { PluginFailed, PluginResultNotAvailable} from 'src/types/errors/types';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { InjectRepository } from '@nestjs/typeorm';
