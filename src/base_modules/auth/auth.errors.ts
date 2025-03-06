@@ -10,6 +10,8 @@ export const errorMessages: { [key: string]: string } = {
     RegistrationNotVerified:
         'Before being able to use our platform, verify your registration via the email send to your inbox.',
     WrongCredentials: 'You have entered the wrong credentials.',
+    PasswordResetTokenInvalidOrExpired: 'The password reset token does not exist or has expired.',
+    PasswordsDoNotMatch: 'The passwords do not match.',
 };
 
 
@@ -68,6 +70,34 @@ export class WrongCredentials extends PublicAPIError {
             WrongCredentials.errorCode,
             WrongCredentials.errorMessage,
             WrongCredentials.statusCode,
+            cause
+        );
+    }
+}
+
+export class PasswordResetTokenInvalidOrExpired extends PublicAPIError {
+    static errorCode = 'PasswordResetTokenInvalidOrExpired';
+    static errorMessage = errorMessages[PasswordResetTokenInvalidOrExpired.errorCode];
+    static statusCode = 400;
+    constructor(cause?: unknown) {
+        super(
+            PasswordResetTokenInvalidOrExpired.errorCode,
+            PasswordResetTokenInvalidOrExpired.errorMessage,
+            PasswordResetTokenInvalidOrExpired.statusCode,
+            cause
+        );
+    }
+}
+
+export class PasswordsDoNotMatch extends PublicAPIError {
+    static errorCode = 'PasswordsDoNotMatch';
+    static errorMessage = errorMessages[PasswordsDoNotMatch.errorCode];
+    static statusCode = 400;
+    constructor(cause?: unknown) {
+        super(
+            PasswordsDoNotMatch.errorCode,
+            PasswordsDoNotMatch.errorCode,
+            PasswordsDoNotMatch.statusCode,
             cause
         );
     }

@@ -11,7 +11,6 @@ import {
     EntityNotFound,
     InternalError,
     NotAuthorized,
-    PasswordsDoNotMatch,
     Unsupported
 } from 'src/types/error.types';
 import { APIDocNoDataResponseDecorator } from 'src/decorators/NoDataResponse';
@@ -26,7 +25,7 @@ import {
 } from 'src/base_modules/users/user.types';
 import { User } from 'src/base_modules/users/users.entity';
 import { SetupAlreadyDone, FailedToSendAccountRegistrationVerificationEmail, CannotPerformActionOnNormalAccount, CannotPerformActionOnSocialAccount } from './users.errors';
-import { AccountRegistrationVerificationTokenInvalidOrExpired } from '../auth/auth.errors';
+import { AccountRegistrationVerificationTokenInvalidOrExpired, PasswordsDoNotMatch } from '../auth/auth.errors';
 
 @Controller('users')
 export class UsersController {

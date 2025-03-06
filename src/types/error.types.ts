@@ -65,7 +65,6 @@ export const errorMessages: { [key: string]: string } = {
         'A default policy cannot be undefaulted. Instead update a different policy to be the default policy.',
     RepositoryCannotBeFound:
         'The repository that you are trying to import does not exist in the integration.',
-    PasswordsDoNotMatch: 'The passwords do not match.',
     IntegrationNotSupported: 'The integration is not yet supported.',
     IntegrationDoesNotExist: 'The integration does not exist.',
     IntegrationTokenExpired:
@@ -90,7 +89,6 @@ export const errorMessages: { [key: string]: string } = {
     AlreadyExists: 'The requested entity could not be created because it already exists.',
     UserDoesNotExist: 'The referenced user does not exists.',
     UnsubscriptionTokenInvalidOrExpired: 'The unsubscription link is invalid or has expired.',
-    PasswordResetTokenInvalidOrExpired: 'The password reset token does not exist or has expired.',
     NotAMember: 'The user is not a member of the referenced organization.',
     CannotLeaveAsLastOwner: 'You cannot leave the organization as the last owner.',
     CannotRevokeOwnMembership: 'You cannot revoke your own membership.',
@@ -245,20 +243,6 @@ export class RepositoryCannotBeFound extends PublicAPIError {
             RepositoryCannotBeFound.errorCode,
             RepositoryCannotBeFound.errorMessage,
             RepositoryCannotBeFound.statusCode,
-            cause
-        );
-    }
-}
-
-export class PasswordsDoNotMatch extends PublicAPIError {
-    static errorCode = 'PasswordsDoNotMatch';
-    static errorMessage = errorMessages[PasswordsDoNotMatch.errorCode];
-    static statusCode = 400;
-    constructor(cause?: unknown) {
-        super(
-            PasswordsDoNotMatch.errorCode,
-            PasswordsDoNotMatch.errorCode,
-            PasswordsDoNotMatch.statusCode,
             cause
         );
     }
@@ -534,20 +518,6 @@ export class UnsubscriptionTokenInvalidOrExpired extends PublicAPIError {
             UnsubscriptionTokenInvalidOrExpired.errorCode,
             UnsubscriptionTokenInvalidOrExpired.errorMessage,
             UnsubscriptionTokenInvalidOrExpired.statusCode,
-            cause
-        );
-    }
-}
-
-export class PasswordResetTokenInvalidOrExpired extends PublicAPIError {
-    static errorCode = 'PasswordResetTokenInvalidOrExpired';
-    static errorMessage = errorMessages[PasswordResetTokenInvalidOrExpired.errorCode];
-    static statusCode = 400;
-    constructor(cause?: unknown) {
-        super(
-            PasswordResetTokenInvalidOrExpired.errorCode,
-            PasswordResetTokenInvalidOrExpired.errorMessage,
-            PasswordResetTokenInvalidOrExpired.statusCode,
             cause
         );
     }
