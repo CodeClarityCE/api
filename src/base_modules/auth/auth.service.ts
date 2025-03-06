@@ -9,8 +9,6 @@ import {
 import {
     AlreadyExists,
     EntityNotFound,
-    RegistrationNotVerified,
-    WrongCredentials,
     FailedToAuthenticateSocialAccount
 } from 'src/types/error.types';
 import { SocialType } from 'src/base_modules/users/user.types';
@@ -27,6 +25,7 @@ import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/git
 import { User } from 'src/base_modules/users/users.entity';
 import { UsersRepository } from '../users/users.repository';
 import { CannotPerformActionOnSocialAccount } from '../users/users.errors';
+import { RegistrationNotVerified, WrongCredentials } from './auth.errors';
 
 @Injectable()
 export class AuthService {

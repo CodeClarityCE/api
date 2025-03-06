@@ -74,9 +74,6 @@ export const errorMessages: { [key: string]: string } = {
         'The integration token could not be refreshed from the provider.',
     DuplicateIntegration: 'You have an existing integration with the integration provider.',
     ProjectDoesNotExist: 'The project referenced does not exist.',
-    AnalyzerDoesNotExist: 'The analyzer referenced does not exist.',
-    AnaylzerMissingConfigAttribute:
-        'A required configuration attribute to run an anylzer is missing.',
     IntegrationWrongTokenType: 'The token type is not supported.',
     FailedToRetrieveReposFromProvider:
         'The provider could not be succesfully reached to retrieve the repositories.',
@@ -84,12 +81,9 @@ export const errorMessages: { [key: string]: string } = {
         'The integration token could not be retrieved from the provider.',
     IntegrationInvalidToken:
         'The requested action cannot be performed because the token is not valid or has been revoked.',
-    RegistrationNotVerified:
-        'Before being able to use our platform, verify your registration via the email send to your inbox.',
     PersonalOrgCannotBeModified: 'A personal org cannot be modified.',
     FailedToCreateApiKey: 'Failed to generate the api key.',
     FailedToAuthenticateSocialAccount: 'Failed to authenticate social account.',
-    WrongCredentials: 'You have entered the wrong credentials.',
     InvitationExpired: 'Invitation expired.',
     EmailAlreadyExists:
         'The requested user could not be created because a different user with the same email already exists.',
@@ -354,34 +348,6 @@ export class ProjectDoesNotExist extends PublicAPIError {
     }
 }
 
-export class AnalyzerDoesNotExist extends PublicAPIError {
-    static errorCode = 'AnalyzerDoesNotExist';
-    static errorMessage = errorMessages[AnalyzerDoesNotExist.errorCode];
-    static statusCode = 400;
-    constructor(cause?: unknown) {
-        super(
-            AnalyzerDoesNotExist.errorCode,
-            AnalyzerDoesNotExist.errorMessage,
-            AnalyzerDoesNotExist.statusCode,
-            cause
-        );
-    }
-}
-
-export class AnaylzerMissingConfigAttribute extends PublicAPIError {
-    static errorCode = 'AnaylzerMissingConfigAttribute';
-    static errorMessage = errorMessages[AnaylzerMissingConfigAttribute.errorCode];
-    static statusCode = 400;
-    constructor(cause?: unknown) {
-        super(
-            AnaylzerMissingConfigAttribute.errorCode,
-            AnaylzerMissingConfigAttribute.errorMessage,
-            AnaylzerMissingConfigAttribute.statusCode,
-            cause
-        );
-    }
-}
-
 export class IntegrationWrongTokenType extends PublicAPIError {
     static errorCode = 'IntegrationWrongTokenType';
     static errorMessage = errorMessages[IntegrationWrongTokenType.errorCode];
@@ -433,20 +399,6 @@ export class IntegrationInvalidToken extends PublicAPIError {
             IntegrationInvalidToken.errorCode,
             IntegrationInvalidToken.errorMessage,
             IntegrationInvalidToken.statusCode,
-            cause
-        );
-    }
-}
-
-export class RegistrationNotVerified extends PublicAPIError {
-    static errorCode = 'RegistrationNotVerified';
-    static errorMessage = errorMessages[RegistrationNotVerified.errorCode];
-    static statusCode = 400;
-    constructor(cause?: unknown) {
-        super(
-            RegistrationNotVerified.errorCode,
-            RegistrationNotVerified.errorMessage,
-            RegistrationNotVerified.statusCode,
             cause
         );
     }
@@ -517,20 +469,6 @@ export class FailedToAuthenticateSocialAccount extends PublicAPIError {
             FailedToAuthenticateSocialAccount.errorCode,
             FailedToAuthenticateSocialAccount.errorMessage,
             FailedToAuthenticateSocialAccount.statusCode,
-            cause
-        );
-    }
-}
-
-export class WrongCredentials extends PublicAPIError {
-    static errorCode = 'WrongCredentials';
-    static errorMessage = errorMessages[WrongCredentials.errorCode];
-    static statusCode = 400;
-    constructor(cause?: unknown) {
-        super(
-            WrongCredentials.errorCode,
-            WrongCredentials.errorMessage,
-            WrongCredentials.statusCode,
             cause
         );
     }

@@ -7,6 +7,9 @@ export const errorMessages: { [key: string]: string } = {
         'The account registration verification token does not exist or has expired.',
     HandleAlreadyExists:
         'The requested user could not be created because a different user with the same handle already exists.',
+    RegistrationNotVerified:
+        'Before being able to use our platform, verify your registration via the email send to your inbox.',
+    WrongCredentials: 'You have entered the wrong credentials.',
 };
 
 
@@ -40,3 +43,33 @@ export class HandleAlreadyExists extends PublicAPIError {
         );
     }
 }
+
+
+export class RegistrationNotVerified extends PublicAPIError {
+    static errorCode = 'RegistrationNotVerified';
+    static errorMessage = errorMessages[RegistrationNotVerified.errorCode];
+    static statusCode = 400;
+    constructor(cause?: unknown) {
+        super(
+            RegistrationNotVerified.errorCode,
+            RegistrationNotVerified.errorMessage,
+            RegistrationNotVerified.statusCode,
+            cause
+        );
+    }
+}
+
+export class WrongCredentials extends PublicAPIError {
+    static errorCode = 'WrongCredentials';
+    static errorMessage = errorMessages[WrongCredentials.errorCode];
+    static statusCode = 400;
+    constructor(cause?: unknown) {
+        super(
+            WrongCredentials.errorCode,
+            WrongCredentials.errorMessage,
+            WrongCredentials.statusCode,
+            cause
+        );
+    }
+}
+

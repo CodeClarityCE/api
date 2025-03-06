@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { AnalysisCreateBody } from 'src/base_modules/analyses/analysis.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
-    AnaylzerMissingConfigAttribute,
     RabbitMQError
 } from 'src/types/error.types';
 import { ProjectMemberService } from '../projects/projectMember.service';
@@ -25,6 +24,7 @@ import { SBOMRepository } from 'src/codeclarity_modules/results/sbom/sbom.reposi
 import { FindingsRepository } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.repository';
 import { LicensesRepository } from 'src/codeclarity_modules/results/licenses/licenses.repository';
 import { AnalysesRepository } from './analyses.repository';
+import { AnaylzerMissingConfigAttribute } from '../analyzers/analyzers.errors';
 
 @Injectable()
 export class AnalysesService {

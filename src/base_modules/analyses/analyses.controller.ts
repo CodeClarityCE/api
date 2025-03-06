@@ -24,14 +24,13 @@ import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPagin
 import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
 import { APIDocNoDataResponseDecorator } from 'src/decorators/NoDataResponse';
 import {
-    AnalyzerDoesNotExist,
-    AnaylzerMissingConfigAttribute,
     EntityNotFound,
     NotAuthorized
 } from 'src/types/error.types';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Analysis } from 'src/base_modules/analyses/analysis.entity';
+import { AnalyzerDoesNotExist, AnaylzerMissingConfigAttribute } from '../analyzers/analyzers.errors';
 
 @Controller('/org/:org_id/projects/:project_id/analyses')
 export class AnalysesController {
