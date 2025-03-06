@@ -2,7 +2,7 @@ import { Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Query } from '@
 import { FindingsService } from './vulnerabilities.service';
 import { PaginatedResponse, Response } from 'src/types/apiResponses';
 import { AuthUser } from 'src/decorators/UserDecorator';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { FindingService } from './vulnerability.service';
 
 @Controller('/org/:org_id/projects/:project_id/analysis')

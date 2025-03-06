@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AnalysisResultsService } from '../results.service';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { Output as PatchesOutput, Workspace } from 'src/types/entities/services/Patching';
 import { Output as VulnsOuptut } from 'src/types/entities/services/Vulnerabilities';
 import { Output as SbomOutput } from 'src/types/entities/services/Sbom';

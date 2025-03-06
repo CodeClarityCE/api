@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { NoDataResponse, TypedPaginatedResponse } from 'src/types/apiResponses';
 import { AuthUser } from 'src/decorators/UserDecorator';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 
 @Controller('/notifications')
 export class NotificationsController {

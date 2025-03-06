@@ -1,7 +1,7 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { LicenseService } from './license.service';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { TypedResponse } from 'src/types/apiResponses';
 import { License } from 'src/codeclarity_modules/knowledge/license/license.entity';
 

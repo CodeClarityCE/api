@@ -18,7 +18,7 @@ import {
 } from 'src/types/apiResponses';
 import { DependencyPatchPolicyService } from './dependencyPatch.service';
 import { AuthUser } from 'src/decorators/UserDecorator';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
     DependencyPatchPolicy,
     DependencyPatchPolicyCreateBody,

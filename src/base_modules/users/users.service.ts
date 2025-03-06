@@ -1,5 +1,5 @@
 import { Inject, Injectable, forwardRef } from '@nestjs/common';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
     AccountRegistrationVerificationTokenInvalidOrExpired,
     CannotPerformActionOnNormalAccount,

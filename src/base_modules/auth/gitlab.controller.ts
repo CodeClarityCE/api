@@ -9,7 +9,7 @@ import {
     Oauth2FinalizeBody,
     Oauth2InitQuery,
     TokenResponse
-} from 'src/types/auth/types';
+} from 'src/base_modules/auth/auth.types';
 import {
     IntegrationInvalidToken,
     IntegrationTokenMissingPermissions,
@@ -17,7 +17,7 @@ import {
     AlreadyExists,
     FailedToAuthenticateSocialAccount
 } from 'src/types/errors/types';
-import { GitlabUserResponse, TokenResGitlabResponse } from 'src/types/apis/gitlab/types';
+import { GitlabUserResponse, TokenResGitlabResponse } from 'src/base_modules/integrations/github.types';
 import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';

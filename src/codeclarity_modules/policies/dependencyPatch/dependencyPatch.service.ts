@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { TypedPaginatedData } from 'src/types/paginated/types';
 import { SortDirection } from 'src/types/sort/types';
 import {

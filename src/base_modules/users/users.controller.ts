@@ -1,7 +1,7 @@
 import { Controller, Post, Body, Get, Patch, Delete, Param } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { AuthUser } from 'src/decorators/UserDecorator';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { CreatedResponse, NoDataResponse, TypedResponse } from 'src/types/apiResponses';
 import { NonAuthEndpoint } from 'src/decorators/SkipAuthDecorator';
 import { ApiTags } from '@nestjs/swagger';

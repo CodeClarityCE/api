@@ -5,7 +5,7 @@ import {
     GitlabAuthenticatedUser,
     TokenRefreshResponse,
     TokenResponse
-} from 'src/types/auth/types';
+} from 'src/base_modules/auth/auth.types';
 import {
     AlreadyExists,
     CannotPerformActionOnSocialAccount,

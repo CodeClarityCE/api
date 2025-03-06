@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AnalysisCreateBody } from 'src/types/entities/frontend/Analysis';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
     AnaylzerMissingConfigAttribute,
     RabbitMQError

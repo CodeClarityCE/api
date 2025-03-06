@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { TypedPaginatedResponse } from 'src/types/apiResponses';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { NotAMember, NotAuthorized } from 'src/types/errors/types';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginated/types';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';

@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { SKIP_AUTH_KEY } from 'src/decorators/SkipAuthDecorator';
-import { AuthenticatedUser, ROLE } from 'src/types/auth/types';
+import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { NotAuthenticated, AccountNotActivated } from 'src/types/errors/types';
 import { Algorithm } from 'jsonwebtoken';
 import { JWTPayload } from 'src/types/jwt/types';

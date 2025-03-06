@@ -1,4 +1,4 @@
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { ProjectMemberService } from '../../base_modules/projects/projectMember.service';
 import { Injectable } from '@nestjs/common';
 import { MemberRole } from 'src/types/entities/frontend/OrgMembership';

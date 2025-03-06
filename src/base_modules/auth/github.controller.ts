@@ -8,13 +8,13 @@ import {
     GithubEmail,
     GithubOAuthAccessTokenResponse,
     GithubUserResponse
-} from 'src/types/apis/github/types';
+} from 'src/base_modules/integrations/github/github.types';
 import {
     GithubAuthenticatedUser,
     Oauth2FinalizeBody,
     Oauth2InitQuery,
     TokenResponse
-} from 'src/types/auth/types';
+} from 'src/base_modules/auth/auth.types';
 import {
     AlreadyExists,
     IntegrationInvalidToken,

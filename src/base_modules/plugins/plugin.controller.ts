@@ -1,7 +1,7 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { PluginService } from './plugin.service';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { TypedResponse } from 'src/types/apiResponses';
 import { ApiTags } from '@nestjs/swagger';
 import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';

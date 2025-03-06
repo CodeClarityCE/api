@@ -20,9 +20,9 @@ import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.reposit
 import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
 import { OWASPRepository } from 'src/codeclarity_modules/knowledge/owasp/owasp.repository';
 import { Dependency } from 'src/types/entities/services/Sbom';
-import { CVSS2, CVSS3, CVSS31 } from 'src/types/entities/knowledge/CVSS';
+import { CVSS2, CVSS3, CVSS31 } from 'src/codeclarity_modules/knowledge/cvss.types';
 import { PatchInfo } from 'src/types/entities/services/Patching';
-import { OwaspTop10Info } from 'src/types/entities/knowledge/OWASP';
+import { OwaspTop10Info } from 'src/codeclarity_modules/knowledge/owasp/owasp.types';
 import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
 import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
 import { Version } from 'src/codeclarity_modules/knowledge/package/package.entity';

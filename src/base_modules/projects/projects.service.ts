@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { TypedPaginatedData } from 'src/types/paginated/types';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginated/types';
 import { EntityNotFound, IntegrationNotSupported, NotAuthorized } from 'src/types/errors/types';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { OrganizationLoggerService } from 'src/base_modules/organizations/organizationLogger.service';
 import { ProjectMemberService } from './projectMember.service';
 import { SortDirection } from 'src/types/sort/types';

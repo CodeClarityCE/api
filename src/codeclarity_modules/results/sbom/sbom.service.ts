@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PaginatedResponse } from 'src/types/apiResponses';
 import { AnalysisResultsService } from '../results.service';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
     DependencyDetails,
     Output as SBOMOutput,

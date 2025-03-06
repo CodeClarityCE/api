@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
 import { ApiTags } from '@nestjs/swagger';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { TypedPaginatedResponse, TypedResponse } from 'src/types/apiResponses';
 import {

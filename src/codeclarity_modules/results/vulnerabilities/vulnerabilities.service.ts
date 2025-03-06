@@ -5,7 +5,7 @@ import {
     Vulnerability,
     VulnerabilityMerged
 } from 'src/types/entities/services/Vulnerabilities';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { AnalysisResultsService } from '../results.service';
 import {
     isNoneSeverity,

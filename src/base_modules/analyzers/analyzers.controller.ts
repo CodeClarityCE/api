@@ -19,7 +19,7 @@ import {
 } from 'src/types/apiResponses';
 import { AnalyzerCreateBody } from 'src/types/entities/frontend/Analyzer';
 import { AuthUser } from 'src/decorators/UserDecorator';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { Analyzer } from 'src/base_modules/analyzers/analyzer.entity';
 
 @Controller('/org/:org_id/analyzers')

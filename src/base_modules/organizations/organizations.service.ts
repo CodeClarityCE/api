@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { EntityNotFound, UserDoesNotExist } from 'src/types/errors/types';
 import { TypedPaginatedData } from 'src/types/paginated/types';
 import { PaginationUserSuppliedConf } from 'src/types/paginated/types';

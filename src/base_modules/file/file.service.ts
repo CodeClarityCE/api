@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { File } from '@nest-lab/fastify-multer';
 import * as fs from 'fs';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { File as FileEntity } from 'src/base_modules/file/file.entity';
 import { UploadData } from './file.controller';
 import { join } from 'path';

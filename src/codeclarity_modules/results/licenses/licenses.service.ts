@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PaginatedResponse } from 'src/types/apiResponses';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { AnalysisResultsService } from '../results.service';
 import { paginate } from 'src/codeclarity_modules/results/utils/utils';
 import { Output as LicensesOutput } from 'src/types/entities/services/Licenses';

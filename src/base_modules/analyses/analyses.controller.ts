@@ -18,7 +18,7 @@ import {
 } from 'src/types/apiResponses';
 import { AnalysisCreateBody } from 'src/types/entities/frontend/Analysis';
 import { AuthUser } from 'src/decorators/UserDecorator';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
 import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
 import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';

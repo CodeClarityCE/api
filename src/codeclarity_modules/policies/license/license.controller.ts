@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { LicensePolicyService } from './license.service';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
     CreatedResponse,
     NoDataResponse,

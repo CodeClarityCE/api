@@ -1,7 +1,7 @@
 import { Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { ApiKeysService } from './apiKeys.service';
 import { AuthUser } from 'src/decorators/UserDecorator';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { NoDataResponse, TypedPaginatedResponse } from 'src/types/apiResponses';
 import { ApiTags } from '@nestjs/swagger';
 

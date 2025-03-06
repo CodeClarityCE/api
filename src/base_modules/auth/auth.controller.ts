@@ -8,7 +8,7 @@ import {
     TokenResponse,
     UserPasswordResetBody,
     UserPasswordResetRequestBody
-} from 'src/types/auth/types';
+} from 'src/base_modules/auth/auth.types';
 import { AuthService } from './auth.service';
 import { RefreshJwtAuthGuard } from './guards/refresh-token.guard';
 import { UserCreateBody, RegistrationConfirmationBody } from 'src/types/entities/frontend/User';

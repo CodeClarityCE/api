@@ -17,7 +17,7 @@ import {
     TypedResponse
 } from 'src/types/apiResponses';
 import { AuthUser } from 'src/decorators/UserDecorator';
-import { AuthenticatedUser } from 'src/types/auth/types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { OrganizationLoggerService } from 'src/base_modules/organizations/organizationLogger.service';
 import { ApiTags } from '@nestjs/swagger';
 import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
