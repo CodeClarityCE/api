@@ -1,4 +1,4 @@
-import { TypedPaginatedData } from './paginated/types';
+import { TypedPaginatedData } from './pagination.types';
 import { ApiProperty, ApiResponseProperty } from '@nestjs/swagger';
 
 export enum Status {

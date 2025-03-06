@@ -4,7 +4,7 @@ import {
     Status
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { Dependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
-import { PluginFailed, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/errors/types';
+import { PluginFailed, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/error.types';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { Repository } from 'typeorm';
 

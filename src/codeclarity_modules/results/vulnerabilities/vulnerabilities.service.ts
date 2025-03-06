@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PaginatedResponse } from 'src/types/apiResponses';
+import { PaginatedResponse } from 'src/types/apiResponses.types';
 import {
     AffectedVuln,
     Vulnerability,
@@ -21,7 +21,7 @@ import {
 } from 'src/codeclarity_modules/results/vulnerabilities/utils/utils';
 import { filter } from 'src/codeclarity_modules/results/vulnerabilities/utils/filter';
 import { sort } from 'src/codeclarity_modules/results/vulnerabilities/utils/sort';
-import { UnknownWorkspace } from 'src/types/errors/types';
+import { UnknownWorkspace } from 'src/types/error.types';
 import { Output as SBOMOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { getSbomResult } from '../sbom/utils/utils';
 import { Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';

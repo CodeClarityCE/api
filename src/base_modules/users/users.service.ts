@@ -5,7 +5,7 @@ import {
     FailedToSendAccountRegistrationVerificationEmail,
     NotAuthorized,
     PasswordsDoNotMatch,
-} from 'src/types/errors/types';
+} from 'src/types/error.types';
 import {
     SocialType,
     UserCompleteSocialCreateBody,

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AnalyzerCreateBody } from 'src/base_modules/analyzers/analyzer.types';
-import { TypedPaginatedData } from 'src/types/paginated/types';
-import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginated/types';
+import { TypedPaginatedData } from 'src/types/pagination.types';
+import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { OrganizationLoggerService } from '../organizations/organizationLogger.service';
 import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';

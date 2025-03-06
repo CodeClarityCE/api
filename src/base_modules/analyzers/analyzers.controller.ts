@@ -16,7 +16,7 @@ import {
     NoDataResponse,
     TypedPaginatedResponse,
     TypedResponse
-} from 'src/types/apiResponses';
+} from 'src/types/apiResponses.types';
 import { AnalyzerCreateBody } from 'src/base_modules/analyzers/analyzer.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';

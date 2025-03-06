@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { TypedPaginatedData } from 'src/types/paginated/types';
-import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginated/types';
-import { SortDirection } from 'src/types/sort/types';
+import { TypedPaginatedData } from 'src/types/pagination.types';
+import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
+import { SortDirection } from 'src/types/sort.types';
 import {
     ActionType,
     getSeverityOfAction,

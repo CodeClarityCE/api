@@ -12,7 +12,7 @@ import {
     PluginFailed,
     PluginResultNotAvailable,
     UnknownWorkspace
-} from 'src/types/errors/types';
+} from 'src/types/error.types';
 import { getLicensesResult } from '../../licenses/utils/utils';
 import { getVulnsResult } from '../../vulnerabilities/utils/utils';
 import { Result } from 'src/codeclarity_modules/results/result.entity';

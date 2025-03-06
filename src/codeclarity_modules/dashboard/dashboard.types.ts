@@ -3,7 +3,7 @@ import { OptionalTransform } from 'src/transformers/transformer';
 import { IntegrationProvider } from '../../base_modules/integrations/integration.types';
 import { IsDateString, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { SortDirection } from 'src/types/sort/types';
+import { SortDirection } from 'src/types/sort.types';
 
 export class DashboardQueryOptions {
     @IsOptional()

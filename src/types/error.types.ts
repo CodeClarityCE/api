@@ -1,5 +1,5 @@
 import { ValidationError } from 'class-validator';
-import { Status } from '../apiResponses';
+import { Status } from './apiResponses.types';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class APIError extends Error {

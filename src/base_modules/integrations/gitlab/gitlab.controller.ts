@@ -18,7 +18,7 @@ import {
     NoDataResponse,
     TypedPaginatedResponse,
     TypedResponse
-} from 'src/types/apiResponses';
+} from 'src/types/apiResponses.types';
 import { GitlabIntegrationService } from './gitlab.service';
 import { ApiTags } from '@nestjs/swagger';
 import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
@@ -34,11 +34,11 @@ import {
     InternalError,
     NotAuthenticated,
     NotAuthorized
-} from 'src/types/errors/types';
+} from 'src/types/error.types';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
 import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
-import { SortDirection } from 'src/types/sort/types';
+import { SortDirection } from 'src/types/sort.types';
 import { GitlabRepositoriesService } from './gitlabRepos.service';
 import {
     GitlabIntegration,

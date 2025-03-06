@@ -13,7 +13,7 @@ import { AuthService } from './auth.service';
 import { RefreshJwtAuthGuard } from './guards/refresh-token.guard';
 import { UserCreateBody, RegistrationConfirmationBody } from 'src/base_modules/users/user.types';
 import { UsersService } from '../users/users.service';
-import { CreatedResponse, NoDataResponse, TypedResponse } from 'src/types/apiResponses';
+import { CreatedResponse, NoDataResponse, TypedResponse } from 'src/types/apiResponses.types';
 import { CombinedAuthGuard } from './guards/combined.guard';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
@@ -28,7 +28,7 @@ import {
     PasswordsDoNotMatch,
     RegistrationNotVerified,
     WrongCredentials
-} from 'src/types/errors/types';
+} from 'src/types/error.types';
 import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
 import { APIDocNoDataResponseDecorator } from 'src/decorators/NoDataResponse';
 import { User } from 'src/base_modules/users/users.entity';

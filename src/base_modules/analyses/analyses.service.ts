@@ -4,14 +4,14 @@ import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
     AnaylzerMissingConfigAttribute,
     RabbitMQError
-} from 'src/types/errors/types';
+} from 'src/types/error.types';
 import { ProjectMemberService } from '../projects/projectMember.service';
-import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginated/types';
-import { TypedPaginatedData } from 'src/types/paginated/types';
+import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
+import { TypedPaginatedData } from 'src/types/pagination.types';
 import * as amqp from 'amqplib';
 import { ConfigService } from '@nestjs/config';
 import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
-import { AnalysisStartMessageCreate } from 'src/types/rabbitMqMessages';
+import { AnalysisStartMessageCreate } from 'src/types/rabbitMqMessages.types';
 import { Output as VulnsOuptut } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { Output as LicensesOutput } from 'src/codeclarity_modules/results/licenses/licenses.types';

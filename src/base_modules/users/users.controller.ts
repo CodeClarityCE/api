@@ -2,7 +2,7 @@ import { Controller, Post, Body, Get, Patch, Delete, Param } from '@nestjs/commo
 import { UsersService } from './users.service';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { CreatedResponse, NoDataResponse, TypedResponse } from 'src/types/apiResponses';
+import { CreatedResponse, NoDataResponse, TypedResponse } from 'src/types/apiResponses.types';
 import { NonAuthEndpoint } from 'src/decorators/SkipAuthDecorator';
 import { ApiTags } from '@nestjs/swagger';
 import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
@@ -18,7 +18,7 @@ import {
     PasswordsDoNotMatch,
     SetupAlreadyDone,
     Unsupported
-} from 'src/types/errors/types';
+} from 'src/types/error.types';
 import { APIDocNoDataResponseDecorator } from 'src/decorators/NoDataResponse';
 import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
 import {

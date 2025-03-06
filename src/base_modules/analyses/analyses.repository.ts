@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import {
     EntityNotFound,
     NotAuthorized,
-} from 'src/types/errors/types';
-import { TypedPaginatedData } from 'src/types/paginated/types';
+} from 'src/types/error.types';
+import { TypedPaginatedData } from 'src/types/pagination.types';
 import { Analysis } from 'src/base_modules/analyses/analysis.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';

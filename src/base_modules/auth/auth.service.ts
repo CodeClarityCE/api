@@ -13,7 +13,7 @@ import {
     RegistrationNotVerified,
     WrongCredentials,
     FailedToAuthenticateSocialAccount
-} from 'src/types/errors/types';
+} from 'src/types/error.types';
 import { SocialType } from 'src/base_modules/users/user.types';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from 'src/base_modules/users/users.service';

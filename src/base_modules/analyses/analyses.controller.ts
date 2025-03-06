@@ -15,7 +15,7 @@ import {
     NoDataResponse,
     TypedPaginatedResponse,
     TypedResponse
-} from 'src/types/apiResponses';
+} from 'src/types/apiResponses.types';
 import { AnalysisCreateBody } from 'src/base_modules/analyses/analysis.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
@@ -28,7 +28,7 @@ import {
     AnaylzerMissingConfigAttribute,
     EntityNotFound,
     NotAuthorized
-} from 'src/types/errors/types';
+} from 'src/types/error.types';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Analysis } from 'src/base_modules/analyses/analysis.entity';

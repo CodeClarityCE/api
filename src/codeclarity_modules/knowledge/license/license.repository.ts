@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { License } from 'src/codeclarity_modules/knowledge/license/license.entity';
-import { EntityNotFound } from 'src/types/errors/types';
+import { EntityNotFound } from 'src/types/error.types';
 import { Repository } from 'typeorm';
 
 @Injectable()

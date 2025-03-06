@@ -16,12 +16,12 @@ import {
     IntegrationTokenRetrievalFailed,
     AlreadyExists,
     FailedToAuthenticateSocialAccount
-} from 'src/types/errors/types';
+} from 'src/types/error.types';
 import { GitlabUserResponse, TokenResGitlabResponse } from 'src/base_modules/integrations/github.types';
 import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
-import { TypedResponse } from 'src/types/apiResponses';
+import { TypedResponse } from 'src/types/apiResponses.types';
 import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
 
 @Controller('auth/gitlab')

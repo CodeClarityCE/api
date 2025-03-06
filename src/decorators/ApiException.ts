@@ -1,7 +1,7 @@
 import { Type, applyDecorators } from '@nestjs/common';
 import { ApiExtraModels, ApiResponse, ApiResponseOptions, getSchemaPath } from '@nestjs/swagger';
-import { Status } from 'src/types/apiResponses';
-import { APIError, PublicAPIError, errorMessages } from 'src/types/errors/types';
+import { Status } from 'src/types/apiResponses.types';
+import { APIError, PublicAPIError, errorMessages } from 'src/types/error.types';
 
 export function ApiErrorDecorator({
     statusCode,

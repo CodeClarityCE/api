@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { TypedPaginatedData } from 'src/types/paginated/types';
-import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginated/types';
-import { EntityNotFound, IntegrationNotSupported, NotAuthorized } from 'src/types/errors/types';
+import { TypedPaginatedData } from 'src/types/pagination.types';
+import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
+import { EntityNotFound, IntegrationNotSupported, NotAuthorized } from 'src/types/error.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { OrganizationLoggerService } from 'src/base_modules/organizations/organizationLogger.service';
 import { ProjectMemberService } from './projectMember.service';
-import { SortDirection } from 'src/types/sort/types';
+import { SortDirection } from 'src/types/sort.types';
 import { GithubRepositoriesService } from '../integrations/github/githubRepos.service';
 import { GitlabRepositoriesService } from '../integrations/gitlab/gitlabRepos.service';
 import { ProjectImportBody } from 'src/base_modules/projects/project.types';

@@ -15,9 +15,9 @@ import {
     PaginationConfig,
     PaginationUserSuppliedConf,
     TypedPaginatedData
-} from 'src/types/paginated/types';
+} from 'src/types/pagination.types';
 import moment from 'moment';
-import { SortDirection } from 'src/types/sort/types';
+import { SortDirection } from 'src/types/sort.types';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { LicenseDist, Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';

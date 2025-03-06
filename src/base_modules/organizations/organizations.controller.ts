@@ -15,7 +15,7 @@ import {
     NoDataResponse,
     TypedPaginatedResponse,
     TypedResponse
-} from 'src/types/apiResponses';
+} from 'src/types/apiResponses.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { OrganizationLoggerService } from 'src/base_modules/organizations/organizationLogger.service';
@@ -35,10 +35,10 @@ import {
     NotAuthorized,
     PersonalOrgCannotBeModified,
     UserDoesNotExist
-} from 'src/types/errors/types';
+} from 'src/types/error.types';
 import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
 import { APIDocNoDataResponseDecorator } from 'src/decorators/NoDataResponse';
-import { SortDirection } from 'src/types/sort/types';
+import { SortDirection } from 'src/types/sort.types';
 import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
 import {
     JoinOrgCreateBody,

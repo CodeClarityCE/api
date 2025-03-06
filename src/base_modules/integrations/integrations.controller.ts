@@ -1,12 +1,12 @@
 import { Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { IntegrationsService } from './integrations.service';
-import { TypedPaginatedResponse } from 'src/types/apiResponses';
+import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
 import { ApiTags } from '@nestjs/swagger';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
-import { InternalError, NotAuthenticated } from 'src/types/errors/types';
+import { InternalError, NotAuthenticated } from 'src/types/error.types';
 import { Integration } from 'src/base_modules/integrations/integrations.entity';
 
 @Controller('org/:org_id/integrations')

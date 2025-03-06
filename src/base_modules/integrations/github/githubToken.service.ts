@@ -4,7 +4,7 @@ import {
     IntegrationTokenExpired,
     IntegrationTokenMissingPermissions,
     IntegrationTokenRetrievalFailed
-} from 'src/types/errors/types';
+} from 'src/types/error.types';
 
 @Injectable()
 export class GithubIntegrationTokenService {

@@ -18,7 +18,7 @@ import {
     NoDataResponse,
     TypedPaginatedResponse,
     TypedResponse
-} from 'src/types/apiResponses';
+} from 'src/types/apiResponses.types';
 import {
     LicensePolicyCreateBody,
     LicensePolicyPatchBody

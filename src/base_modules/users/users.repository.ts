@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
     EntityNotFound,
-} from 'src/types/errors/types';
+} from 'src/types/error.types';
 import { User } from 'src/base_modules/users/users.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';

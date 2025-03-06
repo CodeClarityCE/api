@@ -5,7 +5,7 @@ import {
     IntegrationTokenExpired,
     IntegrationTokenRefreshFailed,
     IntegrationWrongTokenType
-} from 'src/types/errors/types';
+} from 'src/types/error.types';
 import { GithubTokenType } from 'src/base_modules/integrations/github/githubIntegration.types';
 
 export class UnkownTokenType extends Error {}

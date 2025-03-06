@@ -1,7 +1,7 @@
 import { ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
-import { NotAuthenticated } from 'src/types/errors/types';
+import { NotAuthenticated } from 'src/types/error.types';
 
 /**
  * This guard enables refreshing jwt tokens with the provided refresh token

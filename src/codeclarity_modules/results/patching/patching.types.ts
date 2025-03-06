@@ -1,4 +1,4 @@
-import { Status } from 'src/types/apiResponses';
+import { Status } from 'src/types/apiResponses.types';
 import { Vulnerability } from '../vulnerabilities/vulnerabilities.types';
 
 export interface Output {

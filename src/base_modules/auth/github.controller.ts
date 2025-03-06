@@ -21,11 +21,11 @@ import {
     IntegrationTokenMissingPermissions,
     IntegrationTokenRetrievalFailed,
     FailedToAuthenticateSocialAccount
-} from 'src/types/errors/types';
+} from 'src/types/error.types';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
-import { TypedResponse } from 'src/types/apiResponses';
+import { TypedResponse } from 'src/types/apiResponses.types';
 
 @Controller('auth/github')
 export class GithubAuthController {

@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { EntityNotFound, UserDoesNotExist } from 'src/types/errors/types';
-import { TypedPaginatedData } from 'src/types/paginated/types';
-import { PaginationUserSuppliedConf } from 'src/types/paginated/types';
-import { SortDirection } from 'src/types/sort/types';
+import { EntityNotFound, UserDoesNotExist } from 'src/types/error.types';
+import { TypedPaginatedData } from 'src/types/pagination.types';
+import { PaginationUserSuppliedConf } from 'src/types/pagination.types';
+import { SortDirection } from 'src/types/sort.types';
 import { TeamMember } from 'src/base_modules/users/teamMember.types';
 import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
 import { InviteCreateBody } from 'src/base_modules/organizations/orgInvitation.types';

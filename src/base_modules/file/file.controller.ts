@@ -16,11 +16,11 @@ import {
     InternalError,
     NotAuthenticated,
     NotAuthorized
-} from 'src/types/errors/types';
+} from 'src/types/error.types';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import { FileService } from './file.service';
 import { FileInterceptor, File } from '@nest-lab/fastify-multer';
-import { NoDataResponse, TypedResponse } from 'src/types/apiResponses';
+import { NoDataResponse, TypedResponse } from 'src/types/apiResponses.types';
 import { join } from 'path';
 import { readFile } from 'fs';
 import { escapeString } from 'src/utils/cleaner';

@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { TypedPaginatedResponse } from 'src/types/apiResponses';
+import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { PaginationUserSuppliedConf } from 'src/types/paginated/types';
-import { SortDirection } from 'src/types/sort/types';
+import { PaginationUserSuppliedConf } from 'src/types/pagination.types';
+import { SortDirection } from 'src/types/sort.types';
 import { Repository } from 'src/base_modules/integrations/integration.types';
 import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
 

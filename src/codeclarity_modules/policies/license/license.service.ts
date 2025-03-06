@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { PaginationConfig, TypedPaginatedData } from 'src/types/paginated/types';
+import { PaginationConfig, TypedPaginatedData } from 'src/types/pagination.types';
 import {
     LicensePolicyCreateBody,
     LicensePolicyPatchBody
 } from 'src/codeclarity_modules/policies/license/licensePolicy.types';
-import { PaginationUserSuppliedConf } from 'src/types/paginated/types';
-import { SortDirection } from 'src/types/sort/types';
+import { PaginationUserSuppliedConf } from 'src/types/pagination.types';
+import { SortDirection } from 'src/types/sort.types';
 import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
 import { PolicyType } from 'src/codeclarity_modules/policies/policy.types';
 import { Policy, PolicyFrontend } from 'src/codeclarity_modules/policies/policy.entity';

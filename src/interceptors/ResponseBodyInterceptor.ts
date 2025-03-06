@@ -1,7 +1,7 @@
 import { CallHandler, ExecutionContext, NestInterceptor } from '@nestjs/common';
 import { map } from 'rxjs/operators';
 import { Observable } from 'rxjs';
-import { Status } from 'src/types/apiResponses';
+import { Status } from 'src/types/apiResponses.types';
 import { FastifyReply } from 'fastify';
 
 /**

@@ -1,6 +1,6 @@
 import { Type, applyDecorators } from '@nestjs/common';
 import { ApiExtraModels, ApiOkResponse, getSchemaPath } from '@nestjs/swagger';
-import { TypedPaginatedResponse } from 'src/types/apiResponses';
+import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
 
 export const APIDocTypedPaginatedResponseDecorator = <DataDto extends Type<unknown>>(
     dataDto: DataDto

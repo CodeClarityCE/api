@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Analyzer } from 'src/base_modules/analyzers/analyzer.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AnalyzerDoesNotExist, NotAuthorized } from 'src/types/errors/types';
-import { TypedPaginatedData } from 'src/types/paginated/types';
+import { AnalyzerDoesNotExist, NotAuthorized } from 'src/types/error.types';
+import { TypedPaginatedData } from 'src/types/pagination.types';
 
 /**
  * Service that handles the database operations related to Analyzers.

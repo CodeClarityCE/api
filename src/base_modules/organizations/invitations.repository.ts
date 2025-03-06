@@ -2,7 +2,7 @@ import { Repository } from "typeorm";
 import { Invitation } from "./invitation.entity";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Injectable } from "@nestjs/common";
-import { EntityNotFound } from "src/types/errors/types";
+import { EntityNotFound } from "src/types/error.types";
 
 /**
  * Injectable service for handling invitations.

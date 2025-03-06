@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Project } from 'src/base_modules/projects/project.entity';
-import { NotAuthorized } from 'src/types/errors/types';
+import { NotAuthorized } from 'src/types/error.types';
 import { Repository } from 'typeorm';
 
 @Injectable()

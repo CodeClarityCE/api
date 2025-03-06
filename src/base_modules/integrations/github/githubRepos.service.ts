@@ -5,12 +5,12 @@ import {
     FailedToRetrieveReposFromProvider,
     IntegrationInvalidToken,
     NotAuthorized
-} from 'src/types/errors/types';
-import { TypedPaginatedResponse } from 'src/types/apiResponses';
-import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginated/types';
+} from 'src/types/error.types';
+import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
+import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
 import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from './constants';
 import { GithubRepositorySchema } from 'src/base_modules/integrations/github/github.types';
-import { SortDirection } from 'src/types/sort/types';
+import { SortDirection } from 'src/types/sort.types';
 import ms = require('ms');
 import { GithubIntegrationService } from './github.service';
 import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';

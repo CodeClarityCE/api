@@ -1,7 +1,7 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException } from '@nestjs/common';
-import { Status } from 'src/types/apiResponses';
+import { Status } from 'src/types/apiResponses.types';
 import { FastifyReply } from 'fastify';
-import { PrivateAPIError, PublicAPIError } from 'src/types/errors/types';
+import { PrivateAPIError, PublicAPIError } from 'src/types/error.types';
 
 /**
  * The goal of this filter is to filter the information we expose to users in case of an exception

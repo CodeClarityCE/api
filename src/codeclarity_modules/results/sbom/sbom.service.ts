@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PaginatedResponse } from 'src/types/apiResponses';
+import { PaginatedResponse } from 'src/types/apiResponses.types';
 import { AnalysisResultsService } from '../results.service';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
@@ -12,7 +12,7 @@ import { paginate } from 'src/codeclarity_modules/results/utils/utils';
 import { getDependencyData, getSbomResult } from 'src/codeclarity_modules/results/sbom/utils/utils';
 import { filter } from './utils/filter';
 import { sort } from './utils/sort';
-import { EntityNotFound, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/errors/types';
+import { EntityNotFound, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/error.types';
 import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
 import { AnalysisStats, newAnalysisStats } from 'src/codeclarity_modules/results/sbom/sbom2.types';
 import { Result } from 'src/codeclarity_modules/results/result.entity';

@@ -1,7 +1,7 @@
 import { LicensesService } from './licenses.service';
 import { Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { AuthUser } from 'src/decorators/UserDecorator';
-import { PaginatedResponse } from 'src/types/apiResponses';
+import { PaginatedResponse } from 'src/types/apiResponses.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { DepShortInfo } from 'src/codeclarity_modules/results/licenses/licenses2.types';
 

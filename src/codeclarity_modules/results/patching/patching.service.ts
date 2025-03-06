@@ -4,7 +4,7 @@ import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { Output as PatchesOutput, Workspace } from 'src/codeclarity_modules/results/patching/patching.types';
 import { Output as VulnsOuptut } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
-import { UnknownWorkspace } from 'src/types/errors/types';
+import { UnknownWorkspace } from 'src/types/error.types';
 import { getPatchingResult } from './utils/utils';
 import { getSbomResult } from '../sbom/utils/utils';
 import { getVulnsResult } from '../vulnerabilities/utils/utils';

@@ -12,7 +12,7 @@ import { ResponseBodyInterceptor } from './interceptors/ResponseBodyInterceptor'
 
 // Import built-in classes for validation, serialization, and Swagger documentation
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
-import { ValidationFailed } from './types/errors/types';
+import { ValidationFailed } from './types/error.types';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 /**

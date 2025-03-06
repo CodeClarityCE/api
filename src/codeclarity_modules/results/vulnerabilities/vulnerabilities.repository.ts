@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
     Status,
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
-import { PluginFailed, PluginResultNotAvailable } from 'src/types/errors/types';
+import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
 import { Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';

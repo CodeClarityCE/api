@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { OwaspTop10Info } from 'src/codeclarity_modules/knowledge/owasp/owasp.types';
-import { EntityNotFound } from 'src/types/errors/types';
+import { EntityNotFound } from 'src/types/error.types';
 
 const owaspData: { [key: string]: OwaspTop10Info } = {
     // OWASP Top 10 2021

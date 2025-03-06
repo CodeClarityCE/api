@@ -3,7 +3,7 @@ import {
     PaginationConfig,
     PaginationUserSuppliedConf,
     TypedPaginatedData
-} from 'src/types/paginated/types';
+} from 'src/types/pagination.types';
 
 export function isNoneSeverity(severity: number) {
     return severity == 0.0 || severity == null;

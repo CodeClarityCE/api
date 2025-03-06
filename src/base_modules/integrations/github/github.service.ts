@@ -12,7 +12,7 @@ import {
     IntegrationWrongTokenType,
     NotAMember,
     NotAuthorized
-} from 'src/types/errors/types';
+} from 'src/types/error.types';
 import { GithubIntegrationToken } from '../Token';
 import {
     GithubTokenType,

@@ -15,7 +15,7 @@ import {
     NoDataResponse,
     TypedPaginatedResponse,
     TypedResponse
-} from 'src/types/apiResponses';
+} from 'src/types/apiResponses.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { ApiTags } from '@nestjs/swagger';
@@ -26,12 +26,12 @@ import {
     InternalError,
     NotAuthenticated,
     NotAuthorized
-} from 'src/types/errors/types';
+} from 'src/types/error.types';
 import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
 import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
 import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
 import { APIDocNoDataResponseDecorator } from 'src/decorators/NoDataResponse';
-import { SortDirection } from 'src/types/sort/types';
+import { SortDirection } from 'src/types/sort.types';
 import { ProjectImportBody } from 'src/base_modules/projects/project.types';
 import { Project } from 'src/base_modules/projects/project.entity';
 

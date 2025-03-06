@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityNotFound } from 'src/types/errors/types';
+import { EntityNotFound } from 'src/types/error.types';
 
 @Injectable()
 export class AnalysisResultsRepository {
