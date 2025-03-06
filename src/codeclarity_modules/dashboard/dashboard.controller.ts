@@ -18,7 +18,7 @@ import {
     ProjectQuickStats,
     QuickStats,
     SeverityInfoByWeek
-} from 'src/types/entities/frontend/Dashboard';
+} from 'src/codeclarity_modules/dashboard/dashboard.types';
 import { APIDocTypedManyResponseDecorator } from 'src/decorators/TypedManyResponse';
 import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
 import { InternalError, NotAuthenticated, NotAuthorized } from 'src/types/errors/types';

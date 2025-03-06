@@ -14,7 +14,7 @@ import { filter } from './utils/filter';
 import { sort } from './utils/sort';
 import { EntityNotFound, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/errors/types';
 import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
-import { AnalysisStats, newAnalysisStats } from 'src/types/entities/frontend/Sbom';
+import { AnalysisStats, newAnalysisStats } from 'src/codeclarity_modules/results/sbom/sbom2.types';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { Package } from 'src/codeclarity_modules/knowledge/package/package.entity';
 import { InjectRepository } from '@nestjs/typeorm';

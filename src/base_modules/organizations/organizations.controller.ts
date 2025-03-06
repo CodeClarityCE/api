@@ -45,10 +45,10 @@ import {
     OrganizationCreateBody,
     OrganizationInfoForInvitee,
     OrganizationMetaData
-} from 'src/types/entities/frontend/Org';
-import { TeamMember } from 'src/types/entities/frontend/TeamMember';
-import { InviteCreateBody } from 'src/types/entities/frontend/OrgInvitation';
-import { OrganizationAuditLog } from 'src/types/entities/frontend/OrgAuditLog';
+} from 'src/base_modules/organizations/org.types';
+import { TeamMember } from 'src/base_modules/users/teamMember.types';
+import { InviteCreateBody } from 'src/base_modules/organizations/orgInvitation.types';
+import { OrganizationAuditLog } from 'src/base_modules/organizations/orgAuditLog.types';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { Log } from 'src/base_modules/organizations/log.entity';
 import { Invitation } from 'src/base_modules/organizations/invitation.entity';

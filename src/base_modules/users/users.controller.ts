@@ -28,7 +28,7 @@ import {
     UserCompleteSocialCreateBody,
     UserPasswordPatchBody,
     RegistrationConfirmationBody
-} from 'src/types/entities/frontend/User';
+} from 'src/base_modules/users/user.types';
 import { User } from 'src/base_modules/users/users.entity';
 
 @Controller('users')

@@ -9,7 +9,7 @@ import {
     ReferenceInfo,
     SeverityInfo,
     OtherInfo
-} from 'src/types/entities/frontend/Vulnerability';
+} from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities2.types';
 import { Vulnerability, AffectedInfo } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { getVersionsSatisfyingConstraint } from 'src/codeclarity_modules/results/utils/utils';
 import { satisfies } from 'semver';

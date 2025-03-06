@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { StageBase } from './Analyzer';
+import { StageBase } from '../analyzers/analyzer.types';
 
 /********************************************/
 /*             HTTP Post bodies             */

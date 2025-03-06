@@ -2,47 +2,19 @@ import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
     AccountRegistrationVerificationTokenInvalidOrExpired,
-    CannotPerformActionOnNormalAccount,
-    CannotPerformActionOnSocialAccount,
-    EntityNotFound,
     FailedToSendAccountRegistrationVerificationEmail,
-    FailedToSendPasswordResetEmail,
     NotAuthorized,
-    PasswordResetTokenInvalidOrExpired,
     PasswordsDoNotMatch,
-    SetupAlreadyDone,
-    SocialConnectionTypeNotSupported
 } from 'src/types/errors/types';
-import { OrganizationCreate } from 'src/types/entities/frontend/Org';
 import {
     SocialType,
-    UserCompleteSocialCreate,
     UserCompleteSocialCreateBody,
     UserCreateBody,
-    UserCreateSocial,
     UserPasswordPatchBody
-} from 'src/types/entities/frontend/User';
+} from 'src/base_modules/users/user.types';
 import { EmailService } from '../email/email.service';
 import { genRandomString, hash } from 'src/utils/crypto';
-import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/gitlab/gitlabToken.service';
 import { AuthService } from '../auth/auth.service';
-import {
-    EmailAction,
-    EmailActionType,
-    PasswordResetAction,
-    PasswordResetCreate,
-    RegistrationVerificationAction,
-    UserRegistrationVerfificationCreate
-} from 'src/types/entities/frontend/EmailAction';
-import {
-    GithubIntegrationCreate,
-    GithubTokenType
-} from 'src/types/entities/frontend/GithubIntegration';
-import {
-    GitLabIntegrationCreate,
-    GitlabTokenType
-} from 'src/types/entities/frontend/GitlabIntegration';
-import { IntegrationType, IntegrationProvider } from 'src/types/entities/frontend/Integration';
 import { User } from 'src/base_modules/users/users.entity';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import {
@@ -50,8 +22,6 @@ import {
     OrganizationMemberships
 } from 'src/base_modules/organizations/organization.memberships.entity';
 import { Email, EmailType } from 'src/base_modules/email/email.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { EmailRepository } from '../email/email.repository';
 import { UsersRepository } from './users.repository';

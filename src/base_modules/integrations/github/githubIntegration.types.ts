@@ -10,7 +10,7 @@ import {
     IntegrationType,
     VCSIntegration,
     VCSIntegrationMetaData
-} from './Integration';
+} from '../integration.types';
 
 /********************************************/
 /*                  Enums                   */

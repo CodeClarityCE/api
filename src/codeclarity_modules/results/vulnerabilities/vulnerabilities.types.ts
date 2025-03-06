@@ -1,5 +1,5 @@
 import { CVSS2, CVSS3, CVSS31 } from '../../knowledge/cvss.types';
-import { PatchInfo } from '../../../types/entities/frontend/Patching';
+import { PatchInfo } from '../patching/patching2.types';
 import { ParsedGitUrl } from '../sbom/sbom.types';
 
 export interface VulnSourceInfo {

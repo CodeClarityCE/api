@@ -32,7 +32,7 @@ import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
 import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
 import { APIDocNoDataResponseDecorator } from 'src/decorators/NoDataResponse';
 import { SortDirection } from 'src/types/sort/types';
-import { ProjectImportBody } from 'src/types/entities/frontend/Project';
+import { ProjectImportBody } from 'src/base_modules/projects/project.types';
 import { Project } from 'src/base_modules/projects/project.entity';
 
 @Controller('org/:org_id/projects')

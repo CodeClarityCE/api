@@ -18,9 +18,9 @@ import {
     GithubTokenType,
     LinkGithubCreateBody,
     LinkGithubPatchBody
-} from 'src/types/entities/frontend/GithubIntegration';
-import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
-import { IntegrationProvider, IntegrationType } from 'src/types/entities/frontend/Integration';
+} from 'src/base_modules/integrations/github/githubIntegration.types';
+import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
+import { IntegrationProvider, IntegrationType } from 'src/base_modules/integrations/integration.types';
 import { Integration } from 'src/base_modules/integrations/integrations.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';

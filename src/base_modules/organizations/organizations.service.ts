@@ -4,13 +4,13 @@ import { EntityNotFound, UserDoesNotExist } from 'src/types/errors/types';
 import { TypedPaginatedData } from 'src/types/paginated/types';
 import { PaginationUserSuppliedConf } from 'src/types/paginated/types';
 import { SortDirection } from 'src/types/sort/types';
-import { TeamMember } from 'src/types/entities/frontend/TeamMember';
-import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
-import { InviteCreateBody } from 'src/types/entities/frontend/OrgInvitation';
+import { TeamMember } from 'src/base_modules/users/teamMember.types';
+import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
+import { InviteCreateBody } from 'src/base_modules/organizations/orgInvitation.types';
 import {
     OrganizationCreateBody,
     OrganizationInfoForInvitee
-} from 'src/types/entities/frontend/Org';
+} from 'src/base_modules/organizations/org.types';
 import { OrganizationMemberships } from 'src/base_modules/organizations/organization.memberships.entity';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { Email, EmailType } from 'src/base_modules/email/email.entity';

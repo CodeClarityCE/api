@@ -23,7 +23,7 @@ import {
     DependencyPatchPolicy,
     DependencyPatchPolicyCreateBody,
     DependencyPatchPolicyPatchBody
-} from 'src/types/entities/frontend/DependencyPatchPolicy';
+} from 'src/codeclarity_modules/policies/dependencyPatch/dependencyPatchPolicy.types';
 
 @Controller('org/:org_id/policies/dependency_patch')
 export class DependencyPatchPolicyController {

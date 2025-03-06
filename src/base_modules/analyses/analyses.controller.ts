@@ -16,7 +16,7 @@ import {
     TypedPaginatedResponse,
     TypedResponse
 } from 'src/types/apiResponses';
-import { AnalysisCreateBody } from 'src/types/entities/frontend/Analysis';
+import { AnalysisCreateBody } from 'src/base_modules/analyses/analysis.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';

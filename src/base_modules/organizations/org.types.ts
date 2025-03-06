@@ -2,8 +2,8 @@ import { Expose, Type } from 'class-transformer';
 import { IsDefined, IsNotEmpty, Length } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { OptionalTransform } from 'src/transformers/transformer';
-import { TeamMember } from './TeamMember';
-import { MemberRole } from './OrgMembership';
+import { TeamMember } from '../users/teamMember.types';
+import { MemberRole } from './orgMembership.types';
 import { User } from 'src/base_modules/users/users.entity';
 
 /********************************************/

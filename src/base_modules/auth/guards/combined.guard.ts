@@ -5,7 +5,7 @@ import { SKIP_AUTH_KEY } from 'src/decorators/SkipAuthDecorator';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { NotAuthenticated, AccountNotActivated } from 'src/types/errors/types';
 import { Algorithm } from 'jsonwebtoken';
-import { JWTPayload } from 'src/types/jwt/types';
+import { JWTPayload } from 'src/base_modules/auth/guards/jwt.types';
 import { Request } from 'express';
 import { Socket } from 'socket.io';
 // import { ApiKeysService } from 'src/codeclarity_modules/apiKeys/apiKeys.service';

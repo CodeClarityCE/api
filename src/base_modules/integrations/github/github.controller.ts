@@ -43,7 +43,7 @@ import {
     GithubTokenType,
     LinkGithubCreateBody,
     LinkGithubPatchBody
-} from 'src/types/entities/frontend/GithubIntegration';
+} from 'src/base_modules/integrations/github/githubIntegration.types';
 import { Integration } from 'src/base_modules/integrations/integrations.entity';
 import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
 import { Repository } from 'typeorm';

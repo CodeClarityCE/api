@@ -26,7 +26,7 @@ import { Output as SBOMOutput } from 'src/codeclarity_modules/results/sbom/sbom.
 import { getSbomResult } from '../sbom/utils/utils';
 import { Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
-import { AnalysisStats, newAnalysisStats } from 'src/types/entities/frontend/Vulnerability';
+import { AnalysisStats, newAnalysisStats } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities2.types';
 import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
 import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
 import { CWE } from 'src/codeclarity_modules/knowledge/cwe/cwe.entity';

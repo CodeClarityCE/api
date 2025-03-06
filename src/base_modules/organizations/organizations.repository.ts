@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Entity, Repository } from 'typeorm';
 import { MemberRole, OrganizationMemberships } from 'src/base_modules/organizations/organization.memberships.entity';
 import { EntityNotFound, NotAuthorized } from 'src/types/errors/types';
-import { isMemberRoleLessThan, OrgMembership } from 'src/types/entities/frontend/OrgMembership';
+import { isMemberRoleLessThan, OrgMembership } from 'src/base_modules/organizations/orgMembership.types';
 import { TypedPaginatedData } from 'src/types/paginated/types';
 import { User } from '../users/users.entity';
 

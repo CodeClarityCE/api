@@ -1,7 +1,7 @@
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { ProjectMemberService } from '../../base_modules/projects/projectMember.service';
 import { Injectable } from '@nestjs/common';
-import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
+import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 import { AnalysesRepository } from 'src/base_modules/analyses/analyses.repository';
 

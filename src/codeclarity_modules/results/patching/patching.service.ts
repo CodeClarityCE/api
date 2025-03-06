@@ -8,7 +8,7 @@ import { UnknownWorkspace } from 'src/types/errors/types';
 import { getPatchingResult } from './utils/utils';
 import { getSbomResult } from '../sbom/utils/utils';
 import { getVulnsResult } from '../vulnerabilities/utils/utils';
-import { AnalysisStats, newAnalysisStats } from 'src/types/entities/frontend/Patching';
+import { AnalysisStats, newAnalysisStats } from 'src/codeclarity_modules/results/patching/patching2.types';
 import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';

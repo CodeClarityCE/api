@@ -22,7 +22,7 @@ import {
 import {
     LicensePolicyCreateBody,
     LicensePolicyPatchBody
-} from 'src/types/entities/frontend/LicensePolicy';
+} from 'src/codeclarity_modules/policies/license/licensePolicy.types';
 import { Policy, PolicyFrontend } from 'src/codeclarity_modules/policies/policy.entity';
 
 @Controller('org/:org_id/policies/license_policy')

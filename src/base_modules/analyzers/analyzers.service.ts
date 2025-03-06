@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { AnalyzerCreateBody } from 'src/types/entities/frontend/Analyzer';
+import { AnalyzerCreateBody } from 'src/base_modules/analyzers/analyzer.types';
 import { TypedPaginatedData } from 'src/types/paginated/types';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginated/types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { OrganizationLoggerService } from '../organizations/organizationLogger.service';
-import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
-import { ActionType } from 'src/types/entities/frontend/OrgAuditLog';
+import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
+import { ActionType } from 'src/base_modules/organizations/orgAuditLog.types';
 import { Analyzer } from 'src/base_modules/analyzers/analyzer.entity';
 import { UsersRepository } from '../users/users.repository';
 import { OrganizationsRepository } from '../organizations/organizations.repository';

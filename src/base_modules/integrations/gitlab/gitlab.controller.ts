@@ -45,8 +45,8 @@ import {
     GitlabTokenType,
     LinkGitlabCreateBody,
     LinkGitlabPatchBody
-} from 'src/types/entities/frontend/GitlabIntegration';
-import { Repository } from 'src/types/entities/frontend/Integration';
+} from 'src/base_modules/integrations/gitlab/gitlabIntegration.types';
+import { Repository } from 'src/base_modules/integrations/integration.types';
 
 @Controller('org/:org_id/integrations/gitlab')
 export class GitlabIntegrationController {

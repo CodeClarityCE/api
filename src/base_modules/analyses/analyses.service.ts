@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AnalysisCreateBody } from 'src/types/entities/frontend/Analysis';
+import { AnalysisCreateBody } from 'src/base_modules/analyses/analysis.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
     AnaylzerMissingConfigAttribute,
@@ -10,7 +10,7 @@ import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginate
 import { TypedPaginatedData } from 'src/types/paginated/types';
 import * as amqp from 'amqplib';
 import { ConfigService } from '@nestjs/config';
-import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
+import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
 import { AnalysisStartMessageCreate } from 'src/types/rabbitMqMessages';
 import { Output as VulnsOuptut } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';

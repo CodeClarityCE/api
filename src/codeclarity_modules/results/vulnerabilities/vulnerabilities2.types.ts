@@ -1,7 +1,7 @@
-import { CVSS2, CVSS3, CVSS31 } from '../../../codeclarity_modules/knowledge/cvss.types';
-import { OwaspTop10Info } from '../../../codeclarity_modules/knowledge/owasp/owasp.types';
-import { PatchInfo } from '../../../codeclarity_modules/results/patching/patching.types';
-import { ParsedGitUrl } from '../../../codeclarity_modules/results/sbom/sbom.types';
+import { CVSS2, CVSS3, CVSS31 } from '../../knowledge/cvss.types';
+import { OwaspTop10Info } from '../../knowledge/owasp/owasp.types';
+import { PatchInfo } from '../patching/patching.types';
+import { ParsedGitUrl } from '../sbom/sbom.types';
 
 export interface VulnSourceInfo {
     name: string;

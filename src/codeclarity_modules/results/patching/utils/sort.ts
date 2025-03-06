@@ -1,4 +1,4 @@
-import { PatchInfo } from 'src/types/entities/frontend/Patching';
+import { PatchInfo } from 'src/codeclarity_modules/results/patching/patching2.types';
 
 export function sort(
     patches: PatchInfo[],

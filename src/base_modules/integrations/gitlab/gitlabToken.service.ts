@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { GitlabIntegration } from 'src/types/entities/frontend/GitlabIntegration';
+import { GitlabIntegration } from 'src/base_modules/integrations/gitlab/gitlabIntegration.types';
 import { User } from 'src/base_modules/users/users.entity';
 
 @Injectable()

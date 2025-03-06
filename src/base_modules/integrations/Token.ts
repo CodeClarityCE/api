@@ -1,4 +1,4 @@
-import { GitlabTokenType } from 'src/types/entities/frontend/GitlabIntegration';
+import { GitlabTokenType } from 'src/base_modules/integrations/gitlab/gitlabIntegration.types';
 import { GithubIntegrationTokenService } from './github/githubToken.service';
 import { GitlabIntegrationTokenService } from './gitlab/gitlabToken.service';
 import {
@@ -6,7 +6,7 @@ import {
     IntegrationTokenRefreshFailed,
     IntegrationWrongTokenType
 } from 'src/types/errors/types';
-import { GithubTokenType } from 'src/types/entities/frontend/GithubIntegration';
+import { GithubTokenType } from 'src/base_modules/integrations/github/githubIntegration.types';
 
 export class UnkownTokenType extends Error {}
 

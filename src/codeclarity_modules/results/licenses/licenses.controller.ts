@@ -3,7 +3,7 @@ import { Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Query } from '@
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { PaginatedResponse } from 'src/types/apiResponses';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { DepShortInfo } from 'src/types/entities/frontend/Licenses';
+import { DepShortInfo } from 'src/codeclarity_modules/results/licenses/licenses2.types';
 
 @Controller('/org/:org_id/projects/:project_id/analysis')
 export class LicensesController {

@@ -7,7 +7,7 @@ import {
     PolicyCreate,
     PolicyType,
     PolicyUpdate
-} from './Policy';
+} from '../policy.types';
 
 /********************************************/
 /*                   Enums                  */

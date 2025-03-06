@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsOptional, IsUrl } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { IntegrationProvider } from './Integration';
+import { IntegrationProvider } from '../integrations/integration.types';
 
 /********************************************/
 /*             HTTP Post bodies             */

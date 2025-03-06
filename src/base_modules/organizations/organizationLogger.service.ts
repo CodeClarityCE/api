@@ -7,8 +7,8 @@ import {
     ActionType,
     getSeverityOfAction,
     getTypeClassOfAction
-} from 'src/types/entities/frontend/OrgAuditLog';
-import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
+} from 'src/base_modules/organizations/orgAuditLog.types';
+import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
 import { Log } from 'src/base_modules/organizations/log.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';

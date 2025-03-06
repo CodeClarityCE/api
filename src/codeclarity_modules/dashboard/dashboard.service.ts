@@ -9,8 +9,8 @@ import {
     QuickStats,
     SeverityInfoByWeek,
     Trend
-} from 'src/types/entities/frontend/Dashboard';
-import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
+} from 'src/codeclarity_modules/dashboard/dashboard.types';
+import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
 import {
     PaginationConfig,
     PaginationUserSuppliedConf,

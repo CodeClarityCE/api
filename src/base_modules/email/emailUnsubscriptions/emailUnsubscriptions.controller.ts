@@ -1,7 +1,7 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { NonAuthEndpoint } from 'src/decorators/SkipAuthDecorator';
 import { NoDataResponse } from 'src/types/apiResponses';
-import { EmailUnsubscribePostBody } from 'src/types/entities/frontend/EmailUnsubscription';
+import { EmailUnsubscribePostBody } from './emailUnsubscription.types';
 import { EmailUnsubscriptionService } from './emailUnsubscriptions.service';
 
 @Controller('email_unsubscribe')

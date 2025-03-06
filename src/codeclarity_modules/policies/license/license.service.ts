@@ -4,11 +4,11 @@ import { PaginationConfig, TypedPaginatedData } from 'src/types/paginated/types'
 import {
     LicensePolicyCreateBody,
     LicensePolicyPatchBody
-} from 'src/types/entities/frontend/LicensePolicy';
+} from 'src/codeclarity_modules/policies/license/licensePolicy.types';
 import { PaginationUserSuppliedConf } from 'src/types/paginated/types';
 import { SortDirection } from 'src/types/sort/types';
-import { MemberRole } from 'src/types/entities/frontend/OrgMembership';
-import { PolicyType } from 'src/types/entities/frontend/Policy';
+import { MemberRole } from 'src/base_modules/organizations/orgMembership.types';
+import { PolicyType } from 'src/codeclarity_modules/policies/policy.types';
 import { Policy, PolicyFrontend } from 'src/codeclarity_modules/policies/policy.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
