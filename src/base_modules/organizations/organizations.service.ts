@@ -440,7 +440,7 @@ export class OrganizationsService {
      * @param user The authenticated user
      */
     async leaveOrg(orgId: string, user: AuthenticatedUser): Promise<void> {
-        throw new Error('Method not implemented.');
+        await this.organizationsRepository.leaveOrganization(user.userId, orgId)
     }
 
     /**

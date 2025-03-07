@@ -104,6 +104,24 @@ export class OrganizationsRepository {
     }
 
     /**
+     * Removes the user's membership in an organization and returns a comment.
+     *
+     * @param userId - The ID of the user.
+     * @param organizationId - The ID of the organization.
+     * @returns A success message with a comment explaining that the user has left the organization.
+     */
+    async leaveOrganization(userId: string, organizationId: string): Promise<string> {
+        const memberships = await this.membershipRepository.find({
+            where: {
+                user: { id: userId },
+                organization: {id:organizationId}
+            }
+        })
+        await this.membershipRepository.remove(memberships);
+        return 'User has left the organization. Membership removed successfully.';
+    }
+
+    /**
      * Retrieve the membership role of a user in a specific organization.
      *
      * @param orgId - The ID of the organization.
