@@ -24,7 +24,7 @@ export class OrganizationsRepository {
         private organizationRepository: Repository<Organization>,
         @InjectRepository(OrganizationMemberships, 'codeclarity')
         private membershipRepository: Repository<OrganizationMemberships>,
-    ) {}
+    ) { }
     /**
      * Retrieve an organization by its ID.
      *
@@ -45,7 +45,7 @@ export class OrganizationsRepository {
 
         return organization;
     }
-    
+
     /**
      * Retrieve the membership role of a user in a specific organization.
      *
@@ -54,13 +54,14 @@ export class OrganizationsRepository {
      * @returns The organization memberships entity if found, containing the role and ID.
      * @throws {EntityNotFound} If no membership exists for the given user in the organization.
      */
-    async getMembershipsByOrganizationId(organizationId: string): Promise<OrganizationMemberships[]> {
+    async getMembershipsByOrganizationId(organizationId: string, relations?: object): Promise<OrganizationMemberships[]> {
         const memberships = await this.membershipRepository.find({
             where: {
                 organization: {
                     id: organizationId
                 }
-            }
+            },
+            relations: relations
         });
 
         if (!memberships) {
@@ -96,12 +97,12 @@ export class OrganizationsRepository {
     async removeUserMemberships(userId: string): Promise<void> {
         const memberships = await this.membershipRepository.find({
             where: {
-                user: {id: userId}
+                user: { id: userId }
             }
         })
         await this.membershipRepository.remove(memberships);
     }
-    
+
     /**
      * Retrieve the membership role of a user in a specific organization.
      *
@@ -207,8 +208,8 @@ export class OrganizationsRepository {
         return membership
     }
 
-    async getOrganizationsOfUser(userId: string):Promise<TypedPaginatedData<Object>> {
-    const memberships = await this.membershipRepository.find({
+    async getOrganizationsOfUser(userId: string): Promise<TypedPaginatedData<Object>> {
+        const memberships = await this.membershipRepository.find({
             where: {
                 user: {
                     id: userId
@@ -216,22 +217,13 @@ export class OrganizationsRepository {
             },
             relations: {
                 organization: {
-                    owners: true
+                    owners: true,
+                    created_by: true,
+                    organizationMemberships: true
                 },
-                user: true
+                user: true,
             }
         });
-
-        const res = await this.membershipRepository
-            .createQueryBuilder('membership')
-            .leftJoinAndSelect(
-                Organization,
-                'organization',
-                'organization.id = membership.organization.id'
-            )
-            .leftJoinAndSelect(User, 'user', 'user.id = membership.user')
-            .where('user.id = :userId', { userId: userId })
-            .getMany();
 
         return {
             data: memberships,
@@ -254,5 +246,5 @@ export class OrganizationsRepository {
             }
         });
     }
-    
+
 }

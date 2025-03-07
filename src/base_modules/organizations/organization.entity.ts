@@ -58,12 +58,16 @@ export class Organization {
     personal: boolean;
 
     // Foreign keys
+    @ApiProperty()
+    @Expose()
     @ManyToOne(() => User, (user) => user.organizations_created)
     created_by: Relation<User>;
 
     @OneToMany(() => Invitation, (invitation) => invitation.organization)
     invitations?: Relation<Invitation[]>;
 
+    @ApiProperty()
+    @Expose()
     @OneToMany(() => OrganizationMemberships, (membership) => membership.organization)
     organizationMemberships: Relation<OrganizationMemberships[]>;
 

@@ -16,6 +16,8 @@ export class OrganizationMemberships {
     @PrimaryGeneratedColumn('uuid')
     public organizationMembershipId: string;
 
+    @ApiProperty()
+    @Expose()
     @Column()
     public role: MemberRole;
 

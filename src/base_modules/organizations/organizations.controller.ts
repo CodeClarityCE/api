@@ -52,6 +52,7 @@ import { Organization } from 'src/base_modules/organizations/organization.entity
 import { Log } from 'src/base_modules/organizations/log/log.entity';
 import { Invitation } from 'src/base_modules/organizations/invitations/invitation.entity';
 import { InvitationOrgAlreadyExists } from './organizations.errors';
+import { OrganizationMemberships } from './memberships/organization.memberships.entity';
 
 @Controller('org')
 export class OrganizationsController {
@@ -154,7 +155,7 @@ export class OrganizationsController {
     }
 
     @ApiTags('Organizations')
-    @APIDocTypedPaginatedResponseDecorator(TeamMember)
+    @APIDocTypedPaginatedResponseDecorator(Object)
     @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
     @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
     @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
@@ -167,7 +168,7 @@ export class OrganizationsController {
         @Query('search_key') search_key?: string,
         @Query('sort_key') sort_key?: string,
         @Query('sort_direction') sort_direction?: SortDirection
-    ): Promise<TypedPaginatedResponse<TeamMember>> {
+    ): Promise<TypedPaginatedResponse<OrganizationMemberships>> {
         return await this.organizationsService.getOrgMembers(
             organization_id,
             { currentPage: page, entriesPerPage: entries_per_page },
