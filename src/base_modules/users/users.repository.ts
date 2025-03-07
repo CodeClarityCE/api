@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
     EntityNotFound,
+    UserDoesNotExist,
 } from 'src/types/error.types';
 import { User } from 'src/base_modules/users/users.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -54,7 +55,7 @@ export class UsersRepository {
         });
 
         if (!user) {
-            throw new EntityNotFound();
+            throw new UserDoesNotExist();
         }
 
         return user;

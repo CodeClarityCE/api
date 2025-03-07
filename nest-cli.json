@@ -5,7 +5,7 @@
   "compilerOptions": {
     "assets": [
       {
-        "include": "codeclarity_modules/email/templates/**/*",
+        "include": "base_modules/email/templates/**/*",
         "outDir": "dist/src"
       }
     ],

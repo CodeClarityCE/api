@@ -196,11 +196,7 @@ export class OrganizationsService {
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.OWNER);
 
         const invitedUser = await this.usersRepository.getUserByEmail(inviteBody.user_email)
-
-        if (!invitedUser) {
-            throw new UserDoesNotExist();
-        }
-
+        
         const inviter = await this.usersRepository.getUserById(user.userId, {})
 
         const org = await this.organizationsRepository.getOrganizationById(orgId)
