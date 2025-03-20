@@ -169,7 +169,7 @@ abstract class BaseReportGenerator {
                     affectedStringPart += `-${range.FixedSemver.PreReleaseTag}`;
                 affectedStringParts.push(affectedStringPart);
             }
-        } else if (affectedData.Exact.length > 0) {
+        } else if (affectedData.Exact && affectedData.Exact.length > 0) {
             for (const exact of affectedData.Exact) {
                 affectedStringParts.push(exact.VersionString);
             }
