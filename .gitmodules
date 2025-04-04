@@ -1,6 +1,3 @@
 [submodule "cvss-parser-js"]
 	path = cvss-parser-js
 	url = git@github.com:CodeClarityCE/cvss-parser-js.git
-[submodule "src/enterprise_modules"]
-	path = src/enterprise_modules
-	url = git@github.com:parithera/api-parithera-customizations.git
