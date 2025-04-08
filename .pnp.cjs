@@ -1451,10 +1451,10 @@ const RAW_RUNTIME_STATE =
       }]\
     ]],\
     ["@fastify/fast-json-stringify-compiler", [\
-      ["npm:5.0.2", {\
-        "packageLocation": "./.yarn/cache/@fastify-fast-json-stringify-compiler-npm-5.0.2-4a5c6fe192-597b5efce6.zip/node_modules/@fastify/fast-json-stringify-compiler/",\
+      ["npm:5.0.3", {\
+        "packageLocation": "./.yarn/cache/@fastify-fast-json-stringify-compiler-npm-5.0.3-d907498007-82c90130eb.zip/node_modules/@fastify/fast-json-stringify-compiler/",\
         "packageDependencies": [\
-          ["@fastify/fast-json-stringify-compiler", "npm:5.0.2"],\
+          ["@fastify/fast-json-stringify-compiler", "npm:5.0.3"],\
           ["fast-json-stringify", "npm:6.0.1"]\
         ],\
         "linkType": "HARD"\
@@ -5241,7 +5241,7 @@ const RAW_RUNTIME_STATE =
         "packageDependencies": [\
           ["browserslist", "npm:4.24.4"],\
           ["caniuse-lite", "npm:1.0.30001712"],\
-          ["electron-to-chromium", "npm:1.5.132"],\
+          ["electron-to-chromium", "npm:1.5.134"],\
           ["node-releases", "npm:2.0.19"],\
           ["update-browserslist-db", "virtual:2fdeb5face9914bb5fd94c70f084d153c80d2f09e5aabee010e4220b248dc23fca8f73c7beed0195e45ae6e2b1cb25388f709d7bfc4f00e473d573887faf4e5c#npm:1.1.3"]\
         ],\
@@ -6524,10 +6524,10 @@ const RAW_RUNTIME_STATE =
       }]\
     ]],\
     ["electron-to-chromium", [\
-      ["npm:1.5.132", {\
-        "packageLocation": "./.yarn/cache/electron-to-chromium-npm-1.5.132-711be94529-ff50f38e26.zip/node_modules/electron-to-chromium/",\
+      ["npm:1.5.134", {\
+        "packageLocation": "./.yarn/cache/electron-to-chromium-npm-1.5.134-928bc1027b-9a8b8407cd.zip/node_modules/electron-to-chromium/",\
         "packageDependencies": [\
-          ["electron-to-chromium", "npm:1.5.132"]\
+          ["electron-to-chromium", "npm:1.5.134"]\
         ],\
         "linkType": "HARD"\
       }]\
@@ -7290,7 +7290,7 @@ const RAW_RUNTIME_STATE =
         "packageDependencies": [\
           ["@fastify/ajv-compiler", "npm:4.0.2"],\
           ["@fastify/error", "npm:4.1.0"],\
-          ["@fastify/fast-json-stringify-compiler", "npm:5.0.2"],\
+          ["@fastify/fast-json-stringify-compiler", "npm:5.0.3"],\
           ["@fastify/proxy-addr", "npm:5.0.0"],\
           ["abstract-logging", "npm:2.0.1"],\
           ["avvio", "npm:9.1.0"],\

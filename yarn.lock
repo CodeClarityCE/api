@@ -810,11 +810,11 @@ __metadata:
   linkType: hard
 
 "@fastify/fast-json-stringify-compiler@npm:^5.0.0":
-  version: 5.0.2
-  resolution: "@fastify/fast-json-stringify-compiler@npm:5.0.2"
+  version: 5.0.3
+  resolution: "@fastify/fast-json-stringify-compiler@npm:5.0.3"
   dependencies:
     fast-json-stringify: "npm:^6.0.0"
-  checksum: 10/597b5efce6af8bd47679e8c6d537688211f38fd3be1c1b3c8874fff497ec9b09f4b89b33e7e508049f11daa2403930c09abbd59454df13aadffbd74b84772976
+  checksum: 10/82c90130eb423ec9d84a2a17684787b9aeacbc9e3b014f42bf70fed1f6e6d82a252f2363c4c578c98dba8081b43072f5a3a87bf836d6b00e48d1fde0d82bfbb0
   languageName: node
   linkType: hard
 
@@ -4851,9 +4851,9 @@ __metadata:
   linkType: hard
 
 "electron-to-chromium@npm:^1.5.73":
-  version: 1.5.132
-  resolution: "electron-to-chromium@npm:1.5.132"
-  checksum: 10/ff50f38e26c5acdce1010703197a1cd1b9d9d789160ee1d4a2fc9f5dff6a030632ab36893156147d7360e891dd7151e156c6003ca271d4acbb4e501788ff22bd
+  version: 1.5.134
+  resolution: "electron-to-chromium@npm:1.5.134"
+  checksum: 10/9a8b8407cde0431cd4f3281bb35f9af2b190f31a8e039e5bb711e0c4ccef2de72d79a2d90e42c1d1daee35115402d7c029f22db4b32245233a62542ec1694d2d
   languageName: node
   linkType: hard
 
