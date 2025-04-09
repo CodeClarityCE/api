@@ -19,7 +19,7 @@ export class EmailRepository {
      * @returns A Promise that resolves to the retrieved Email entity.
      * @throws EntityNotFound if no email is found matching the criteria.
      */
-    async getMailByType(emailType: EmailType, userID: string): Promise<Email> {
+    async getMailByType(emailType: EmailType, userID: string): Promise<Email | null> {
         const mail = await this.emailRepository.findOne({
             where: {
                 email_type: emailType,
@@ -32,9 +32,6 @@ export class EmailRepository {
             }
         });
 
-        if (!mail) {
-            throw new EntityNotFound(); // Throwing an error if no matching email is found
-        }
         return mail;
     }
 
