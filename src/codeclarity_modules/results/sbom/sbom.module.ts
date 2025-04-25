@@ -12,6 +12,7 @@ import { SbomUtilsService } from './utils/utils';
 import { VulnerabilitiesModule } from '../vulnerabilities/vulnerabilities.module';
 import { KnowledgeModule } from 'src/codeclarity_modules/knowledge/knowledge.module';
 import { LicenseModule } from '../licenses/licenses.module';
+import { AnalysisResultsRepository } from '../results.repository';
 
 @Module({
     imports: [
@@ -24,7 +25,7 @@ import { LicenseModule } from '../licenses/licenses.module';
         TypeOrmModule.forFeature([Result], 'codeclarity')
     ],
     exports: [SBOMRepository, SbomUtilsService],
-    providers: [SBOMService, AnalysisResultsService, SBOMRepository, SbomUtilsService],
+    providers: [SBOMService, AnalysisResultsService, SBOMRepository, SbomUtilsService, AnalysisResultsRepository],
     controllers: [SBOMController]
 })
 export class SbomModule {}

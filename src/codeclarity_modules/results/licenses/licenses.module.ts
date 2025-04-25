@@ -11,6 +11,7 @@ import { LicensesRepository } from './licenses.repository';
 import { LicensesUtilsService } from './utils/utils';
 import { KnowledgeModule } from 'src/codeclarity_modules/knowledge/knowledge.module';
 import { SbomModule } from '../sbom/sbom.module';
+import { AnalysisResultsRepository } from '../results.repository';
 
 @Module({
     imports: [
@@ -21,7 +22,7 @@ import { SbomModule } from '../sbom/sbom.module';
         forwardRef(() => SbomModule),
         TypeOrmModule.forFeature([Result], 'codeclarity')
     ],
-    providers: [LicensesService, AnalysisResultsService, LicensesRepository, LicensesUtilsService],
+    providers: [LicensesService, AnalysisResultsService, AnalysisResultsRepository, LicensesRepository, LicensesUtilsService],
     exports: [LicensesRepository, LicensesUtilsService],
     controllers: [LicensesController]
 })

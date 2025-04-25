@@ -15,6 +15,7 @@ import { PatchingModule } from '../patching/patching.module';
 import { SbomModule } from '../sbom/sbom.module';
 import { VulnerabilitiesSortService } from './utils/sort.service';
 import { VulnerabilitiesFilterService } from './utils/filter.service';
+import { AnalysisResultsRepository } from '../results.repository';
 
 @Module({
     imports: [
@@ -34,7 +35,8 @@ import { VulnerabilitiesFilterService } from './utils/filter.service';
         VulnerabilitiesUtilsService,
         VulnerabilitiesSortService,
         VulnerabilitiesFilterService,
-        VulnerabilitiesRepository
+        VulnerabilitiesRepository,
+        AnalysisResultsRepository
     ],
     controllers: [FindingsController]
 })
