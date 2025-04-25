@@ -1,11 +1,15 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, Relation } from 'typeorm';
 import { Analysis } from '../../base_modules/analyses/analysis.entity';
+import { ApiProperty } from '@nestjs/swagger';
+import { Expose } from 'class-transformer';
 
 @Entity()
 export class Result {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
+    @ApiProperty()
+    @Expose()
     @Column('jsonb')
     result: ResultObject;
 
@@ -13,6 +17,8 @@ export class Result {
     @ManyToOne(() => Analysis, (analysis) => analysis.results)
     analysis: Relation<Analysis>;
 
+    @ApiProperty()
+    @Expose()
     @Column()
     plugin: string;
 }
@@ -23,7 +29,7 @@ export interface ResultByAnalysisId {
 }
 
 export interface ResultObject {
-    result: object;
+    workspaces: object;
     analysis_info: any;
 }
 

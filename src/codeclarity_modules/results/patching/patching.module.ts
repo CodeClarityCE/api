@@ -12,6 +12,7 @@ import { EmailModule } from 'src/base_modules/email/email.module';
 import { PatchingUtilsService } from './utils/utils';
 import { SbomModule } from '../sbom/sbom.module';
 import { VulnerabilitiesModule } from '../vulnerabilities/vulnerabilities.module';
+import { AnalysisResultsRepository } from '../results.repository';
 
 @Module({
     imports: [
@@ -25,7 +26,7 @@ import { VulnerabilitiesModule } from '../vulnerabilities/vulnerabilities.module
         TypeOrmModule.forFeature([Result], 'codeclarity')
     ],
     exports: [PatchingUtilsService],
-    providers: [PatchingService, AnalysisResultsService, PatchingUtilsService],
+    providers: [PatchingService, AnalysisResultsService, PatchingUtilsService, AnalysisResultsRepository],
     controllers: [PatchingController]
 })
 export class PatchingModule {}
