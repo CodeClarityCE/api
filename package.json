@@ -40,7 +40,7 @@
     "@nestjs/websockets": "11.0.11",
     "@types/passport-oauth2": "1.4.17",
     "@webundsoehne/nest-fastify-file-upload": "2.3.1",
-    "amqplib": "0.10.5",
+    "amqplib": "0.10.7",
     "axios": "1.8.3",
     "bcrypt": "5.1.1",
     "class-transformer": "0.5.1",
