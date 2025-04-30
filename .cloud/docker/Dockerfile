@@ -24,6 +24,7 @@ FROM node:23.11.0-alpine AS api
 ARG USERNAME
 RUN adduser -D ${USERNAME}
 USER ${USERNAME}
+RUN mkdir /home/${USERNAME}/private
 WORKDIR /home/${USERNAME}/app
 # Copy only necessary files
 COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/dist ./dist
