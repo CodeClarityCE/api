@@ -57,7 +57,8 @@ export class FileService {
         const added_by = await this.usersRepository.getUserById(user.userId);
 
         // Define the folder path where the file will be saved
-        const folderPath = join('/private', project.added_by.id, escapeProjectId);
+        const downloadPath = process.env.DOWNLOAD_PATH || '/private';
+        const folderPath = join(downloadPath, project.added_by.id, escapeProjectId);
 
         // Create the folder path if it doesn't exist
         if (!fs.existsSync(folderPath)) {
@@ -233,7 +234,8 @@ export class FileService {
         const file = await this.fileRepository.getById(file_id, added_by);
 
         // Define the file path
-        const filePath = join('/private', project.added_by.id, escapeProjectId, file.name);
+        const downloadPath = process.env.DOWNLOAD_PATH || '/private';
+        const filePath = join(downloadPath, project.added_by.id, escapeProjectId, file.name);
 
         // Delete the file from the file system if it exists
         if (fs.existsSync(filePath)) {

@@ -160,7 +160,8 @@ export class ProjectService {
 
         const added_project = await this.projectsRepository.saveProject(project);
 
-        const folderPath = join('/private', organization.id, 'projects', added_project.id);
+        const downloadPath = process.env.DOWNLOAD_PATH || '/private';
+        const folderPath = join(downloadPath, organization.id, 'projects', added_project.id);
         await mkdir(folderPath, { recursive: true });
 
         await this.organizationLoggerService.addAuditLog(
@@ -304,7 +305,8 @@ export class ProjectService {
         }
 
         // Remove project folder
-        const filePath = join('/private', organization.id, 'projects', project.id);
+        const downloadPath = process.env.DOWNLOAD_PATH || '/private';
+        const filePath = join(downloadPath, organization.id, 'projects', project.id);
         if (existsSync(filePath)) {
             await rm(filePath, { recursive: true, force: true });
         }
