@@ -88,18 +88,26 @@ export class ProjectService {
                         user
                     );
                 } catch (err) {
+                    // Check if the repository is public
                     if (err instanceof EntityNotFound) {
-                        // Our cache might be out of sync
-                        // So refresh cache and try again
-                        repo = await this.githubRepositoriesService.getGithubRepository(
-                            orgId,
-                            projectData.integration_id,
-                            projectData.url,
-                            user,
-                            true
-                        );
+                       const response = await fetch(projectData.url);
+                       if (!response.ok) {
+                            throw err;
+                       }
+                       // Process the response body
+                       const body = await response.text();
+                       if (body.includes("Page not found")) {
+                            throw err;
+                       }
+
+                       repo = new RepositoryCache()
+                       repo.fully_qualified_name = projectData.url.replace('https://github.com/', '')
+                       repo.description = 'Imported manually'
+                       repo.default_branch = 'main'
+                       repo.service_domain = 'github.com'
+                    } else {
+                        throw err;
                     }
-                    throw err;
                 }
             } else if (integration.integration_provider == IntegrationProvider.GITLAB) {
                 await this.gitlabRepositoriesService.syncGitlabRepos(projectData.integration_id);
@@ -111,18 +119,26 @@ export class ProjectService {
                         user
                     );
                 } catch (err) {
+                    // Check if the repository is public
                     if (err instanceof EntityNotFound) {
-                        // Our cache might be out of sync
-                        // So refresh cache and try again
-                        repo = await this.gitlabRepositoriesService.getGitlabRepository(
-                            orgId,
-                            projectData.integration_id,
-                            projectData.url,
-                            user,
-                            true
-                        );
+                       const response = await fetch(projectData.url);
+                       if (!response.ok) {
+                            throw err;
+                       }
+                       // Process the response body
+                       const body = await response.text();
+                       if (body.includes("Page not found")) {
+                            throw err;
+                       }
+
+                       repo = new RepositoryCache()
+                       repo.fully_qualified_name = projectData.url.replace('https://gitlab.com/', '')
+                       repo.description = 'Imported manually'
+                       repo.default_branch = 'main'
+                       repo.service_domain = 'gitlab.com'
+                    } else {
+                        throw err;
                     }
-                    throw err;
                 }
             } else {
                 throw new IntegrationNotSupported();
