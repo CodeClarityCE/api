@@ -31,7 +31,7 @@ export class DashboardService {
         private readonly organizationsRepository: OrganizationsRepository,
         @InjectRepository(Organization, 'codeclarity')
         private organizationRepository: Repository<Organization>
-    ) {}
+    ) { }
 
     /**
      * Returns the severity info for all projects and their most recent analysis
@@ -61,9 +61,9 @@ export class DashboardService {
             .leftJoinAndSelect('org.projects', 'projects')
             .leftJoinAndSelect('projects.analyses', 'analyses')
             .leftJoinAndSelect('analyses.results', 'results')
-            // .andWhere('results.created_on >= :start_date', { start_date: dateRangeStart })
+            .andWhere('analyses.created_on >= :start_date', { start_date: dateRangeStart })
+            .orderBy('analyses.created_on')
             .andWhere('results.plugin = :plugin_name', { plugin_name: 'js-vuln-finder' })
-            // .select(['org'])
             .getOne();
 
         if (!res) {
@@ -74,45 +74,52 @@ export class DashboardService {
 
         for (const project of res.projects) {
             project.analyses.forEach((analysis) => {
+
+                const week_number = moment(analysis.created_on).week();
+                const year = moment(analysis.created_on).year();
+                let weekInfo = severityInfoByWeek.find(
+                    (info) =>
+                        info.week_number.week == week_number &&
+                        info.week_number.year == year
+                );
+
+                if (!weekInfo) {
+                    weekInfo = {
+                        week_number: {
+                            week: week_number,
+                            year: year
+                        },
+                        nmb_critical: 0,
+                        nmb_high: 0,
+                        nmb_medium: 0,
+                        nmb_low: 0,
+                        nmb_none: 0,
+                        summed_severity: 0,
+                        projects: []
+                    };
+                    severityInfoByWeek.push(weekInfo);
+                }
+
                 analysis.results.forEach((result) => {
                     const res = result.result as unknown as VulnsOutput;
 
-                    for (const workspace_name of Object.keys(res.workspaces)) {
-                        const workspace = res.workspaces[workspace_name];
-                        workspace.Vulnerabilities.forEach((vuln) => {
-                            const severity = vuln.Severity.Severity;
-                            const week_number = moment(analysis.created_on).week();
-                            const year = moment(analysis.created_on).year();
+                    // We only retrieve one result per project per week
+                    if (!weekInfo.projects.find(p => p === project.id.toString())) {
+                        for (const workspace_name of Object.keys(res.workspaces)) {
+                            const workspace = res.workspaces[workspace_name];
+                            workspace.Vulnerabilities.forEach((vuln) => {
+                                const severity = vuln.Severity.Severity;
 
-                            let weekInfo = severityInfoByWeek.find(
-                                (info) =>
-                                    info.week_number.week == week_number &&
-                                    info.week_number.year == year
-                            );
+                                weekInfo.summed_severity += severity;
+                                if (severity >= 7) weekInfo.nmb_critical++;
+                                else if (severity >= 4) weekInfo.nmb_high++;
+                                else if (severity >= 2) weekInfo.nmb_medium++;
+                                else if (severity >= 1) weekInfo.nmb_low++;
+                                else weekInfo.nmb_none++;
 
-                            if (!weekInfo) {
-                                weekInfo = {
-                                    week_number: {
-                                        week: week_number,
-                                        year: year
-                                    },
-                                    nmb_critical: 0,
-                                    nmb_high: 0,
-                                    nmb_medium: 0,
-                                    nmb_low: 0,
-                                    nmb_none: 0,
-                                    summed_severity: 0
-                                };
-                                severityInfoByWeek.push(weekInfo);
-                            }
-
-                            weekInfo.summed_severity += severity;
-                            if (severity >= 7) weekInfo.nmb_critical++;
-                            else if (severity >= 4) weekInfo.nmb_high++;
-                            else if (severity >= 2) weekInfo.nmb_medium++;
-                            else if (severity >= 1) weekInfo.nmb_low++;
-                            else weekInfo.nmb_none++;
-                        });
+                                weekInfo.projects.push(project.id.toString())
+                            });
+                        }
                     }
                 });
             });
