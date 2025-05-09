@@ -22,7 +22,13 @@ import { AnalysisResultsRepository } from '../results.repository';
         forwardRef(() => SbomModule),
         TypeOrmModule.forFeature([Result], 'codeclarity')
     ],
-    providers: [LicensesService, AnalysisResultsService, AnalysisResultsRepository, LicensesRepository, LicensesUtilsService],
+    providers: [
+        LicensesService,
+        AnalysisResultsService,
+        AnalysisResultsRepository,
+        LicensesRepository,
+        LicensesUtilsService
+    ],
     exports: [LicensesRepository, LicensesUtilsService],
     controllers: [LicensesController]
 })

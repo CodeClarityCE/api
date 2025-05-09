@@ -90,21 +90,24 @@ export class ProjectService {
                 } catch (err) {
                     // Check if the repository is public
                     if (err instanceof EntityNotFound) {
-                       const response = await fetch(projectData.url);
-                       if (!response.ok) {
+                        const response = await fetch(projectData.url);
+                        if (!response.ok) {
                             throw err;
-                       }
-                       // Process the response body
-                       const body = await response.text();
-                       if (body.includes("Page not found")) {
+                        }
+                        // Process the response body
+                        const body = await response.text();
+                        if (body.includes('Page not found')) {
                             throw err;
-                       }
+                        }
 
-                       repo = new RepositoryCache()
-                       repo.fully_qualified_name = projectData.url.replace('https://github.com/', '')
-                       repo.description = 'Imported manually'
-                       repo.default_branch = 'main'
-                       repo.service_domain = 'github.com'
+                        repo = new RepositoryCache();
+                        repo.fully_qualified_name = projectData.url.replace(
+                            'https://github.com/',
+                            ''
+                        );
+                        repo.description = 'Imported manually';
+                        repo.default_branch = 'main';
+                        repo.service_domain = 'github.com';
                     } else {
                         throw err;
                     }
@@ -121,21 +124,24 @@ export class ProjectService {
                 } catch (err) {
                     // Check if the repository is public
                     if (err instanceof EntityNotFound) {
-                       const response = await fetch(projectData.url);
-                       if (!response.ok) {
+                        const response = await fetch(projectData.url);
+                        if (!response.ok) {
                             throw err;
-                       }
-                       // Process the response body
-                       const body = await response.text();
-                       if (body.includes("Page not found")) {
+                        }
+                        // Process the response body
+                        const body = await response.text();
+                        if (body.includes('Page not found')) {
                             throw err;
-                       }
+                        }
 
-                       repo = new RepositoryCache()
-                       repo.fully_qualified_name = projectData.url.replace('https://gitlab.com/', '')
-                       repo.description = 'Imported manually'
-                       repo.default_branch = 'main'
-                       repo.service_domain = 'gitlab.com'
+                        repo = new RepositoryCache();
+                        repo.fully_qualified_name = projectData.url.replace(
+                            'https://gitlab.com/',
+                            ''
+                        );
+                        repo.description = 'Imported manually';
+                        repo.default_branch = 'main';
+                        repo.service_domain = 'gitlab.com';
                     } else {
                         throw err;
                     }

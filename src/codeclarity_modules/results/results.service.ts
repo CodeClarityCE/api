@@ -14,7 +14,7 @@ export class AnalysisResultsService {
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly analysesRepository: AnalysesRepository,
         private readonly resultsRepository: AnalysisResultsRepository
-    ) { }
+    ) {}
 
     /**
      * Check if the user is allowed to acces the analysis result
@@ -46,11 +46,11 @@ export class AnalysisResultsService {
         type: string,
         user: AuthenticatedUser
     ) {
-        await this.checkAccess(org_id, project_id, analysis_id, user)
-        const result = await this.resultsRepository.getByAnalysisIdAndPluginType(analysis_id, type)
+        await this.checkAccess(org_id, project_id, analysis_id, user);
+        const result = await this.resultsRepository.getByAnalysisIdAndPluginType(analysis_id, type);
         if (!result) {
-            throw new EntityNotFound()
+            throw new EntityNotFound();
         }
-        return result
+        return result;
     }
 }

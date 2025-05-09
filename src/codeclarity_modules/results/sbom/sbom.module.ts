@@ -25,7 +25,13 @@ import { AnalysisResultsRepository } from '../results.repository';
         TypeOrmModule.forFeature([Result], 'codeclarity')
     ],
     exports: [SBOMRepository, SbomUtilsService],
-    providers: [SBOMService, AnalysisResultsService, SBOMRepository, SbomUtilsService, AnalysisResultsRepository],
+    providers: [
+        SBOMService,
+        AnalysisResultsService,
+        SBOMRepository,
+        SbomUtilsService,
+        AnalysisResultsRepository
+    ],
     controllers: [SBOMController]
 })
 export class SbomModule {}

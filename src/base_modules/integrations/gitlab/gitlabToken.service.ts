@@ -19,44 +19,45 @@ export class GitlabIntegrationTokenService {
         gitlabInstanceUrl: string,
         { additionalScopes = [] }: { additionalScopes?: string[] }
     ): Promise<void> {
-       const requiredScopes = ['read_repository', 'read_user', 'read_api', 'self_rotate'];
-       const allScopes = [...requiredScopes, ...additionalScopes];
-       
+        const requiredScopes = ['read_repository', 'read_user', 'read_api', 'self_rotate'];
+        const allScopes = [...requiredScopes, ...additionalScopes];
 
-       try {
-           const response = await fetch(`${gitlabInstanceUrl}/api/v4/personal_access_tokens/self`, {
-               headers: {
-                   'PRIVATE-TOKEN': token,
-               },
-           });
+        try {
+            const response = await fetch(
+                `${gitlabInstanceUrl}/api/v4/personal_access_tokens/self`,
+                {
+                    headers: {
+                        'PRIVATE-TOKEN': token
+                    }
+                }
+            );
 
-           if (!response.ok) {
-               if (response.status === 401) {
-                   throw new Error('Invalid or revoked token');
+            if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Invalid or revoked token');
+                }
+                throw new Error(`Failed to fetch user information: ${response.status}`);
+            }
+
+            const tokenInfo = await response.json();
+
+            // Check if the token has the required scopes
+            if (!tokenInfo) {
+                throw new Error('Token does not have the required permissions.');
+            }
+
+            const hasAllScopes = allScopes.every((scope) => tokenInfo.scopes?.includes(scope));
+
+            if (!hasAllScopes) {
+                throw new Error('Token does not have the required permissions.');
+            }
+        } catch (error) {
+            if (error instanceof Error && error.message.includes('401')) {
+                throw new Error('Invalid or revoked token');
+            }
+            throw new Error(`Failed to validate token: ${error.message}`);
+        }
     }
-               throw new Error(`Failed to fetch user information: ${response.status}`);
-           }
-
-           const tokenInfo = await response.json();
-
-           // Check if the token has the required scopes
-           if (!tokenInfo) {
-               throw new Error('Token does not have the required permissions.');
-           }
-
-          const hasAllScopes = allScopes.every(scope => tokenInfo.scopes?.includes(scope));
-
-          if (!hasAllScopes) {
-              throw new Error('Token does not have the required permissions.');
-          }
-
-       } catch (error) {
-           if (error instanceof Error && error.message.includes('401')) {
-               throw new Error('Invalid or revoked token');
-           }
-           throw new Error(`Failed to validate token: ${error.message}`);
-       }
-   }
 
     /**
      * Retrieves the expiry date of a personal access token from the provider
@@ -71,27 +72,27 @@ export class GitlabIntegrationTokenService {
         token: string,
         gitlabInstanceUrl: string
     ): Promise<[boolean, Date | undefined]> {
-       try {
-           const response = await fetch(`${gitlabInstanceUrl}/api/v4/admin/token`, {
-               method: 'POST',
-               headers: {
-                   'Content-Type': 'application/json',
-                   'PRIVATE-TOKEN': token,
-               },
-               body: JSON.stringify({ token: token }),
-           });
+        try {
+            const response = await fetch(`${gitlabInstanceUrl}/api/v4/admin/token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'PRIVATE-TOKEN': token
+                },
+                body: JSON.stringify({ token: token })
+            });
 
-           if (!response.ok) {
-               if (response.status === 401) {
-                   throw new Error('Invalid or revoked token');
-               }
-               throw new Error(`Failed to fetch access token info. Status: ${response.status}`);
-           }
+            if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Invalid or revoked token');
+                }
+                throw new Error(`Failed to fetch access token info. Status: ${response.status}`);
+            }
 
             const data = await response.json();
 
-           if (data && data.expires_at) {
-               const expiryDate = new Date(data.expires_at);
+            if (data && data.expires_at) {
+                const expiryDate = new Date(data.expires_at);
                 return [true, expiryDate];
             }
 

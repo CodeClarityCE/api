@@ -26,7 +26,12 @@ import { AnalysisResultsRepository } from '../results.repository';
         TypeOrmModule.forFeature([Result], 'codeclarity')
     ],
     exports: [PatchingUtilsService],
-    providers: [PatchingService, AnalysisResultsService, PatchingUtilsService, AnalysisResultsRepository],
+    providers: [
+        PatchingService,
+        AnalysisResultsService,
+        PatchingUtilsService,
+        AnalysisResultsRepository
+    ],
     controllers: [PatchingController]
 })
 export class PatchingModule {}
