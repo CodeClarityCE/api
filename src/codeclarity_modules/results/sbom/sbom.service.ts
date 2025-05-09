@@ -266,26 +266,8 @@ export class SBOMService {
 
         const sbom: SBOMOutput = await this.sbomUtilsService.getSbomResult(analysisId);
 
-        const map = sbom.analysis_info.work_space_package_file_paths;
-
-        const cleanedMap: { [key: string]: string } = {};
-
-        for (let index = 0; index < Object.entries(map).length; index++) {
-            const element = Object.entries(map)[index];
-            const key = element[0];
-            let path = element[1];
-            const baseFile: string = path.split('/')[path.split('/').length - 1];
-            const baseDir: string = path.split('/')[path.split('/').length - 2];
-            const cleanedBaseDir = baseDir.replace(
-                '-' + baseDir.split('-')[baseDir.split('-').length - 1],
-                ''
-            );
-            path = `${cleanedBaseDir}/${baseFile}`;
-            cleanedMap[key] = path;
-        }
-
         return {
-            workspaces_map: cleanedMap,
+            workspaces: Object.keys(sbom.workspaces),
             package_manager: sbom.analysis_info.package_manager
         };
     }

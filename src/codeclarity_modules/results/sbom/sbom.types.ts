@@ -141,6 +141,6 @@ export interface GraphOutput {
 }
 
 export interface WorkspacesOutput {
-    workspaces_map: { [key: string]: string };
+    workspaces: Array<string>;
     package_manager: string;
 }
