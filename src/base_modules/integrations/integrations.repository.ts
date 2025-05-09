@@ -20,7 +20,7 @@ export class IntegrationsRepository {
      */
     async getIntegrationById(integrationId: string, relations?: any): Promise<Integration> {
         const integration = await this.integrationRepository.findOne({
-            where:{id: integrationId},
+            where: { id: integrationId },
             relations: relations
         });
 

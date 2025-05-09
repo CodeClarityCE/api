@@ -81,6 +81,8 @@ export class SeverityInfoByWeek {
     nmb_none: number;
     @ApiProperty()
     summed_severity: number;
+    
+    projects: Array<string>
 }
 
 export class SeverityInfoByWeekInternal {

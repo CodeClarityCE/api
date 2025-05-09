@@ -20,4 +20,4 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     providers: [GitlabIntegrationService, GitlabRepositoriesService, GitlabIntegrationTokenService],
     controllers: [GitlabIntegrationController]
 })
-export class GitlabModule { }
+export class GitlabModule {}

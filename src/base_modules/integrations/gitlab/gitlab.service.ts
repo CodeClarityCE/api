@@ -1,7 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { GitlabIntegrationToken } from 'src/base_modules/integrations/Token';
-import { DuplicateIntegration, EntityNotFound, IntegrationInvalidToken, IntegrationTokenExpired, IntegrationTokenMissingPermissions, IntegrationTokenRefreshFailed, IntegrationTokenRetrievalFailed, IntegrationWrongTokenType, NotAMember, NotAuthorized } from 'src/types/error.types';
+import {
+    DuplicateIntegration,
+    EntityNotFound,
+    IntegrationInvalidToken,
+    IntegrationTokenExpired,
+    IntegrationTokenMissingPermissions,
+    IntegrationTokenRefreshFailed,
+    IntegrationTokenRetrievalFailed,
+    IntegrationWrongTokenType,
+    NotAMember,
+    NotAuthorized
+} from 'src/types/error.types';
 import {
     GitlabIntegration,
     GitlabTokenType,
@@ -24,8 +35,8 @@ export class GitlabIntegrationService {
         private readonly gitlabIntegrationTokenService: GitlabIntegrationTokenService,
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly integrationsRepository: IntegrationsRepository,
-        private readonly usersRepository: UsersRepository,
-    ) { }
+        private readonly usersRepository: UsersRepository
+    ) {}
 
     /**
      *
@@ -55,23 +66,23 @@ export class GitlabIntegrationService {
             owner: true
         });
 
-        const gitlabIntegration = new GitlabIntegration()
-        gitlabIntegration.id = integration.id
-        gitlabIntegration.access_token = integration.access_token
-        gitlabIntegration.meta_data = new VCSIntegrationMetaData()
-        gitlabIntegration.added_on = integration.added_on
-        gitlabIntegration.added_by = integration.owner.id
-        gitlabIntegration.service_domain = integration.service_domain
-        gitlabIntegration.integration_type = integration.integration_type
-        gitlabIntegration.integration_provider = integration.integration_provider
-        gitlabIntegration.invalid = integration.invalid
-        gitlabIntegration.expiry_date = integration.expiry_date
-        gitlabIntegration.organization_id = integration.organizations[0].id
-        gitlabIntegration.refresh_token = integration.refresh_token
-        gitlabIntegration.service_base_url = integration.service_domain
-        gitlabIntegration.token_type = GitlabTokenType.PERSONAL_ACCESS_TOKEN
+        const gitlabIntegration = new GitlabIntegration();
+        gitlabIntegration.id = integration.id;
+        gitlabIntegration.access_token = integration.access_token;
+        gitlabIntegration.meta_data = new VCSIntegrationMetaData();
+        gitlabIntegration.added_on = integration.added_on;
+        gitlabIntegration.added_by = integration.owner.id;
+        gitlabIntegration.service_domain = integration.service_domain;
+        gitlabIntegration.integration_type = integration.integration_type;
+        gitlabIntegration.integration_provider = integration.integration_provider;
+        gitlabIntegration.invalid = integration.invalid;
+        gitlabIntegration.expiry_date = integration.expiry_date;
+        gitlabIntegration.organization_id = integration.organizations[0].id;
+        gitlabIntegration.refresh_token = integration.refresh_token;
+        gitlabIntegration.service_base_url = integration.service_domain;
+        gitlabIntegration.token_type = GitlabTokenType.PERSONAL_ACCESS_TOKEN;
 
-        return gitlabIntegration
+        return gitlabIntegration;
     }
 
     /**

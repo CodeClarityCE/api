@@ -16,14 +16,13 @@ import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from '../github/cons
 
 @Injectable()
 export class GitlabRepositoriesService {
-
     constructor(
         private readonly gitlabIntegrationService: GitlabIntegrationService,
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly integrationsRepository: IntegrationsRepository,
         @InjectRepository(RepositoryCache, 'codeclarity')
         private repositoryCacheRepository: Repository<RepositoryCache>
-    ) { }
+    ) {}
 
     /**
      * Sync updated and new repos from the integration
@@ -49,22 +48,31 @@ export class GitlabRepositoriesService {
         const entriesPerPage = 100;
 
         try {
-            const response = await fetch(integration.service_domain+'/api/v4/projects?owned=true&membership=true&per_page=' + entriesPerPage, {
-                headers: {
-                    'PRIVATE-TOKEN': rawToken
+            const response = await fetch(
+                integration.service_domain +
+                    '/api/v4/projects?owned=true&membership=true&per_page=' +
+                    entriesPerPage,
+                {
+                    headers: {
+                        'PRIVATE-TOKEN': rawToken
+                    }
                 }
-            });
+            );
 
             if (!response.ok) {
-                throw new Error(`Failed to fetch repositories from GitLab. Status: ${response.status}`);
+                throw new Error(
+                    `Failed to fetch repositories from GitLab. Status: ${response.status}`
+                );
             }
 
             const projects = await response.json();
 
             // Process the projects and save them to the repository cache
             for (const project of projects) {
-                const repo = await this.repositoryCacheRepository.existsBy({ fully_qualified_name: project.name_with_namespace })
-                if (repo) continue
+                const repo = await this.repositoryCacheRepository.existsBy({
+                    fully_qualified_name: project.name_with_namespace
+                });
+                if (repo) continue;
 
                 const repository = new RepositoryCache();
                 repository.repository_type = RepositoryType.GITLAB;
@@ -78,12 +86,10 @@ export class GitlabRepositoriesService {
 
                 await this.repositoryCacheRepository.save(repository);
             }
-
         } catch (error) {
             console.error('Error syncing GitLab repositories:', error);
             throw error;
         }
-
 
         // TODO Fetch repositories
 
@@ -154,14 +160,13 @@ export class GitlabRepositoriesService {
         if (paginationUserSuppliedConf.currentPage)
             currentPage = Math.max(0, paginationUserSuppliedConf.currentPage);
 
-
         const isSynced = await this.areGitlabReposSynced(integrationId);
 
         if (forceRefresh != undefined && forceRefresh == true) {
-            await this.syncGitlabRepos(integrationId)
+            await this.syncGitlabRepos(integrationId);
         } else {
             if (!isSynced) {
-                await this.syncGitlabRepos(integrationId)
+                await this.syncGitlabRepos(integrationId);
             }
         }
 
@@ -214,11 +219,11 @@ export class GitlabRepositoriesService {
     }
 
     /**
-         * Check if github repos have been synced
-         *
-         * @param integrationId The id of the integration
-         * @returns a boolean indicating whether the repos of the integration are synced
-         */
+     * Check if github repos have been synced
+     *
+     * @param integrationId The id of the integration
+     * @returns a boolean indicating whether the repos of the integration are synced
+     */
     async areGitlabReposSynced(integrationId: string): Promise<boolean> {
         const integration = await this.integrationsRepository.getIntegrationById(integrationId);
 
