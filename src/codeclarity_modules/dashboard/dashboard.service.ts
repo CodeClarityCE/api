@@ -31,7 +31,7 @@ export class DashboardService {
         private readonly organizationsRepository: OrganizationsRepository,
         @InjectRepository(Organization, 'codeclarity')
         private organizationRepository: Repository<Organization>
-    ) { }
+    ) {}
 
     /**
      * Returns the severity info for all projects and their most recent analysis
@@ -74,13 +74,10 @@ export class DashboardService {
 
         for (const project of res.projects) {
             project.analyses.forEach((analysis) => {
-
                 const week_number = moment(analysis.created_on).week();
                 const year = moment(analysis.created_on).year();
                 let weekInfo = severityInfoByWeek.find(
-                    (info) =>
-                        info.week_number.week == week_number &&
-                        info.week_number.year == year
+                    (info) => info.week_number.week == week_number && info.week_number.year == year
                 );
 
                 if (!weekInfo) {
@@ -104,7 +101,7 @@ export class DashboardService {
                     const res = result.result as unknown as VulnsOutput;
 
                     // We only retrieve one result per project per week
-                    if (!weekInfo.projects.find(p => p === project.id.toString())) {
+                    if (!weekInfo.projects.find((p) => p === project.id.toString())) {
                         for (const workspace_name of Object.keys(res.workspaces)) {
                             const workspace = res.workspaces[workspace_name];
                             workspace.Vulnerabilities.forEach((vuln) => {
@@ -117,7 +114,7 @@ export class DashboardService {
                                 else if (severity >= 1) weekInfo.nmb_low++;
                                 else weekInfo.nmb_none++;
 
-                                weekInfo.projects.push(project.id.toString())
+                                weekInfo.projects.push(project.id.toString());
                             });
                         }
                     }

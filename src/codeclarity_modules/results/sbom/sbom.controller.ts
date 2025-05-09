@@ -3,7 +3,6 @@ import { SBOMService } from './sbom.service';
 import { PaginatedResponse, Response } from 'src/types/apiResponses.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { WorkspacesOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
 
 @Controller('/org/:org_id/projects/:project_id/analysis')
 export class SBOMController {
@@ -71,8 +70,10 @@ export class SBOMController {
         @Param('project_id') project_id: string,
         @Param('analysis_id') analysis_id: string,
         @AuthUser() user: AuthenticatedUser
-    ): Promise<WorkspacesOutput> {
-        return await this.sbomService.getWorkspaces(org_id, project_id, analysis_id, user);
+    ): Promise<Response> {
+        return {
+            data: await this.sbomService.getWorkspaces(org_id, project_id, analysis_id, user)
+        };
     }
 
     @Get(':analysis_id/sbom/dependency')
