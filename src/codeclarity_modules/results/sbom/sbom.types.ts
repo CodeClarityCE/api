@@ -31,6 +31,8 @@ export interface Dependency {
     Optional: boolean;
     Bundled: boolean;
     Dev: boolean;
+    Prod: boolean;
+    Direct: boolean;
     Transitive: boolean;
     Licenses: string[];
 }
@@ -40,6 +42,7 @@ export class SbomDependency {
     version: string;
     newest_release: string;
     dev: boolean;
+    prod: boolean;
     is_direct_count: number;
     is_transitive_count: number;
 }

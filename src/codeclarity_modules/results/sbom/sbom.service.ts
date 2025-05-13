@@ -85,16 +85,15 @@ export class SBOMService {
         wPrevStats.number_of_dev_dependencies =
             sbomPrevious.workspaces[workspace]?.start.dev_dependencies?.length || 0;
 
-        wStats.number_of_direct_dependencies =
-            wStats.number_of_dev_dependencies + wStats.number_of_non_dev_dependencies;
-        wPrevStats.number_of_direct_dependencies =
-            wPrevStats.number_of_dev_dependencies + wPrevStats.number_of_non_dev_dependencies;
-
         for (const dep of Object.values(dependencies)) {
             for (const version of Object.values(dep)) {
                 if (version.Bundled) wStats.number_of_bundled_dependencies += 1;
                 if (version.Optional) wStats.number_of_optional_dependencies += 1;
-                if (version.Transitive) wStats.number_of_transitive_dependencies += 1;
+                if (version.Transitive && version.Direct)
+                    wStats.number_of_both_direct_transitive_dependencies += 1;
+                else if (version.Transitive) wStats.number_of_transitive_dependencies += 1;
+                else if (version.Direct) wStats.number_of_direct_dependencies += 1;
+
                 wStats.number_of_dependencies += 1;
             }
         }
@@ -103,7 +102,10 @@ export class SBOMService {
             for (const version of Object.values(dep)) {
                 if (version.Bundled) wPrevStats.number_of_bundled_dependencies += 1;
                 if (version.Optional) wPrevStats.number_of_optional_dependencies += 1;
-                if (version.Transitive) wPrevStats.number_of_transitive_dependencies += 1;
+                if (version.Transitive && version.Direct)
+                    wPrevStats.number_of_both_direct_transitive_dependencies += 1;
+                else if (version.Transitive) wPrevStats.number_of_transitive_dependencies += 1;
+                else if (version.Direct) wPrevStats.number_of_direct_dependencies += 1;
                 wPrevStats.number_of_dependencies += 1;
             }
         }
@@ -246,6 +248,7 @@ export class SBOMService {
                     version: version_key,
                     newest_release: version_key,
                     dev: version.Dev,
+                    prod: version.Prod,
                     is_direct_count: is_direct,
                     is_transitive_count: version.Transitive ? 1 : 0
                 };
