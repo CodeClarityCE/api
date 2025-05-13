@@ -28,7 +28,7 @@ export class SBOMService {
         private readonly packageRepository: PackageRepository,
         @InjectRepository(Result, 'codeclarity')
         private resultRepository: Repository<Result>
-    ) { }
+    ) {}
 
     async getStats(
         orgId: string,
@@ -217,21 +217,25 @@ export class SBOMService {
 
         for (const [dep_key, dep] of Object.entries(sbom.workspaces[workspace].dependencies)) {
             for (const [version_key, version] of Object.entries(dep)) {
-                let is_direct = 0
+                let is_direct = 0;
 
                 if (sbom.workspaces[workspace].start.dependencies) {
-                    for (const [, dependency] of Object.entries(sbom.workspaces[workspace].start.dependencies)) {
+                    for (const [, dependency] of Object.entries(
+                        sbom.workspaces[workspace].start.dependencies
+                    )) {
                         if (dependency.name == dep_key && dependency.version == version_key) {
-                            is_direct = 1
-                            break
+                            is_direct = 1;
+                            break;
                         }
                     }
                 }
                 if (sbom.workspaces[workspace].start.dev_dependencies && is_direct == 0) {
-                    for (const [, dependency] of Object.entries(sbom.workspaces[workspace].start.dev_dependencies)) {
+                    for (const [, dependency] of Object.entries(
+                        sbom.workspaces[workspace].start.dev_dependencies
+                    )) {
                         if (dependency.name == dep_key && dependency.version == version_key) {
-                            is_direct = 1
-                            break
+                            is_direct = 1;
+                            break;
                         }
                     }
                 }

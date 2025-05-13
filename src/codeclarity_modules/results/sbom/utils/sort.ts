@@ -134,26 +134,19 @@ function sort(
         //     .sort((a: any, b: any) => {
         //         return b.is_direct - a.is_direct;
         //     });
-    }
-    else if (sortBySafe == 'dev') {
+    } else if (sortBySafe == 'dev') {
         sorted = dependencies.sort((a: any, b: any) => {
             return b.dev - a.dev;
         });
 
-        if (sortDirectionSafe == 'DESC') (
-            sorted.reverse()
-        )
-    }
-    else if (sortBySafe == 'is_direct_count') {
+        if (sortDirectionSafe == 'DESC') sorted.reverse();
+    } else if (sortBySafe == 'is_direct_count') {
         sorted = dependencies.sort((a: any, b: any) => {
             return b.is_direct_count - a.is_direct_count;
         });
 
-        if (sortDirectionSafe == 'DESC') (
-            sorted.reverse()
-        )
-    }
-    else if (sortBySafe == 'version') {
+        if (sortDirectionSafe == 'DESC') sorted.reverse();
+    } else if (sortBySafe == 'version') {
         sorted = dependencies.sort((a: any, b: any) => {
             let greater = false;
             try {
