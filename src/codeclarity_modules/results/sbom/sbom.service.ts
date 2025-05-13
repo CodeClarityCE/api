@@ -220,7 +220,7 @@ export class SBOMService {
                 let is_direct = 0
 
                 if (sbom.workspaces[workspace].start.dependencies) {
-                    for (const [_, dependency] of Object.entries(sbom.workspaces[workspace].start.dependencies)) {
+                    for (const [, dependency] of Object.entries(sbom.workspaces[workspace].start.dependencies)) {
                         if (dependency.name == dep_key && dependency.version == version_key) {
                             is_direct = 1
                             break
@@ -228,7 +228,7 @@ export class SBOMService {
                     }
                 }
                 if (sbom.workspaces[workspace].start.dev_dependencies && is_direct == 0) {
-                    for (const [_, dependency] of Object.entries(sbom.workspaces[workspace].start.dev_dependencies)) {
+                    for (const [, dependency] of Object.entries(sbom.workspaces[workspace].start.dev_dependencies)) {
                         if (dependency.name == dep_key && dependency.version == version_key) {
                             is_direct = 1
                             break
