@@ -39,6 +39,9 @@ export class SbomDependency {
     name: string;
     version: string;
     newest_release: string;
+    dev: boolean;
+    is_direct_count: number;
+    is_transitive_count: number
 }
 
 export interface DependencyDetails {

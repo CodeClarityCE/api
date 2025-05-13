@@ -28,7 +28,7 @@ export class SBOMService {
         private readonly packageRepository: PackageRepository,
         @InjectRepository(Result, 'codeclarity')
         private resultRepository: Repository<Result>
-    ) {}
+    ) { }
 
     async getStats(
         orgId: string,
@@ -141,6 +141,23 @@ export class SBOMService {
     //     projectId: string,
     //     analysisId: string,
     //     workspace: string,
+    // ): Promise<any> {
+    //     const result = await this.resultRepository.findOne({
+    //         relations: { analysis: true },
+    //         where: {
+    //             analysis: {
+    //                 id: analysisId
+    //             },
+    //             plugin: 'js-sbom'
+    //         },
+    //     });
+    //     if (!result) {
+    //         throw new EntityNotFound();
+    //     }
+    //     const sbom: SBOMOutput = result.result as unknown as SBOMOutput;
+    //     const graph = this.sbomUtilsService.createGraph(sbom, workspace);
+    //     return graph;
+    // }
     //     user: AuthenticatedUser
     // ): Promise<GraphOutput> {
     //     await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
@@ -200,11 +217,33 @@ export class SBOMService {
 
         for (const [dep_key, dep] of Object.entries(sbom.workspaces[workspace].dependencies)) {
             for (const [version_key, version] of Object.entries(dep)) {
+                let is_direct = 0
+
+                if (sbom.workspaces[workspace].start.dependencies) {
+                    for (const [_, dependency] of Object.entries(sbom.workspaces[workspace].start.dependencies)) {
+                        if (dependency.name == dep_key && dependency.version == version_key) {
+                            is_direct = 1
+                            break
+                        }
+                    }
+                }
+                if (sbom.workspaces[workspace].start.dev_dependencies && is_direct == 0) {
+                    for (const [_, dependency] of Object.entries(sbom.workspaces[workspace].start.dev_dependencies)) {
+                        if (dependency.name == dep_key && dependency.version == version_key) {
+                            is_direct = 1
+                            break
+                        }
+                    }
+                }
+
                 const sbomDependency: SbomDependency = {
                     ...version,
                     name: dep_key,
                     version: version_key,
-                    newest_release: version_key
+                    newest_release: version_key,
+                    dev: version.Dev,
+                    is_direct_count: is_direct,
+                    is_transitive_count: version.Transitive ? 1 : 0
                 };
 
                 const pack = await this.packageRepository.getPackageInfoWithoutFailing(dep_key);
