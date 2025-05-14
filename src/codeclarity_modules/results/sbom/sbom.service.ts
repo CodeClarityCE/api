@@ -40,10 +40,12 @@ export class SBOMService {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
         const result = await this.resultRepository.find({
-            relations: { analysis: true },
+            relations: { analysis: { project: true } },
             where: {
                 analysis: {
-                    id: analysisId
+                    project: {
+                        id: projectId
+                    }
                 },
                 plugin: 'js-sbom'
             },
