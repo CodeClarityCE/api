@@ -256,7 +256,12 @@ export class SBOMService {
                 const pack = await this.packageRepository.getPackageInfoWithoutFailing(dep_key);
                 if (pack) sbomDependency.newest_release = pack.latest_version;
 
-                dependenciesArray.push(sbomDependency);
+                // If the dependency is not tagged as prod or dev,
+                // then it is not used in the workspace.
+                // It can be used in another workspace
+                if (sbomDependency.dev || sbomDependency.prod) {
+                    dependenciesArray.push(sbomDependency);
+                }
             }
         }
 
