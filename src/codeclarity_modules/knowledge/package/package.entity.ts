@@ -99,6 +99,7 @@ export class Version {
     @Column({
         length: 255
     })
+    @Index('idx_js_version_version')
     @ApiProperty()
     @Expose()
     version: string;
