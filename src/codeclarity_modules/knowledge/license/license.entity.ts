@@ -13,6 +13,7 @@ export class License {
         length: 250,
         nullable: true
     })
+    @Index('idx_license_name')
     @ApiProperty()
     @Expose()
     name: string;
