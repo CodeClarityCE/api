@@ -19,9 +19,11 @@ function sort(
         'newest_release',
         'last_published',
         'user_installed',
-        'release'
+        'release',
+        'dev',
+        'is_direct_count'
     ];
-    const DEFAULT_SORT = 'combined_severity';
+    const DEFAULT_SORT = 'dev';
     const DEFAULT_SORT_DIRECTION = 'desc';
 
     const mapping: { [key: string]: string } = {
@@ -132,6 +134,18 @@ function sort(
         //     .sort((a: any, b: any) => {
         //         return b.is_direct - a.is_direct;
         //     });
+    } else if (sortBySafe == 'dev') {
+        sorted = dependencies.sort((a: any, b: any) => {
+            return b.dev - a.dev;
+        });
+
+        if (sortDirectionSafe == 'DESC') sorted.reverse();
+    } else if (sortBySafe == 'is_direct_count') {
+        sorted = dependencies.sort((a: any, b: any) => {
+            return b.is_direct_count - a.is_direct_count;
+        });
+
+        if (sortDirectionSafe == 'DESC') sorted.reverse();
     } else if (sortBySafe == 'version') {
         sorted = dependencies.sort((a: any, b: any) => {
             let greater = false;

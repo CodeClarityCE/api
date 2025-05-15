@@ -40,10 +40,12 @@ export class SBOMService {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
         const result = await this.resultRepository.find({
-            relations: { analysis: true },
+            relations: { analysis: { project: true } },
             where: {
                 analysis: {
-                    id: analysisId
+                    project: {
+                        id: projectId
+                    }
                 },
                 plugin: 'js-sbom'
             },
@@ -85,16 +87,15 @@ export class SBOMService {
         wPrevStats.number_of_dev_dependencies =
             sbomPrevious.workspaces[workspace]?.start.dev_dependencies?.length || 0;
 
-        wStats.number_of_direct_dependencies =
-            wStats.number_of_dev_dependencies + wStats.number_of_non_dev_dependencies;
-        wPrevStats.number_of_direct_dependencies =
-            wPrevStats.number_of_dev_dependencies + wPrevStats.number_of_non_dev_dependencies;
-
         for (const dep of Object.values(dependencies)) {
             for (const version of Object.values(dep)) {
                 if (version.Bundled) wStats.number_of_bundled_dependencies += 1;
                 if (version.Optional) wStats.number_of_optional_dependencies += 1;
-                if (version.Transitive) wStats.number_of_transitive_dependencies += 1;
+                if (version.Transitive && version.Direct)
+                    wStats.number_of_both_direct_transitive_dependencies += 1;
+                else if (version.Transitive) wStats.number_of_transitive_dependencies += 1;
+                else if (version.Direct) wStats.number_of_direct_dependencies += 1;
+
                 wStats.number_of_dependencies += 1;
             }
         }
@@ -103,7 +104,10 @@ export class SBOMService {
             for (const version of Object.values(dep)) {
                 if (version.Bundled) wPrevStats.number_of_bundled_dependencies += 1;
                 if (version.Optional) wPrevStats.number_of_optional_dependencies += 1;
-                if (version.Transitive) wPrevStats.number_of_transitive_dependencies += 1;
+                if (version.Transitive && version.Direct)
+                    wPrevStats.number_of_both_direct_transitive_dependencies += 1;
+                else if (version.Transitive) wPrevStats.number_of_transitive_dependencies += 1;
+                else if (version.Direct) wPrevStats.number_of_direct_dependencies += 1;
                 wPrevStats.number_of_dependencies += 1;
             }
         }
@@ -141,6 +145,23 @@ export class SBOMService {
     //     projectId: string,
     //     analysisId: string,
     //     workspace: string,
+    // ): Promise<any> {
+    //     const result = await this.resultRepository.findOne({
+    //         relations: { analysis: true },
+    //         where: {
+    //             analysis: {
+    //                 id: analysisId
+    //             },
+    //             plugin: 'js-sbom'
+    //         },
+    //     });
+    //     if (!result) {
+    //         throw new EntityNotFound();
+    //     }
+    //     const sbom: SBOMOutput = result.result as unknown as SBOMOutput;
+    //     const graph = this.sbomUtilsService.createGraph(sbom, workspace);
+    //     return graph;
+    // }
     //     user: AuthenticatedUser
     // ): Promise<GraphOutput> {
     //     await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
@@ -200,17 +221,49 @@ export class SBOMService {
 
         for (const [dep_key, dep] of Object.entries(sbom.workspaces[workspace].dependencies)) {
             for (const [version_key, version] of Object.entries(dep)) {
+                let is_direct = 0;
+
+                if (sbom.workspaces[workspace].start.dependencies) {
+                    for (const [, dependency] of Object.entries(
+                        sbom.workspaces[workspace].start.dependencies
+                    )) {
+                        if (dependency.name == dep_key && dependency.version == version_key) {
+                            is_direct = 1;
+                            break;
+                        }
+                    }
+                }
+                if (sbom.workspaces[workspace].start.dev_dependencies && is_direct == 0) {
+                    for (const [, dependency] of Object.entries(
+                        sbom.workspaces[workspace].start.dev_dependencies
+                    )) {
+                        if (dependency.name == dep_key && dependency.version == version_key) {
+                            is_direct = 1;
+                            break;
+                        }
+                    }
+                }
+
                 const sbomDependency: SbomDependency = {
                     ...version,
                     name: dep_key,
                     version: version_key,
-                    newest_release: version_key
+                    newest_release: version_key,
+                    dev: version.Dev,
+                    prod: version.Prod,
+                    is_direct_count: is_direct,
+                    is_transitive_count: version.Transitive ? 1 : 0
                 };
 
                 const pack = await this.packageRepository.getPackageInfoWithoutFailing(dep_key);
                 if (pack) sbomDependency.newest_release = pack.latest_version;
 
-                dependenciesArray.push(sbomDependency);
+                // If the dependency is not tagged as prod or dev,
+                // then it is not used in the workspace.
+                // It can be used in another workspace
+                if (sbomDependency.dev || sbomDependency.prod) {
+                    dependenciesArray.push(sbomDependency);
+                }
             }
         }
 

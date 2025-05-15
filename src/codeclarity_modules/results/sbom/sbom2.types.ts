@@ -9,6 +9,7 @@ export declare interface AnalysisStats {
     number_of_unlicensed_dependencies: number;
     number_of_direct_dependencies: number;
     number_of_transitive_dependencies: number;
+    number_of_both_direct_transitive_dependencies: number;
     number_of_dependencies: number;
     average_dependency_age: number;
     number_of_dev_dependencies_diff: number;
@@ -36,6 +37,7 @@ export function newAnalysisStats(): AnalysisStats {
         number_of_peer_dependencies: 0,
         number_of_direct_dependencies: 0,
         number_of_transitive_dependencies: 0,
+        number_of_both_direct_transitive_dependencies: 0,
         number_of_deprecated_dependencies: 0,
         number_of_unlicensed_dependencies: 0,
         number_of_outdated_dependencies: 0,

@@ -44,13 +44,13 @@ function filter(
         searchKey = searchkeySafe.toLocaleLowerCase();
 
         for (const dependency of dependencies) {
-            // if (
-            //     dependency.name != null &&
-            //     dependency.name.toLocaleLowerCase().includes(searchKey)
-            // ) {
-            //     toReturn.push(dependency);
-            //     continue;
-            // }
+            if (
+                dependency.name != null &&
+                dependency.name.toLocaleLowerCase().includes(searchKey)
+            ) {
+                toReturn.push(dependency);
+                continue;
+            }
             if (
                 dependency.version != null &&
                 dependency.version.toLocaleLowerCase().includes(searchKey)
