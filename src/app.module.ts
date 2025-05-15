@@ -19,7 +19,7 @@ export const defaultOptions: PostgresConnectionOptions = {
     port: port,
     username: user,
     password: password,
-    synchronize: true,
+    synchronize: ENV != 'prod', // Only sync if not in prod
     logging: false
     // dropSchema: true
 };
