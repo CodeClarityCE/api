@@ -439,7 +439,8 @@ export class VulnerabilitiesService {
                 OSVMatch: finding.OSVMatch,
                 NVDMatch: finding.NVDMatch,
                 Severity: finding.Severity,
-                Weaknesses: finding.Weaknesses
+                Weaknesses: finding.Weaknesses,
+                Conflict: finding.Conflict,
             };
             // if vuln already in map
             const vuln = findingsMerged.get(finding.VulnerabilityId);
@@ -455,7 +456,7 @@ export class VulnerabilitiesService {
                     Weaknesses: finding.Weaknesses,
                     Affected: [affected],
                     Description: '',
-                    WinningSource: ''
+                    Conflict: finding.Conflict
                 };
                 findingsMerged.set(finding.VulnerabilityId, mergedFinding);
             }
