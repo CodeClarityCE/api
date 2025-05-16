@@ -210,7 +210,7 @@ export interface VulnerabilityMerged {
     Severity: Severity;
     Weaknesses?: WeaknessInfo[];
     Description: string;
-    Conflict: Conflict
+    Conflict: Conflict;
 }
 
 export interface AffectedVuln {
