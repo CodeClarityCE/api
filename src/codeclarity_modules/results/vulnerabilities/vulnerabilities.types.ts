@@ -185,6 +185,7 @@ export interface Vulnerability {
     Weaknesses?: WeaknessInfo[];
     OSVMatch: Vuln;
     NVDMatch: Vuln;
+    Conflict: Conflict;
 }
 
 interface Vuln {
@@ -209,7 +210,7 @@ export interface VulnerabilityMerged {
     Severity: Severity;
     Weaknesses?: WeaknessInfo[];
     Description: string;
-    WinningSource: string;
+    Conflict: Conflict;
 }
 
 export interface AffectedVuln {
@@ -221,6 +222,12 @@ export interface AffectedVuln {
     Weaknesses?: WeaknessInfo[];
     OSVMatch: Vuln;
     NVDMatch: Vuln;
+    Conflict: Conflict;
+}
+
+interface Conflict {
+    ConflictWinner: string;
+    ConflictFlag: string;
 }
 
 interface Semver {
