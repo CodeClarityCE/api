@@ -225,9 +225,16 @@ export interface AffectedVuln {
     Conflict: Conflict;
 }
 
+export enum ConflictFlag {
+    MATCH_CORRECT = 'MATCH_CORRECT',
+    MATCH_INCORRECT = 'MATCH_INCORRECT',
+    MATCH_POSSIBLE_INCORRECT = 'MATCH_POSSIBLE_INCORRECT',
+    NO_CONFLICT = 'NO_CONFLICT'
+}
+
 interface Conflict {
     ConflictWinner: string;
-    ConflictFlag: string;
+    ConflictFlag: ConflictFlag;
 }
 
 interface Semver {

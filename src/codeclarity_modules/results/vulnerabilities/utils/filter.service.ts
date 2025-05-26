@@ -6,7 +6,10 @@ import {
     isHighSeverity,
     isCriticalSeverity
 } from 'src/codeclarity_modules/results/utils/utils';
-import { VulnerabilityMerged } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
+import {
+    ConflictFlag,
+    VulnerabilityMerged
+} from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 
 @Injectable()
 export class VulnerabilitiesFilterService {
@@ -232,6 +235,19 @@ export class VulnerabilitiesFilterService {
                         (vulnerability.Severity &&
                             vulnerability.Severity.IntegrityImpact == 'NONE') ||
                         vulnerability.Severity.IntegrityImpact == ''
+                    )
+                        continue;
+                }
+                if (filters.includes('hide_correct_matching')) {
+                    if (vulnerability.Conflict.ConflictFlag == ConflictFlag.MATCH_CORRECT) continue;
+                }
+                if (filters.includes('hide_incorrect_matching')) {
+                    if (vulnerability.Conflict.ConflictFlag == ConflictFlag.MATCH_INCORRECT)
+                        continue;
+                }
+                if (filters.includes('hide_possibly_incorrect_matching')) {
+                    if (
+                        vulnerability.Conflict.ConflictFlag == ConflictFlag.MATCH_POSSIBLE_INCORRECT
                     )
                         continue;
                 }
