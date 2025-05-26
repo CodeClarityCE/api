@@ -472,7 +472,7 @@ export class VulnerabilitiesService {
 
         const paginated = paginate<VulnerabilityMerged>(
             sorted,
-            Array.from(findingsMerged.values()).length,
+            filtered.length,
             { currentPage: page, entriesPerPage: entries_per_page },
             { maxEntriesPerPage: 100, defaultEntriesPerPage: 20 }
         );
