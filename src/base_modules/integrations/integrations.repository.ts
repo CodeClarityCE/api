@@ -133,6 +133,22 @@ export class IntegrationsRepository {
      * @param integrationId - The ID of the integration to delete.
      */
     async deleteIntegration(integrationId: string) {
+        const integration = await this.integrationRepository.findOne({
+            where: { id: integrationId },
+            relations: { users: true, owner: true, organizations: true }
+        });
+        if (!integration) {
+            throw new EntityNotFound();
+        }
+        integration.organizations = [];
+        integration.users = [];
+
+        integration.owner.integrations = integration.owner.integrations?.filter(
+            (integration) => integration.id !== integrationId
+        );
+
+        await this.integrationRepository.save(integration);
+
         await this.integrationRepository.delete(integrationId);
     }
 }

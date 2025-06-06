@@ -136,7 +136,7 @@ export class User {
 
     @ManyToMany(() => Integration, (integration) => integration.users)
     @JoinTable()
-    integrations?: Relation<User[]>;
+    integrations?: Relation<Integration[]>;
 
     @Column({ nullable: true })
     oauth_integration?: string;

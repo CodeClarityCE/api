@@ -2,7 +2,6 @@ import {
     Body,
     Controller,
     DefaultValuePipe,
-    Delete,
     Get,
     Param,
     ParseBoolPipe,
@@ -84,21 +83,6 @@ export class GitlabIntegrationController {
                 user
             )
         };
-    }
-
-    @ApiTags('Integrations')
-    @Delete(':integration_id')
-    @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
-    @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
-    @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
-    @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
-    async unlinkGitlab(
-        @AuthUser() user: AuthenticatedUser,
-        @Param('org_id') org_id: string,
-        @Param('integration_id') integration_id: string
-    ): Promise<NoDataResponse> {
-        await this.gitlabIntegrationService.removeGitlabIntegration(org_id, integration_id, user);
-        return {};
     }
 
     @ApiTags('Integrations')

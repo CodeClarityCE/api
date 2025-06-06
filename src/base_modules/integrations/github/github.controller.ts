@@ -2,7 +2,6 @@ import {
     Body,
     Controller,
     DefaultValuePipe,
-    Delete,
     Get,
     Param,
     ParseBoolPipe,
@@ -46,16 +45,12 @@ import {
 } from 'src/base_modules/integrations/github/githubIntegration.types';
 import { Integration } from 'src/base_modules/integrations/integrations.entity';
 import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
-import { IntegrationsRepository } from '../integrations.repository';
 
 @Controller('org/:org_id/integrations/github')
 export class GithubIntegrationController {
     constructor(
         private readonly githubIntegrationService: GithubIntegrationService,
-        private readonly githubReposService: GithubRepositoriesService,
-        private readonly organizationsRepository: OrganizationsRepository,
-        private readonly integrationsRepository: IntegrationsRepository
+        private readonly githubReposService: GithubRepositoriesService
     ) {}
 
     @ApiTags('Integrations')
@@ -107,33 +102,6 @@ export class GithubIntegrationController {
                 user
             )
         };
-    }
-
-    @ApiTags('Integrations')
-    @Delete(':integration_id')
-    @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
-    @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
-    @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
-    @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
-    async unlinkGithub(
-        @AuthUser() user: AuthenticatedUser,
-        @Param('org_id') org_id: string,
-        @Param('integration_id') integration_id: string
-    ): Promise<NoDataResponse> {
-        const organization = await this.organizationsRepository.getOrganizationById(org_id, {
-            integrations: true
-        });
-        if (!organization) {
-            throw new EntityNotFound();
-        }
-        organization.integrations = organization.integrations?.filter(
-            (integration) => integration.id !== integration_id
-        );
-
-        await this.organizationsRepository.saveOrganization(organization);
-
-        await this.integrationsRepository.deleteIntegration(integration_id);
-        return {};
     }
 
     @ApiTags('Integrations')
