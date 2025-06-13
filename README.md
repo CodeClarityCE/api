@@ -1,12 +1,41 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/CodeClarityCE/identity/blob/main/logo/vectorized/logo_name_white.svg">
+  <source media="(prefers-color-scheme: light)" srcset="https://github.com/CodeClarityCE/identity/blob/main/logo/vectorized/logo_name_black.svg">
+  <img alt="codeclarity-logo" src="https://github.com/CodeClarityCE/identity/blob/main/logo/vectorized/logo_name_black.svg">
+</picture>
+<br>
+<br>
+
+Secure your software empower your team.
+
+[![License](https://img.shields.io/github/license/codeclarityce/codeclarity-dev)](LICENSE.txt)
+
+<details open="open">
+<summary>Table of Contents</summary>
+
+- [CodeClarity API](#codeclarity-api)
+  - [Contributing](#contributing)
+  - [Reporting Issues](#reporting-issues)
+  - [Purpose](#purpose)
+  - [Getting started](#getting-started)
+  - [API Responses](#api-responses)
+    - [API data](#api-data)
+    - [API conventions](#api-conventions)
+
+
+</details>
+
+---
+
 # CodeClarity API
 
-<br>
+## Contributing
 
-<div align="center">
-    <img src="https://user-images.githubusercontent.com/124595411/233356880-fdc7ea8a-8b1d-4991-8726-67b47e91df9e.svg" width="400px" />
-</div>
+If you'd like to contribute code or documentation, please see [CONTRIBUTING.md](https://github.com/CodeClarityCE/codeclarity-dev/blob/main/CONTRIBUTING.md) for guidelines on how to do so.
 
-<br>
+## Reporting Issues
+
+Please report any issues with the setup process or other problems encountered while using this repository by opening a new issue in this project's GitHub page.
 
 ## Purpose
 
