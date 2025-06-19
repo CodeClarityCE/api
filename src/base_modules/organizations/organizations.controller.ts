@@ -19,7 +19,7 @@ import {
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { OrganizationLoggerService } from 'src/base_modules/organizations/log/organizationLogger.service';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import {
@@ -54,6 +54,7 @@ import { Invitation } from 'src/base_modules/organizations/invitations/invitatio
 import { InvitationOrgAlreadyExists } from './organizations.errors';
 import { OrganizationMemberships } from './memberships/organization.memberships.entity';
 
+@ApiBearerAuth()
 @Controller('org')
 export class OrganizationsController {
     constructor(
@@ -103,6 +104,11 @@ export class OrganizationsController {
     @ApiTags('Organizations')
     @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
     @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
+    @ApiQuery({ name: 'page', required: false })
+    @ApiQuery({ name: 'entries_per_page', required: false })
+    @ApiQuery({ name: 'search_key', required: false })
+    @ApiQuery({ name: 'sort_key', required: false })
+    @ApiQuery({ name: 'sort_direction', required: false })
     @Get('')
     async getMany(
         @AuthUser() user: AuthenticatedUser,

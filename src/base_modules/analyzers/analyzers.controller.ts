@@ -21,7 +21,9 @@ import { AnalyzerCreateBody } from 'src/base_modules/analyzers/analyzer.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { Analyzer } from 'src/base_modules/analyzers/analyzer.entity';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiBearerAuth()
 @Controller('/org/:org_id/analyzers')
 export class AnalyzersController {
     constructor(private readonly analyzersService: AnalyzersService) {}
