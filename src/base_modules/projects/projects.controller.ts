@@ -18,7 +18,7 @@ import {
 } from 'src/types/apiResponses.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import {
     AlreadyExists,
@@ -35,6 +35,7 @@ import { SortDirection } from 'src/types/sort.types';
 import { ProjectImportBody } from 'src/base_modules/projects/project.types';
 import { Project } from 'src/base_modules/projects/project.entity';
 
+@ApiBearerAuth()
 @Controller('org/:org_id/projects')
 export class ProjectController {
     constructor(private readonly projectsService: ProjectService) {}
@@ -77,11 +78,15 @@ export class ProjectController {
     @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
     @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
     @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
+    @ApiQuery({ name: 'page', required: false })
+    @ApiQuery({ name: 'entries_per_page', required: false })
+    @ApiQuery({ name: 'search_key', required: false })
+    @ApiQuery({ name: 'sort_key', required: false })
+    @ApiQuery({ name: 'sort_direction', required: false })
     @Get('')
     async getMany(
         @AuthUser() user: AuthenticatedUser,
         @Param('org_id') org_id: string,
-        @Query('integration_id') integration_id?: string,
         @Query('page', new DefaultValuePipe(0), ParseIntPipe) page?: number,
         @Query('entries_per_page', new DefaultValuePipe(0), ParseIntPipe) entries_per_page?: number,
         @Query('search_key') search_key?: string,

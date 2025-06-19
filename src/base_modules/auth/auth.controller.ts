@@ -15,7 +15,7 @@ import { UserCreateBody, RegistrationConfirmationBody } from 'src/base_modules/u
 import { UsersService } from '../users/users.service';
 import { CreatedResponse, NoDataResponse, TypedResponse } from 'src/types/apiResponses.types';
 import { CombinedAuthGuard } from './guards/combined.guard';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import { EmailAlreadyExists, EntityNotFound } from 'src/types/error.types';
@@ -55,6 +55,7 @@ export class AuthController {
     @APIDocTypedResponseDecorator(User)
     @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
     @UseGuards(CombinedAuthGuard)
+    @ApiBearerAuth()
     @Get('/user')
     async getAuthenticatedAccount(
         @AuthUser() user: AuthenticatedUser

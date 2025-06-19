@@ -4,7 +4,7 @@ import { AuthUser } from 'src/decorators/UserDecorator';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { CreatedResponse, NoDataResponse, TypedResponse } from 'src/types/apiResponses.types';
 import { NonAuthEndpoint } from 'src/decorators/SkipAuthDecorator';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import { EntityNotFound, InternalError, NotAuthorized, Unsupported } from 'src/types/error.types';
@@ -31,6 +31,7 @@ import {
     PasswordsDoNotMatch
 } from '../auth/auth.errors';
 
+@ApiBearerAuth()
 @Controller('users')
 export class UsersController {
     constructor(private readonly usersService: UsersService) {}
