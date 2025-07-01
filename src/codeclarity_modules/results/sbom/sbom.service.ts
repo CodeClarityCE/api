@@ -3,6 +3,7 @@ import { PaginatedResponse } from 'src/types/apiResponses.types';
 import { AnalysisResultsService } from '../results.service';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
+    Dependency,
     DependencyDetails,
     Output as SBOMOutput,
     SbomDependency,
@@ -14,14 +15,22 @@ import { filter } from './utils/filter';
 import { sort } from './utils/sort';
 import { EntityNotFound, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/error.types';
 import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
-import { AnalysisStats, newAnalysisStats } from 'src/codeclarity_modules/results/sbom/sbom2.types';
+import { AnalysisStats, newAnalysisStats } from 'src/codeclarity_modules/results/sbom/sbom_stats.types';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
+import { GraphDependency, GraphTraversalUtils } from './sbom_graph.types';
 
 @Injectable()
 export class SBOMService {
+    /**
+     * Virtual root node ID used to create a unified tree structure.
+     * All nodes without parents (root dependencies and orphaned nodes) will have this as their parent.
+     * This node is included in API responses to provide a complete tree structure.
+     */
+    private static readonly VIRTUAL_ROOT_ID = '__VIRTUAL_ROOT__';
+
     constructor(
         private readonly analysisResultsService: AnalysisResultsService,
         private readonly sbomUtilsService: SbomUtilsService,
@@ -139,62 +148,6 @@ export class SBOMService {
 
         return wStats;
     }
-
-    // async getGraph(
-    //     orgId: string,
-    //     projectId: string,
-    //     analysisId: string,
-    //     workspace: string,
-    // ): Promise<any> {
-    //     const result = await this.resultRepository.findOne({
-    //         relations: { analysis: true },
-    //         where: {
-    //             analysis: {
-    //                 id: analysisId
-    //             },
-    //             plugin: 'js-sbom'
-    //         },
-    //     });
-    //     if (!result) {
-    //         throw new EntityNotFound();
-    //     }
-    //     const sbom: SBOMOutput = result.result as unknown as SBOMOutput;
-    //     const graph = this.sbomUtilsService.createGraph(sbom, workspace);
-    //     return graph;
-    // }
-    //     user: AuthenticatedUser
-    // ): Promise<GraphOutput> {
-    //     await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
-
-    //     const sbom: SBOMOutput = await getSbomResult(analysisId);
-
-    //     // Validate that the workspace exists
-    //     if (!(workspace in sbom.workspaces)) {
-    //         throw new UnknownWorkspace();
-    //     }
-
-    //     const dependenciesMap: { [key: string]: Dependency } =
-    //         sbom.workspaces[workspace].dependencies;
-
-    //     sbom.workspaces[workspace].dependencies = dependenciesMap;
-
-    //     let relativePackageFile: string =
-    //         sbom.analysis_info.work_space_package_file_paths[workspace];
-    //     const baseFile: string =
-    //         relativePackageFile.split('/')[relativePackageFile.split('/').length - 1];
-    //     const baseDir: string =
-    //         relativePackageFile.split('/')[relativePackageFile.split('/').length - 2];
-    //     const cleanedBaseDir = baseDir.replace(
-    //         '-' + baseDir.split('-')[baseDir.split('-').length - 1],
-    //         ''
-    //     );
-    //     relativePackageFile = `${cleanedBaseDir}/${baseFile}`;
-
-    //     return {
-    //         graph: sbom.workspaces[workspace],
-    //         project_name: relativePackageFile
-    //     };
-    // }
 
     async getSbom(
         orgId: string,
@@ -359,42 +312,205 @@ export class SBOMService {
         throw new EntityNotFound();
     }
 
-    // async getDependencyGraph(
-    //     orgId: string,
-    //     projectId: string,
-    //     analysisId: string,
-    //     workspace: string,
-    //     dependency: string,
-    //     user: AuthenticatedUser
-    // ): Promise<GraphOutput> {
-    //     await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
+    async getDependencyGraph(
+        orgId: string,
+        projectId: string,
+        analysisId: string,
+        workspace: string,
+        dependency: string,
+        user: AuthenticatedUser
+    ): Promise<Array<GraphDependency>> {
+        await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
-    //     const sbom: SBOMOutput = await getSbomResult(analysisId);
+        const sbom: SBOMOutput = await this.sbomUtilsService.getSbomResult(analysisId);
 
-    //     // Validate that the workspace exists
-    //     if (!(workspace in sbom.workspaces)) {
-    //         throw new UnknownWorkspace();
-    //     }
+        // Validate that the workspace exists
+        if (!(workspace in sbom.workspaces)) {
+            throw new UnknownWorkspace();
+        }
 
-    //     const dependenciesMap: { [key: string]: Dependency } =
-    //         sbom.workspaces[workspace].dependencies;
-    //     const parentGraph: WorkSpaceData = await getParents(dependenciesMap, dependency, new Set());
+        // Validate dependency parameter
+        if (!dependency || dependency.trim() === '') {
+            throw new EntityNotFound('Dependency parameter is required');
+        }
 
-    //     let relativePackageFile: string =
-    //         sbom.analysis_info.work_space_package_file_paths[workspace];
-    //     const baseFile: string =
-    //         relativePackageFile.split('/')[relativePackageFile.split('/').length - 1];
-    //     const baseDir: string =
-    //         relativePackageFile.split('/')[relativePackageFile.split('/').length - 2];
-    //     const cleanedBaseDir = baseDir.replace(
-    //         '-' + baseDir.split('-')[baseDir.split('-').length - 1],
-    //         ''
-    //     );
-    //     relativePackageFile = `${cleanedBaseDir}/${baseFile}`;
+        const dependenciesMap: { [depName: string]: { [version: string]: Dependency } } =
+            sbom.workspaces[workspace].dependencies;
 
-    //     return {
-    //         graph: parentGraph,
-    //         project_name: relativePackageFile
-    //     };
-    // }
+        // Check if dependencies exist in this workspace
+        if (!dependenciesMap || Object.keys(dependenciesMap).length === 0) {
+            throw new EntityNotFound('No dependencies found in this workspace');
+        }
+
+        // First, build the complete dependency graph
+        const completeGraph: Array<GraphDependency> = this.buildCompleteGraph(dependenciesMap, sbom.workspaces[workspace]);
+
+        // Find the target dependency in the complete graph
+        const targetNode = completeGraph.find(node => node.id === dependency);
+        if (!targetNode) {
+            throw new EntityNotFound(`Dependency ${dependency} not found in workspace ${workspace}`);
+        }
+
+        // Find all parents and children of the specified node
+        const traversalResult = GraphTraversalUtils.findAllParentsAndChildren(dependency, completeGraph);
+        
+        // Return the target node plus all its parents and children
+        const result: Array<GraphDependency> = [];
+        
+        if (traversalResult.node) {
+            result.push(traversalResult.node);
+        }
+        
+        result.push(...traversalResult.parents);
+        result.push(...traversalResult.children);
+
+        // Remove duplicates based on ID (including virtual root in results)
+        const uniqueResult = result.filter((item, index, self) => 
+            index === self.findIndex(node => node.id === item.id)
+        );
+
+        return uniqueResult;
+    }
+
+    /**
+     * Builds a complete dependency graph from the SBOM data with a unified tree structure.
+     * Creates a virtual root node that serves as the parent for all orphaned nodes,
+     * ensuring every node in the graph has a path to the root.
+     * 
+     * @param dependenciesMap - Map of dependencies from SBOM
+     * @param workspace - Workspace data containing start dependencies
+     * @returns Complete graph of all dependencies with parent-child relationships rooted at virtual root
+     */
+    private buildCompleteGraph(
+        dependenciesMap: { [depName: string]: { [version: string]: Dependency } },
+        workspace: any
+    ): Array<GraphDependency> {
+        const graph: Array<GraphDependency> = [];
+        const processedNodes = new Set<string>();
+
+        // Create a virtual root node that will be the parent of all orphaned nodes
+        const virtualRootId = SBOMService.VIRTUAL_ROOT_ID;
+        const virtualRootNode: GraphDependency = {
+            id: virtualRootId,
+            parentIds: [],
+            childrenIds: []
+        };
+
+        // Add root dependencies (those without parents)
+        const rootDependencies = new Set<string>();
+        
+        // Collect start dependencies (these are roots)
+        if (workspace.start?.dependencies) {
+            for (const dep of workspace.start.dependencies) {
+                if (dep.name && dep.version) {
+                    rootDependencies.add(`${dep.name}@${dep.version}`);
+                }
+            }
+        }
+        if (workspace.start?.dev_dependencies) {
+            for (const dep of workspace.start.dev_dependencies) {
+                if (dep.name && dep.version) {
+                    rootDependencies.add(`${dep.name}@${dep.version}`);
+                }
+            }
+        }
+
+        // Process all dependencies and build parent-child relationships
+        for (const [depName, versions] of Object.entries(dependenciesMap)) {
+            if (!depName || !versions) continue;
+
+            for (const [version, depData] of Object.entries(versions)) {
+                if (!version || !depData) continue;
+
+                const nodeId = `${depName}@${version}`;
+                
+                if (processedNodes.has(nodeId)) {
+                    continue;
+                }
+
+                // Determine if this is a root node
+                const isRoot = rootDependencies.has(nodeId);
+                
+                const node: GraphDependency = {
+                    id: nodeId,
+                    parentIds: [],
+                    childrenIds: []
+                };
+
+                // Add children from Dependencies property
+                if (depData.Dependencies && typeof depData.Dependencies === 'object') {
+                    for (const [childName, childVersion] of Object.entries(depData.Dependencies)) {
+                        if (childName && childVersion) {
+                            const childId = `${childName}@${childVersion}`;
+                            node.childrenIds!.push(childId);
+                        }
+                    }
+                }
+
+                // Find all parents for this node
+                const parents = this.findParentDependencies(nodeId, dependenciesMap);
+                
+                if (parents.length > 0) {
+                    // Node has real parents
+                    node.parentIds = parents;
+                } else if (isRoot) {
+                    // Root node (from package.json) - make it a child of virtual root
+                    node.parentIds = [virtualRootId];
+                    virtualRootNode.childrenIds!.push(nodeId);
+                } else {
+                    // Orphaned node (no parents found) - make it a child of virtual root
+                    node.parentIds = [virtualRootId];
+                    virtualRootNode.childrenIds!.push(nodeId);
+                }
+
+                graph.push(node);
+                processedNodes.add(nodeId);
+            }
+        }
+
+        // Add the virtual root node to the graph
+        graph.push(virtualRootNode);
+
+        return graph;
+    }
+
+    /**
+     * Finds all parent dependencies for a given dependency
+     * @param targetDependency - The dependency to find parents for (format: "name@version")
+     * @param dependenciesMap - Map of all dependencies
+     * @returns Array of parent dependency IDs
+     */
+    private findParentDependencies(
+        targetDependency: string,
+        dependenciesMap: { [depName: string]: { [version: string]: Dependency } }
+    ): string[] {
+        if (!targetDependency || !targetDependency.includes('@')) {
+            return [];
+        }
+
+        const [targetName, targetVersion] = targetDependency.split('@');
+        if (!targetName || !targetVersion) {
+            return [];
+        }
+
+        const parents: string[] = [];
+
+        // Look through all dependencies to see which ones have this as a child
+        for (const [depName, versions] of Object.entries(dependenciesMap)) {
+            if (!depName || !versions) continue;
+
+            for (const [version, depData] of Object.entries(versions)) {
+                if (!version || !depData) continue;
+
+                // Check if this dependency has the target as a child in Dependencies
+                if (depData.Dependencies && 
+                    typeof depData.Dependencies === 'object' && 
+                    depData.Dependencies[targetName] === targetVersion) {
+                    parents.push(`${depName}@${version}`);
+                }
+            }
+        }
+
+        return parents;
+    }   
 }
