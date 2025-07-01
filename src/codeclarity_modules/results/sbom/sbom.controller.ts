@@ -51,19 +51,6 @@ export class SBOMController {
         };
     }
 
-    // @Get(':analysis_id/sbom/graph')
-    // async getGraph(
-    //     @Param('org_id') org_id: string,
-    //     @Param('project_id') project_id: string,
-    //     @Param('analysis_id') analysis_id: string,
-    //     @AuthUser() user: AuthenticatedUser,
-    //     @Query('workspace') workspace: string
-    // ): Promise<Response> {
-    //     return {
-    //         data: await this.sbomService.getGraph(org_id, project_id, analysis_id, workspace, user)
-    //     };
-    // }
-
     @Get(':analysis_id/sbom/workspaces')
     async getWorkspaces(
         @Param('org_id') org_id: string,
@@ -98,24 +85,24 @@ export class SBOMController {
         };
     }
 
-    // @Get(':analysis_id/sbom/dependency/graph')
-    // async getDependencyGraph(
-    //     @Param('org_id') org_id: string,
-    //     @Param('project_id') project_id: string,
-    //     @Param('analysis_id') analysis_id: string,
-    //     @AuthUser() user: AuthenticatedUser,
-    //     @Query('dependency') dependency: string,
-    //     @Query('workspace') workspace: string
-    // ): Promise<Response> {
-    //     return {
-    //         data: await this.sbomService.getDependencyGraph(
-    //             org_id,
-    //             project_id,
-    //             analysis_id,
-    //             workspace,
-    //             dependency,
-    //             user
-    //         )
-    //     };
-    // }
+    @Get(':analysis_id/sbom/dependency/graph')
+    async getDependencyGraph(
+        @Param('org_id') org_id: string,
+        @Param('project_id') project_id: string,
+        @Param('analysis_id') analysis_id: string,
+        @AuthUser() user: AuthenticatedUser,
+        @Query('dependency') dependency: string,
+        @Query('workspace') workspace: string
+    ): Promise<Response> {
+        return {
+            data: await this.sbomService.getDependencyGraph(
+                org_id,
+                project_id,
+                analysis_id,
+                workspace,
+                dependency,
+                user
+            )
+        };
+    }
 }
