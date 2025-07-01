@@ -175,4 +175,198 @@ export class GraphTraversalUtils {
 
         return result;
     }
+
+    /**
+     * Finds only the paths that lead to or from the target dependency.
+     * This excludes branches that don't contain the target dependency.
+     * 
+     * @param nodeId - The ID of the target dependency
+     * @param graph - Array of GraphDependency nodes representing the entire graph
+     * @returns Array of GraphDependency nodes that are in paths containing the target
+     */
+    static findPathsContaining(nodeId: string, graph: GraphDependency[]): GraphDependency[] {
+        const result: GraphDependency[] = [];
+        const nodeMap = new Map<string, GraphDependency>();
+        const nodesInPaths = new Set<string>();
+
+        // Build node map for efficient lookups
+        for (const node of graph) {
+            nodeMap.set(node.id, node);
+        }
+
+        // Find the target dependency
+        const targetNode = nodeMap.get(nodeId);
+        if (!targetNode) {
+            return result; // Target not found
+        }
+
+        console.log(`Finding paths for target dependency: ${nodeId}`);
+
+        // Mark the target node as part of a relevant path
+        nodesInPaths.add(targetNode.id);
+
+        // Find all paths from root to target (mark ancestors that lead to target)
+        this.markPathsToTarget(targetNode, nodeMap, nodesInPaths);
+
+        // Find all paths from target to leaves (mark descendants of target)
+        this.markPathsFromTarget(targetNode, nodeMap, nodesInPaths);
+
+        // Collect all nodes that are marked as part of relevant paths
+        for (const nodeId of nodesInPaths) {
+            const node = nodeMap.get(nodeId);
+            if (node) {
+                result.push(node);
+            }
+        }
+
+        console.log(`Total nodes in paths containing ${nodeId}:`, result.length);
+        console.log(`Node IDs in result:`, result.map(n => n.id));
+
+        return result;
+    }
+
+    /**
+     * Marks all ancestor nodes that have a path leading to the target
+     * @param targetNode - The target dependency node
+     * @param nodeMap - Map of all nodes for quick lookup
+     * @param nodesInPaths - Set to track nodes that are part of relevant paths
+     */
+    private static markPathsToTarget(
+        targetNode: GraphDependency,
+        nodeMap: Map<string, GraphDependency>,
+        nodesInPaths: Set<string>
+    ): void {
+        if (!targetNode.parentIds || targetNode.parentIds.length === 0) {
+            return; // Reached root
+        }
+
+        for (const parentId of targetNode.parentIds) {
+            const parent = nodeMap.get(parentId);
+            if (parent && !nodesInPaths.has(parent.id)) {
+                // Mark this parent as part of a path to target
+                nodesInPaths.add(parent.id);
+                
+                // Recursively mark ancestors of this parent
+                this.markPathsToTarget(parent, nodeMap, nodesInPaths);
+            }
+        }
+    }
+
+    /**
+     * Marks all descendant nodes that are children of the target
+     * @param targetNode - The target dependency node
+     * @param nodeMap - Map of all nodes for quick lookup
+     * @param nodesInPaths - Set to track nodes that are part of relevant paths
+     */
+    private static markPathsFromTarget(
+        targetNode: GraphDependency,
+        nodeMap: Map<string, GraphDependency>,
+        nodesInPaths: Set<string>
+    ): void {
+        if (!targetNode.childrenIds || targetNode.childrenIds.length === 0) {
+            return; // Reached leaf
+        }
+
+        for (const childId of targetNode.childrenIds) {
+            const child = nodeMap.get(childId);
+            if (child && !nodesInPaths.has(child.id)) {
+                // Mark this child as part of a path from target
+                nodesInPaths.add(child.id);
+                
+                // Recursively mark descendants of this child
+                this.markPathsFromTarget(child, nodeMap, nodesInPaths);
+            }
+        }
+    }
+
+    /**
+     * Finds only the minimal paths that lead to the target dependency.
+     * This is more restrictive than findPathsContaining - it only includes nodes
+     * that are strictly necessary to show how the target is reached.
+     * 
+     * @param nodeId - The ID of the target dependency
+     * @param graph - Array of GraphDependency nodes representing the entire graph
+     * @returns Array of GraphDependency nodes that are in minimal paths to the target
+     */
+    static findMinimalPathsToTarget(nodeId: string, graph: GraphDependency[]): GraphDependency[] {
+        const result: GraphDependency[] = [];
+        const nodeMap = new Map<string, GraphDependency>();
+
+        // Build node map for efficient lookups
+        for (const node of graph) {
+            nodeMap.set(node.id, node);
+        }
+
+        // Find the target dependency
+        const targetNode = nodeMap.get(nodeId);
+        if (!targetNode) {
+            return result; // Target not found
+        }
+
+        console.log(`Finding minimal paths to target dependency: ${nodeId}`);
+
+        // Always include the target
+        result.push(targetNode);
+
+        // Find all minimal paths from roots to target
+        const pathsToTarget = this.findAllPathsToTarget(targetNode, nodeMap, []);
+        
+        console.log(`Found ${pathsToTarget.length} paths to target`);
+
+        // Collect all unique nodes from these paths
+        const uniqueNodes = new Set<string>();
+        uniqueNodes.add(nodeId); // Always include target
+
+        for (const path of pathsToTarget) {
+            for (const node of path) {
+                uniqueNodes.add(node.id);
+            }
+        }
+
+        // Build result from unique nodes
+        for (const nodeId of uniqueNodes) {
+            const node = nodeMap.get(nodeId);
+            if (node && !result.some(n => n.id === nodeId)) {
+                result.push(node);
+            }
+        }
+
+        console.log(`Minimal paths contain ${result.length} nodes:`, result.map(n => n.id));
+        return result;
+    }
+
+    /**
+     * Finds all complete paths from root nodes to the target
+     * @param targetNode - The target dependency node
+     * @param nodeMap - Map of all nodes for quick lookup
+     * @param currentPath - Current path being built
+     * @returns Array of paths (each path is an array of nodes)
+     */
+    private static findAllPathsToTarget(
+        targetNode: GraphDependency,
+        nodeMap: Map<string, GraphDependency>,
+        currentPath: GraphDependency[]
+    ): GraphDependency[][] {
+        // If no parents, this is a root-to-target path
+        if (!targetNode.parentIds || targetNode.parentIds.length === 0) {
+            return [currentPath];
+        }
+
+        const allPaths: GraphDependency[][] = [];
+
+        // For each parent, recursively find paths
+        for (const parentId of targetNode.parentIds) {
+            const parent = nodeMap.get(parentId);
+            if (parent) {
+                // Avoid cycles
+                if (!currentPath.some(node => node.id === parent.id)) {
+                    const newPath = [parent, ...currentPath];
+                    const pathsFromParent = this.findAllPathsToTarget(parent, nodeMap, newPath);
+                    allPaths.push(...pathsFromParent);
+                }
+            }
+        }
+
+        return allPaths;
+    }
 }

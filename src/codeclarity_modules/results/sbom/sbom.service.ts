@@ -345,31 +345,40 @@ export class SBOMService {
         // First, build the complete dependency graph
         const completeGraph: Array<GraphDependency> = this.buildCompleteGraph(dependenciesMap, sbom.workspaces[workspace]);
 
+        console.log(`Complete graph has ${completeGraph.length} nodes`);
+        console.log(`Looking for dependency: ${dependency}`);
+
         // Find the target dependency in the complete graph
         const targetNode = completeGraph.find(node => node.id === dependency);
         if (!targetNode) {
+            console.log(`Available dependencies:`, completeGraph.map(n => n.id));
             throw new EntityNotFound(`Dependency ${dependency} not found in workspace ${workspace}`);
         }
 
-        // Find all parents and children of the specified node
-        const traversalResult = GraphTraversalUtils.findAllParentsAndChildren(dependency, completeGraph);
-        
-        // Return the target node plus all its parents and children
-        const result: Array<GraphDependency> = [];
-        
-        if (traversalResult.node) {
-            result.push(traversalResult.node);
+        console.log(`Target node found:`, targetNode);
+
+        // Find only the paths that contain the target dependency
+        // This excludes branches that don't lead to the target
+        const pathNodes = GraphTraversalUtils.findMinimalPathsToTarget(dependency, completeGraph);
+
+        console.log(`Found ${pathNodes.length} nodes in minimal paths to the target dependency`);
+
+        // Always include the virtual root if any of the path nodes are its direct children
+        const virtualRoot = completeGraph.find(node => node.id === SBOMService.VIRTUAL_ROOT_ID);
+        if (virtualRoot && !pathNodes.some(node => node.id === virtualRoot.id)) {
+            // Check if any path node is a child of virtual root
+            const hasVirtualRootChild = pathNodes.some(node => 
+                node.parentIds && node.parentIds.includes(SBOMService.VIRTUAL_ROOT_ID)
+            );
+            
+            if (hasVirtualRootChild) {
+                pathNodes.push(virtualRoot);
+                console.log(`Added virtual root to the result`);
+            }
         }
-        
-        result.push(...traversalResult.parents);
-        result.push(...traversalResult.children);
 
-        // Remove duplicates based on ID (including virtual root in results)
-        const uniqueResult = result.filter((item, index, self) => 
-            index === self.findIndex(node => node.id === item.id)
-        );
-
-        return uniqueResult;
+        console.log(`Final result has ${pathNodes.length} nodes`);
+        return pathNodes;
     }
 
     /**
@@ -470,6 +479,14 @@ export class SBOMService {
 
         // Add the virtual root node to the graph
         graph.push(virtualRootNode);
+
+        console.log(`Built complete graph with ${graph.length} nodes`);
+        console.log(`Virtual root has ${virtualRootNode.childrenIds?.length || 0} direct children`);
+        console.log(`Sample nodes:`, graph.slice(0, 3).map(n => ({ 
+            id: n.id, 
+            parents: n.parentIds?.length || 0, 
+            children: n.childrenIds?.length || 0 
+        })));
 
         return graph;
     }
