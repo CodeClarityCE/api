@@ -8,6 +8,10 @@ export interface GraphDependency {
     parentIds?: string[];
     /** Array of direct child dependency IDs */
     childrenIds?: string[];
+    /** True if this dependency is a production dependency (direct child of root) */
+    prod?: boolean;
+    /** True if this dependency is a dev dependency (direct child of root) */
+    dev?: boolean;
 }
 
 /**

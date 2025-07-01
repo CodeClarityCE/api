@@ -350,21 +350,40 @@ export class SBOMService {
 
         // Find the target dependency in the complete graph
         const targetNode = completeGraph.find(node => node.id === dependency);
+        const virtualRoot = completeGraph.find(node => node.id === SBOMService.VIRTUAL_ROOT_ID);
         if (!targetNode) {
             console.log(`Available dependencies:`, completeGraph.map(n => n.id));
             throw new EntityNotFound(`Dependency ${dependency} not found in workspace ${workspace}`);
         }
 
-        console.log(`Target node found:`, targetNode);
+        // If the target node is a direct dependency and does not already have the virtual root as a parent, add it
+        if (virtualRoot && (!targetNode.parentIds || !targetNode.parentIds.includes(SBOMService.VIRTUAL_ROOT_ID))) {
+            // Add virtual root as parent
+            targetNode.parentIds = Array.from(new Set([...(targetNode.parentIds || []), SBOMService.VIRTUAL_ROOT_ID]));
+            // Add target node as child of virtual root if not already present
+            if (!virtualRoot.childrenIds) virtualRoot.childrenIds = [];
+            if (!virtualRoot.childrenIds.includes(targetNode.id)) {
+                virtualRoot.childrenIds.push(targetNode.id);
+            }
+            console.log(`Added virtual root as parent to direct dependency node: ${targetNode.id}`);
+        }
 
         // Find only the paths that contain the target dependency
         // This excludes branches that don't lead to the target
         const pathNodes = GraphTraversalUtils.findMinimalPathsToTarget(dependency, completeGraph);
 
+        // Ensure the target node is always included (even if it's a direct dependency/root)
+        if (!pathNodes.some(node => node.id === dependency)) {
+            const targetNodeInGraph = completeGraph.find(node => node.id === dependency);
+            if (targetNodeInGraph) {
+                pathNodes.push(targetNodeInGraph);
+                console.log(`Explicitly added target node ${dependency} to pathNodes (was missing)`);
+            }
+        }
+
         console.log(`Found ${pathNodes.length} nodes in minimal paths to the target dependency`);
 
         // Always include the virtual root if any of the path nodes are its direct children
-        const virtualRoot = completeGraph.find(node => node.id === SBOMService.VIRTUAL_ROOT_ID);
         if (virtualRoot && !pathNodes.some(node => node.id === virtualRoot.id)) {
             // Check if any path node is a child of virtual root
             const hasVirtualRootChild = pathNodes.some(node => 
@@ -432,14 +451,14 @@ export class SBOMService {
                 if (!version || !depData) continue;
 
                 const nodeId = `${depName}@${version}`;
-                
                 if (processedNodes.has(nodeId)) {
                     continue;
                 }
 
                 // Determine if this is a root node
                 const isRoot = rootDependencies.has(nodeId);
-                
+
+                // Default node
                 const node: GraphDependency = {
                     id: nodeId,
                     parentIds: [],
@@ -458,7 +477,7 @@ export class SBOMService {
 
                 // Find all parents for this node
                 const parents = this.findParentDependencies(nodeId, dependenciesMap);
-                
+
                 if (parents.length > 0) {
                     // Node has real parents
                     node.parentIds = parents;
@@ -466,6 +485,9 @@ export class SBOMService {
                     // Root node (from package.json) - make it a child of virtual root
                     node.parentIds = [virtualRootId];
                     virtualRootNode.childrenIds!.push(nodeId);
+                    // Add prod/dev info for direct children of root
+                    node.prod = !!depData.Prod;
+                    node.dev = !!depData.Dev;
                 } else {
                     // Orphaned node (no parents found) - make it a child of virtual root
                     node.parentIds = [virtualRootId];
