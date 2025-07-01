@@ -36,7 +36,10 @@ export class GraphTraversalUtils {
      * @param graph - Array of GraphDependency nodes representing the entire graph
      * @returns NodeTraversalResult containing parents, children, and the node itself
      */
-    static findAllParentsAndChildren(nodeId: string, graph: GraphDependency[]): NodeTraversalResult {
+    static findAllParentsAndChildren(
+        nodeId: string,
+        graph: GraphDependency[]
+    ): NodeTraversalResult {
         const result: NodeTraversalResult = {
             parents: [],
             children: [],
@@ -50,7 +53,7 @@ export class GraphTraversalUtils {
         // Build maps for efficient traversal
         for (const node of graph) {
             nodeMap.set(node.id, node);
-            
+
             // Build children map for each node based on parentIds
             if (node.parentIds && node.parentIds.length > 0) {
                 for (const parentId of node.parentIds) {
@@ -106,7 +109,7 @@ export class GraphTraversalUtils {
             if (parent) {
                 visited.add(parent.id);
                 parents.push(parent);
-                
+
                 // Recursively find parents of this parent
                 this.findParentsRecursive(parent, nodeMap, visited, parents);
             }
@@ -127,15 +130,15 @@ export class GraphTraversalUtils {
         children: GraphDependency[]
     ): void {
         const directChildren = childrenMap.get(node.id) || [];
-        
+
         for (const child of directChildren) {
             if (visited.has(child.id)) {
                 continue; // Already visited (cycle prevention)
             }
-            
+
             visited.add(child.id);
             children.push(child);
-            
+
             // Recursively find children of this child
             this.findChildrenRecursive(child, childrenMap, visited, children);
         }
@@ -147,7 +150,10 @@ export class GraphTraversalUtils {
      * @param graph - Array of GraphDependency nodes representing the entire graph
      * @returns NodeTraversalResult containing only direct parents and children
      */
-    static findDirectParentsAndChildren(nodeId: string, graph: GraphDependency[]): NodeTraversalResult {
+    static findDirectParentsAndChildren(
+        nodeId: string,
+        graph: GraphDependency[]
+    ): NodeTraversalResult {
         const result: NodeTraversalResult = {
             parents: [],
             children: [],
@@ -155,7 +161,7 @@ export class GraphTraversalUtils {
         };
 
         // Find the target node
-        const targetNode = graph.find(node => node.id === nodeId);
+        const targetNode = graph.find((node) => node.id === nodeId);
         if (!targetNode) {
             return result;
         }
@@ -164,7 +170,7 @@ export class GraphTraversalUtils {
         // Find direct parents
         if (targetNode.parentIds && targetNode.parentIds.length > 0) {
             for (const parentId of targetNode.parentIds) {
-                const parent = graph.find(node => node.id === parentId);
+                const parent = graph.find((node) => node.id === parentId);
                 if (parent) {
                     result.parents.push(parent);
                 }
@@ -172,9 +178,7 @@ export class GraphTraversalUtils {
         }
 
         // Find direct children
-        const children = graph.filter(node => 
-            node.parentIds && node.parentIds.includes(nodeId)
-        );
+        const children = graph.filter((node) => node.parentIds && node.parentIds.includes(nodeId));
         result.children.push(...children);
 
         return result;
@@ -183,7 +187,7 @@ export class GraphTraversalUtils {
     /**
      * Finds only the paths that lead to or from the target dependency.
      * This excludes branches that don't contain the target dependency.
-     * 
+     *
      * @param nodeId - The ID of the target dependency
      * @param graph - Array of GraphDependency nodes representing the entire graph
      * @returns Array of GraphDependency nodes that are in paths containing the target
@@ -224,7 +228,10 @@ export class GraphTraversalUtils {
         }
 
         console.log(`Total nodes in paths containing ${nodeId}:`, result.length);
-        console.log(`Node IDs in result:`, result.map(n => n.id));
+        console.log(
+            `Node IDs in result:`,
+            result.map((n) => n.id)
+        );
 
         return result;
     }
@@ -249,7 +256,7 @@ export class GraphTraversalUtils {
             if (parent && !nodesInPaths.has(parent.id)) {
                 // Mark this parent as part of a path to target
                 nodesInPaths.add(parent.id);
-                
+
                 // Recursively mark ancestors of this parent
                 this.markPathsToTarget(parent, nodeMap, nodesInPaths);
             }
@@ -276,7 +283,7 @@ export class GraphTraversalUtils {
             if (child && !nodesInPaths.has(child.id)) {
                 // Mark this child as part of a path from target
                 nodesInPaths.add(child.id);
-                
+
                 // Recursively mark descendants of this child
                 this.markPathsFromTarget(child, nodeMap, nodesInPaths);
             }
@@ -287,7 +294,7 @@ export class GraphTraversalUtils {
      * Finds only the minimal paths that lead to the target dependency.
      * This is more restrictive than findPathsContaining - it only includes nodes
      * that are strictly necessary to show how the target is reached.
-     * 
+     *
      * @param nodeId - The ID of the target dependency
      * @param graph - Array of GraphDependency nodes representing the entire graph
      * @returns Array of GraphDependency nodes that are in minimal paths to the target
@@ -314,7 +321,7 @@ export class GraphTraversalUtils {
 
         // Find all minimal paths from roots to target
         const pathsToTarget = this.findAllPathsToTarget(targetNode, nodeMap, []);
-        
+
         console.log(`Found ${pathsToTarget.length} paths to target`);
 
         // Collect all unique nodes from these paths
@@ -330,12 +337,15 @@ export class GraphTraversalUtils {
         // Build result from unique nodes
         for (const nodeId of uniqueNodes) {
             const node = nodeMap.get(nodeId);
-            if (node && !result.some(n => n.id === nodeId)) {
+            if (node && !result.some((n) => n.id === nodeId)) {
                 result.push(node);
             }
         }
 
-        console.log(`Minimal paths contain ${result.length} nodes:`, result.map(n => n.id));
+        console.log(
+            `Minimal paths contain ${result.length} nodes:`,
+            result.map((n) => n.id)
+        );
         return result;
     }
 
@@ -363,7 +373,7 @@ export class GraphTraversalUtils {
             const parent = nodeMap.get(parentId);
             if (parent) {
                 // Avoid cycles
-                if (!currentPath.some(node => node.id === parent.id)) {
+                if (!currentPath.some((node) => node.id === parent.id)) {
                     const newPath = [parent, ...currentPath];
                     const pathsFromParent = this.findAllPathsToTarget(parent, nodeMap, newPath);
                     allPaths.push(...pathsFromParent);

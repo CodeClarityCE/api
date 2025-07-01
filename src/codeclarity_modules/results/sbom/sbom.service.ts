@@ -15,7 +15,10 @@ import { filter } from './utils/filter';
 import { sort } from './utils/sort';
 import { EntityNotFound, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/error.types';
 import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
-import { AnalysisStats, newAnalysisStats } from 'src/codeclarity_modules/results/sbom/sbom_stats.types';
+import {
+    AnalysisStats,
+    newAnalysisStats
+} from 'src/codeclarity_modules/results/sbom/sbom_stats.types';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -343,20 +346,29 @@ export class SBOMService {
         }
 
         // First, build the complete dependency graph
-        const completeGraph: Array<GraphDependency> = this.buildCompleteGraph(dependenciesMap, sbom.workspaces[workspace]);
-
+        const completeGraph: Array<GraphDependency> = this.buildCompleteGraph(
+            dependenciesMap,
+            sbom.workspaces[workspace]
+        );
 
         // Find the target dependency in the complete graph
-        const targetNode = completeGraph.find(node => node.id === dependency);
-        const virtualRoot = completeGraph.find(node => node.id === SBOMService.VIRTUAL_ROOT_ID);
+        const targetNode = completeGraph.find((node) => node.id === dependency);
+        const virtualRoot = completeGraph.find((node) => node.id === SBOMService.VIRTUAL_ROOT_ID);
         if (!targetNode) {
-            throw new EntityNotFound(`Dependency ${dependency} not found in workspace ${workspace}`);
+            throw new EntityNotFound(
+                `Dependency ${dependency} not found in workspace ${workspace}`
+            );
         }
 
         // If the target node is a direct dependency and does not already have the virtual root as a parent, add it
-        if (virtualRoot && (!targetNode.parentIds || !targetNode.parentIds.includes(SBOMService.VIRTUAL_ROOT_ID))) {
+        if (
+            virtualRoot &&
+            (!targetNode.parentIds || !targetNode.parentIds.includes(SBOMService.VIRTUAL_ROOT_ID))
+        ) {
             // Add virtual root as parent
-            targetNode.parentIds = Array.from(new Set([...(targetNode.parentIds || []), SBOMService.VIRTUAL_ROOT_ID]));
+            targetNode.parentIds = Array.from(
+                new Set([...(targetNode.parentIds || []), SBOMService.VIRTUAL_ROOT_ID])
+            );
             // Add target node as child of virtual root if not already present
             if (!virtualRoot.childrenIds) virtualRoot.childrenIds = [];
             if (!virtualRoot.childrenIds.includes(targetNode.id)) {
@@ -369,21 +381,20 @@ export class SBOMService {
         const pathNodes = GraphTraversalUtils.findMinimalPathsToTarget(dependency, completeGraph);
 
         // Ensure the target node is always included (even if it's a direct dependency/root)
-        if (!pathNodes.some(node => node.id === dependency)) {
-            const targetNodeInGraph = completeGraph.find(node => node.id === dependency);
+        if (!pathNodes.some((node) => node.id === dependency)) {
+            const targetNodeInGraph = completeGraph.find((node) => node.id === dependency);
             if (targetNodeInGraph) {
                 pathNodes.push(targetNodeInGraph);
             }
         }
 
-
         // Always include the virtual root if any of the path nodes are its direct children
-        if (virtualRoot && !pathNodes.some(node => node.id === virtualRoot.id)) {
+        if (virtualRoot && !pathNodes.some((node) => node.id === virtualRoot.id)) {
             // Check if any path node is a child of virtual root
-            const hasVirtualRootChild = pathNodes.some(node => 
-                node.parentIds && node.parentIds.includes(SBOMService.VIRTUAL_ROOT_ID)
+            const hasVirtualRootChild = pathNodes.some(
+                (node) => node.parentIds && node.parentIds.includes(SBOMService.VIRTUAL_ROOT_ID)
             );
-            
+
             if (hasVirtualRootChild) {
                 pathNodes.push(virtualRoot);
             }
@@ -396,7 +407,7 @@ export class SBOMService {
      * Builds a complete dependency graph from the SBOM data with a unified tree structure.
      * Creates a virtual root node that serves as the parent for all orphaned nodes,
      * ensuring every node in the graph has a path to the root.
-     * 
+     *
      * @param dependenciesMap - Map of dependencies from SBOM
      * @param workspace - Workspace data containing start dependencies
      * @returns Complete graph of all dependencies with parent-child relationships rooted at virtual root
@@ -420,7 +431,7 @@ export class SBOMService {
 
         // Add root dependencies (those without parents)
         const rootDependencies = new Set<string>();
-        
+
         // Collect start dependencies (these are roots)
         if (workspace.start?.dependencies) {
             for (const dep of workspace.start.dependencies) {
@@ -498,7 +509,6 @@ export class SBOMService {
         // Add the virtual root node to the graph
         graph.push(virtualRootNode);
 
-
         return graph;
     }
 
@@ -531,14 +541,16 @@ export class SBOMService {
                 if (!version || !depData) continue;
 
                 // Check if this dependency has the target as a child in Dependencies
-                if (depData.Dependencies && 
-                    typeof depData.Dependencies === 'object' && 
-                    depData.Dependencies[targetName] === targetVersion) {
+                if (
+                    depData.Dependencies &&
+                    typeof depData.Dependencies === 'object' &&
+                    depData.Dependencies[targetName] === targetVersion
+                ) {
                     parents.push(`${depName}@${version}`);
                 }
             }
         }
 
         return parents;
-    }   
+    }
 }
