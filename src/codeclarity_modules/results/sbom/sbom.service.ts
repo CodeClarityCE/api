@@ -421,7 +421,9 @@ export class SBOMService {
         const virtualRootNode: GraphDependency = {
             id: virtualRootId,
             parentIds: [],
-            childrenIds: []
+            childrenIds: [],
+            prod: false, // Virtual root is not a production dependency
+            dev: false // Virtual root is not a dev dependency
         };
 
         // Add root dependencies (those without parents)
@@ -462,7 +464,9 @@ export class SBOMService {
                 const node: GraphDependency = {
                     id: nodeId,
                     parentIds: [],
-                    childrenIds: []
+                    childrenIds: [],
+                    prod: !!depData.Prod, // True if this is a production dependency
+                    dev: !!depData.Dev // True if this is a dev dependency
                 };
 
                 // Add children from Dependencies property
