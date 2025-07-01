@@ -345,14 +345,11 @@ export class SBOMService {
         // First, build the complete dependency graph
         const completeGraph: Array<GraphDependency> = this.buildCompleteGraph(dependenciesMap, sbom.workspaces[workspace]);
 
-        console.log(`Complete graph has ${completeGraph.length} nodes`);
-        console.log(`Looking for dependency: ${dependency}`);
 
         // Find the target dependency in the complete graph
         const targetNode = completeGraph.find(node => node.id === dependency);
         const virtualRoot = completeGraph.find(node => node.id === SBOMService.VIRTUAL_ROOT_ID);
         if (!targetNode) {
-            console.log(`Available dependencies:`, completeGraph.map(n => n.id));
             throw new EntityNotFound(`Dependency ${dependency} not found in workspace ${workspace}`);
         }
 
@@ -365,7 +362,6 @@ export class SBOMService {
             if (!virtualRoot.childrenIds.includes(targetNode.id)) {
                 virtualRoot.childrenIds.push(targetNode.id);
             }
-            console.log(`Added virtual root as parent to direct dependency node: ${targetNode.id}`);
         }
 
         // Find only the paths that contain the target dependency
@@ -377,11 +373,9 @@ export class SBOMService {
             const targetNodeInGraph = completeGraph.find(node => node.id === dependency);
             if (targetNodeInGraph) {
                 pathNodes.push(targetNodeInGraph);
-                console.log(`Explicitly added target node ${dependency} to pathNodes (was missing)`);
             }
         }
 
-        console.log(`Found ${pathNodes.length} nodes in minimal paths to the target dependency`);
 
         // Always include the virtual root if any of the path nodes are its direct children
         if (virtualRoot && !pathNodes.some(node => node.id === virtualRoot.id)) {
@@ -392,11 +386,9 @@ export class SBOMService {
             
             if (hasVirtualRootChild) {
                 pathNodes.push(virtualRoot);
-                console.log(`Added virtual root to the result`);
             }
         }
 
-        console.log(`Final result has ${pathNodes.length} nodes`);
         return pathNodes;
     }
 
@@ -506,13 +498,6 @@ export class SBOMService {
         // Add the virtual root node to the graph
         graph.push(virtualRootNode);
 
-        console.log(`Built complete graph with ${graph.length} nodes`);
-        console.log(`Virtual root has ${virtualRootNode.childrenIds?.length || 0} direct children`);
-        console.log(`Sample nodes:`, graph.slice(0, 3).map(n => ({ 
-            id: n.id, 
-            parents: n.parentIds?.length || 0, 
-            children: n.childrenIds?.length || 0 
-        })));
 
         return graph;
     }
