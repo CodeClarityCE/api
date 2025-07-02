@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PaginatedResponse } from 'src/types/apiResponses.types';
 import {
     AffectedVuln,
+    Source,
     Vulnerability,
     VulnerabilityMerged
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
@@ -456,8 +457,23 @@ export class VulnerabilitiesService {
                     Weaknesses: finding.Weaknesses,
                     Affected: [affected],
                     Description: '',
-                    Conflict: finding.Conflict
+                    Conflict: finding.Conflict,
+                    VLAI: []
                 };
+                if (finding.NVDMatch) {
+                    mergedFinding.VLAI.push({
+                        Source: Source.Nvd,
+                        Score: finding.NVDMatch.Vulnerability.Vlai_score,
+                        Confidence: finding.NVDMatch.Vulnerability.Vlai_confidence
+                    })
+                }
+                if (finding.OSVMatch) {
+                    mergedFinding.VLAI.push({
+                        Source: Source.Osv,
+                        Score: finding.OSVMatch.Vulnerability.Vlai_score,
+                        Confidence: finding.OSVMatch.Vulnerability.Vlai_confidence
+                    });
+                }
                 findingsMerged.set(finding.VulnerabilityId, mergedFinding);
             }
         }

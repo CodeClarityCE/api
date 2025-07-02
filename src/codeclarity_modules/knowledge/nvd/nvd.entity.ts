@@ -40,6 +40,16 @@ export class NVD {
     @Expose()
     descriptions: any;
 
+    @Column({ nullable: true })
+    @ApiProperty()
+    @Expose()
+    vlai_score: string;
+
+    @Column('float', { nullable: true })
+    @ApiProperty()
+    @Expose()
+    vlai_confidence: number;
+
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
