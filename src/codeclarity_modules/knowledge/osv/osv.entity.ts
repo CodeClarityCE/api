@@ -23,6 +23,16 @@ export class OSV {
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
+    vlai_score: string;
+
+    @Column({ nullable: true })
+    @ApiProperty()
+    @Expose()
+    vlai_confidence: number;
+
+    @Column({ nullable: true })
+    @ApiProperty()
+    @Expose()
     modified: string;
 
     @Column({ nullable: true })
