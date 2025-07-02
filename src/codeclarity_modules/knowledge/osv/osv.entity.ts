@@ -25,7 +25,7 @@ export class OSV {
     @Expose()
     vlai_score: string;
 
-    @Column({ nullable: true })
+    @Column('float', { nullable: true })
     @ApiProperty()
     @Expose()
     vlai_confidence: number;
