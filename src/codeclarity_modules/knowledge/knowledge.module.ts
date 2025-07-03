@@ -19,9 +19,10 @@ import {
     NVDReportGenerator,
     OSVReportGenerator
 } from '../results/vulnerabilities/services/reportGenerator';
+import { EPSS } from './epss/epss.entity';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([License, CWE, Package, NVD, OSV, Version], 'knowledge')],
+    imports: [TypeOrmModule.forFeature([License, CWE, Package, NVD, OSV, Version, EPSS], 'knowledge')],
     exports: [
         LicenseRepository,
         CWERepository,
