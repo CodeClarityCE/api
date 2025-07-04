@@ -23,7 +23,9 @@ import { EPSS } from './epss/epss.entity';
 import { EPSSRepository } from './epss/epss.repository';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([License, CWE, Package, NVD, OSV, Version, EPSS], 'knowledge')],
+    imports: [
+        TypeOrmModule.forFeature([License, CWE, Package, NVD, OSV, Version, EPSS], 'knowledge')
+    ],
     exports: [
         LicenseRepository,
         CWERepository,

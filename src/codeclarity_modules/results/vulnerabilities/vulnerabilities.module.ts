@@ -36,7 +36,7 @@ import { AnalysisResultsRepository } from '../results.repository';
         VulnerabilitiesSortService,
         VulnerabilitiesFilterService,
         VulnerabilitiesRepository,
-        AnalysisResultsRepository,
+        AnalysisResultsRepository
     ],
     controllers: [FindingsController]
 })

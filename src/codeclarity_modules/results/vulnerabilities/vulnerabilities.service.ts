@@ -464,7 +464,7 @@ export class VulnerabilitiesService {
                     VLAI: [],
                     EPSS: {
                         Score: epss.score,
-                        Percentile: epss.percentile,
+                        Percentile: epss.percentile
                     }
                 };
                 if (finding.NVDMatch) {
@@ -472,7 +472,7 @@ export class VulnerabilitiesService {
                         Source: Source.Nvd,
                         Score: finding.NVDMatch.Vulnerability.Vlai_score,
                         Confidence: finding.NVDMatch.Vulnerability.Vlai_confidence
-                    })
+                    });
                 }
                 if (finding.OSVMatch) {
                     mergedFinding.VLAI.push({
