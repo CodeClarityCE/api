@@ -20,9 +20,12 @@ import {
     OSVReportGenerator
 } from '../results/vulnerabilities/services/reportGenerator';
 import { EPSS } from './epss/epss.entity';
+import { EPSSRepository } from './epss/epss.repository';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([License, CWE, Package, NVD, OSV, Version, EPSS], 'knowledge')],
+    imports: [
+        TypeOrmModule.forFeature([License, CWE, Package, NVD, OSV, Version, EPSS], 'knowledge')
+    ],
     exports: [
         LicenseRepository,
         CWERepository,
@@ -33,7 +36,8 @@ import { EPSS } from './epss/epss.entity';
         PackageRepository,
         VersionsRepository,
         NVDReportGenerator,
-        OSVReportGenerator
+        OSVReportGenerator,
+        EPSSRepository
     ],
     providers: [
         LicenseService,
@@ -46,7 +50,8 @@ import { EPSS } from './epss/epss.entity';
         PackageRepository,
         VersionsRepository,
         NVDReportGenerator,
-        OSVReportGenerator
+        OSVReportGenerator,
+        EPSSRepository
     ],
     controllers: [LicenseController]
 })

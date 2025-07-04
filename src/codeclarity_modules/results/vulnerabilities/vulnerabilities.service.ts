@@ -31,6 +31,7 @@ import { SbomUtilsService } from '../sbom/utils/utils';
 import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.repository';
 import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
 import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
+import { EPSSRepository } from 'src/codeclarity_modules/knowledge/epss/epss.repository';
 
 @Injectable()
 export class VulnerabilitiesService {
@@ -42,7 +43,8 @@ export class VulnerabilitiesService {
         private readonly sbomUtilsService: SbomUtilsService,
         private readonly osvRepository: OSVRepository,
         private readonly nvdRepository: NVDRepository,
-        private readonly cweRepository: CWERepository
+        private readonly cweRepository: CWERepository,
+        private readonly epssRepository: EPSSRepository
     ) {}
 
     async getStats(
@@ -449,6 +451,7 @@ export class VulnerabilitiesService {
                 vuln.Affected.push(affected);
                 findingsMerged.set(finding.VulnerabilityId, vuln);
             } else {
+                const epss = await this.epssRepository.getByCVE(finding.VulnerabilityId);
                 const mergedFinding: VulnerabilityMerged = {
                     Id: finding.Id,
                     Sources: finding.Sources,
@@ -458,14 +461,18 @@ export class VulnerabilitiesService {
                     Affected: [affected],
                     Description: '',
                     Conflict: finding.Conflict,
-                    VLAI: []
+                    VLAI: [],
+                    EPSS: {
+                        Score: epss.score,
+                        Percentile: epss.percentile
+                    }
                 };
                 if (finding.NVDMatch) {
                     mergedFinding.VLAI.push({
                         Source: Source.Nvd,
                         Score: finding.NVDMatch.Vulnerability.Vlai_score,
                         Confidence: finding.NVDMatch.Vulnerability.Vlai_confidence
-                    })
+                    });
                 }
                 if (finding.OSVMatch) {
                     mergedFinding.VLAI.push({
