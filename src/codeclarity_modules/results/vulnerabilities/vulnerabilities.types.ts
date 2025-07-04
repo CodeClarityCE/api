@@ -212,12 +212,18 @@ export interface VulnerabilityMerged {
     Description: string;
     Conflict: Conflict;
     VLAI: VLAI[];
+    EPSS: EPSS;
 }
 
 export interface VLAI {
     Source: Source;
     Score: string;
     Confidence: number;
+}
+
+export interface EPSS {
+    Score: number;
+    Percentile: number;
 }
 
 export interface AffectedVuln {
