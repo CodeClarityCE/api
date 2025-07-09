@@ -16,7 +16,21 @@ import {
     PaginationUserSuppliedConf,
     TypedPaginatedData
 } from 'src/types/pagination.types';
-import moment from 'moment';
+// Native Date API utility functions
+function subtractMonths(date: Date, months: number): Date {
+    const result = new Date(date);
+    result.setMonth(result.getMonth() - months);
+    return result;
+}
+
+function getWeekNumber(date: Date): number {
+    const target = new Date(date.valueOf());
+    const dayNr = (date.getDay() + 6) % 7;
+    target.setDate(target.getDate() - dayNr + 3);
+    const jan4 = new Date(target.getFullYear(), 0, 4);
+    const dayDiff = (target.getTime() - jan4.getTime()) / 86400000;
+    return 1 + Math.ceil(dayDiff / 7);
+}
 import { SortDirection } from 'src/types/sort.types';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { LicenseDist, Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
@@ -51,8 +65,8 @@ export class DashboardService {
         dateRangeEnd?: Date,
         integrationIds?: string[]
     ): Promise<SeverityInfoByWeek[]> {
-        if (!dateRangeStart) dateRangeStart = moment().subtract(1, 'months').toDate();
-        if (!dateRangeEnd) dateRangeEnd = moment().toDate();
+        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 1);
+        if (!dateRangeEnd) dateRangeEnd = new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
@@ -74,8 +88,8 @@ export class DashboardService {
 
         for (const project of res.projects) {
             project.analyses.forEach((analysis) => {
-                const week_number = moment(analysis.created_on).week();
-                const year = moment(analysis.created_on).year();
+                const week_number = getWeekNumber(analysis.created_on);
+                const year = analysis.created_on.getFullYear();
                 let weekInfo = severityInfoByWeek.find(
                     (info) => info.week_number.week == week_number && info.week_number.year == year
                 );
@@ -142,8 +156,8 @@ export class DashboardService {
         dateRangeEnd?: Date,
         integrationIds?: string[]
     ): Promise<AttackVectorDist[]> {
-        if (!dateRangeStart) dateRangeStart = moment().subtract(2, 'months').toDate();
-        if (!dateRangeEnd) dateRangeEnd = moment().toDate();
+        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
+        if (!dateRangeEnd) dateRangeEnd = new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
@@ -211,8 +225,8 @@ export class DashboardService {
         dateRangeEnd?: Date,
         integrationIds?: string[]
     ): Promise<CIAImpact[]> {
-        if (!dateRangeStart) dateRangeStart = moment().subtract(2, 'months').toDate();
-        if (!dateRangeEnd) dateRangeEnd = moment().toDate();
+        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
+        if (!dateRangeEnd) dateRangeEnd = new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
@@ -279,8 +293,8 @@ export class DashboardService {
         dateRangeEnd?: Date,
         integrationIds?: string[]
     ): Promise<LicenseDist> {
-        if (!dateRangeStart) dateRangeStart = moment().subtract(2, 'months').toDate();
-        if (!dateRangeEnd) dateRangeEnd = moment().toDate();
+        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
+        if (!dateRangeEnd) dateRangeEnd = new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
@@ -335,8 +349,8 @@ export class DashboardService {
         dateRangeEnd?: Date,
         integrationIds?: string[]
     ): Promise<LatestVulns> {
-        if (!dateRangeStart) dateRangeStart = moment().subtract(2, 'months').toDate();
-        if (!dateRangeEnd) dateRangeEnd = moment().toDate();
+        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
+        if (!dateRangeEnd) dateRangeEnd = new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
@@ -415,8 +429,8 @@ export class DashboardService {
         dateRangeEnd?: Date,
         integrationIds?: string[]
     ): Promise<QuickStats> {
-        if (!dateRangeStart) dateRangeStart = moment().subtract(2, 'months').toDate();
-        if (!dateRangeEnd) dateRangeEnd = moment().toDate();
+        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
+        if (!dateRangeEnd) dateRangeEnd = new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
@@ -494,8 +508,8 @@ export class DashboardService {
         sortBy?: string,
         sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<ProjectQuickStats>> {
-        if (!dateRangeStart) dateRangeStart = moment().subtract(2, 'months').toDate();
-        if (!dateRangeEnd) dateRangeEnd = moment().toDate();
+        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
+        if (!dateRangeEnd) dateRangeEnd = new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         enum AllowedOrderBy {

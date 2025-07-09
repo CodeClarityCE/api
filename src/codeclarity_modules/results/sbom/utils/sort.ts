@@ -1,5 +1,5 @@
 import { SbomDependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
-import { compare } from 'compare-versions';
+import { gt, lt } from 'semver';
 
 function sort(
     dependencies: SbomDependency[],
@@ -148,31 +148,21 @@ function sort(
         if (sortDirectionSafe == 'DESC') sorted.reverse();
     } else if (sortBySafe == 'version') {
         sorted = dependencies.sort((a: any, b: any) => {
-            let greater = false;
-            try {
-                compare(a[sortBySafe] ?? '0.0.0', b[sortBySafe] ?? '0.0.0', '>')
-                    ? (greater = true)
-                    : (greater = false);
-            } catch (e) {
-                console.log('error', e);
-            }
+            const versionA = a[sortBySafe] ?? '0.0.0';
+            const versionB = b[sortBySafe] ?? '0.0.0';
 
-            if (greater) {
-                return sortDirectionSafe == 'DESC' ? -1 : 1;
-            }
-
-            let lower = false;
             try {
-                compare(a[sortBySafe] ?? '0.0.0', b[sortBySafe] ?? '0.0.0', '<')
-                    ? (lower = true)
-                    : (lower = false);
+                if (gt(versionA, versionB)) {
+                    return sortDirectionSafe == 'DESC' ? -1 : 1;
+                }
+                if (lt(versionA, versionB)) {
+                    return sortDirectionSafe == 'DESC' ? 1 : -1;
+                }
+                return 0;
             } catch (e) {
-                console.log('error', e);
+                console.log('error comparing versions:', e);
+                return 0;
             }
-            if (lower) {
-                return sortDirectionSafe == 'DESC' ? 1 : -1;
-            }
-            return 0;
         });
     } else {
         sorted = dependencies.sort((a: any, b: any) => {

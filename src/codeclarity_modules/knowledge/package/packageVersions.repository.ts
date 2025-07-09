@@ -1,4 +1,4 @@
-import { compareVersions } from 'compare-versions';
+import { compare as semverCompare } from 'semver';
 import { Injectable } from '@nestjs/common';
 import { EntityNotFound } from 'src/types/error.types';
 import { Package, Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
@@ -60,7 +60,7 @@ export class VersionsRepository {
         for (const version of pack.versions) {
             versions.push(version);
         }
-        versions.sort((a, b) => compareVersions(a.version, b.version));
+        versions.sort((a, b) => semverCompare(a.version, b.version));
         return versions;
     }
 }
