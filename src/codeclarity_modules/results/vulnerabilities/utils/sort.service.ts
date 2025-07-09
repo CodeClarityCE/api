@@ -1,4 +1,4 @@
-// import { compare } from 'compare-versions';
+import { gt, lt } from 'semver';
 import { Injectable } from '@nestjs/common';
 import { VulnerabilityMerged } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 
@@ -68,27 +68,20 @@ export class VulnerabilitiesSortService {
         //             return sortDirectionSafe == 'DESC' ? -1 : 1;
         //         return 0;
         //     });
-        // } else if (sortBySafe == 'dep_version') {
-        //     sorted = vulnerabilities.sort((a: VulnerabilityMerged, b: VulnerabilityMerged) => {
-        //         if (
-        //             compare(
-        //                 a.AffectedDependencyObject?.version ?? '0.0.0',
-        //                 b.AffectedDependencyObject?.version ?? '0.0.0',
-        //                 '>'
-        //             )
-        //         )
-        //             return sortDirectionSafe == 'DESC' ? -1 : 1;
-        //         if (
-        //             compare(
-        //                 a.AffectedDependencyObject?.version ?? '0.0.0',
-        //                 b.AffectedDependencyObject?.version ?? '0.0.0',
-        //                 '<'
-        //             )
-        //         )
-        //             return sortDirectionSafe == 'DESC' ? 1 : -1;
-        //         return 0;
-        //     });
-        // }
+        } else if (sortBySafe == 'dep_version') {
+            sorted = vulnerabilities.sort((a: VulnerabilityMerged, b: VulnerabilityMerged) => {
+                const versionA = a.AffectedDependencyObject?.version ?? '0.0.0';
+                const versionB = b.AffectedDependencyObject?.version ?? '0.0.0';
+                
+                if (gt(versionA, versionB)) {
+                    return sortDirectionSafe == 'DESC' ? -1 : 1;
+                }
+                if (lt(versionA, versionB)) {
+                    return sortDirectionSafe == 'DESC' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
         else if (sortBySafe == 'exploitability') {
             sorted = vulnerabilities.sort((a: VulnerabilityMerged, b: VulnerabilityMerged) => {
                 if ((a.Severity.Exploitability ?? 0.0) > (b.Severity.Exploitability ?? 0.0))
