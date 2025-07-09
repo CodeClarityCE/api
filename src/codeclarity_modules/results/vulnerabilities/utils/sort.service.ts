@@ -59,20 +59,20 @@ export class VulnerabilitiesSortService {
                 return 0;
             });
         }
-
         // else if (sortBySafe == 'dep_name') {
         //     sorted = vulnerabilities.sort((a: VulnerabilityMerged, b: VulnerabilityMerged) => {
-        //         if ((a.AffectedDependencyObject?.name ?? '') > (b.AffectedDependencyObject?.name ?? ''))
+        //         if ((a.Affected?.[0]?.AffectedDependency ?? '') > (b.Affected?.[0]?.AffectedDependency ?? ''))
         //             return sortDirectionSafe == 'DESC' ? 1 : -1;
-        //         if ((a.AffectedDependencyObject?.name ?? '') < (b.AffectedDependencyObject?.name ?? ''))
+        //         if ((a.Affected?.[0]?.AffectedDependency ?? '') < (b.Affected?.[0]?.AffectedDependency ?? ''))
         //             return sortDirectionSafe == 'DESC' ? -1 : 1;
         //         return 0;
         //     });
-        } else if (sortBySafe == 'dep_version') {
+        // }
+        else if (sortBySafe == 'dep_version') {
             sorted = vulnerabilities.sort((a: VulnerabilityMerged, b: VulnerabilityMerged) => {
-                const versionA = a.AffectedDependencyObject?.version ?? '0.0.0';
-                const versionB = b.AffectedDependencyObject?.version ?? '0.0.0';
-                
+                const versionA = a.Affected?.[0]?.AffectedVersion ?? '0.0.0';
+                const versionB = b.Affected?.[0]?.AffectedVersion ?? '0.0.0';
+
                 if (gt(versionA, versionB)) {
                     return sortDirectionSafe == 'DESC' ? -1 : 1;
                 }
@@ -81,8 +81,7 @@ export class VulnerabilitiesSortService {
                 }
                 return 0;
             });
-        }
-        else if (sortBySafe == 'exploitability') {
+        } else if (sortBySafe == 'exploitability') {
             sorted = vulnerabilities.sort((a: VulnerabilityMerged, b: VulnerabilityMerged) => {
                 if ((a.Severity.Exploitability ?? 0.0) > (b.Severity.Exploitability ?? 0.0))
                     return sortDirectionSafe == 'DESC' ? -1 : 1;
