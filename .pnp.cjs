@@ -70,7 +70,6 @@ const RAW_RUNTIME_STATE =
           ["bcrypt", "npm:6.0.0"],\
           ["class-transformer", "npm:0.5.1"],\
           ["class-validator", "npm:0.14.2"],\
-          ["compare-versions", "npm:6.1.1"],\
           ["cvss-parser", "file:cvss-parser-js/#cvss-parser-js/::hash=b9994f&locator=api%40workspace%3A."],\
           ["dotenv", "npm:17.0.1"],\
           ["eslint", "virtual:7473a2b7820d54bc9e09e43d07c4d6a37311d3c27cf8d3479124c02c830f39ea1edcd0240ea9cd8892e68b95c71dc40f3562d9221ee2fee4332c0f6b026a8253#npm:9.30.1"],\
@@ -82,7 +81,6 @@ const RAW_RUNTIME_STATE =
           ["jest", "virtual:7473a2b7820d54bc9e09e43d07c4d6a37311d3c27cf8d3479124c02c830f39ea1edcd0240ea9cd8892e68b95c71dc40f3562d9221ee2fee4332c0f6b026a8253#npm:30.0.4"],\
           ["jsonwebtoken", "npm:9.0.2"],\
           ["lodash", "npm:4.17.21"],\
-          ["moment", "npm:2.30.1"],\
           ["ms", "npm:2.1.3"],\
           ["nodemailer", "npm:7.0.4"],\
           ["octokit", "npm:5.0.3"],\
@@ -5309,7 +5307,6 @@ const RAW_RUNTIME_STATE =
           ["bcrypt", "npm:6.0.0"],\
           ["class-transformer", "npm:0.5.1"],\
           ["class-validator", "npm:0.14.2"],\
-          ["compare-versions", "npm:6.1.1"],\
           ["cvss-parser", "file:cvss-parser-js/#cvss-parser-js/::hash=b9994f&locator=api%40workspace%3A."],\
           ["dotenv", "npm:17.0.1"],\
           ["eslint", "virtual:7473a2b7820d54bc9e09e43d07c4d6a37311d3c27cf8d3479124c02c830f39ea1edcd0240ea9cd8892e68b95c71dc40f3562d9221ee2fee4332c0f6b026a8253#npm:9.30.1"],\
@@ -5321,7 +5318,6 @@ const RAW_RUNTIME_STATE =
           ["jest", "virtual:7473a2b7820d54bc9e09e43d07c4d6a37311d3c27cf8d3479124c02c830f39ea1edcd0240ea9cd8892e68b95c71dc40f3562d9221ee2fee4332c0f6b026a8253#npm:30.0.4"],\
           ["jsonwebtoken", "npm:9.0.2"],\
           ["lodash", "npm:4.17.21"],\
-          ["moment", "npm:2.30.1"],\
           ["ms", "npm:2.1.3"],\
           ["nodemailer", "npm:7.0.4"],\
           ["octokit", "npm:5.0.3"],\
@@ -6231,15 +6227,6 @@ const RAW_RUNTIME_STATE =
           ["esprima", "npm:4.0.1"],\
           ["has-own-prop", "npm:2.0.0"],\
           ["repeat-string", "npm:1.6.1"]\
-        ],\
-        "linkType": "HARD"\
-      }]\
-    ]],\
-    ["compare-versions", [\
-      ["npm:6.1.1", {\
-        "packageLocation": "./.yarn/cache/compare-versions-npm-6.1.1-4b4ac16a32-9325c0fadf.zip/node_modules/compare-versions/",\
-        "packageDependencies": [\
-          ["compare-versions", "npm:6.1.1"]\
         ],\
         "linkType": "HARD"\
       }]\
@@ -10720,15 +10707,6 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "./.yarn/cache/mkdirp-npm-3.0.1-f94bfa769e-16fd79c286.zip/node_modules/mkdirp/",\
         "packageDependencies": [\
           ["mkdirp", "npm:3.0.1"]\
-        ],\
-        "linkType": "HARD"\
-      }]\
-    ]],\
-    ["moment", [\
-      ["npm:2.30.1", {\
-        "packageLocation": "./.yarn/cache/moment-npm-2.30.1-1c51a5c631-ae42d876d4.zip/node_modules/moment/",\
-        "packageDependencies": [\
-          ["moment", "npm:2.30.1"]\
         ],\
         "linkType": "HARD"\
       }]\
