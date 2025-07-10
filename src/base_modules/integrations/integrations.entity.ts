@@ -7,13 +7,13 @@ import {
     ManyToOne,
     OneToMany
 } from 'typeorm';
-import { Organization } from '../organizations/organization.entity';
-import { User } from '../users/users.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { RepositoryCache } from '../projects/repositoryCache.entity';
-import { Project } from '../projects/project.entity';
-import { Analysis } from '../analyses/analysis.entity';
+import type { Organization } from '../organizations/organization.entity';
+import type { User } from '../users/users.entity';
+import type { RepositoryCache } from '../projects/repositoryCache.entity';
+import type { Project } from '../projects/project.entity';
+import type { Analysis } from '../analyses/analysis.entity';
 
 export enum IntegrationType {
     VCS = 'VCS'
@@ -91,21 +91,21 @@ export class Integration {
     last_repository_sync: Date;
 
     // Foreign keys
-    @ManyToMany(() => Organization, (organization) => organization.integrations)
+    @ManyToMany('Organization', 'integrations')
     organizations: Relation<Organization[]>;
 
-    @ManyToMany(() => User, (user) => user.integrations)
+    @ManyToMany('User', 'integrations')
     users: Relation<User[]>;
 
-    @ManyToOne(() => RepositoryCache, (repository) => repository.integration)
+    @ManyToOne('RepositoryCache', 'integration')
     repository_cache: Relation<RepositoryCache>;
 
-    @OneToMany(() => Project, (project) => project.integration)
+    @OneToMany('Project', 'integration')
     projects: Relation<Project[]>;
 
-    @OneToMany(() => Analysis, (analysis) => analysis.integration)
+    @OneToMany('Analysis', 'integration')
     analyses: Relation<Analysis[]>;
 
-    @ManyToOne(() => User, (user) => user.integrations_owned)
+    @ManyToOne('User', 'integrations_owned')
     owner: Relation<User>;
 }

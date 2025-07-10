@@ -36,6 +36,7 @@ class EnvironmentVariables {
      * The port number to listen on.
      */
     @IsNumber()
+    @Transform(({ value }) => parseInt(value, 10))
     PORT: number;
 
     /**
@@ -137,6 +138,7 @@ class EnvironmentVariables {
      * The port number to connect on.
      */
     @IsNumber()
+    @Transform(({ value }) => parseInt(value, 10))
     MAIL_PORT: number;
 
     /**

@@ -35,33 +35,35 @@ export class TestUtils {
         providers: any[] = [],
         imports: any[] = []
     ): Promise<TestingModule> {
-        const moduleBuilder = Test.createTestingModule({
-            imports: [TypeOrmModule.forRoot(this.getTestDatabaseConfig()), ...imports],
-            providers: [
-                ...providers,
-                {
-                    provide: ConfigService,
-                    useValue: {
-                        get: jest.fn((key: string) => {
-                            const config = {
-                                JWT_SECRET: 'test_jwt_secret',
-                                JWT_EXPIRATION_TIME: '1h',
-                                MAIL_HOST: 'localhost',
-                                MAIL_PORT: 1025,
-                                MAIL_USER: 'test',
-                                MAIL_PASSWORD: 'test',
-                                MAIL_FROM: 'test@codeclarity.io'
-                            };
-                            return config[key as keyof typeof config];
-                        })
-                    }
+        const allProviders = [
+            ...providers,
+            {
+                provide: ConfigService,
+                useValue: {
+                    get: jest.fn((key: string) => {
+                        const config = {
+                            JWT_SECRET: 'test_jwt_secret',
+                            JWT_EXPIRATION_TIME: '1h',
+                            MAIL_HOST: 'localhost',
+                            MAIL_PORT: 1025,
+                            MAIL_USER: 'test',
+                            MAIL_PASSWORD: 'test',
+                            MAIL_FROM: 'test@codeclarity.io'
+                        };
+                        return config[key as keyof typeof config];
+                    })
                 }
-            ]
-        });
+            }
+        ];
 
         if (module) {
-            moduleBuilder.providers.push(module);
+            allProviders.push(module);
         }
+
+        const moduleBuilder = Test.createTestingModule({
+            imports: [TypeOrmModule.forRoot(this.getTestDatabaseConfig()), ...imports],
+            providers: allProviders
+        });
 
         return moduleBuilder.compile();
     }

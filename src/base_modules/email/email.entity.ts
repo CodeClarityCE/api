@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, Relation, ManyToOne } from 'typeorm';
-import { User } from '../users/users.entity';
+import type { User } from '../users/users.entity';
 
 export enum EmailType {
     EMAILS_BLOCK_ALL_EMAILS = 'EMAILS_BLOCK_ALL_EMAILS',
@@ -30,6 +30,6 @@ export class Email {
     @Column('timestamptz', { nullable: true })
     ttl: Date;
 
-    @ManyToOne(() => User, (user) => user.mails)
+    @ManyToOne('User', 'mails')
     user: Relation<User>;
 }

@@ -10,18 +10,18 @@ import {
     JoinColumn,
     Index
 } from 'typeorm';
-import { Organization } from '../organizations/organization.entity';
-import { Integration } from '../integrations/integrations.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { OrganizationMemberships } from '../organizations/memberships/organization.memberships.entity';
-import { Project } from '../projects/project.entity';
-import { Analyzer } from '../analyzers/analyzer.entity';
-import { Analysis } from '../analyses/analysis.entity';
-import { Policy } from '../../codeclarity_modules/policies/policy.entity';
-import { File } from '../file/file.entity';
-import { Email } from '../email/email.entity';
-import { Invitation } from '../organizations/invitations/invitation.entity';
+import type { Organization } from '../organizations/organization.entity';
+import type { Integration } from '../integrations/integrations.entity';
+import type { Project } from '../projects/project.entity';
+import type { Analyzer } from '../analyzers/analyzer.entity';
+import type { Analysis } from '../analyses/analysis.entity';
+import type { Policy } from '../../codeclarity_modules/policies/policy.entity';
+import type { File } from '../file/file.entity';
+import type { Email } from '../email/email.entity';
+import type { Invitation } from '../organizations/invitations/invitation.entity';
 
 export enum SocialType {
     GITHUB = 'GITHUB',
@@ -116,25 +116,25 @@ export class User {
     setup_temporary_conf?: string;
 
     // Foreign keys
-    @OneToMany(() => Organization, (organization) => organization.created_by)
+    @OneToMany('Organization', 'created_by')
     organizations_created: Relation<Organization[]>;
 
-    @OneToMany(() => Policy, (policy) => policy.created_by)
+    @OneToMany('Policy', 'created_by')
     policies: Relation<Policy[]>;
 
-    @OneToMany(() => Analyzer, (analyzer) => analyzer.created_by)
+    @OneToMany('Analyzer', 'created_by')
     analyzers_created: Relation<Analyzer[]>;
 
-    @OneToMany(() => Invitation, (invitation) => invitation.user)
+    @OneToMany('Invitation', 'user')
     invitations: Relation<Invitation[]>;
 
-    @OneToMany(() => OrganizationMemberships, (membership) => membership.organization)
+    @OneToMany('OrganizationMemberships', 'organization')
     organizationMemberships: Relation<OrganizationMemberships[]>;
 
-    @ManyToMany(() => Organization, (organization) => organization.owners)
+    @ManyToMany('Organization', 'owners')
     ownerships: Relation<Organization[]>;
 
-    @ManyToMany(() => Integration, (integration) => integration.users)
+    @ManyToMany('Integration', 'users')
     @JoinTable()
     integrations?: Relation<Integration[]>;
 
@@ -146,22 +146,22 @@ export class User {
 
     @ApiProperty()
     @Expose({ name: 'default_org' })
-    @ManyToOne(() => Organization, (organization) => organization.default)
+    @ManyToOne('Organization', 'default')
     @JoinColumn({ name: 'default_org' })
     default_org: Relation<Organization>;
 
-    @OneToMany(() => Project, (project) => project.added_by)
+    @OneToMany('Project', 'added_by')
     projects_imported: Relation<Project[]>;
 
-    @OneToMany(() => Integration, (integration) => integration.owner)
+    @OneToMany('Integration', 'owner')
     integrations_owned: Relation<Integration[]>;
 
-    @OneToMany(() => Analysis, (analysis) => analysis.created_by)
+    @OneToMany('Analysis', 'created_by')
     analyses: Relation<Analysis[]>;
 
-    @OneToMany(() => File, (file) => file.added_by)
+    @OneToMany('File', 'added_by')
     files_imported: Relation<File[]>;
 
-    @OneToMany(() => Email, (email) => email.user)
+    @OneToMany('Email', 'user')
     mails: Relation<Email[]>;
 }

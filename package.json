@@ -15,6 +15,8 @@
     "start:debug": "nest build && ENV=dev node ./dist/src/utils/validate-env.js && ENV=dev nest start --debug 0.0.0.0:9229 --watch",
     "start:prod": "nest build && ENV=prod node ./dist/src/utils/validate-env.js && ENV=prod node dist/src/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "typecheck": "tsc --noEmit",
+    "check": "yarn lint && yarn typecheck",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",

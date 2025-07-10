@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToMany, Relation } from 'typeorm';
-import { Organization } from '../organizations/organization.entity';
+import type { Organization } from '../organizations/organization.entity';
 
 enum NotificationType {
     Info = 'info',
@@ -34,6 +34,6 @@ export class Notification {
     content_type: NotificationContentType;
 
     // Foreign keys
-    @ManyToMany(() => Organization, (organization) => organization.notifications)
+    @ManyToMany('Organization', 'notifications')
     organizations: Relation<Organization[]>;
 }

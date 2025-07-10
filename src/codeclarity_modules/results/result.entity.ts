@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, Relation } from 'typeorm';
-import { Analysis } from '../../base_modules/analyses/analysis.entity';
+import type { Analysis } from '../../base_modules/analyses/analysis.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 
@@ -14,7 +14,7 @@ export class Result {
     result: ResultObject;
 
     // Foreign keys
-    @ManyToOne(() => Analysis, (analysis) => analysis.results)
+    @ManyToOne('Analysis', 'results')
     analysis: Relation<Analysis>;
 
     @ApiProperty()
