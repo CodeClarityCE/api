@@ -29,7 +29,7 @@ pipeline {
         stage('Test lint and format') {
             steps {
                 sh 'yarn lint'
-                // sh 'yarn jest'
+                sh 'yarn test'
                 sh 'yarn run prettier src --check'
             }
         }
