@@ -48,9 +48,12 @@ export class TestUtils {
     /**
      * Create a test user fixture
      */
-    static async createTestUser(repository: Repository<User>, overrides: Partial<User> = {}): Promise<User> {
+    static async createTestUser(
+        repository: Repository<User>,
+        overrides: Partial<User> = {}
+    ): Promise<User> {
         const hashedPassword = await bcrypt.hash('testpassword123', 10);
-        
+
         const user = repository.create({
             first_name: 'Test',
             last_name: 'User',
@@ -70,7 +73,11 @@ export class TestUtils {
     /**
      * Create a test organization fixture
      */
-    static async createTestOrganization(repository: Repository<Organization>, owner: User, overrides: Partial<Organization> = {}): Promise<Organization> {
+    static async createTestOrganization(
+        repository: Repository<Organization>,
+        owner: User,
+        overrides: Partial<Organization> = {}
+    ): Promise<Organization> {
         const organization = repository.create({
             name: 'Test Organization',
             description: 'A test organization',
@@ -124,7 +131,7 @@ export class TestUtils {
      */
     static async cleanDatabase(dataSource: DataSource): Promise<void> {
         const entities = dataSource.entityMetadatas;
-        
+
         for (const entity of entities) {
             const repository = dataSource.getRepository(entity.name);
             await repository.query(`DELETE FROM "${entity.tableName}"`);

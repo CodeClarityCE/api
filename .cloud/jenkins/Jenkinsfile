@@ -30,6 +30,7 @@ pipeline {
             steps {
                 sh 'yarn check'
                 sh 'yarn test'
+                sh 'yarn test:e2e test/integration/*contract*.e2e-spec.ts'
                 sh 'yarn run prettier src --check'
             }
         }

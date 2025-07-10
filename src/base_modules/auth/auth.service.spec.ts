@@ -4,17 +4,9 @@ import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { UsersRepository } from '../users/users.repository';
 import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
-import { 
-    WrongCredentials, 
-    RegistrationNotVerified 
-} from './auth.errors';
-import { 
-    CannotPerformActionOnSocialAccount 
-} from '../users/users.errors';
-import { 
-    FailedToAuthenticateSocialAccount,
-    EntityNotFound
-} from 'src/types/error.types';
+import { WrongCredentials, RegistrationNotVerified } from './auth.errors';
+import { CannotPerformActionOnSocialAccount } from '../users/users.errors';
+import { FailedToAuthenticateSocialAccount, EntityNotFound } from 'src/types/error.types';
 import { SocialType } from '../users/user.types';
 import { ROLE } from './auth.types';
 import { User } from '../users/users.entity';
@@ -129,7 +121,9 @@ describe('AuthService', () => {
         jwtService = module.get<JwtService>(JwtService);
         usersService = module.get<UsersService>(UsersService);
         usersRepository = module.get<UsersRepository>(UsersRepository);
-        _gitlabTokenService = module.get<GitlabIntegrationTokenService>(GitlabIntegrationTokenService);
+        _gitlabTokenService = module.get<GitlabIntegrationTokenService>(
+            GitlabIntegrationTokenService
+        );
     });
 
     afterEach(() => {
@@ -175,9 +169,9 @@ describe('AuthService', () => {
             jest.spyOn(usersRepository, 'getUserByEmail').mockResolvedValue(mockSocialUser);
 
             // Act & Assert
-            await expect(
-                service.authenticate('test@example.com', 'password')
-            ).rejects.toThrow(CannotPerformActionOnSocialAccount);
+            await expect(service.authenticate('test@example.com', 'password')).rejects.toThrow(
+                CannotPerformActionOnSocialAccount
+            );
         });
 
         it('should throw RegistrationNotVerified for unverified users', async () => {
@@ -187,11 +181,13 @@ describe('AuthService', () => {
             jest.spyOn(usersService, 'sendUserRegistrationVerificationEmail').mockResolvedValue();
 
             // Act & Assert
-            await expect(
-                service.authenticate('test@example.com', 'password')
-            ).rejects.toThrow(RegistrationNotVerified);
-            
-            expect(usersService.sendUserRegistrationVerificationEmail).toHaveBeenCalledWith('test@example.com');
+            await expect(service.authenticate('test@example.com', 'password')).rejects.toThrow(
+                RegistrationNotVerified
+            );
+
+            expect(usersService.sendUserRegistrationVerificationEmail).toHaveBeenCalledWith(
+                'test@example.com'
+            );
         });
 
         it('should throw WrongCredentials for invalid password', async () => {
@@ -201,9 +197,9 @@ describe('AuthService', () => {
             jest.spyOn(usersRepository, 'getUserByEmail').mockResolvedValue(userWithHashedPassword);
 
             // Act & Assert
-            await expect(
-                service.authenticate('test@example.com', 'wrongpassword')
-            ).rejects.toThrow(WrongCredentials);
+            await expect(service.authenticate('test@example.com', 'wrongpassword')).rejects.toThrow(
+                WrongCredentials
+            );
         });
     });
 
@@ -213,9 +209,9 @@ describe('AuthService', () => {
             const userWithoutEmail = { ...mockGithubUser, email: undefined };
 
             // Act & Assert
-            await expect(
-                service.authenticateGithubSocial(userWithoutEmail)
-            ).rejects.toThrow(FailedToAuthenticateSocialAccount);
+            await expect(service.authenticateGithubSocial(userWithoutEmail)).rejects.toThrow(
+                FailedToAuthenticateSocialAccount
+            );
         });
 
         it('should call existsSocialUser to check if user exists', async () => {
@@ -245,9 +241,9 @@ describe('AuthService', () => {
             const userWithoutEmail = { ...mockGitlabUser, email: undefined };
 
             // Act & Assert
-            await expect(
-                service.authenticateGitlabSocial(userWithoutEmail)
-            ).rejects.toThrow(FailedToAuthenticateSocialAccount);
+            await expect(service.authenticateGitlabSocial(userWithoutEmail)).rejects.toThrow(
+                FailedToAuthenticateSocialAccount
+            );
         });
 
         it('should call existsSocialUser to check if user exists', async () => {
@@ -307,9 +303,9 @@ describe('AuthService', () => {
             jest.spyOn(usersRepository, 'getUserById').mockRejectedValue(new EntityNotFound());
 
             // Act & Assert
-            await expect(
-                service.getAuthenticatedUser(mockAuthenticatedUser)
-            ).rejects.toThrow(EntityNotFound);
+            await expect(service.getAuthenticatedUser(mockAuthenticatedUser)).rejects.toThrow(
+                EntityNotFound
+            );
         });
     });
 
@@ -325,7 +321,7 @@ describe('AuthService', () => {
             expect(hashedPassword).toBeDefined();
             expect(hashedPassword).not.toBe(password);
             expect(typeof hashedPassword).toBe('string');
-            
+
             // Verify the hash can be validated
             const isValid = await bcrypt.compare(password, hashedPassword);
             expect(isValid).toBe(true);
@@ -386,7 +382,10 @@ describe('AuthService', () => {
             jest.spyOn(usersRepository, 'getUserByEmail').mockResolvedValue(null as any);
 
             // Act
-            const [isValid, user] = await service.validateCredentials('nonexistent@example.com', 'password');
+            const [isValid, user] = await service.validateCredentials(
+                'nonexistent@example.com',
+                'password'
+            );
 
             // Assert
             expect(isValid).toBe(false);
@@ -400,9 +399,7 @@ describe('AuthService', () => {
             jest.spyOn(usersRepository, 'getUserByEmail').mockResolvedValue(null as any);
 
             // Act & Assert
-            await expect(
-                service.authenticate('', 'password')
-            ).rejects.toThrow(WrongCredentials);
+            await expect(service.authenticate('', 'password')).rejects.toThrow(WrongCredentials);
         });
 
         it('should handle empty password gracefully', async () => {
@@ -410,9 +407,9 @@ describe('AuthService', () => {
             jest.spyOn(usersRepository, 'getUserByEmail').mockResolvedValue(mockUser);
 
             // Act & Assert
-            await expect(
-                service.authenticate('test@example.com', '')
-            ).rejects.toThrow(WrongCredentials);
+            await expect(service.authenticate('test@example.com', '')).rejects.toThrow(
+                WrongCredentials
+            );
         });
 
         it('should handle null values gracefully', async () => {
@@ -420,9 +417,9 @@ describe('AuthService', () => {
             jest.spyOn(usersRepository, 'getUserByEmail').mockResolvedValue(null as any);
 
             // Act & Assert
-            await expect(
-                service.authenticate(null as any, null as any)
-            ).rejects.toThrow(WrongCredentials);
+            await expect(service.authenticate(null as any, null as any)).rejects.toThrow(
+                WrongCredentials
+            );
         });
 
         it('should handle very long passwords', async () => {

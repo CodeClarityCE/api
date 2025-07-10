@@ -39,23 +39,27 @@ describe('AnalysesService', () => {
 
     // Mock data
     const mockUser = new AuthenticatedUser('user-123', [ROLE.USER], true);
-    
+
     const mockAnalyzer = {
         id: 'analyzer-123',
         name: 'Test Analyzer',
         steps: [
-            [{
-                name: 'step1',
-                version: '1.0.0',
-                config: {
-                    option1: { required: true, default: 'value1' }
+            [
+                {
+                    name: 'step1',
+                    version: '1.0.0',
+                    config: {
+                        option1: { required: true, default: 'value1' }
+                    }
                 }
-            }],
-            [{
-                name: 'step2',
-                version: '1.0.0',
-                config: null
-            }]
+            ],
+            [
+                {
+                    name: 'step2',
+                    version: '1.0.0',
+                    config: null
+                }
+            ]
         ]
     };
 
@@ -201,7 +205,8 @@ describe('AnalysesService', () => {
         analyzersRepository = module.get<AnalyzersRepository>(AnalyzersRepository);
         resultsRepository = module.get<AnalysisResultsRepository>(AnalysisResultsRepository);
         sbomRepository = module.get<SBOMRepository>(SBOMRepository);
-        vulnerabilitiesRepository = module.get<VulnerabilitiesRepository>(VulnerabilitiesRepository);
+        vulnerabilitiesRepository =
+            module.get<VulnerabilitiesRepository>(VulnerabilitiesRepository);
         licensesRepository = module.get<LicensesRepository>(LicensesRepository);
         analysesRepository = module.get<AnalysesRepository>(AnalysesRepository);
 
@@ -216,27 +221,45 @@ describe('AnalysesService', () => {
             // Arrange
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(projectMemberService, 'doesProjectBelongToOrg').mockResolvedValue();
-            jest.spyOn(analyzersRepository, 'getAnalyzerById').mockResolvedValue(mockAnalyzer as any);
+            jest.spyOn(analyzersRepository, 'getAnalyzerById').mockResolvedValue(
+                mockAnalyzer as any
+            );
             jest.spyOn(projectsRepository, 'getProjectById').mockResolvedValue(mockProject as any);
             jest.spyOn(usersRepository, 'getUserById').mockResolvedValue(mockCreator as any);
-            jest.spyOn(organizationsRepository, 'getOrganizationById').mockResolvedValue(mockOrganization as any);
+            jest.spyOn(organizationsRepository, 'getOrganizationById').mockResolvedValue(
+                mockOrganization as any
+            );
             jest.spyOn(analysesRepository, 'saveAnalysis').mockResolvedValue(mockAnalysis);
 
             // Act
-            const result = await service.create('org-123', 'project-123', mockAnalysisCreateBody, mockUser);
+            const result = await service.create(
+                'org-123',
+                'project-123',
+                mockAnalysisCreateBody,
+                mockUser
+            );
 
             // Assert
             expect(result).toBe('analysis-123');
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith('org-123', 'user-123', MemberRole.USER);
-            expect(projectMemberService.doesProjectBelongToOrg).toHaveBeenCalledWith('project-123', 'org-123');
+            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+                'org-123',
+                'user-123',
+                MemberRole.USER
+            );
+            expect(projectMemberService.doesProjectBelongToOrg).toHaveBeenCalledWith(
+                'project-123',
+                'org-123'
+            );
             expect(analysesRepository.saveAnalysis).toHaveBeenCalled();
             expect(mockChannel.sendToQueue).toHaveBeenCalledWith(
                 'analyses',
-                Buffer.from(JSON.stringify({
-                    analysis_id: 'analysis-123',
-                    integration_id: 'integration-123',
-                    organization_id: 'org-123'
-                }))
+                Buffer.from(
+                    JSON.stringify({
+                        analysis_id: 'analysis-123',
+                        integration_id: 'integration-123',
+                        organization_id: 'org-123'
+                    })
+                )
             );
         });
 
@@ -244,13 +267,17 @@ describe('AnalysesService', () => {
             // Arrange
             const analyzerWithRequiredConfig = {
                 ...mockAnalyzer,
-                steps: [[{
-                    name: 'step1',
-                    version: '1.0.0',
-                    config: {
-                        requiredOption: { required: true }
-                    }
-                }]]
+                steps: [
+                    [
+                        {
+                            name: 'step1',
+                            version: '1.0.0',
+                            config: {
+                                requiredOption: { required: true }
+                            }
+                        }
+                    ]
+                ]
             };
             const bodyWithoutRequiredConfig = {
                 ...mockAnalysisCreateBody,
@@ -259,10 +286,14 @@ describe('AnalysesService', () => {
 
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(projectMemberService, 'doesProjectBelongToOrg').mockResolvedValue();
-            jest.spyOn(analyzersRepository, 'getAnalyzerById').mockResolvedValue(analyzerWithRequiredConfig as any);
+            jest.spyOn(analyzersRepository, 'getAnalyzerById').mockResolvedValue(
+                analyzerWithRequiredConfig as any
+            );
             jest.spyOn(projectsRepository, 'getProjectById').mockResolvedValue(mockProject as any);
             jest.spyOn(usersRepository, 'getUserById').mockResolvedValue(mockCreator as any);
-            jest.spyOn(organizationsRepository, 'getOrganizationById').mockResolvedValue(mockOrganization as any);
+            jest.spyOn(organizationsRepository, 'getOrganizationById').mockResolvedValue(
+                mockOrganization as any
+            );
 
             // Act & Assert
             await expect(
@@ -274,10 +305,14 @@ describe('AnalysesService', () => {
             // Arrange
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(projectMemberService, 'doesProjectBelongToOrg').mockResolvedValue();
-            jest.spyOn(analyzersRepository, 'getAnalyzerById').mockResolvedValue(mockAnalyzer as any);
+            jest.spyOn(analyzersRepository, 'getAnalyzerById').mockResolvedValue(
+                mockAnalyzer as any
+            );
             jest.spyOn(projectsRepository, 'getProjectById').mockResolvedValue(mockProject as any);
             jest.spyOn(usersRepository, 'getUserById').mockResolvedValue(mockCreator as any);
-            jest.spyOn(organizationsRepository, 'getOrganizationById').mockResolvedValue(mockOrganization as any);
+            jest.spyOn(organizationsRepository, 'getOrganizationById').mockResolvedValue(
+                mockOrganization as any
+            );
             jest.spyOn(analysesRepository, 'saveAnalysis').mockResolvedValue(mockAnalysis);
             (amqp.connect as jest.Mock).mockRejectedValue(new Error('Connection failed'));
 
@@ -292,24 +327,37 @@ describe('AnalysesService', () => {
             const projectWithoutIntegration = { ...mockProject, integration: null };
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(projectMemberService, 'doesProjectBelongToOrg').mockResolvedValue();
-            jest.spyOn(analyzersRepository, 'getAnalyzerById').mockResolvedValue(mockAnalyzer as any);
-            jest.spyOn(projectsRepository, 'getProjectById').mockResolvedValue(projectWithoutIntegration as any);
+            jest.spyOn(analyzersRepository, 'getAnalyzerById').mockResolvedValue(
+                mockAnalyzer as any
+            );
+            jest.spyOn(projectsRepository, 'getProjectById').mockResolvedValue(
+                projectWithoutIntegration as any
+            );
             jest.spyOn(usersRepository, 'getUserById').mockResolvedValue(mockCreator as any);
-            jest.spyOn(organizationsRepository, 'getOrganizationById').mockResolvedValue(mockOrganization as any);
+            jest.spyOn(organizationsRepository, 'getOrganizationById').mockResolvedValue(
+                mockOrganization as any
+            );
             jest.spyOn(analysesRepository, 'saveAnalysis').mockResolvedValue(mockAnalysis);
 
             // Act
-            const result = await service.create('org-123', 'project-123', mockAnalysisCreateBody, mockUser);
+            const result = await service.create(
+                'org-123',
+                'project-123',
+                mockAnalysisCreateBody,
+                mockUser
+            );
 
             // Assert
             expect(result).toBe('analysis-123');
             expect(mockChannel.sendToQueue).toHaveBeenCalledWith(
                 'analyses',
-                Buffer.from(JSON.stringify({
-                    analysis_id: 'analysis-123',
-                    integration_id: null,
-                    organization_id: 'org-123'
-                }))
+                Buffer.from(
+                    JSON.stringify({
+                        analysis_id: 'analysis-123',
+                        integration_id: null,
+                        organization_id: 'org-123'
+                    })
+                )
             );
         });
     });
@@ -327,9 +375,19 @@ describe('AnalysesService', () => {
 
             // Assert
             expect(result).toEqual(mockAnalysis);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith('org-123', 'user-123', MemberRole.USER);
-            expect(projectMemberService.doesProjectBelongToOrg).toHaveBeenCalledWith('project-123', 'org-123');
-            expect(analysesRepository.doesAnalysesBelongToProject).toHaveBeenCalledWith('analysis-123', 'project-123');
+            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+                'org-123',
+                'user-123',
+                MemberRole.USER
+            );
+            expect(projectMemberService.doesProjectBelongToOrg).toHaveBeenCalledWith(
+                'project-123',
+                'org-123'
+            );
+            expect(analysesRepository.doesAnalysesBelongToProject).toHaveBeenCalledWith(
+                'analysis-123',
+                'project-123'
+            );
             expect(analysesRepository.getAnalysisById).toHaveBeenCalledWith('analysis-123');
         });
     });
@@ -355,10 +413,7 @@ describe('AnalysesService', () => {
             const mockVulnsOutput = {
                 workspaces: {
                     default: {
-                        Vulnerabilities: [
-                            { id: 'vuln1' },
-                            { id: 'vuln2' }
-                        ]
+                        Vulnerabilities: [{ id: 'vuln1' }, { id: 'vuln2' }]
                     }
                 },
                 analysis_info: {
@@ -381,11 +436,20 @@ describe('AnalysesService', () => {
             jest.spyOn(projectMemberService, 'doesProjectBelongToOrg').mockResolvedValue();
             jest.spyOn(analysesRepository, 'doesAnalysesBelongToProject').mockResolvedValue();
             jest.spyOn(sbomRepository, 'getSbomResult').mockResolvedValue(mockSbomOutput as any);
-            jest.spyOn(vulnerabilitiesRepository, 'getVulnsResult').mockResolvedValue(mockVulnsOutput as any);
-            jest.spyOn(licensesRepository, 'getLicensesResult').mockResolvedValue(mockLicensesOutput as any);
+            jest.spyOn(vulnerabilitiesRepository, 'getVulnsResult').mockResolvedValue(
+                mockVulnsOutput as any
+            );
+            jest.spyOn(licensesRepository, 'getLicensesResult').mockResolvedValue(
+                mockLicensesOutput as any
+            );
 
             // Act
-            const result = await service.getChart('org-123', 'project-123', 'analysis-123', mockUser);
+            const result = await service.getChart(
+                'org-123',
+                'project-123',
+                'analysis-123',
+                mockUser
+            );
 
             // Assert
             expect(result).toEqual([
@@ -415,14 +479,25 @@ describe('AnalysesService', () => {
 
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(projectMemberService, 'doesProjectBelongToOrg').mockResolvedValue();
-            jest.spyOn(analysesRepository, 'getAnalysisByProjectId').mockResolvedValue(mockPaginatedData);
+            jest.spyOn(analysesRepository, 'getAnalysisByProjectId').mockResolvedValue(
+                mockPaginatedData
+            );
 
             // Act
-            const result = await service.getMany('org-123', 'project-123', { entriesPerPage: 10, currentPage: 0 }, mockUser);
+            const result = await service.getMany(
+                'org-123',
+                'project-123',
+                { entriesPerPage: 10, currentPage: 0 },
+                mockUser
+            );
 
             // Assert
             expect(result).toEqual(mockPaginatedData);
-            expect(analysesRepository.getAnalysisByProjectId).toHaveBeenCalledWith('project-123', 0, 10);
+            expect(analysesRepository.getAnalysisByProjectId).toHaveBeenCalledWith(
+                'project-123',
+                0,
+                10
+            );
         });
 
         it('should apply pagination limits', async () => {
@@ -440,14 +515,25 @@ describe('AnalysesService', () => {
 
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(projectMemberService, 'doesProjectBelongToOrg').mockResolvedValue();
-            jest.spyOn(analysesRepository, 'getAnalysisByProjectId').mockResolvedValue(mockPaginatedData);
+            jest.spyOn(analysesRepository, 'getAnalysisByProjectId').mockResolvedValue(
+                mockPaginatedData
+            );
 
             // Act
-            const result = await service.getMany('org-123', 'project-123', { entriesPerPage: 200, currentPage: -1 }, mockUser);
+            const result = await service.getMany(
+                'org-123',
+                'project-123',
+                { entriesPerPage: 200, currentPage: -1 },
+                mockUser
+            );
 
             // Assert
             expect(result).toEqual(mockPaginatedData);
-            expect(analysesRepository.getAnalysisByProjectId).toHaveBeenCalledWith('project-123', 0, 100); // max 100, min page 0
+            expect(analysesRepository.getAnalysisByProjectId).toHaveBeenCalledWith(
+                'project-123',
+                0,
+                100
+            ); // max 100, min page 0
         });
 
         it('should use default pagination when not provided', async () => {
@@ -465,14 +551,20 @@ describe('AnalysesService', () => {
 
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(projectMemberService, 'doesProjectBelongToOrg').mockResolvedValue();
-            jest.spyOn(analysesRepository, 'getAnalysisByProjectId').mockResolvedValue(mockPaginatedData);
+            jest.spyOn(analysesRepository, 'getAnalysisByProjectId').mockResolvedValue(
+                mockPaginatedData
+            );
 
             // Act
             const result = await service.getMany('org-123', 'project-123', {}, mockUser);
 
             // Assert
             expect(result).toEqual(mockPaginatedData);
-            expect(analysesRepository.getAnalysisByProjectId).toHaveBeenCalledWith('project-123', 0, 10); // defaults
+            expect(analysesRepository.getAnalysisByProjectId).toHaveBeenCalledWith(
+                'project-123',
+                0,
+                10
+            ); // defaults
         });
     });
 
@@ -481,16 +573,15 @@ describe('AnalysesService', () => {
             // Arrange
             const analysisWithResults = {
                 ...mockAnalysis,
-                results: [
-                    { id: 'result-1' },
-                    { id: 'result-2' }
-                ]
+                results: [{ id: 'result-1' }, { id: 'result-2' }]
             };
 
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(projectMemberService, 'doesProjectBelongToOrg').mockResolvedValue();
             jest.spyOn(analysesRepository, 'doesAnalysesBelongToProject').mockResolvedValue();
-            jest.spyOn(analysesRepository, 'getAnalysisById').mockResolvedValue(analysisWithResults);
+            jest.spyOn(analysesRepository, 'getAnalysisById').mockResolvedValue(
+                analysisWithResults
+            );
             jest.spyOn(resultsRepository, 'delete').mockResolvedValue();
             jest.spyOn(analysesRepository, 'deleteAnalysis').mockResolvedValue();
 
@@ -498,10 +589,22 @@ describe('AnalysesService', () => {
             await service.delete('org-123', 'project-123', 'analysis-123', mockUser);
 
             // Assert
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith('org-123', 'user-123', MemberRole.USER);
-            expect(projectMemberService.doesProjectBelongToOrg).toHaveBeenCalledWith('project-123', 'org-123');
-            expect(analysesRepository.doesAnalysesBelongToProject).toHaveBeenCalledWith('analysis-123', 'project-123');
-            expect(analysesRepository.getAnalysisById).toHaveBeenCalledWith('analysis-123', { results: true });
+            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+                'org-123',
+                'user-123',
+                MemberRole.USER
+            );
+            expect(projectMemberService.doesProjectBelongToOrg).toHaveBeenCalledWith(
+                'project-123',
+                'org-123'
+            );
+            expect(analysesRepository.doesAnalysesBelongToProject).toHaveBeenCalledWith(
+                'analysis-123',
+                'project-123'
+            );
+            expect(analysesRepository.getAnalysisById).toHaveBeenCalledWith('analysis-123', {
+                results: true
+            });
             expect(resultsRepository.delete).toHaveBeenCalledTimes(2);
             expect(resultsRepository.delete).toHaveBeenCalledWith('result-1');
             expect(resultsRepository.delete).toHaveBeenCalledWith('result-2');

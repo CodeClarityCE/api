@@ -121,7 +121,9 @@ describe('UsersRepository', () => {
             mockUserRepository.findOne.mockResolvedValue(null);
 
             // Act & Assert
-            await expect(usersRepository.getUserById('non-existent-id')).rejects.toThrow(EntityNotFound);
+            await expect(usersRepository.getUserById('non-existent-id')).rejects.toThrow(
+                EntityNotFound
+            );
             expect(mockUserRepository.findOne).toHaveBeenCalledWith({
                 where: { id: 'non-existent-id' },
                 relations: undefined
@@ -158,7 +160,9 @@ describe('UsersRepository', () => {
             mockUserRepository.findOneBy.mockResolvedValue(null);
 
             // Act & Assert
-            await expect(usersRepository.getUserByEmail('unknown@example.com')).rejects.toThrow(UserDoesNotExist);
+            await expect(usersRepository.getUserByEmail('unknown@example.com')).rejects.toThrow(
+                UserDoesNotExist
+            );
             expect(mockUserRepository.findOneBy).toHaveBeenCalledWith({
                 email: 'unknown@example.com'
             });
@@ -226,7 +230,9 @@ describe('UsersRepository', () => {
             await usersRepository.deleteUser('user-123');
 
             // Assert
-            expect(mockOrganizationsRepository.removeUserMemberships).toHaveBeenCalledWith('user-123');
+            expect(mockOrganizationsRepository.removeUserMemberships).toHaveBeenCalledWith(
+                'user-123'
+            );
             expect(mockProjectsRepository.deleteUserProjects).toHaveBeenCalledWith('user-123');
             expect(mockUserRepository.delete).toHaveBeenCalledWith('user-123');
         });
@@ -251,7 +257,11 @@ describe('UsersRepository', () => {
             await usersRepository.deleteUser('user-123');
 
             // Assert
-            expect(callOrder).toEqual(['removeUserMemberships', 'deleteUserProjects', 'deleteUser']);
+            expect(callOrder).toEqual([
+                'removeUserMemberships',
+                'deleteUserProjects',
+                'deleteUser'
+            ]);
         });
 
         it('should handle errors in membership removal', async () => {

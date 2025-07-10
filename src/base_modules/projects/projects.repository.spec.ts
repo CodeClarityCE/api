@@ -55,7 +55,7 @@ describe('ProjectsRepository', () => {
         }).compile();
 
         projectsRepository = module.get<ProjectsRepository>(ProjectsRepository);
-        
+
         // Reset mocks
         jest.clearAllMocks();
         mockProjectRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
@@ -98,7 +98,9 @@ describe('ProjectsRepository', () => {
             mockProjectRepository.findOne.mockResolvedValue(null);
 
             // Act & Assert
-            await expect(projectsRepository.getProjectById('non-existent')).rejects.toThrow(EntityNotFound);
+            await expect(projectsRepository.getProjectById('non-existent')).rejects.toThrow(
+                EntityNotFound
+            );
         });
     });
 
@@ -108,7 +110,10 @@ describe('ProjectsRepository', () => {
             mockProjectRepository.findOne.mockResolvedValue(mockProject);
 
             // Act
-            const result = await projectsRepository.getProjectByIdAndOrganization('project-123', 'org-123');
+            const result = await projectsRepository.getProjectByIdAndOrganization(
+                'project-123',
+                'org-123'
+            );
 
             // Assert
             expect(result).toEqual(mockProject);
@@ -139,7 +144,11 @@ describe('ProjectsRepository', () => {
             mockProjectRepository.findOne.mockResolvedValue(mockProject);
 
             // Act
-            const result = await projectsRepository.getProjectByIdAndOrganization('project-123', 'org-123', relations);
+            const result = await projectsRepository.getProjectByIdAndOrganization(
+                'project-123',
+                'org-123',
+                relations
+            );
 
             // Assert
             expect(result).toEqual(mockProject);
@@ -161,7 +170,9 @@ describe('ProjectsRepository', () => {
             mockProjectRepository.exists.mockResolvedValue(true);
 
             // Act & Assert - Should not throw
-            await expect(projectsRepository.doesProjectBelongToOrg('project-123', 'org-123')).resolves.toBeUndefined();
+            await expect(
+                projectsRepository.doesProjectBelongToOrg('project-123', 'org-123')
+            ).resolves.toBeUndefined();
             expect(mockProjectRepository.exists).toHaveBeenCalledWith({
                 relations: {
                     organizations: true
@@ -180,7 +191,9 @@ describe('ProjectsRepository', () => {
             mockProjectRepository.exists.mockResolvedValue(false);
 
             // Act & Assert
-            await expect(projectsRepository.doesProjectBelongToOrg('project-123', 'wrong-org')).rejects.toThrow(NotAuthorized);
+            await expect(
+                projectsRepository.doesProjectBelongToOrg('project-123', 'wrong-org')
+            ).rejects.toThrow(NotAuthorized);
         });
     });
 
@@ -281,7 +294,9 @@ describe('ProjectsRepository', () => {
                 matching_count: 1,
                 filter_count: {}
             });
-            expect(mockQueryBuilder.where).toHaveBeenCalledWith('organizations.id = :orgId', { orgId: 'org-123' });
+            expect(mockQueryBuilder.where).toHaveBeenCalledWith('organizations.id = :orgId', {
+                orgId: 'org-123'
+            });
             expect(mockQueryBuilder.limit).toHaveBeenCalledWith(10);
             expect(mockQueryBuilder.offset).toHaveBeenCalledWith(0);
         });
@@ -357,11 +372,26 @@ describe('ProjectsRepository', () => {
             await projectsRepository.getManyProjects('org-123', 0, 10);
 
             // Assert
-            expect(mockQueryBuilder.leftJoin).toHaveBeenCalledWith('project.organizations', 'organizations');
-            expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('project.analyses', 'analyses');
-            expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('analyses.analyzer', 'analyzer');
-            expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('project.files', 'files');
-            expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('project.added_by', 'added_by');
+            expect(mockQueryBuilder.leftJoin).toHaveBeenCalledWith(
+                'project.organizations',
+                'organizations'
+            );
+            expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+                'project.analyses',
+                'analyses'
+            );
+            expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+                'analyses.analyzer',
+                'analyzer'
+            );
+            expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+                'project.files',
+                'files'
+            );
+            expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+                'project.added_by',
+                'added_by'
+            );
             expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('analyses.created_on', 'DESC');
         });
     });

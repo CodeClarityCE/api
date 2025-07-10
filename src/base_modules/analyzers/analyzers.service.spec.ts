@@ -19,7 +19,7 @@ describe('AnalyzersService', () => {
 
     // Mock data
     const mockUser = new AuthenticatedUser('user-123', [ROLE.USER], true);
-    
+
     const mockOrganization = {
         id: 'org-123',
         name: 'Test Organization',
@@ -38,14 +38,16 @@ describe('AnalyzersService', () => {
         name: 'Test Analyzer',
         description: 'Test analyzer description',
         steps: [
-            [{
-                name: 'step1',
-                version: '1.0.0',
-                config: {
-                    option1: { required: true, default: 'value1' }
-                },
-                persistant_config: {}
-            }]
+            [
+                {
+                    name: 'step1',
+                    version: '1.0.0',
+                    config: {
+                        option1: { required: true, default: 'value1' }
+                    },
+                    persistant_config: {}
+                }
+            ]
         ],
         global: false,
         created_on: new Date('2024-01-01'),
@@ -58,14 +60,16 @@ describe('AnalyzersService', () => {
         name: 'Test Analyzer',
         description: 'Test analyzer description',
         steps: [
-            [{
-                name: 'step1',
-                version: '1.0.0',
-                config: {
-                    option1: { required: true, default: 'value1' }
-                },
-                persistant_config: {}
-            }]
+            [
+                {
+                    name: 'step1',
+                    version: '1.0.0',
+                    config: {
+                        option1: { required: true, default: 'value1' }
+                    },
+                    persistant_config: {}
+                }
+            ]
         ]
     };
 
@@ -118,7 +122,8 @@ describe('AnalyzersService', () => {
         }).compile();
 
         service = module.get<AnalyzersService>(AnalyzersService);
-        organizationLoggerService = module.get<OrganizationLoggerService>(OrganizationLoggerService);
+        organizationLoggerService =
+            module.get<OrganizationLoggerService>(OrganizationLoggerService);
         organizationsRepository = module.get<OrganizationsRepository>(OrganizationsRepository);
         usersRepository = module.get<UsersRepository>(UsersRepository);
         analyzersRepository = module.get<AnalyzersRepository>(AnalyzersRepository);
@@ -132,7 +137,9 @@ describe('AnalyzersService', () => {
             // Arrange
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(usersRepository, 'getUserById').mockResolvedValue(mockCreator as any);
-            jest.spyOn(organizationsRepository, 'getOrganizationById').mockResolvedValue(mockOrganization as any);
+            jest.spyOn(organizationsRepository, 'getOrganizationById').mockResolvedValue(
+                mockOrganization as any
+            );
             jest.spyOn(analyzersRepository, 'saveAnalyzer').mockResolvedValue(mockAnalyzer);
             jest.spyOn(organizationLoggerService, 'addAuditLog').mockResolvedValue('log-id-123');
 
@@ -141,7 +148,11 @@ describe('AnalyzersService', () => {
 
             // Assert
             expect(result).toBe('analyzer-123');
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith('org-123', 'user-123', MemberRole.ADMIN);
+            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+                'org-123',
+                'user-123',
+                MemberRole.ADMIN
+            );
             expect(usersRepository.getUserById).toHaveBeenCalledWith('user-123');
             expect(organizationsRepository.getOrganizationById).toHaveBeenCalledWith('org-123');
             expect(analyzersRepository.saveAnalyzer).toHaveBeenCalledWith(
@@ -166,12 +177,19 @@ describe('AnalyzersService', () => {
         it('should require ADMIN role', async () => {
             // Arrange
             const unauthorizedError = new Error('NotAuthorized');
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(unauthorizedError);
+            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(
+                unauthorizedError
+            );
 
             // Act & Assert
-            await expect(service.create('org-123', mockAnalyzerCreateBody, mockUser))
-                .rejects.toThrow(unauthorizedError);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith('org-123', 'user-123', MemberRole.ADMIN);
+            await expect(
+                service.create('org-123', mockAnalyzerCreateBody, mockUser)
+            ).rejects.toThrow(unauthorizedError);
+            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+                'org-123',
+                'user-123',
+                MemberRole.ADMIN
+            );
         });
 
         it('should handle user not found error', async () => {
@@ -181,8 +199,9 @@ describe('AnalyzersService', () => {
             jest.spyOn(usersRepository, 'getUserById').mockRejectedValue(entityNotFoundError);
 
             // Act & Assert
-            await expect(service.create('org-123', mockAnalyzerCreateBody, mockUser))
-                .rejects.toThrow(entityNotFoundError);
+            await expect(
+                service.create('org-123', mockAnalyzerCreateBody, mockUser)
+            ).rejects.toThrow(entityNotFoundError);
         });
 
         it('should handle organization not found error', async () => {
@@ -190,11 +209,14 @@ describe('AnalyzersService', () => {
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(usersRepository, 'getUserById').mockResolvedValue(mockCreator as any);
             const entityNotFoundError = new Error('EntityNotFound');
-            jest.spyOn(organizationsRepository, 'getOrganizationById').mockRejectedValue(entityNotFoundError);
+            jest.spyOn(organizationsRepository, 'getOrganizationById').mockRejectedValue(
+                entityNotFoundError
+            );
 
             // Act & Assert
-            await expect(service.create('org-123', mockAnalyzerCreateBody, mockUser))
-                .rejects.toThrow(entityNotFoundError);
+            await expect(
+                service.create('org-123', mockAnalyzerCreateBody, mockUser)
+            ).rejects.toThrow(entityNotFoundError);
         });
 
         it('should create analyzer with complex steps configuration', async () => {
@@ -202,26 +224,32 @@ describe('AnalyzersService', () => {
             const complexAnalyzerCreateBody = {
                 ...mockAnalyzerCreateBody,
                 steps: [
-                    [{
-                        name: 'step1',
-                        version: '1.0.0',
-                        config: {
-                            option1: { required: true, default: 'value1' },
-                            option2: { required: false, default: 'value2' }
-                        },
-                        persistant_config: {}
-                    }],
-                    [{
-                        name: 'step2',
-                        version: '2.0.0',
-                        config: {},
-                        persistant_config: {}
-                    }]
+                    [
+                        {
+                            name: 'step1',
+                            version: '1.0.0',
+                            config: {
+                                option1: { required: true, default: 'value1' },
+                                option2: { required: false, default: 'value2' }
+                            },
+                            persistant_config: {}
+                        }
+                    ],
+                    [
+                        {
+                            name: 'step2',
+                            version: '2.0.0',
+                            config: {},
+                            persistant_config: {}
+                        }
+                    ]
                 ]
             };
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(usersRepository, 'getUserById').mockResolvedValue(mockCreator as any);
-            jest.spyOn(organizationsRepository, 'getOrganizationById').mockResolvedValue(mockOrganization as any);
+            jest.spyOn(organizationsRepository, 'getOrganizationById').mockResolvedValue(
+                mockOrganization as any
+            );
             jest.spyOn(analyzersRepository, 'saveAnalyzer').mockResolvedValue(mockAnalyzer);
             jest.spyOn(organizationLoggerService, 'addAuditLog').mockResolvedValue('log-id-123');
 
@@ -256,7 +284,11 @@ describe('AnalyzersService', () => {
             await service.update('org-123', 'analyzer-123', updateData, mockUser);
 
             // Assert
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith('org-123', 'user-123', MemberRole.ADMIN);
+            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+                'org-123',
+                'user-123',
+                MemberRole.ADMIN
+            );
             expect(analyzersRepository.getAnalyzerById).toHaveBeenCalledWith('analyzer-123');
             expect(mockAnalyzer.name).toBe('Updated Analyzer');
             expect(mockAnalyzer.description).toBe('Updated description');
@@ -273,23 +305,33 @@ describe('AnalyzersService', () => {
         it('should require ADMIN role for update', async () => {
             // Arrange
             const unauthorizedError = new Error('NotAuthorized');
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(unauthorizedError);
+            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(
+                unauthorizedError
+            );
 
             // Act & Assert
-            await expect(service.update('org-123', 'analyzer-123', mockAnalyzerCreateBody, mockUser))
-                .rejects.toThrow(unauthorizedError);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith('org-123', 'user-123', MemberRole.ADMIN);
+            await expect(
+                service.update('org-123', 'analyzer-123', mockAnalyzerCreateBody, mockUser)
+            ).rejects.toThrow(unauthorizedError);
+            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+                'org-123',
+                'user-123',
+                MemberRole.ADMIN
+            );
         });
 
         it('should handle analyzer not found error', async () => {
             // Arrange
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
             const entityNotFoundError = new Error('EntityNotFound');
-            jest.spyOn(analyzersRepository, 'getAnalyzerById').mockRejectedValue(entityNotFoundError);
+            jest.spyOn(analyzersRepository, 'getAnalyzerById').mockRejectedValue(
+                entityNotFoundError
+            );
 
             // Act & Assert
-            await expect(service.update('org-123', 'analyzer-123', mockAnalyzerCreateBody, mockUser))
-                .rejects.toThrow(entityNotFoundError);
+            await expect(
+                service.update('org-123', 'analyzer-123', mockAnalyzerCreateBody, mockUser)
+            ).rejects.toThrow(entityNotFoundError);
         });
     });
 
@@ -305,32 +347,52 @@ describe('AnalyzersService', () => {
 
             // Assert
             expect(result).toEqual(mockAnalyzer);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith('org-123', 'user-123', MemberRole.USER);
-            expect(analyzersRepository.doesAnalyzerBelongToOrg).toHaveBeenCalledWith('analyzer-123', 'org-123');
+            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+                'org-123',
+                'user-123',
+                MemberRole.USER
+            );
+            expect(analyzersRepository.doesAnalyzerBelongToOrg).toHaveBeenCalledWith(
+                'analyzer-123',
+                'org-123'
+            );
             expect(analyzersRepository.getAnalyzerById).toHaveBeenCalledWith('analyzer-123');
         });
 
         it('should require USER role for access', async () => {
             // Arrange
             const unauthorizedError = new Error('NotAuthorized');
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(unauthorizedError);
+            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(
+                unauthorizedError
+            );
 
             // Act & Assert
-            await expect(service.get('org-123', 'analyzer-123', mockUser))
-                .rejects.toThrow(unauthorizedError);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith('org-123', 'user-123', MemberRole.USER);
+            await expect(service.get('org-123', 'analyzer-123', mockUser)).rejects.toThrow(
+                unauthorizedError
+            );
+            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+                'org-123',
+                'user-123',
+                MemberRole.USER
+            );
         });
 
         it('should validate analyzer belongs to organization', async () => {
             // Arrange
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
             const notAuthorizedError = new Error('NotAuthorized');
-            jest.spyOn(analyzersRepository, 'doesAnalyzerBelongToOrg').mockRejectedValue(notAuthorizedError);
+            jest.spyOn(analyzersRepository, 'doesAnalyzerBelongToOrg').mockRejectedValue(
+                notAuthorizedError
+            );
 
             // Act & Assert
-            await expect(service.get('org-123', 'analyzer-123', mockUser))
-                .rejects.toThrow(notAuthorizedError);
-            expect(analyzersRepository.doesAnalyzerBelongToOrg).toHaveBeenCalledWith('analyzer-123', 'org-123');
+            await expect(service.get('org-123', 'analyzer-123', mockUser)).rejects.toThrow(
+                notAuthorizedError
+            );
+            expect(analyzersRepository.doesAnalyzerBelongToOrg).toHaveBeenCalledWith(
+                'analyzer-123',
+                'org-123'
+            );
         });
     });
 
@@ -338,7 +400,9 @@ describe('AnalyzersService', () => {
         it('should retrieve an analyzer by name successfully', async () => {
             // Arrange
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
-            jest.spyOn(analyzersRepository, 'getByNameAndOrganization').mockResolvedValue(mockAnalyzer);
+            jest.spyOn(analyzersRepository, 'getByNameAndOrganization').mockResolvedValue(
+                mockAnalyzer
+            );
             jest.spyOn(analyzersRepository, 'doesAnalyzerBelongToOrg').mockResolvedValue();
 
             // Act
@@ -346,31 +410,51 @@ describe('AnalyzersService', () => {
 
             // Assert
             expect(result).toEqual(mockAnalyzer);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith('org-123', 'user-123', MemberRole.USER);
-            expect(analyzersRepository.getByNameAndOrganization).toHaveBeenCalledWith('Test Analyzer', 'org-123');
-            expect(analyzersRepository.doesAnalyzerBelongToOrg).toHaveBeenCalledWith('analyzer-123', 'org-123');
+            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+                'org-123',
+                'user-123',
+                MemberRole.USER
+            );
+            expect(analyzersRepository.getByNameAndOrganization).toHaveBeenCalledWith(
+                'Test Analyzer',
+                'org-123'
+            );
+            expect(analyzersRepository.doesAnalyzerBelongToOrg).toHaveBeenCalledWith(
+                'analyzer-123',
+                'org-123'
+            );
         });
 
         it('should require USER role for access', async () => {
             // Arrange
             const unauthorizedError = new Error('NotAuthorized');
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(unauthorizedError);
+            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(
+                unauthorizedError
+            );
 
             // Act & Assert
-            await expect(service.getByName('org-123', 'Test Analyzer', mockUser))
-                .rejects.toThrow(unauthorizedError);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith('org-123', 'user-123', MemberRole.USER);
+            await expect(service.getByName('org-123', 'Test Analyzer', mockUser)).rejects.toThrow(
+                unauthorizedError
+            );
+            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+                'org-123',
+                'user-123',
+                MemberRole.USER
+            );
         });
 
         it('should handle analyzer not found by name', async () => {
             // Arrange
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
             const entityNotFoundError = new Error('EntityNotFound');
-            jest.spyOn(analyzersRepository, 'getByNameAndOrganization').mockRejectedValue(entityNotFoundError);
+            jest.spyOn(analyzersRepository, 'getByNameAndOrganization').mockRejectedValue(
+                entityNotFoundError
+            );
 
             // Act & Assert
-            await expect(service.getByName('org-123', 'Non-existent Analyzer', mockUser))
-                .rejects.toThrow(entityNotFoundError);
+            await expect(
+                service.getByName('org-123', 'Non-existent Analyzer', mockUser)
+            ).rejects.toThrow(entityNotFoundError);
         });
     });
 
@@ -379,14 +463,20 @@ describe('AnalyzersService', () => {
             // Arrange
             const paginationConfig = { entriesPerPage: 10, currentPage: 0 };
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
-            jest.spyOn(analyzersRepository, 'getManyAnalyzers').mockResolvedValue(mockPaginatedAnalyzers);
+            jest.spyOn(analyzersRepository, 'getManyAnalyzers').mockResolvedValue(
+                mockPaginatedAnalyzers
+            );
 
             // Act
             const result = await service.getMany('org-123', paginationConfig, mockUser);
 
             // Assert
             expect(result).toEqual(mockPaginatedAnalyzers);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith('org-123', 'user-123', MemberRole.USER);
+            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+                'org-123',
+                'user-123',
+                MemberRole.USER
+            );
             expect(analyzersRepository.getManyAnalyzers).toHaveBeenCalledWith('org-123', 0, 10);
         });
 
@@ -394,7 +484,9 @@ describe('AnalyzersService', () => {
             // Arrange
             const paginationConfig = { entriesPerPage: 200, currentPage: -1 }; // Over limit and negative page
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
-            jest.spyOn(analyzersRepository, 'getManyAnalyzers').mockResolvedValue(mockPaginatedAnalyzers);
+            jest.spyOn(analyzersRepository, 'getManyAnalyzers').mockResolvedValue(
+                mockPaginatedAnalyzers
+            );
 
             // Act
             await service.getMany('org-123', paginationConfig, mockUser);
@@ -407,7 +499,9 @@ describe('AnalyzersService', () => {
             // Arrange
             const paginationConfig = {};
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
-            jest.spyOn(analyzersRepository, 'getManyAnalyzers').mockResolvedValue(mockPaginatedAnalyzers);
+            jest.spyOn(analyzersRepository, 'getManyAnalyzers').mockResolvedValue(
+                mockPaginatedAnalyzers
+            );
 
             // Act
             await service.getMany('org-123', paginationConfig, mockUser);
@@ -420,7 +514,9 @@ describe('AnalyzersService', () => {
             // Arrange
             const paginationConfig = { entriesPerPage: 25, currentPage: 2 };
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
-            jest.spyOn(analyzersRepository, 'getManyAnalyzers').mockResolvedValue(mockPaginatedAnalyzers);
+            jest.spyOn(analyzersRepository, 'getManyAnalyzers').mockResolvedValue(
+                mockPaginatedAnalyzers
+            );
 
             // Act
             await service.getMany('org-123', paginationConfig, mockUser);
@@ -433,7 +529,9 @@ describe('AnalyzersService', () => {
             // Arrange
             const paginationConfig = { entriesPerPage: 10, currentPage: 0 };
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
-            jest.spyOn(analyzersRepository, 'getManyAnalyzers').mockResolvedValue(mockPaginatedAnalyzers);
+            jest.spyOn(analyzersRepository, 'getManyAnalyzers').mockResolvedValue(
+                mockPaginatedAnalyzers
+            );
 
             // Act
             await service.getMany('org-123', paginationConfig, mockUser);
@@ -446,12 +544,19 @@ describe('AnalyzersService', () => {
             // Arrange
             const paginationConfig = { entriesPerPage: 10, currentPage: 0 };
             const unauthorizedError = new Error('NotAuthorized');
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(unauthorizedError);
+            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(
+                unauthorizedError
+            );
 
             // Act & Assert
-            await expect(service.getMany('org-123', paginationConfig, mockUser))
-                .rejects.toThrow(unauthorizedError);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith('org-123', 'user-123', MemberRole.USER);
+            await expect(service.getMany('org-123', paginationConfig, mockUser)).rejects.toThrow(
+                unauthorizedError
+            );
+            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+                'org-123',
+                'user-123',
+                MemberRole.USER
+            );
         });
     });
 
@@ -466,32 +571,52 @@ describe('AnalyzersService', () => {
             await service.delete('org-123', 'analyzer-123', mockUser);
 
             // Assert
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith('org-123', 'user-123', MemberRole.ADMIN);
-            expect(analyzersRepository.doesAnalyzerBelongToOrg).toHaveBeenCalledWith('analyzer-123', 'org-123');
+            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+                'org-123',
+                'user-123',
+                MemberRole.ADMIN
+            );
+            expect(analyzersRepository.doesAnalyzerBelongToOrg).toHaveBeenCalledWith(
+                'analyzer-123',
+                'org-123'
+            );
             expect(analyzersRepository.deleteAnalyzer).toHaveBeenCalledWith('analyzer-123');
         });
 
         it('should require ADMIN role for deletion', async () => {
             // Arrange
             const unauthorizedError = new Error('NotAuthorized');
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(unauthorizedError);
+            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(
+                unauthorizedError
+            );
 
             // Act & Assert
-            await expect(service.delete('org-123', 'analyzer-123', mockUser))
-                .rejects.toThrow(unauthorizedError);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith('org-123', 'user-123', MemberRole.ADMIN);
+            await expect(service.delete('org-123', 'analyzer-123', mockUser)).rejects.toThrow(
+                unauthorizedError
+            );
+            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+                'org-123',
+                'user-123',
+                MemberRole.ADMIN
+            );
         });
 
         it('should validate analyzer belongs to organization before deletion', async () => {
             // Arrange
             jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
             const notAuthorizedError = new Error('NotAuthorized');
-            jest.spyOn(analyzersRepository, 'doesAnalyzerBelongToOrg').mockRejectedValue(notAuthorizedError);
+            jest.spyOn(analyzersRepository, 'doesAnalyzerBelongToOrg').mockRejectedValue(
+                notAuthorizedError
+            );
 
             // Act & Assert
-            await expect(service.delete('org-123', 'analyzer-123', mockUser))
-                .rejects.toThrow(notAuthorizedError);
-            expect(analyzersRepository.doesAnalyzerBelongToOrg).toHaveBeenCalledWith('analyzer-123', 'org-123');
+            await expect(service.delete('org-123', 'analyzer-123', mockUser)).rejects.toThrow(
+                notAuthorizedError
+            );
+            expect(analyzersRepository.doesAnalyzerBelongToOrg).toHaveBeenCalledWith(
+                'analyzer-123',
+                'org-123'
+            );
             expect(analyzersRepository.deleteAnalyzer).not.toHaveBeenCalled();
         });
 
@@ -503,8 +628,9 @@ describe('AnalyzersService', () => {
             jest.spyOn(analyzersRepository, 'deleteAnalyzer').mockRejectedValue(deletionError);
 
             // Act & Assert
-            await expect(service.delete('org-123', 'analyzer-123', mockUser))
-                .rejects.toThrow(deletionError);
+            await expect(service.delete('org-123', 'analyzer-123', mockUser)).rejects.toThrow(
+                deletionError
+            );
         });
     });
 });

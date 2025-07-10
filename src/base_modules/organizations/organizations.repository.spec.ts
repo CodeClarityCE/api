@@ -110,7 +110,9 @@ describe('OrganizationsRepository', () => {
             mockOrganizationRepository.findOne.mockResolvedValue(null);
 
             // Act & Assert
-            await expect(organizationsRepository.getOrganizationById('non-existent')).rejects.toThrow(EntityNotFound);
+            await expect(
+                organizationsRepository.getOrganizationById('non-existent')
+            ).rejects.toThrow(EntityNotFound);
         });
     });
 
@@ -142,7 +144,10 @@ describe('OrganizationsRepository', () => {
             mockMembershipRepository.find.mockResolvedValue(memberships);
 
             // Act
-            const result = await organizationsRepository.getMembershipsByOrganizationId('org-123', relations);
+            const result = await organizationsRepository.getMembershipsByOrganizationId(
+                'org-123',
+                relations
+            );
 
             // Assert
             expect(result).toEqual(memberships);
@@ -186,7 +191,9 @@ describe('OrganizationsRepository', () => {
             mockOrganizationRepository.delete.mockRejectedValue(error);
 
             // Act & Assert
-            await expect(organizationsRepository.deleteOrganization('org-123')).rejects.toThrow(error);
+            await expect(organizationsRepository.deleteOrganization('org-123')).rejects.toThrow(
+                error
+            );
         });
     });
 
@@ -294,7 +301,9 @@ describe('OrganizationsRepository', () => {
             mockMembershipRepository.findOne.mockResolvedValue(null);
 
             // Act & Assert
-            await expect(organizationsRepository.getMembershipRole('org-123', 'user-123')).rejects.toThrow(EntityNotFound);
+            await expect(
+                organizationsRepository.getMembershipRole('org-123', 'user-123')
+            ).rejects.toThrow(EntityNotFound);
         });
     });
 
@@ -304,7 +313,9 @@ describe('OrganizationsRepository', () => {
             mockMembershipRepository.findOne.mockResolvedValue(mockMembership); // mockMembership has ADMIN role
 
             // Act & Assert - Should not throw (ADMIN can do USER actions)
-            await expect(organizationsRepository.hasRequiredRole('org-123', 'user-123', MemberRole.USER)).resolves.toBeUndefined();
+            await expect(
+                organizationsRepository.hasRequiredRole('org-123', 'user-123', MemberRole.USER)
+            ).resolves.toBeUndefined();
         });
 
         it('should pass when user has same role as required', async () => {
@@ -312,7 +323,9 @@ describe('OrganizationsRepository', () => {
             mockMembershipRepository.findOne.mockResolvedValue(mockMembership); // mockMembership has ADMIN role
 
             // Act & Assert - Should not throw (ADMIN can do ADMIN actions)
-            await expect(organizationsRepository.hasRequiredRole('org-123', 'user-123', MemberRole.ADMIN)).resolves.toBeUndefined();
+            await expect(
+                organizationsRepository.hasRequiredRole('org-123', 'user-123', MemberRole.ADMIN)
+            ).resolves.toBeUndefined();
         });
 
         // Note: There's a bug in hasRequiredRole implementation where NotAuthorized errors get swallowed
@@ -331,7 +344,9 @@ describe('OrganizationsRepository', () => {
             mockMembershipRepository.findOne.mockResolvedValue(null);
 
             // Act & Assert
-            await expect(organizationsRepository.hasRequiredRole('org-123', 'user-123', MemberRole.USER)).rejects.toThrow(NotAuthorized);
+            await expect(
+                organizationsRepository.hasRequiredRole('org-123', 'user-123', MemberRole.USER)
+            ).rejects.toThrow(NotAuthorized);
         });
     });
 
@@ -371,7 +386,10 @@ describe('OrganizationsRepository', () => {
             mockOrganizationRepository.exists.mockResolvedValue(true);
 
             // Act
-            const result = await organizationsRepository.doesIntegrationBelongToOrg('integration-123', 'org-123');
+            const result = await organizationsRepository.doesIntegrationBelongToOrg(
+                'integration-123',
+                'org-123'
+            );
 
             // Assert
             expect(result).toBe(true);
@@ -389,7 +407,10 @@ describe('OrganizationsRepository', () => {
             mockOrganizationRepository.exists.mockResolvedValue(false);
 
             // Act
-            const result = await organizationsRepository.doesIntegrationBelongToOrg('integration-123', 'org-123');
+            const result = await organizationsRepository.doesIntegrationBelongToOrg(
+                'integration-123',
+                'org-123'
+            );
 
             // Assert
             expect(result).toBe(false);
@@ -402,7 +423,10 @@ describe('OrganizationsRepository', () => {
             mockMembershipRepository.findOne.mockResolvedValue(mockMembership);
 
             // Act
-            const result = await organizationsRepository.getMembershipByOrganizationAndUser('org-123', 'user-123');
+            const result = await organizationsRepository.getMembershipByOrganizationAndUser(
+                'org-123',
+                'user-123'
+            );
 
             // Assert
             expect(result).toEqual(mockMembership);
