@@ -11,7 +11,7 @@ import { SBOMRepository } from 'src/codeclarity_modules/results/sbom/sbom.reposi
 import { VulnerabilitiesRepository } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.repository';
 import { LicensesRepository } from 'src/codeclarity_modules/results/licenses/licenses.repository';
 import { AnalysesRepository } from './analyses.repository';
-import { Analysis, AnalysisStatus } from './analysis.entity';
+import { AnalysisStatus } from './analysis.entity';
 import { AnalysisCreateBody } from './analysis.types';
 import { AuthenticatedUser, ROLE } from '../auth/auth.types';
 import { MemberRole } from '../organizations/memberships/orgMembership.types';
@@ -27,7 +27,6 @@ jest.mock('amqplib', () => ({
 describe('AnalysesService', () => {
     let service: AnalysesService;
     let projectMemberService: ProjectMemberService;
-    let configService: ConfigService;
     let usersRepository: UsersRepository;
     let organizationsRepository: OrganizationsRepository;
     let projectsRepository: ProjectsRepository;
@@ -196,7 +195,6 @@ describe('AnalysesService', () => {
 
         service = module.get<AnalysesService>(AnalysesService);
         projectMemberService = module.get<ProjectMemberService>(ProjectMemberService);
-        configService = module.get<ConfigService>(ConfigService);
         usersRepository = module.get<UsersRepository>(UsersRepository);
         organizationsRepository = module.get<OrganizationsRepository>(OrganizationsRepository);
         projectsRepository = module.get<ProjectsRepository>(ProjectsRepository);
