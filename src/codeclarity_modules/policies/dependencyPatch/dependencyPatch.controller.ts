@@ -49,10 +49,10 @@ export class DependencyPatchPolicyController {
 
     @Get('')
     async getMany(
-        @AuthUser() user: AuthenticatedUser,
-        @Param('org_id') org_id: string,
-        @Query('page', new DefaultValuePipe(0), ParseIntPipe) page?: number,
-        @Query('entries_per_page', new DefaultValuePipe(0), ParseIntPipe) entries_per_page?: number
+        @AuthUser() _user: AuthenticatedUser,
+        @Param('org_id') _org_id: string,
+        @Query('page', new DefaultValuePipe(0), ParseIntPipe) _page?: number,
+        @Query('entries_per_page', new DefaultValuePipe(0), ParseIntPipe) _entries_per_page?: number
     ): Promise<TypedPaginatedResponse<DependencyPatchPolicy>> {
         throw new Error('Method not implemented.');
         // return await this.dependencyPatchPolicyService.getMany(

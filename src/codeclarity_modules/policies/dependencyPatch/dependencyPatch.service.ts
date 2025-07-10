@@ -18,9 +18,9 @@ export class DependencyPatchPolicyService {
      * @returns the id of the created dependency patch policy
      */
     async create(
-        orgId: string,
-        create: DependencyPatchPolicyCreateBody,
-        user: AuthenticatedUser
+        _orgId: string,
+        _create: DependencyPatchPolicyCreateBody,
+        _user: AuthenticatedUser
     ): Promise<string> {
         throw new Error('Method not implemented.');
     }
@@ -35,9 +35,9 @@ export class DependencyPatchPolicyService {
      * @returns the dependency patch policy
      */
     async get(
-        orgId: string,
-        dependencyPolicyId: string,
-        user: AuthenticatedUser
+        _orgId: string,
+        _dependencyPolicyId: string,
+        _user: AuthenticatedUser
     ): Promise<DependencyPatchPolicy> {
         throw new Error('Method not implemented.');
     }
@@ -53,11 +53,11 @@ export class DependencyPatchPolicyService {
      * @returns the dependency patch policies belonging to the org
      */
     async getMany(
-        orgId: string,
-        user: AuthenticatedUser,
-        searchKey?: string,
-        sortBy?: string,
-        sortDirection?: SortDirection
+        _orgId: string,
+        _user: AuthenticatedUser,
+        _searchKey?: string,
+        _sortBy?: string,
+        _sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<DependencyPatchPolicy>> {
         throw new Error('Method not implemented.');
     }
@@ -72,10 +72,10 @@ export class DependencyPatchPolicyService {
      * @param user The authenticated user
      */
     async update(
-        orgId: string,
-        dependencyUpgradePolicyId: string,
-        update: DependencyPatchPolicyPatchBody,
-        user: AuthenticatedUser
+        _orgId: string,
+        _dependencyUpgradePolicyId: string,
+        _update: DependencyPatchPolicyPatchBody,
+        _user: AuthenticatedUser
     ): Promise<void> {
         throw new Error('Method not implemented.');
     }
@@ -89,9 +89,9 @@ export class DependencyPatchPolicyService {
      * @param user The authenticated user
      */
     async remove(
-        orgId: string,
-        dependencyUpgradePolicyId: string,
-        user: AuthenticatedUser
+        _orgId: string,
+        _dependencyUpgradePolicyId: string,
+        _user: AuthenticatedUser
     ): Promise<void> {
         throw new Error('Method not implemented.');
     }

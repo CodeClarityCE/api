@@ -30,7 +30,7 @@ export class PluginController {
     @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
     @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
     @Get()
-    async getAll(@AuthUser() user: AuthenticatedUser): Promise<TypedResponse<Array<Plugin>>> {
+    async getAll(@AuthUser() _user: AuthenticatedUser): Promise<TypedResponse<Array<Plugin>>> {
         return { data: await this.pluginService.getAll() };
     }
 }

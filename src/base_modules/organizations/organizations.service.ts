@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { EntityNotFound, UserDoesNotExist } from 'src/types/error.types';
+import { EntityNotFound } from 'src/types/error.types';
 import { TypedPaginatedData } from 'src/types/pagination.types';
 import { PaginationUserSuppliedConf } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
@@ -134,11 +134,11 @@ export class OrganizationsService {
      * @returns the orgs
      */
     async getMany(
-        paginationUserSuppliedConf: PaginationUserSuppliedConf,
+        _paginationUserSuppliedConf: PaginationUserSuppliedConf,
         user: AuthenticatedUser,
-        searchKey?: string,
-        sortBy?: string,
-        sortDirection?: SortDirection
+        _searchKey?: string,
+        _sortBy?: string,
+        _sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<object>> {
         return this.organizationsRepository.getOrganizationsOfUser(user.userId);
     }
@@ -157,11 +157,11 @@ export class OrganizationsService {
      */
     async getOrgMembers(
         orgId: string,
-        paginationUserSuppliedConf: PaginationUserSuppliedConf,
-        user: AuthenticatedUser,
-        searchKey?: string,
-        sortBy?: string,
-        sortDirection?: SortDirection
+        _paginationUserSuppliedConf: PaginationUserSuppliedConf,
+        _user: AuthenticatedUser,
+        _searchKey?: string,
+        _sortBy?: string,
+        _sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<OrganizationMemberships>> {
         const memberships = await this.organizationsRepository.getMembershipsByOrganizationId(
             orgId,
@@ -254,9 +254,9 @@ export class OrganizationsService {
      * @param user The authenticated user
      */
     async reSendOrganizationInviteEmail(
-        orgId: string,
-        inviteId: string,
-        user: AuthenticatedUser
+        _orgId: string,
+        _inviteId: string,
+        _user: AuthenticatedUser
     ): Promise<void> {
         throw new Error('Method not implemented.');
     }
@@ -271,9 +271,9 @@ export class OrganizationsService {
      * @param user The authenticated user
      */
     async revokeInvitation(
-        orgId: string,
-        invitationId: string,
-        user: AuthenticatedUser
+        _orgId: string,
+        _invitationId: string,
+        _user: AuthenticatedUser
     ): Promise<void> {
         throw new Error('Method not implemented.');
     }
@@ -290,11 +290,11 @@ export class OrganizationsService {
      */
     async getInvitations(
         orgId: string,
-        paginationUserSuppliedConf: PaginationUserSuppliedConf,
+        _paginationUserSuppliedConf: PaginationUserSuppliedConf,
         user: AuthenticatedUser,
-        searchKey?: string,
-        sortBy?: string,
-        sortDirection?: SortDirection
+        _searchKey?: string,
+        _sortBy?: string,
+        _sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<Invitation>> {
         // const organizations = await CodeclarityDB.getRepository(Organization).find({
         //     where: {
@@ -339,7 +339,7 @@ export class OrganizationsService {
     async joinOrg(
         inviteToken: string,
         emailDigest: string,
-        user: AuthenticatedUser
+        _user: AuthenticatedUser
     ): Promise<void> {
         const invitation = await this.invitationsRepository.getInvitationBy(
             {
@@ -430,9 +430,9 @@ export class OrganizationsService {
      * @param user The authenticated user
      */
     async revokeOrgMemberShip(
-        orgId: string,
-        user_id_to_remove: string,
-        user: AuthenticatedUser
+        _orgId: string,
+        _user_id_to_remove: string,
+        _user: AuthenticatedUser
     ): Promise<void> {
         throw new Error('Method not implemented.');
     }
@@ -480,9 +480,9 @@ export class OrganizationsService {
      * @returns the team member
      */
     public async getOrgMember(
-        orgId: string,
-        userId: string,
-        user: AuthenticatedUser
+        _orgId: string,
+        _userId: string,
+        _user: AuthenticatedUser
     ): Promise<TeamMember> {
         throw new Error('Method not implemented.');
     }

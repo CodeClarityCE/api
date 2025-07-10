@@ -240,8 +240,8 @@ export class ProjectService {
         paginationUserSuppliedConf: PaginationUserSuppliedConf,
         user: AuthenticatedUser,
         searchKey?: string,
-        sortBy?: AllowedOrderByGetProjects,
-        sortDirection?: SortDirection
+        _sortBy?: AllowedOrderByGetProjects,
+        _sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<Project>> {
         // Every member of an org can retrieve all project
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);

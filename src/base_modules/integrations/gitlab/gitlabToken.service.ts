@@ -111,7 +111,7 @@ export class GitlabIntegrationTokenService {
      * @returns (1) a boolean indicating whether it has an expiry data at all (2) the expiry date (if any)
      * @param token The oauth token
      */
-    async getOAuthTokenExpiryRemote(token: string): Promise<[boolean, Date | undefined]> {
+    async getOAuthTokenExpiryRemote(_token: string): Promise<[boolean, Date | undefined]> {
         throw new Error('Method not implemented.');
     }
 
@@ -126,8 +126,8 @@ export class GitlabIntegrationTokenService {
      * @returns
      */
     async validateOAuthAccessTokenPermissions(
-        token: string,
-        { additionalScopes = [] }: { additionalScopes?: string[] }
+        _token: string,
+        { additionalScopes: _additionalScopes = [] }: { additionalScopes?: string[] }
     ): Promise<void> {
         throw new Error('Method not implemented.');
     }
@@ -140,8 +140,8 @@ export class GitlabIntegrationTokenService {
      * @returns the new integration
      */
     async refreshOAuthToken(
-        refreshToken: string,
-        integrationId: string
+        _refreshToken: string,
+        _integrationId: string
     ): Promise<GitlabIntegration> {
         throw new Error('Method not implemented.');
     }
@@ -155,9 +155,9 @@ export class GitlabIntegrationTokenService {
      * @param newRefreshToken The new refresh token
      */
     async updateOAuthTokenFromSignIn(
-        user: User,
-        newAccessToken: string,
-        newRefreshToken: string
+        _user: User,
+        _newAccessToken: string,
+        _newRefreshToken: string
     ): Promise<void> {
         throw new Error('Method not implemented.');
     }

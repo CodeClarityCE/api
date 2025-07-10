@@ -3,18 +3,18 @@ import { PatchInfo } from 'src/codeclarity_modules/results/patching/patching2.ty
 export function sort(
     patches: PatchInfo[],
     sortBy: string | undefined,
-    sortDirection: string | undefined
+    _sortDirection: string | undefined
 ): PatchInfo[] {
     // Defaults
     const ALLOWED_SORT_BY = ['patch_type'];
     const DEFAULT_SORT = 'patch_type';
-    const DEFAULT_SORT_DIRECTION = 'DESC';
+    // const DEFAULT_SORT_DIRECTION = 'DESC';
 
     const mapping: { [key: string]: string } = {};
 
     // Validation of input
     let sortBySafe: string;
-    let sortDirectionSafe: string;
+    // let _sortDirectionSafe: string;
 
     if (sortBy == null || !ALLOWED_SORT_BY.includes(sortBy)) {
         sortBySafe = DEFAULT_SORT;
@@ -22,11 +22,11 @@ export function sort(
         sortBySafe = sortBy;
     }
 
-    if (sortDirection == null || (sortDirection != 'DESC' && sortDirection != 'ASC')) {
-        sortDirectionSafe = DEFAULT_SORT_DIRECTION;
-    } else {
-        sortDirectionSafe = sortDirection;
-    }
+    // if (sortDirection == null || (sortDirection != 'DESC' && sortDirection != 'ASC')) {
+    //     _sortDirectionSafe = DEFAULT_SORT_DIRECTION;
+    // } else {
+    //     _sortDirectionSafe = sortDirection;
+    // }
 
     if (sortBySafe in mapping) sortBySafe = mapping[sortBySafe];
 
@@ -43,9 +43,7 @@ export function sort(
     // }
 
     if (sortBySafe == 'patch_type') {
-        sorted = patches.sort((a: PatchInfo, b: PatchInfo) => {
-            console.log(a, b);
-
+        sorted = patches.sort((_a: PatchInfo, _b: PatchInfo) => {
             // if (patchTypeToNumeric(a.patch_type) > patchTypeToNumeric(b.patch_type))
             //     return sortDirectionSafe == 'DESC' ? -1 : 1;
             // if (patchTypeToNumeric(a.patch_type) < patchTypeToNumeric(b.patch_type))

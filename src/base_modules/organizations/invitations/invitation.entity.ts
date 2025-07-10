@@ -41,21 +41,11 @@ export class Invitation {
 
     @ApiProperty()
     @Expose()
-    @ManyToOne(
-        () => Organization,
-        (organization) => {
-            organization.invitations;
-        }
-    )
+    @ManyToOne(() => Organization, (_organization) => _organization.invitations)
     organization: Relation<Organization>;
 
     @ApiProperty()
     @Expose()
-    @ManyToOne(
-        () => User,
-        (user) => {
-            user.invitations;
-        }
-    )
+    @ManyToOne(() => User, (_user) => _user.invitations)
     user: Relation<User>;
 }

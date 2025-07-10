@@ -63,7 +63,7 @@ export class DashboardService {
         user: AuthenticatedUser,
         dateRangeStart?: Date,
         dateRangeEnd?: Date,
-        integrationIds?: string[]
+        _integrationIds?: string[]
     ): Promise<SeverityInfoByWeek[]> {
         if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 1);
         if (!dateRangeEnd) dateRangeEnd = new Date();
@@ -154,7 +154,7 @@ export class DashboardService {
         user: AuthenticatedUser,
         dateRangeStart?: Date,
         dateRangeEnd?: Date,
-        integrationIds?: string[]
+        _integrationIds?: string[]
     ): Promise<AttackVectorDist[]> {
         if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
         if (!dateRangeEnd) dateRangeEnd = new Date();
@@ -223,7 +223,7 @@ export class DashboardService {
         user: AuthenticatedUser,
         dateRangeStart?: Date,
         dateRangeEnd?: Date,
-        integrationIds?: string[]
+        _integrationIds?: string[]
     ): Promise<CIAImpact[]> {
         if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
         if (!dateRangeEnd) dateRangeEnd = new Date();
@@ -291,7 +291,7 @@ export class DashboardService {
         user: AuthenticatedUser,
         dateRangeStart?: Date,
         dateRangeEnd?: Date,
-        integrationIds?: string[]
+        _integrationIds?: string[]
     ): Promise<LicenseDist> {
         if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
         if (!dateRangeEnd) dateRangeEnd = new Date();
@@ -347,7 +347,7 @@ export class DashboardService {
         user: AuthenticatedUser,
         dateRangeStart?: Date,
         dateRangeEnd?: Date,
-        integrationIds?: string[]
+        _integrationIds?: string[]
     ): Promise<LatestVulns> {
         if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
         if (!dateRangeEnd) dateRangeEnd = new Date();
@@ -427,7 +427,7 @@ export class DashboardService {
         user: AuthenticatedUser,
         dateRangeStart?: Date,
         dateRangeEnd?: Date,
-        integrationIds?: string[]
+        _integrationIds?: string[]
     ): Promise<QuickStats> {
         if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
         if (!dateRangeEnd) dateRangeEnd = new Date();
@@ -471,14 +471,14 @@ export class DashboardService {
                     for (const workspace_name of Object.keys(res.workspaces)) {
                         const workspace = res.workspaces[workspace_name];
                         workspace.Vulnerabilities.forEach((vuln) => {
-                            const severity = vuln.Severity.Severity;
-                            const cia = vuln.Severity.ConfidentialityImpact;
-                            const impact = vuln.Severity.Impact;
-                            const cwe = vuln.VulnerabilityId;
+                            // const _severity = vuln.Severity.Severity;
+                            // const _cia = vuln.Severity.ConfidentialityImpact;
+                            // const _impact = vuln.Severity.Impact;
+                            const _cwe = vuln.VulnerabilityId;
 
                             throw new Error('Not implemented');
 
-                            if (cwe == 'DEPRECATED') quickStats.nmb_deprecated++;
+                            if (_cwe == 'DEPRECATED') quickStats.nmb_deprecated++;
                         });
                     }
                 });
@@ -504,24 +504,24 @@ export class DashboardService {
         pagination: PaginationUserSuppliedConf,
         dateRangeStart?: Date,
         dateRangeEnd?: Date,
-        integrationIds?: string[],
-        sortBy?: string,
-        sortDirection?: SortDirection
+        _integrationIds?: string[],
+        _sortBy?: string,
+        _sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<ProjectQuickStats>> {
         if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
         if (!dateRangeEnd) dateRangeEnd = new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
-        enum AllowedOrderBy {
-            PROJECT = 'project_name',
-            GRADE = 'name',
-            NMB_VULNS = 'nmb_vulns',
-            AVG_SEVERITY = 'avg_severity',
-            SUM_SEVERITY = 'sum_severity',
-            NMB_DEPRECATED_DEPS = 'nmb_deprecated_deps',
-            NMB_OUTDATED_DEPS = 'nmb_outdated_deps',
-            NMB_LICENSE_CONFLICTS = 'nmb_license_conflicts'
-        }
+        // enum AllowedOrderBy {
+        //     PROJECT = 'project_name',
+        //     GRADE = 'name',
+        //     NMB_VULNS = 'nmb_vulns',
+        //     AVG_SEVERITY = 'avg_severity',
+        //     SUM_SEVERITY = 'sum_severity',
+        //     NMB_DEPRECATED_DEPS = 'nmb_deprecated_deps',
+        //     NMB_OUTDATED_DEPS = 'nmb_outdated_deps',
+        //     NMB_LICENSE_CONFLICTS = 'nmb_license_conflicts'
+        // }
 
         const paginationConfig: PaginationConfig = {
             maxEntriesPerPage: 100,
@@ -603,22 +603,22 @@ export class DashboardService {
      * @param score The project's numerical grade score
      * @returns The discrete score class (A+,A,B+,B,C+,C,D+,D)
      */
-    private getProjectScoreClassFromScore(score: number): ProjectGradeClass {
-        if (score <= 1.0 && score >= 0.85) {
+    private getProjectScoreClassFromScore(_score: number): ProjectGradeClass {
+        if (_score <= 1.0 && _score >= 0.85) {
             return ProjectGradeClass.D;
-        } else if (score < 0.85 && score >= 0.7) {
+        } else if (_score < 0.85 && _score >= 0.7) {
             return ProjectGradeClass.D_PLUS;
-        } else if (score < 0.7 && score >= 0.55) {
+        } else if (_score < 0.7 && _score >= 0.55) {
             return ProjectGradeClass.C;
-        } else if (score < 0.55 && score >= 0.4) {
+        } else if (_score < 0.55 && _score >= 0.4) {
             return ProjectGradeClass.C_PLUS;
-        } else if (score < 0.4 && score >= 0.25) {
+        } else if (_score < 0.4 && _score >= 0.25) {
             return ProjectGradeClass.B;
-        } else if (score < 0.25 && score >= 0.1) {
+        } else if (_score < 0.25 && _score >= 0.1) {
             return ProjectGradeClass.B_PLUS;
-        } else if (score < 0.1 && score > 0) {
+        } else if (_score < 0.1 && _score > 0) {
             return ProjectGradeClass.A;
-        } else if (score == 0) {
+        } else if (_score == 0) {
             return ProjectGradeClass.A_PLUS;
         }
         return ProjectGradeClass.D;

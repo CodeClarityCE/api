@@ -90,8 +90,8 @@ export class ProjectsRepository {
         currentPage: number,
         entriesPerPage: number,
         searchKey?: string,
-        sortBy?: AllowedOrderByGetProjects,
-        sortDirection?: SortDirection
+        _sortBy?: AllowedOrderByGetProjects,
+        _sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<Project>> {
         let queryBuilder = await this.projectRepository
             .createQueryBuilder('project')

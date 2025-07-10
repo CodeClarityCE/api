@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { TypedPaginatedData } from 'src/types/pagination.types';
-import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
+import { PaginationUserSuppliedConf } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
 import {
     ActionType,
@@ -68,17 +68,17 @@ export class OrganizationLoggerService {
         organizationId: string,
         paginationUserSuppliedConf: PaginationUserSuppliedConf,
         user: AuthenticatedUser,
-        searchKey?: string,
-        sortBy?: string,
-        sortDirection?: SortDirection
+        _searchKey?: string,
+        _sortBy?: string,
+        _sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<Log>> {
-        enum AllowedOrderBy {
-            SEVERITY = 'action_severity',
-            CLASS = 'action_class',
-            TYPE = 'action',
-            BLAME = 'blame_on_email',
-            CREATED_ON = 'created_on'
-        }
+        // enum AllowedOrderBy {
+        //     SEVERITY = 'action_severity',
+        //     CLASS = 'action_class',
+        //     TYPE = 'action',
+        //     BLAME = 'blame_on_email',
+        //     CREATED_ON = 'created_on'
+        // }
 
         // Only owners and admins can view audit logs
         await this.organizationsRepository.hasRequiredRole(
@@ -87,22 +87,22 @@ export class OrganizationLoggerService {
             MemberRole.ADMIN
         );
 
-        const paginationConfig: PaginationConfig = {
-            maxEntriesPerPage: 100,
-            defaultEntriesPerPage: 10
-        };
+        // const paginationConfig: PaginationConfig = {
+        //     maxEntriesPerPage: 100,
+        //     defaultEntriesPerPage: 10
+        // };
 
-        let entriesPerPage = paginationConfig.defaultEntriesPerPage;
-        let currentPage = 0;
+        // let entriesPerPage = paginationConfig.defaultEntriesPerPage;
+        // let currentPage = 0;
 
-        if (paginationUserSuppliedConf.entriesPerPage)
-            entriesPerPage = Math.min(
-                paginationConfig.maxEntriesPerPage,
-                paginationUserSuppliedConf.entriesPerPage
-            );
+        // if (paginationUserSuppliedConf.entriesPerPage)
+        //     entriesPerPage = Math.min(
+        //         paginationConfig.maxEntriesPerPage,
+        //         paginationUserSuppliedConf.entriesPerPage
+        //     );
 
-        if (paginationUserSuppliedConf.currentPage)
-            currentPage = Math.max(0, paginationUserSuppliedConf.currentPage);
+        // if (paginationUserSuppliedConf.currentPage)
+        //     currentPage = Math.max(0, paginationUserSuppliedConf.currentPage);
 
         // let sortByKey: SortField<OrganizationAuditLog> | undefined = undefined;
         // let searchCriteria: ComplexSearchCriteria<OrganizationAuditLog> | undefined = undefined;

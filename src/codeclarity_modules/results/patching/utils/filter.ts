@@ -23,24 +23,24 @@ export function filter(
     }
 
     function filterBySearchKey(patches: PatchInfo[]): PatchInfo[] {
-        if (searchKey == '') {
+        if (searchkeySafe == '') {
             return patches;
         }
 
         const toReturn = [];
-        searchKey = searchkeySafe.toLocaleLowerCase();
+        const searchKeyLower = searchkeySafe.toLocaleLowerCase();
 
         for (const patch of patches) {
             if (
                 patch.affected_dep_name != null &&
-                patch.affected_dep_name.toLowerCase().includes(searchKey.toLowerCase())
+                patch.affected_dep_name.toLowerCase().includes(searchKeyLower)
             ) {
                 toReturn.push(patch);
                 continue;
             }
             if (
                 patch.vulnerability_id != null &&
-                patch.vulnerability_id.toLowerCase().includes(searchKey.toLowerCase())
+                patch.vulnerability_id.toLowerCase().includes(searchKeyLower)
             ) {
                 toReturn.push(patch);
                 continue;
@@ -50,7 +50,7 @@ export function filter(
         return toReturn;
     }
 
-    function filterByOptions(patches: PatchInfo[], filters: string[]): PatchInfo[] {
+    function filterByOptions(patches: PatchInfo[], _filters: string[]): PatchInfo[] {
         const toReturn = [];
 
         for (const patch of patches) {
