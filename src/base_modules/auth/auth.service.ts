@@ -20,7 +20,7 @@ import {
     CONST_REFRESH_JWT_TOKEN_EXPIRES_IN
 } from './constants';
 import * as bcrypt from 'bcrypt';
-import ms = require('ms');
+import ms from 'ms';
 import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/gitlab/gitlabToken.service';
 import { User } from 'src/base_modules/users/users.entity';
 import { UsersRepository } from '../users/users.repository';
@@ -61,7 +61,7 @@ export class AuthService {
         if (!user.registration_verified) {
             try {
                 await this.userService.sendUserRegistrationVerificationEmail(email);
-            } catch (err) {
+            } catch {
                 // The user can resend the user registration verification email, so no need to throw here
             }
             throw new RegistrationNotVerified();

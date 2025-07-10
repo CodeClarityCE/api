@@ -129,7 +129,7 @@ export class IntegrationsService {
      * @param integrationId The ID of the integration to mark as invalid.
      * @returns No data response upon successful marking of the integration as invalid.
      */
-    async markIntegrationAsInvalid(integrationId: string): Promise<void> {
+    async markIntegrationAsInvalid(_integrationId: string): Promise<void> {
         throw new Error('Method not implemented.');
         // return await this.integrationsRepo.update(integrationId, { invalid: true });
     }

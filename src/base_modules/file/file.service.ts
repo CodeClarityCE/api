@@ -252,13 +252,12 @@ export class FileService {
      * @param filename - The name of the final file to be created.
      * @param totalChunks - The total number of chunks that make up the file.
      */
-    async assembleChunks(filename: string, totalChunks: number) {
+    async assembleChunks(_filename: string, _totalChunks: number) {
         // Create a write stream for the final file
-        const writer = fs.createWriteStream(`./uploads/${filename}`);
-
+        // const writer = fs.createWriteStream(`./uploads/${_filename}`);
         // Iterate over each chunk and append its content to the final file
-        // for (let i = 1; i <= totalChunks; i++) {
-        //   const chunkPath = `${CHUNKS_DIR}/${filename}.${i}`;
+        // for (let i = 1; i <= _totalChunks; i++) {
+        //   const chunkPath = `${CHUNKS_DIR}/${_filename}.${i}`;
         //   await pipeline(pump(fs.createReadStream(chunkPath)), pump(writer));
         //   fs.unlink(chunkPath, (err) => {
         //     if (err) {

@@ -153,7 +153,7 @@ export class UsersService {
 
         try {
             await this.sendUserRegistrationVerificationEmail(userData.email);
-        } catch (err) {
+        } catch (_err) {
             // The user can resend the user registration verification email, so no need to throw here
         }
 
@@ -239,7 +239,7 @@ export class UsersService {
      *
      * @param email the email of the user
      */
-    async requestPasswordReset(email: string): Promise<void> {
+    async requestPasswordReset(_email: string): Promise<void> {
         throw new Error('Method not implemented.');
     }
 
@@ -254,10 +254,10 @@ export class UsersService {
      * @param newPasswordConfirmation Confirmation of the new password
      */
     async resetPassword(
-        token: string,
-        userIdHash: string,
-        newPassword: string,
-        newPasswordConfirmation: string
+        _token: string,
+        _userIdHash: string,
+        _newPassword: string,
+        _newPasswordConfirmation: string
     ): Promise<void> {
         throw new Error('Method not implemented.');
     }
@@ -276,13 +276,13 @@ export class UsersService {
      * @returns the id of the created user
      */
     async registerSocial(
-        email: string,
-        accessToken: string,
-        socialType: SocialType,
-        socialId: string,
-        avatarUrl?: string,
-        refreshToken?: string,
-        integrationBaseUrl?: string
+        _email: string,
+        _accessToken: string,
+        _socialType: SocialType,
+        _socialId: string,
+        _avatarUrl?: string,
+        _refreshToken?: string,
+        _integrationBaseUrl?: string
     ): Promise<string> {
         throw new Error('Method not implemented.');
     }
@@ -298,8 +298,8 @@ export class UsersService {
      * @returns the user id
      */
     async completeSocialAccountSetup(
-        userCompleteSocial: UserCompleteSocialCreateBody,
-        authenticatedUser: AuthenticatedUser
+        _userCompleteSocial: UserCompleteSocialCreateBody,
+        _authenticatedUser: AuthenticatedUser
     ): Promise<string> {
         throw new Error('Method not implemented.');
     }
@@ -333,7 +333,7 @@ export class UsersService {
             throw new CannotPerformActionOnSocialAccount();
         }
 
-        const [match, _] = await this.authService.validateCredentials(
+        const [match] = await this.authService.validateCredentials(
             user.email,
             passwordPatchBody.old_password
         );
@@ -421,7 +421,7 @@ export class UsersService {
      * Check whether user with the given id exists.
      * @param id The id of the user to check
      */
-    async existsUser(id: string): Promise<boolean> {
+    async existsUser(_id: string): Promise<boolean> {
         throw new Error('Method not implemented.');
     }
 
@@ -430,7 +430,7 @@ export class UsersService {
      * @param socialId The id of the social account (this is not the userid!)
      * @param socialType socialType
      */
-    async existsSocialUser(socialId: string, socialType: SocialType): Promise<boolean> {
+    async existsSocialUser(_socialId: string, _socialType: SocialType): Promise<boolean> {
         throw new Error('Method not implemented.');
     }
 
@@ -438,7 +438,7 @@ export class UsersService {
      * Check whether user with the given email exists.
      * @param id email
      */
-    async existsUserEmail(email: string): Promise<boolean> {
+    async existsUserEmail(_email: string): Promise<boolean> {
         throw new Error('Method not implemented.');
     }
 }

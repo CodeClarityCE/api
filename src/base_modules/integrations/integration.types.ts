@@ -1,4 +1,4 @@
-import { ClassConstructor, Exclude, Expose, Type } from 'class-transformer';
+import { Exclude, Expose } from 'class-transformer';
 import { OptionalTransform } from 'src/transformers/transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -20,7 +20,7 @@ export enum IntegrationProvider {
 /*             Database entities            */
 /********************************************/
 
-export abstract class AccessTokenBasedIntegration<Type> {
+export abstract class AccessTokenBasedIntegration<_Type> {
     @ApiProperty()
     @Expose()
     integration_type: IntegrationType;
@@ -165,17 +165,9 @@ export interface IntegrationCreate {
 }
 
 export interface AccessTokenBasedIntegrationCreate extends IntegrationCreate {
-    integration_type: IntegrationType;
     access_token: string;
     refresh_token?: string;
     expiry_date?: Date;
-}
-
-export interface IntegrationCreate {
-    integration_type: IntegrationType;
-    added_on: Date;
-    added_by: string;
-    service_domain: string;
 }
 
 export interface RepositoryCreate {

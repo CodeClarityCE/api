@@ -94,9 +94,9 @@ export class GitlabIntegrationService {
      * @returns no data response
      */
     async removeGitlabIntegration(
-        orgId: string,
-        integrationId: string,
-        user: AuthenticatedUser
+        _orgId: string,
+        _integrationId: string,
+        _user: AuthenticatedUser
     ): Promise<void> {
         throw new Error('Method not implemented.');
     }
@@ -286,8 +286,8 @@ export class GitlabIntegrationService {
      * @returns a boolean indicating if the gitlab integration, on the same host (ex: https://gitlab.uni.lu), already exists
      */
     private async checkIfIntegrationAlreadyExists(
-        orgId: string,
-        serviceBaseUrl: string
+        _orgId: string,
+        _serviceBaseUrl: string
     ): Promise<boolean> {
         throw new Error('Method not implemented.');
     }

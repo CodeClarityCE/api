@@ -1,18 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Entity, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import {
     MemberRole,
     OrganizationMemberships
 } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
 import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
-import {
-    isMemberRoleLessThan,
-    OrgMembership
-} from 'src/base_modules/organizations/memberships/orgMembership.types';
+import { isMemberRoleLessThan } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { TypedPaginatedData } from 'src/types/pagination.types';
-import { User } from '../users/users.entity';
 
 /**
  * Injectable service for handling organizations and their memberships.

@@ -9,7 +9,7 @@ import { JWTPayload } from 'src/base_modules/auth/guards/jwt.types';
 import { Request } from 'express';
 import { Socket } from 'socket.io';
 // import { ApiKeysService } from 'src/codeclarity_modules/apiKeys/apiKeys.service';
-const fs = require('fs');
+import fs from 'fs';
 
 /**
  * This is a guard that combines JWT and API authentication.
@@ -143,7 +143,7 @@ export class CombinedAuthGuard implements CanActivate {
                     payload.activated
                 )
             ];
-        } catch (error) {
+        } catch {
             return [false, undefined];
         }
     }
@@ -153,7 +153,9 @@ export class CombinedAuthGuard implements CanActivate {
      * @param token the API token
      * @returns {Promise<[boolean, AuthenticatedUser|undefined]>} (1) a boolean indicating if it is valid, and (2) the user to which the API token belongs if valid otherwise undefined
      */
-    private async verifyAPIToken(token: string): Promise<[boolean, AuthenticatedUser | undefined]> {
+    private async verifyAPIToken(
+        _token: string
+    ): Promise<[boolean, AuthenticatedUser | undefined]> {
         throw new Error('Not implemented');
         // try {
         //     const user: User = await this.apiKeyService.getUserOfApiKey(token);

@@ -1,0 +1,11 @@
+# Ignore Handlebars templates
+src/base_modules/email/templates/**/*.hbs
+
+# Ignore node_modules
+node_modules/
+
+# Ignore dist
+dist/
+
+# Ignore coverage
+coverage/

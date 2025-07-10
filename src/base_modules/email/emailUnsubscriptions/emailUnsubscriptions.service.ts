@@ -8,7 +8,7 @@ export class EmailUnsubscriptionService {
      * @param token The unsubscribe token
      * @param emailHash The email hash
      */
-    async unsubscribeViaEmailLink(token: string, emailHash: string): Promise<void> {
+    async unsubscribeViaEmailLink(_token: string, _emailHash: string): Promise<void> {
         throw new Error('Not implemented');
     }
 }

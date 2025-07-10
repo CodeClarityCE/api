@@ -5,7 +5,7 @@ import {
     Output as PatchesOutput,
     Workspace
 } from 'src/codeclarity_modules/results/patching/patching.types';
-import { Output as VulnsOuptut } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
+// import { Output as VulnsOuptut } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { UnknownWorkspace } from 'src/types/error.types';
 import { PatchingUtilsService } from './utils/utils';
@@ -37,24 +37,24 @@ export class PatchingService {
         analysisId: string,
         user: AuthenticatedUser,
         workspace: string,
-        page: number | undefined,
-        entries_per_page: number | undefined,
-        sort_by: string | undefined,
-        sort_direction: string | undefined,
-        active_filters_string: string | undefined,
-        search_key: string | undefined
+        _page: number | undefined,
+        _entries_per_page: number | undefined,
+        _sort_by: string | undefined,
+        _sort_direction: string | undefined,
+        _active_filters_string: string | undefined,
+        _search_key: string | undefined
     ): Promise<Workspace> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
-        let active_filters: string[] = [];
-        if (active_filters_string != null)
-            active_filters = active_filters_string.replace('[', '').replace(']', '').split(',');
+        // let active_filters: string[] = [];
+        // if (active_filters_string != null)
+        //     active_filters = active_filters_string.replace('[', '').replace(']', '').split(',');
 
         const patchesOutput: PatchesOutput =
             await this.patchingUtilsService.getPatchingResult(analysisId);
         // const sbomOutput: SbomOutput = await getSbomResult(analysisId);
-        const vulnOutput: VulnsOuptut =
-            await this.vulnerabilitiesUtilsService.getVulnsResult(analysisId);
+        // const _vulnOutput: VulnsOuptut =
+        //     await this.vulnerabilitiesUtilsService.getVulnsResult(analysisId);
 
         if (!(workspace in patchesOutput.workspaces)) {
             throw new UnknownWorkspace();
@@ -102,21 +102,21 @@ export class PatchingService {
     ): Promise<AnalysisStats> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
-        function getContinuousFromDiscreteCIA(metric: string): number {
-            if (metric == 'COMPLETE') return 1.0; // CVSS 2
-            if (metric == 'PARTIAL') return 0.5; // CVSS 2
-            if (metric == 'HIGH') return 1.0; // CVSS 3
-            if (metric == 'LOW') return 0.5; // CVSS 3
-            return 0.0;
-        }
+        // function getContinuousFromDiscreteCIA(metric: string): number {
+        //     if (metric == 'COMPLETE') return 1.0; // CVSS 2
+        //     if (metric == 'PARTIAL') return 0.5; // CVSS 2
+        //     if (metric == 'HIGH') return 1.0; // CVSS 3
+        //     if (metric == 'LOW') return 0.5; // CVSS 3
+        //     return 0.0;
+        // }
 
-        const patchesOutput: PatchesOutput =
+        const _patchesOutput: PatchesOutput =
             await this.patchingUtilsService.getPatchingResult(analysisId);
         // const sbomOutput: SbomOutput = await getSbomResult(analysisId);
-        const vulnsOutput: VulnsOuptut =
-            await this.vulnerabilitiesUtilsService.getVulnsResult(analysisId);
+        // const _vulnsOutput: VulnsOuptut =
+        //     await this.vulnerabilitiesUtilsService.getVulnsResult(analysisId);
 
-        if (!(workspace in patchesOutput.workspaces)) {
+        if (!(workspace in _patchesOutput.workspaces)) {
             throw new UnknownWorkspace();
         }
 
@@ -134,10 +134,10 @@ export class PatchingService {
     // ): Promise<{ [key: string]: PatchOccurenceInfo }> {
     //     await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
-    //     const patchesOutput: PatchesOutput = await getPatchingResult(analysisId);
+    //     const _patchesOutput: PatchesOutput = await getPatchingResult(analysisId);
     //     const sbomOutput: SbomOutput = await getSbomResult(analysisId);
 
-    //     if (!(workspace in patchesOutput.workspaces)) {
+    //     if (!(workspace in _patchesOutput.workspaces)) {
     //         throw new UnknownWorkspace();
     //     }
 
@@ -146,7 +146,7 @@ export class PatchingService {
     //         sbomOutput.analysis_info.package_manager == 'YARN' ||
     //         sbomOutput.analysis_info.package_manager == 'PNPM'
     //     ) {
-    //         return this.getPatchTreeJSEcosystem(patchesOutput, workspace);
+    //         return this.getPatchTreeJSEcosystem(_patchesOutput, workspace);
     //     }
 
     //     // Add other languages / package managers here
@@ -155,12 +155,12 @@ export class PatchingService {
     // }
 
     // private async getPatchTreeJSEcosystem(
-    //     patchesOutput: PatchesOutput,
+    //     _patchesOutput: PatchesOutput,
     //     workspace: string
     // ): Promise<{ [key: string]: PatchOccurenceInfo }> {
     //     const overall_paths: { [key: string]: PatchOccurenceInfo } = {};
     //     // for (const [key, patch] of Object.entries(
-    //     //     patchesOutput.workspaces[workspace].vulnerability_patch_info
+    //     //     _patchesOutput.workspaces[workspace].vulnerability_patch_info
     //     // )) {
     //     //     if (patch && patch.patches) {
     //     //         const paths: string[][] = [];

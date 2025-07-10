@@ -14,7 +14,7 @@ import {
     Vulnerability,
     AffectedInfo
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
-import { getVersionsSatisfyingConstraint } from 'src/codeclarity_modules/results/utils/utils';
+// import { getVersionsSatisfyingConstraint } from 'src/codeclarity_modules/results/utils/utils';
 import { satisfies } from 'semver';
 import { VersionsRepository } from 'src/codeclarity_modules/knowledge/package/packageVersions.repository';
 import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.repository';
@@ -181,7 +181,7 @@ abstract class BaseReportGenerator {
 
     async getVersionsStatusArray(
         affectedVersionsString: string,
-        affectedDependencyName: string
+        _affectedDependencyName: string
     ): Promise<VulnerableVersionInfo[]> {
         // const versions = await this.#getVersions();
         const versions: Version[] = [];
@@ -220,11 +220,11 @@ abstract class BaseReportGenerator {
 
         if (this.vulnsData.Weaknesses == null) return [weakenessses, common_consequences];
 
-        for (const weakeness of this.vulnsData.Weaknesses) {
+        for (const _weakeness of this.vulnsData.Weaknesses) {
             try {
-                const cweInfo = await this.cweRepository.getCWE(
-                    weakeness.WeaknessId.replace('CWE-', '')
-                );
+                // const cweInfo = await this.cweRepository.getCWE(
+                //     _weakeness.WeaknessId.replace('CWE-', '')
+                // );
                 throw new Error('Method not implemented.');
                 // weakenessses.push({
                 //     id: weakeness.WeaknessId,
@@ -267,11 +267,11 @@ abstract class BaseReportGenerator {
         };
 
         try {
-            const packageInfo = await this.packageRepository.getPackageInfo('');
-            const versionInfo = await this.versionsRepository.getVersion(
-                'this.dependencyData.name',
-                'this.dependencyData.version'
-            );
+            // const _packageInfo = await this.packageRepository.getPackageInfo('');
+            // const _versionInfo = await this.versionsRepository.getVersion(
+            //     'this.dependencyData.name',
+            //     'this.dependencyData.version'
+            // );
 
             // dependencyInfo.description = packageInfo.Description;
             // if (packageInfo.Keywords) dependencyInfo.keywords = packageInfo.Keywords;

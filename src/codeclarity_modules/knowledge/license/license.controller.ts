@@ -11,14 +11,14 @@ export class LicenseController {
 
     @Get(':license_id')
     async get(
-        @AuthUser() user: AuthenticatedUser,
+        @AuthUser() _user: AuthenticatedUser,
         @Param('license_id') license_id: string
     ): Promise<TypedResponse<License>> {
         return { data: await this.licenseService.get(license_id) };
     }
 
     @Get()
-    async getAll(@AuthUser() user: AuthenticatedUser): Promise<TypedResponse<Array<License>>> {
+    async getAll(@AuthUser() _user: AuthenticatedUser): Promise<TypedResponse<Array<License>>> {
         return { data: await this.licenseService.getAll() };
     }
 }

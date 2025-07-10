@@ -116,8 +116,8 @@ export class AnalysesService {
         }
 
         // Merge user-provided configuration with default or existing configuration
-        for (const [pluginName, _] of Object.entries(analysisData.config)) {
-            for (const [key, value] of Object.entries(_)) {
+        for (const [pluginName, pluginConfig] of Object.entries(analysisData.config)) {
+            for (const [key, value] of Object.entries(pluginConfig)) {
                 if (!config[pluginName]) config[pluginName] = {};
                 config[pluginName][key] = value;
             }

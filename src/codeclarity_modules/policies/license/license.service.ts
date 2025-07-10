@@ -61,7 +61,7 @@ export class LicensePolicyService {
             analyses: []
         });
 
-        return policy;
+        return policy.id;
     }
 
     /**
@@ -102,9 +102,9 @@ export class LicensePolicyService {
         orgId: string,
         paginationUserSuppliedConf: PaginationUserSuppliedConf,
         user: AuthenticatedUser,
-        searchKey?: string,
-        sortBy?: string,
-        sortDirection?: SortDirection
+        _searchKey?: string,
+        _sortBy?: string,
+        _sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<PolicyFrontend>> {
         // Check if user has access to org
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
@@ -174,8 +174,8 @@ export class LicensePolicyService {
      */
     async update(
         orgId: string,
-        licensePolicyId: string,
-        update: LicensePolicyPatchBody,
+        _licensePolicyId: string,
+        _update: LicensePolicyPatchBody,
         user: AuthenticatedUser
     ): Promise<void> {
         // Only owners and admins can update an policy to the org
@@ -191,7 +191,7 @@ export class LicensePolicyService {
      * @param licensePolicyId The id of the dependency patch policy
      * @param user The authenticated user
      */
-    async remove(orgId: string, licensePolicyId: string, user: AuthenticatedUser): Promise<void> {
+    async remove(orgId: string, _licensePolicyId: string, user: AuthenticatedUser): Promise<void> {
         // Only owners and admins can remove an policy to the org
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
         throw new Error('Method not implemented.');
