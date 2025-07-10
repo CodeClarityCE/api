@@ -1,9 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcrypt';
+import { User } from 'src/base_modules/users/users.entity';
+import { Organization } from 'src/base_modules/organizations/organization.entity';
+import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 
 /**
  * Test utilities for setting up NestJS applications and modules
@@ -25,6 +29,106 @@ export class TestUtils {
             dropSchema: true,
             logging: false
         };
+    }
+
+    /**
+     * Create an in-memory SQLite database configuration for faster tests
+     */
+    static getInMemoryDatabaseConfig() {
+        return {
+            type: 'sqlite' as const,
+            database: ':memory:',
+            entities: ['src/**/*.entity.ts'],
+            synchronize: true,
+            dropSchema: true,
+            logging: false
+        };
+    }
+
+    /**
+     * Create a test user fixture
+     */
+    static async createTestUser(repository: Repository<User>, overrides: Partial<User> = {}): Promise<User> {
+        const hashedPassword = await bcrypt.hash('testpassword123', 10);
+        
+        const user = repository.create({
+            first_name: 'Test',
+            last_name: 'User',
+            email: 'test@example.com',
+            password: hashedPassword,
+            activated: true,
+            setup_done: true,
+            registration_verified: true,
+            social: false,
+            created_on: new Date(),
+            ...overrides
+        });
+
+        return repository.save(user);
+    }
+
+    /**
+     * Create a test organization fixture
+     */
+    static async createTestOrganization(repository: Repository<Organization>, owner: User, overrides: Partial<Organization> = {}): Promise<Organization> {
+        const organization = repository.create({
+            name: 'Test Organization',
+            description: 'A test organization',
+            created_by: owner,
+            created_on: new Date(),
+            ...overrides
+        });
+
+        return repository.save(organization);
+    }
+
+    /**
+     * Generate a valid JWT token for testing
+     */
+    static generateTestJWT(jwtService: JwtService, user: User): string {
+        const payload: AuthenticatedUser = new AuthenticatedUser(
+            user.id,
+            [ROLE.USER],
+            user.activated
+        );
+
+        return jwtService.sign(payload);
+    }
+
+    /**
+     * Create a mock ConfigService with test values
+     */
+    static createMockConfigService() {
+        return {
+            get: jest.fn((key: string) => {
+                const config = {
+                    JWT_SECRET: 'test_jwt_secret',
+                    JWT_EXPIRATION_TIME: '1h',
+                    MAIL_HOST: 'localhost',
+                    MAIL_PORT: 1025,
+                    MAIL_USER: 'test',
+                    MAIL_PASSWORD: 'test',
+                    MAIL_FROM: 'test@codeclarity.io',
+                    GITHUB_AUTH_CLIENT_ID: 'test_github_client',
+                    GITHUB_AUTH_CLIENT_SECRET: 'test_github_secret',
+                    GITLAB_AUTH_CLIENT_ID: 'test_gitlab_client',
+                    GITLAB_AUTH_CLIENT_SECRET: 'test_gitlab_secret'
+                };
+                return config[key as keyof typeof config];
+            })
+        };
+    }
+
+    /**
+     * Clean up database between tests
+     */
+    static async cleanDatabase(dataSource: DataSource): Promise<void> {
+        const entities = dataSource.entityMetadatas;
+        
+        for (const entity of entities) {
+            const repository = dataSource.getRepository(entity.name);
+            await repository.query(`DELETE FROM "${entity.tableName}"`);
+        }
     }
 
     /**
@@ -90,9 +194,9 @@ export class TestUtils {
     }
 
     /**
-     * Clean up test database
+     * Clean up test database repositories
      */
-    static async cleanDatabase(repositories: Repository<any>[]): Promise<void> {
+    static async cleanRepositories(repositories: Repository<any>[]): Promise<void> {
         for (const repository of repositories) {
             await repository.clear();
         }
