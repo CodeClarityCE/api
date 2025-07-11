@@ -5,7 +5,7 @@ const originalLog = console.log;
 console.log = () => {};
 
 // Load test environment variables
-config({ path: '.env.test' });
+config({ path: 'env/.env.test' });
 
 // Restore console.log
 console.log = originalLog;
