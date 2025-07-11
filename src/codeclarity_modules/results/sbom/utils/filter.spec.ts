@@ -213,7 +213,7 @@ describe('filter', () => {
             }
 
             // Other filters should still be present
-            const remainingFilters = possibleFilters.filter(f => !activeFilters.includes(f));
+            const remainingFilters = possibleFilters.filter((f) => !activeFilters.includes(f));
             for (const filter of remainingFilters) {
                 expect(counts).toHaveProperty(filter);
             }
@@ -289,9 +289,7 @@ describe('filter', () => {
         });
 
         it('should handle unicode characters in search key', () => {
-            const dependencies = [
-                createMockDependency({ name: 'package-with-unicode-émojis-🎉' })
-            ];
+            const dependencies = [createMockDependency({ name: 'package-with-unicode-émojis-🎉' })];
 
             const [filteredDeps] = filter(dependencies, 'émojis', undefined);
 
@@ -299,9 +297,7 @@ describe('filter', () => {
         });
 
         it('should be case insensitive for unicode characters', () => {
-            const dependencies = [
-                createMockDependency({ name: 'Package-With-UNICODE-ÉMOJIS' })
-            ];
+            const dependencies = [createMockDependency({ name: 'Package-With-UNICODE-ÉMOJIS' })];
 
             const [filteredDeps] = filter(dependencies, 'émojis', undefined);
 

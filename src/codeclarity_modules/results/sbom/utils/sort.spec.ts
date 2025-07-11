@@ -246,17 +246,18 @@ describe('sort', () => {
     describe('boolean field sorting', () => {
         const booleanFields = ['unlicensed', 'deprecated', 'outdated', 'is_direct'];
 
-        booleanFields.forEach(field => {
+        booleanFields.forEach((field) => {
             describe(`${field} sorting`, () => {
                 const shouldSkip = field === 'is_direct';
-                const skipReason = shouldSkip ? 
-                    '// SKIPPED: Implementation bug - is_direct boolean field is missing from SbomDependency\n            // The sort function expects is_direct: boolean but only is_direct_count: number exists\n            // Fix needed in sbom.service.ts to add: is_direct: is_direct_count > 0' : '';
+                const _skipReason = shouldSkip
+                    ? '// SKIPPED: Implementation bug - is_direct boolean field is missing from SbomDependency\n            // The sort function expects is_direct: boolean but only is_direct_count: number exists\n            // Fix needed in sbom.service.ts to add: is_direct: is_direct_count > 0'
+                    : '';
 
                 const testFn = shouldSkip ? it.skip : it;
 
                 testFn(`should sort by ${field} in ascending order`, () => {
                     if (shouldSkip) return;
-                    
+
                     const dependencies = [
                         createMockDependency({ name: 'package-a' }),
                         createMockDependency({ name: 'package-b' }),
@@ -321,7 +322,7 @@ describe('sort', () => {
     describe('date field sorting', () => {
         const dateFields = ['last_published', 'release'];
 
-        dateFields.forEach(field => {
+        dateFields.forEach((field) => {
             describe(`${field} sorting`, () => {
                 it(`should sort by ${field} in ascending order`, () => {
                     const dependencies = [
@@ -553,7 +554,7 @@ describe('sort', () => {
             'is_direct_count'
         ];
 
-        allowedSortBy.forEach(field => {
+        allowedSortBy.forEach((field) => {
             it(`should handle allowed sort field: ${field}`, () => {
                 const dependencies = [createMockDependency()];
 

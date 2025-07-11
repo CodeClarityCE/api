@@ -6,16 +6,10 @@ import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { VulnerabilitiesUtilsService } from '../../vulnerabilities/utils/utils.service';
 import { LicensesUtilsService } from '../../licenses/utils/utils';
 import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
-import { 
-    Status, 
-    Output as SBOMOutput,
-    Dependency,
-    DependencyDetails,
-    SbomDependency 
-} from '../sbom.types';
+import { Status, Output as SBOMOutput } from '../sbom.types';
 import { Output as VulnsOutput } from '../../vulnerabilities/vulnerabilities.types';
 import { PluginFailed, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/error.types';
-import { Source, Package } from 'src/codeclarity_modules/knowledge/package/package.entity';
+import { Package } from 'src/codeclarity_modules/knowledge/package/package.entity';
 
 describe('SbomUtilsService', () => {
     let service: SbomUtilsService;
@@ -47,11 +41,13 @@ describe('SbomUtilsService', () => {
                     }
                 },
                 start: {
-                    dependencies: [{
-                        name: 'test-package',
-                        version: '1.0.0',
-                        constraint: '^1.0.0'
-                    }]
+                    dependencies: [
+                        {
+                            name: 'test-package',
+                            version: '1.0.0',
+                            constraint: '^1.0.0'
+                        }
+                    ]
                 }
             }
         },
@@ -81,33 +77,35 @@ describe('SbomUtilsService', () => {
         ...overrides
     });
 
-    const createMockVulnsOutput = (): VulnsOutput => ({
-        workspaces: {
-            '.': {
-                Vulnerabilities: [
-                    {
-                        VulnerabilityId: 'CVE-2023-1234',
-                        AffectedDependency: 'test-package',
-                        AffectedVersion: '1.0.0',
-                        Severity: {
-                            SeverityClass: 'HIGH',
-                            Severity: 8.0
+    const createMockVulnsOutput = (): VulnsOutput =>
+        ({
+            workspaces: {
+                '.': {
+                    Vulnerabilities: [
+                        {
+                            VulnerabilityId: 'CVE-2023-1234',
+                            AffectedDependency: 'test-package',
+                            AffectedVersion: '1.0.0',
+                            Severity: {
+                                SeverityClass: 'HIGH',
+                                Severity: 8.0
+                            }
                         }
-                    }
-                ]
+                    ]
+                }
             }
-        }
-    } as any);
+        }) as any;
 
-    const createMockResult = (sbom: SBOMOutput): Result => ({
-        id: 'result-id',
-        plugin: 'js-sbom',
-        result: sbom as any,
-        analysis: {
-            id: mockAnalysisId,
-            created_on: new Date('2023-01-01T00:00:00Z')
-        }
-    } as any);
+    const createMockResult = (sbom: SBOMOutput): Result =>
+        ({
+            id: 'result-id',
+            plugin: 'js-sbom',
+            result: sbom as any,
+            analysis: {
+                id: mockAnalysisId,
+                created_on: new Date('2023-01-01T00:00:00Z')
+            }
+        }) as any;
 
     beforeEach(async () => {
         const mockResultRepository = {
@@ -184,9 +182,9 @@ describe('SbomUtilsService', () => {
         it('should throw PluginResultNotAvailable when result is not found', async () => {
             resultRepository.findOne.mockResolvedValue(null);
 
-            await expect(
-                service.getSbomData(mockAnalysisId, mockWorkspace)
-            ).rejects.toThrow(PluginResultNotAvailable);
+            await expect(service.getSbomData(mockAnalysisId, mockWorkspace)).rejects.toThrow(
+                PluginResultNotAvailable
+            );
         });
 
         it('should throw PluginFailed when SBOM status is failure', async () => {
@@ -198,9 +196,9 @@ describe('SbomUtilsService', () => {
             });
             resultRepository.findOne.mockResolvedValue(createMockResult(mockSBOM));
 
-            await expect(
-                service.getSbomData(mockAnalysisId, mockWorkspace)
-            ).rejects.toThrow(PluginFailed);
+            await expect(service.getSbomData(mockAnalysisId, mockWorkspace)).rejects.toThrow(
+                PluginFailed
+            );
         });
     });
 
@@ -226,7 +224,9 @@ describe('SbomUtilsService', () => {
         it('should throw PluginResultNotAvailable when result is not found', async () => {
             resultRepository.findOne.mockResolvedValue(null);
 
-            await expect(service.getSbomResult(mockAnalysisId)).rejects.toThrow(PluginResultNotAvailable);
+            await expect(service.getSbomResult(mockAnalysisId)).rejects.toThrow(
+                PluginResultNotAvailable
+            );
         });
 
         it('should throw PluginFailed when SBOM status is failure', async () => {
@@ -263,29 +263,32 @@ describe('SbomUtilsService', () => {
         const dependencyName = 'test-package';
         const dependencyVersion = '1.0.0';
 
-        const createMockPackageVersionInfo = (): Package => ({
-            id: 'test-package-id',
-            name: 'test-package',
-            description: 'A test package',
-            homepage: 'https://test.com',
-            repository: 'https://github.com/test/test',
-            latest_version: '1.1.0',
-            license: 'MIT',
-            licenses: [{ type: 'MIT', url: 'https://opensource.org/licenses/MIT' }],
-            source: { type: 'npm', url: 'https://npmjs.com/package/test-package' },
-            time: new Date('2023-01-15T00:00:00Z'),
-            keywords: ['test'],
-            extra: {},
-            versions: [{
-                version: '1.0.0',
-                dependencies: { 'lodash': '^4.0.0' },
-                dev_dependencies: { 'jest': '^29.0.0' },
-                extra: {
-                    Engines: { node: '>=14.0.0' },
-                    Time: new Date('2023-01-01T00:00:00Z')
-                }
-            }] as any
-        } as Package);
+        const createMockPackageVersionInfo = (): Package =>
+            ({
+                id: 'test-package-id',
+                name: 'test-package',
+                description: 'A test package',
+                homepage: 'https://test.com',
+                repository: 'https://github.com/test/test',
+                latest_version: '1.1.0',
+                license: 'MIT',
+                licenses: [{ type: 'MIT', url: 'https://opensource.org/licenses/MIT' }],
+                source: { type: 'npm', url: 'https://npmjs.com/package/test-package' },
+                time: new Date('2023-01-15T00:00:00Z'),
+                keywords: ['test'],
+                extra: {},
+                versions: [
+                    {
+                        version: '1.0.0',
+                        dependencies: { lodash: '^4.0.0' },
+                        dev_dependencies: { jest: '^29.0.0' },
+                        extra: {
+                            Engines: { node: '>=14.0.0' },
+                            Time: new Date('2023-01-01T00:00:00Z')
+                        }
+                    }
+                ] as any
+            }) as Package;
 
         it('should return dependency details with vulnerability information', async () => {
             const mockSBOM = createMockSBOMOutput();
@@ -307,8 +310,8 @@ describe('SbomUtilsService', () => {
                 name: dependencyName,
                 version: '1.0.0',
                 latest_version: '1.1.0',
-                dependencies: { 'lodash': '^4.0.0' },
-                dev_dependencies: { 'jest': '^29.0.0' },
+                dependencies: { lodash: '^4.0.0' },
+                dev_dependencies: { jest: '^29.0.0' },
                 transitive: false,
                 source: { type: 'npm', url: 'https://npmjs.com/package/test-package' },
                 package_manager: 'npm',
@@ -487,8 +490,10 @@ describe('SbomUtilsService', () => {
 
         it('should handle transitive dependencies correctly', async () => {
             const mockSBOM = createMockSBOMOutput();
-            mockSBOM.workspaces[mockWorkspace].dependencies[dependencyName][dependencyVersion].Transitive = true;
-            
+            mockSBOM.workspaces[mockWorkspace].dependencies[dependencyName][
+                dependencyVersion
+            ].Transitive = true;
+
             const mockVulns = createMockVulnsOutput();
             const mockPackageInfo = createMockPackageVersionInfo();
 
@@ -568,7 +573,14 @@ describe('SbomUtilsService', () => {
                 time: new Date(),
                 keywords: ['test'],
                 extra: {},
-                versions: [{ version: '1.0.0', dependencies: {}, dev_dependencies: {}, extra: { Engines: {}, Time: new Date() } }] as any
+                versions: [
+                    {
+                        version: '1.0.0',
+                        dependencies: {},
+                        dev_dependencies: {},
+                        extra: { Engines: {}, Time: new Date() }
+                    }
+                ] as any
             } as any;
             const error = new Error('Vulnerabilities service failed');
 
