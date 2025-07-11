@@ -6,7 +6,7 @@ import { SbomUtilsService } from './utils/utils';
 import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
 import { Result } from '../result.entity';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
-import { PluginResultNotAvailable } from 'src/types/error.types';
+import { PluginResultNotAvailable, UnknownWorkspace, EntityNotFound } from 'src/types/error.types';
 
 describe('SBOMService', () => {
     let service: SBOMService;
@@ -310,30 +310,103 @@ describe('SBOMService', () => {
     });
 
     describe('getDependency', () => {
-        it('should call getSbomResult and checkAccess', async () => {
+        const mockSbomUtilsService = {
+            getSbomResult: jest.fn(),
+            getDependencyData: jest.fn()
+        };
+
+        beforeEach(() => {
+            // Mock the private property
+            Object.defineProperty(service, 'sbomUtilsService', {
+                value: mockSbomUtilsService,
+                writable: true
+            });
+        });
+
+        it('should return dependency details for valid dependency', async () => {
+            const mockDependencyDetails = {
+                name: 'package1',
+                version: '1.0.0',
+                latest_version: '1.2.0',
+                dependencies: {},
+                dev_dependencies: {},
+                transitive: false,
+                source: undefined,
+                package_manager: 'npm',
+                license: 'MIT',
+                engines: {},
+                release_date: new Date(),
+                lastest_release_date: new Date(),
+                vulnerabilities: [],
+                severity_dist: {
+                    critical: 0,
+                    high: 0,
+                    medium: 0,
+                    low: 0,
+                    none: 0
+                }
+            };
+
             mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
             mockSbomUtilsService.getSbomResult.mockResolvedValue(mockSbomOutput);
+            mockSbomUtilsService.getDependencyData.mockResolvedValue(mockDependencyDetails);
 
-            // Since getDependency exists and takes orgId, projectId, analysisId, workspace, dependency, user
-            try {
-                await service.getDependency(
-                    'org-123',
-                    'project-123',
-                    'analysis-123',
-                    'default',
-                    'package1@1.0.0',
-                    mockUser
-                );
-            } catch (_error) {
-                // Method might not be implemented yet, that's ok for testing the pattern
-            }
+            const result = await service.getDependency(
+                'org-123',
+                'project-123',
+                'analysis-123',
+                'default',
+                'package1@1.0.0',
+                mockUser
+            );
 
+            expect(result).toEqual(mockDependencyDetails);
             expect(analysisResultsService.checkAccess).toHaveBeenCalledWith(
                 'org-123',
                 'project-123',
                 'analysis-123',
                 mockUser
             );
+            expect(mockSbomUtilsService.getSbomResult).toHaveBeenCalledWith('analysis-123');
+            expect(mockSbomUtilsService.getDependencyData).toHaveBeenCalledWith(
+                'analysis-123',
+                'default',
+                'package1',
+                '1.0.0',
+                mockSbomOutput
+            );
+        });
+
+        it('should throw UnknownWorkspace for invalid workspace', async () => {
+            mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+            mockSbomUtilsService.getSbomResult.mockResolvedValue(mockSbomOutput);
+
+            await expect(
+                service.getDependency(
+                    'org-123',
+                    'project-123',
+                    'analysis-123',
+                    'invalid-workspace',
+                    'package1@1.0.0',
+                    mockUser
+                )
+            ).rejects.toThrow(UnknownWorkspace);
+        });
+
+        it('should throw EntityNotFound for invalid dependency', async () => {
+            mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+            mockSbomUtilsService.getSbomResult.mockResolvedValue(mockSbomOutput);
+
+            await expect(
+                service.getDependency(
+                    'org-123',
+                    'project-123',
+                    'analysis-123',
+                    'default',
+                    'nonexistent@1.0.0',
+                    mockUser
+                )
+            ).rejects.toThrow(EntityNotFound);
         });
     });
 
@@ -400,6 +473,178 @@ describe('SBOMService', () => {
             ).rejects.toThrow('Access denied');
 
             expect(sbomUtilsService.getSbomResult).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('getWorkspaces', () => {
+        it('should return available workspaces', async () => {
+            const mockWorkspacesOutput = {
+                workspaces: {
+                    default: { dependencies: {}, start: {} },
+                    workspace1: { dependencies: {}, start: {} }
+                },
+                analysis_info: {
+                    package_manager: 'npm'
+                }
+            };
+
+            mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+            mockSbomUtilsService.getSbomResult.mockResolvedValue(mockWorkspacesOutput);
+
+            const result = await service.getWorkspaces(
+                'org-123',
+                'project-123',
+                'analysis-123',
+                mockUser
+            );
+
+            expect(result).toEqual({
+                workspaces: ['default', 'workspace1'],
+                package_manager: 'npm'
+            });
+            expect(analysisResultsService.checkAccess).toHaveBeenCalledWith(
+                'org-123',
+                'project-123',
+                'analysis-123',
+                mockUser
+            );
+            expect(sbomUtilsService.getSbomResult).toHaveBeenCalledWith('analysis-123');
+        });
+
+        it('should handle access check failure', async () => {
+            const accessError = new Error('Access denied');
+            mockAnalysisResultsService.checkAccess.mockRejectedValue(accessError);
+
+            await expect(
+                service.getWorkspaces('org-123', 'project-123', 'analysis-123', mockUser)
+            ).rejects.toThrow('Access denied');
+
+            expect(sbomUtilsService.getSbomResult).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('getDependencyGraph', () => {
+        it('should return dependency graph for valid dependency', async () => {
+            const mockGraphOutput = {
+                workspaces: {
+                    default: {
+                        dependencies: {
+                            package1: {
+                                '1.0.0': {
+                                    Dependencies: { package2: '2.0.0' },
+                                    Prod: true,
+                                    Dev: false
+                                }
+                            },
+                            package2: {
+                                '2.0.0': {
+                                    Dependencies: {},
+                                    Prod: true,
+                                    Dev: false
+                                }
+                            }
+                        },
+                        start: {
+                            dependencies: [{ name: 'package1', version: '1.0.0' }]
+                        }
+                    }
+                }
+            };
+
+            mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+            mockSbomUtilsService.getSbomResult.mockResolvedValue(mockGraphOutput);
+
+            const result = await service.getDependencyGraph(
+                'org-123',
+                'project-123',
+                'analysis-123',
+                'default',
+                'package1@1.0.0',
+                mockUser
+            );
+
+            expect(result).toBeDefined();
+            expect(Array.isArray(result)).toBe(true);
+            expect(analysisResultsService.checkAccess).toHaveBeenCalledWith(
+                'org-123',
+                'project-123',
+                'analysis-123',
+                mockUser
+            );
+            expect(sbomUtilsService.getSbomResult).toHaveBeenCalledWith('analysis-123');
+        });
+
+        it('should throw UnknownWorkspace for invalid workspace', async () => {
+            mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+            mockSbomUtilsService.getSbomResult.mockResolvedValue(mockSbomOutput);
+
+            await expect(
+                service.getDependencyGraph(
+                    'org-123',
+                    'project-123',
+                    'analysis-123',
+                    'invalid-workspace',
+                    'package1@1.0.0',
+                    mockUser
+                )
+            ).rejects.toThrow(UnknownWorkspace);
+        });
+
+        it('should throw EntityNotFound for empty dependency parameter', async () => {
+            mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+            mockSbomUtilsService.getSbomResult.mockResolvedValue(mockSbomOutput);
+
+            await expect(
+                service.getDependencyGraph(
+                    'org-123',
+                    'project-123',
+                    'analysis-123',
+                    'default',
+                    '',
+                    mockUser
+                )
+            ).rejects.toThrow(EntityNotFound);
+        });
+
+        it('should throw EntityNotFound for no dependencies in workspace', async () => {
+            const emptyWorkspaceOutput = {
+                workspaces: {
+                    default: {
+                        dependencies: {},
+                        start: {}
+                    }
+                }
+            };
+
+            mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+            mockSbomUtilsService.getSbomResult.mockResolvedValue(emptyWorkspaceOutput);
+
+            await expect(
+                service.getDependencyGraph(
+                    'org-123',
+                    'project-123',
+                    'analysis-123',
+                    'default',
+                    'package1@1.0.0',
+                    mockUser
+                )
+            ).rejects.toThrow(EntityNotFound);
+        });
+
+        it('should throw EntityNotFound for dependency not found in workspace', async () => {
+            mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+            mockSbomUtilsService.getSbomResult.mockResolvedValue(mockSbomOutput);
+
+            await expect(
+                service.getDependencyGraph(
+                    'org-123',
+                    'project-123',
+                    'analysis-123',
+                    'default',
+                    'nonexistent@1.0.0',
+                    mockUser
+                )
+            ).rejects.toThrow(EntityNotFound);
         });
     });
 });
