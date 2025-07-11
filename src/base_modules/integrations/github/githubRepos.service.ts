@@ -369,7 +369,7 @@ export class GithubRepositoriesService {
             // Just why github, just why...
             if (linkHeader) {
                 const links = linkHeader.split(',');
-                let lastLink = links.find((link) => link.includes('rel="last"'));
+                let lastLink = links.find((link: string) => link.includes('rel="last"'));
                 if (lastLink) {
                     lastLink = lastLink
                         .replace('; rel="last"', '')
