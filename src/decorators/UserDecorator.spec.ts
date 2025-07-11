@@ -5,7 +5,9 @@ jest.mock('@nestjs/common', () => ({
 }));
 
 describe('UserDecorator', () => {
-    const mockCreateParamDecorator = createParamDecorator as jest.MockedFunction<typeof createParamDecorator>;
+    const mockCreateParamDecorator = createParamDecorator as jest.MockedFunction<
+        typeof createParamDecorator
+    >;
     let decoratorFactory: (data: unknown, ctx: ExecutionContext) => any;
 
     beforeEach(() => {
@@ -26,8 +28,8 @@ describe('UserDecorator', () => {
     describe('decorator factory function', () => {
         beforeEach(async () => {
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        await import('./UserDecorator');
+            // @ts-ignore
+            await import('./UserDecorator');
         });
 
         describe('HTTP context', () => {

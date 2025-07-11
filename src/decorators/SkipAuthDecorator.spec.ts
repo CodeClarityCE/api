@@ -53,10 +53,8 @@ describe('SkipAuthDecorator', () => {
         it('should create a reusable decorator', async () => {
             const mockDecorator1 = jest.fn() as any;
             const mockDecorator2 = jest.fn() as any;
-            
-            mockSetMetadata
-                .mockReturnValueOnce(mockDecorator1)
-                .mockReturnValueOnce(mockDecorator2);
+
+            mockSetMetadata.mockReturnValueOnce(mockDecorator1).mockReturnValueOnce(mockDecorator2);
 
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore
@@ -91,7 +89,7 @@ describe('SkipAuthDecorator', () => {
             module.NonAuthEndpoint();
 
             expect(mockSetMetadata).toHaveBeenCalledWith(SKIP_AUTH_KEY, true);
-            mockSetMetadata.mock.calls.forEach(call => {
+            mockSetMetadata.mock.calls.forEach((call) => {
                 expect(call[1]).toBe(true);
             });
         });
