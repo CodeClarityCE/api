@@ -1,7 +1,14 @@
 import { config } from 'dotenv';
 
+// Temporarily suppress console.log to avoid dotenv promotional message
+const originalLog = console.log;
+console.log = () => {};
+
 // Load test environment variables
 config({ path: '.env.test' });
+
+// Restore console.log
+console.log = originalLog;
 
 // Set test environment
 process.env.ENV = 'test';
