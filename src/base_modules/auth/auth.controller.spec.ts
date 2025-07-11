@@ -81,11 +81,11 @@ describe('AuthController', () => {
                 { provide: Reflector, useValue: { getAllAndOverride: jest.fn() } }
             ]
         })
-        .overrideGuard(CombinedAuthGuard)
-        .useValue(mockCombinedAuthGuard)
-        .overrideGuard(RefreshJwtAuthGuard)
-        .useValue(mockRefreshJwtAuthGuard)
-        .compile();
+            .overrideGuard(CombinedAuthGuard)
+            .useValue(mockCombinedAuthGuard)
+            .overrideGuard(RefreshJwtAuthGuard)
+            .useValue(mockRefreshJwtAuthGuard)
+            .compile();
 
         controller = module.get<AuthController>(AuthController);
         authService = module.get(AuthService);

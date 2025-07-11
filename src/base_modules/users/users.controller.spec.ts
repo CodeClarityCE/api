@@ -75,9 +75,9 @@ describe('UsersController', () => {
                 { provide: Reflector, useValue: { getAllAndOverride: jest.fn() } }
             ]
         })
-        .overrideGuard(CombinedAuthGuard)
-        .useValue(mockCombinedAuthGuard)
-        .compile();
+            .overrideGuard(CombinedAuthGuard)
+            .useValue(mockCombinedAuthGuard)
+            .compile();
 
         controller = module.get<UsersController>(UsersController);
         usersService = module.get(UsersService);

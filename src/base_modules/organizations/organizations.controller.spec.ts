@@ -63,9 +63,9 @@ describe('OrganizationsController', () => {
                 { provide: Reflector, useValue: { getAllAndOverride: jest.fn() } }
             ]
         })
-        .overrideGuard(CombinedAuthGuard)
-        .useValue(mockCombinedAuthGuard)
-        .compile();
+            .overrideGuard(CombinedAuthGuard)
+            .useValue(mockCombinedAuthGuard)
+            .compile();
 
         controller = module.get<OrganizationsController>(OrganizationsController);
         organizationsService = module.get(OrganizationsService);
