@@ -13,6 +13,9 @@ import {
     CannotLeaveAsOwner,
     PersonalOrgCannotBeModified
 } from '../../types/error.types';
+import { JwtService } from '@nestjs/jwt';
+import { Reflector } from '@nestjs/core';
+import { CombinedAuthGuard } from '../auth/guards/combined.guard';
 
 describe('OrganizationsController', () => {
     let controller: OrganizationsController;
@@ -47,13 +50,22 @@ describe('OrganizationsController', () => {
             logAction: jest.fn()
         };
 
+        const mockCombinedAuthGuard = {
+            canActivate: jest.fn().mockReturnValue(true)
+        };
+
         const module: TestingModule = await Test.createTestingModule({
             controllers: [OrganizationsController],
             providers: [
                 { provide: OrganizationsService, useValue: mockOrganizationsService },
-                { provide: OrganizationLoggerService, useValue: mockOrganizationLoggerService }
+                { provide: OrganizationLoggerService, useValue: mockOrganizationLoggerService },
+                { provide: JwtService, useValue: { verifyAsync: jest.fn() } },
+                { provide: Reflector, useValue: { getAllAndOverride: jest.fn() } }
             ]
-        }).compile();
+        })
+        .overrideGuard(CombinedAuthGuard)
+        .useValue(mockCombinedAuthGuard)
+        .compile();
 
         controller = module.get<OrganizationsController>(OrganizationsController);
         organizationsService = module.get(OrganizationsService);
@@ -199,7 +211,7 @@ describe('OrganizationsController', () => {
             const result = await controller.getMany(mockAuthenticatedUser);
 
             expect(organizationsService.getMany).toHaveBeenCalledWith(
-                { currentPage: 0, entriesPerPage: 0 },
+                { currentPage: undefined, entriesPerPage: undefined },
                 mockAuthenticatedUser,
                 undefined,
                 undefined,

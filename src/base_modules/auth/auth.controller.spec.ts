@@ -13,6 +13,10 @@ import {
     PasswordResetTokenInvalidOrExpired
 } from './auth.errors';
 import { EmailAlreadyExists } from '../../types/error.types';
+import { JwtService } from '@nestjs/jwt';
+import { Reflector } from '@nestjs/core';
+import { CombinedAuthGuard } from './guards/combined.guard';
+import { RefreshJwtAuthGuard } from './guards/refresh-token.guard';
 
 describe('AuthController', () => {
     let controller: AuthController;
@@ -60,13 +64,28 @@ describe('AuthController', () => {
             resetPassword: jest.fn()
         };
 
+        const mockCombinedAuthGuard = {
+            canActivate: jest.fn().mockReturnValue(true)
+        };
+
+        const mockRefreshJwtAuthGuard = {
+            canActivate: jest.fn().mockReturnValue(true)
+        };
+
         const module: TestingModule = await Test.createTestingModule({
             controllers: [AuthController],
             providers: [
                 { provide: AuthService, useValue: mockAuthService },
-                { provide: UsersService, useValue: mockUsersService }
+                { provide: UsersService, useValue: mockUsersService },
+                { provide: JwtService, useValue: { verifyAsync: jest.fn() } },
+                { provide: Reflector, useValue: { getAllAndOverride: jest.fn() } }
             ]
-        }).compile();
+        })
+        .overrideGuard(CombinedAuthGuard)
+        .useValue(mockCombinedAuthGuard)
+        .overrideGuard(RefreshJwtAuthGuard)
+        .useValue(mockRefreshJwtAuthGuard)
+        .compile();
 
         controller = module.get<AuthController>(AuthController);
         authService = module.get(AuthService);

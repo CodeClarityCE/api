@@ -23,6 +23,9 @@ import {
     PasswordsDoNotMatch,
     AccountRegistrationVerificationTokenInvalidOrExpired
 } from '../auth/auth.errors';
+import { JwtService } from '@nestjs/jwt';
+import { Reflector } from '@nestjs/core';
+import { CombinedAuthGuard } from '../auth/guards/combined.guard';
 
 describe('UsersController', () => {
     let controller: UsersController;
@@ -60,10 +63,21 @@ describe('UsersController', () => {
             setDefaultOrg: jest.fn()
         };
 
+        const mockCombinedAuthGuard = {
+            canActivate: jest.fn().mockReturnValue(true)
+        };
+
         const module: TestingModule = await Test.createTestingModule({
             controllers: [UsersController],
-            providers: [{ provide: UsersService, useValue: mockUsersService }]
-        }).compile();
+            providers: [
+                { provide: UsersService, useValue: mockUsersService },
+                { provide: JwtService, useValue: { verifyAsync: jest.fn() } },
+                { provide: Reflector, useValue: { getAllAndOverride: jest.fn() } }
+            ]
+        })
+        .overrideGuard(CombinedAuthGuard)
+        .useValue(mockCombinedAuthGuard)
+        .compile();
 
         controller = module.get<UsersController>(UsersController);
         usersService = module.get(UsersService);
