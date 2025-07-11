@@ -245,7 +245,7 @@ describe('OptionalTransform', () => {
             }
 
             const plainObject = { field: 'test' };
-            const _transformed = plainToClass(TestClass, plainObject);
+            plainToClass(TestClass, plainObject);
 
             expect(mockTransformer).toHaveBeenCalledWith('test');
         });
@@ -260,7 +260,7 @@ describe('OptionalTransform', () => {
             }
 
             const plainObject = { field: null };
-            const _transformed = plainToClass(TestClass, plainObject);
+            plainToClass(TestClass, plainObject);
 
             expect(mockTransformer).not.toHaveBeenCalled();
         });
@@ -275,7 +275,7 @@ describe('OptionalTransform', () => {
             }
 
             const plainObject = { field: undefined };
-            const _transformed = plainToClass(TestClass, plainObject);
+            plainToClass(TestClass, plainObject);
 
             expect(mockTransformer).not.toHaveBeenCalled();
         });
