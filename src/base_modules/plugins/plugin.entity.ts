@@ -12,25 +12,25 @@ export class Plugin {
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    name: string;
+    name?: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    version: string;
+    version?: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    description: string;
+    description?: string;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    depends_on: string[];
+    depends_on?: string[];
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    config: { [key: string]: any };
+    config?: { [key: string]: any };
 }
