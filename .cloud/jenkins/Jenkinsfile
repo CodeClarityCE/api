@@ -23,8 +23,7 @@ pipeline {
                 sh 'docker system prune -af'
                 sh 'git submodule update --init --recursive'
                 sh 'git fetch --tags --force'
-                sh 'yarn cache clean --all'
-                sh 'yarn'
+                sh 'YARN_ENABLE_IMMUTABLE_INSTALLS=false yarn install'
             }
         }
         stage('Test lint and format') {
