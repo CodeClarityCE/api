@@ -43,4 +43,3 @@ package-lock.json
 # Misc
 src/enterprise_modules/*
 !src/enterprise_modules/*spec.ts
-/env
