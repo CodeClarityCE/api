@@ -1,7 +1,8 @@
 import { Entity, Column, PrimaryGeneratedColumn, OneToMany, Relation, ManyToOne } from 'typeorm';
-import { Analysis, StageBase } from '../analyses/analysis.entity';
-import { Organization } from '../organizations/organization.entity';
-import { User } from '../users/users.entity';
+import { StageBase } from '../analyses/analysis.entity';
+import type { Analysis } from '../analyses/analysis.entity';
+import type { Organization } from '../organizations/organization.entity';
+import type { User } from '../users/users.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 
@@ -38,12 +39,12 @@ export class Analyzer {
     steps: StageBase[][];
 
     // Foreign keys
-    @OneToMany(() => Analysis, (analysis) => analysis.analyzer)
+    @OneToMany('Analysis', 'analyzer')
     analyses: Relation<Analysis[]>;
 
-    @ManyToOne(() => Organization, (organization) => organization.analyzers)
+    @ManyToOne('Organization', 'analyzers')
     organization: Relation<Organization>;
 
-    @ManyToOne(() => User, (user) => user.analyzers_created)
+    @ManyToOne('User', 'analyzers_created')
     created_by: Relation<User>;
 }

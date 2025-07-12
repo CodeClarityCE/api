@@ -23,13 +23,15 @@ pipeline {
                 sh 'docker system prune -af'
                 sh 'git submodule update --init --recursive'
                 sh 'git fetch --tags --force'
-                sh 'yarn'
+                sh 'YARN_ENABLE_IMMUTABLE_INSTALLS=false yarn install'
             }
         }
         stage('Test lint and format') {
             steps {
                 sh 'yarn lint'
+                sh 'yarn typecheck'
                 sh 'yarn test'
+                sh 'yarn test:e2e test/integration/*contract*.e2e-spec.ts'
                 sh 'yarn run prettier src --check'
             }
         }

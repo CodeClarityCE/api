@@ -1,6 +1,6 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, Relation } from 'typeorm';
-import { Organization } from '../organization.entity';
-import { User } from '../../users/users.entity';
+import type { Organization } from '../organization.entity';
+import type { User } from '../../users/users.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 import { MemberRole } from '../memberships/organization.memberships.entity';
@@ -41,11 +41,11 @@ export class Invitation {
 
     @ApiProperty()
     @Expose()
-    @ManyToOne(() => Organization, (_organization) => _organization.invitations)
+    @ManyToOne('Organization', 'invitations')
     organization: Relation<Organization>;
 
     @ApiProperty()
     @Expose()
-    @ManyToOne(() => User, (_user) => _user.invitations)
+    @ManyToOne('User', 'invitations')
     user: Relation<User>;
 }

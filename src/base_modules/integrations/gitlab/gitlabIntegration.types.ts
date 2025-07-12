@@ -78,6 +78,7 @@ export class LinkGitlabPatchBody {
     token: string;
 
     @IsNotEmpty()
+    @IsEnum(GitlabTokenType)
     token_type: GitlabTokenType;
 
     @IsUrl()

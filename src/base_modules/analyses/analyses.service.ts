@@ -127,7 +127,7 @@ export class AnalysesService {
         for (const [pluginName, plugin_config] of Object.entries(config_structure)) {
             for (const [key] of Object.entries(plugin_config)) {
                 const config_element = config_structure[pluginName][key];
-                if (config_element.required && !config[pluginName][key]) {
+                if (config_element.required && (!config[pluginName] || !config[pluginName][key])) {
                     throw new AnaylzerMissingConfigAttribute();
                 }
             }

@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, Relation } from 'typeorm';
-import { Organization } from '../organization.entity';
+import type { Organization } from '../organization.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 
@@ -82,7 +82,7 @@ export class Log {
     created_on: Date;
 
     // Foreign keys
-    @ManyToOne(() => Organization, (organization) => organization.logs)
+    @ManyToOne('Organization', 'logs')
     organization: Relation<Organization>;
 
     @Column()

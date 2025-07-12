@@ -7,13 +7,13 @@ import {
     OneToMany,
     ManyToOne
 } from 'typeorm';
-import { Organization } from '../organizations/organization.entity';
-import { Analysis } from '../analyses/analysis.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { Integration } from '../integrations/integrations.entity';
-import { User } from '../users/users.entity';
-import { File } from '../file/file.entity';
+import type { Organization } from '../organizations/organization.entity';
+import type { Analysis } from '../analyses/analysis.entity';
+import type { Integration } from '../integrations/integrations.entity';
+import type { User } from '../users/users.entity';
+import type { File } from '../file/file.entity';
 
 export enum IntegrationType {
     VCS = 'VCS'
@@ -82,27 +82,27 @@ export class Project {
     type: IntegrationProvider;
 
     // Foreign keys
-    @ManyToMany(() => Organization, (organization) => organization.projects)
+    @ManyToMany('Organization', 'projects')
     @ApiProperty()
     @Expose()
     organizations: Relation<Organization[]>;
 
     @ApiProperty()
     @Expose()
-    @OneToMany(() => Analysis, (analysis) => analysis.project)
+    @OneToMany('Analysis', 'project')
     analyses: Relation<Analysis[]>;
 
-    @ManyToOne(() => Integration, (integration) => integration.projects)
+    @ManyToOne('Integration', 'projects')
     @ApiProperty()
     @Expose()
     integration: Relation<Integration>;
 
     @ApiProperty()
     @Expose()
-    @OneToMany(() => File, (file) => file.project)
+    @OneToMany('File', 'project')
     files: Relation<File[]>;
 
-    @ManyToOne(() => User, (user) => user.projects_imported)
+    @ManyToOne('User', 'projects_imported')
     @ApiProperty()
     @Expose()
     added_by: Relation<User>;

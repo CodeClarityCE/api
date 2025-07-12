@@ -8,18 +8,18 @@ import {
     Relation,
     OneToMany
 } from 'typeorm';
-import { User } from '../users/users.entity';
-import { Notification } from '../notifications/notification.entity';
-import { Integration } from '../integrations/integrations.entity';
-import { Log } from './log/log.entity';
-import { Policy } from '../../codeclarity_modules/policies/policy.entity';
-import { Project } from '../projects/project.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { OrganizationMemberships } from './memberships/organization.memberships.entity';
-import { Analyzer } from '../analyzers/analyzer.entity';
-import { Analysis } from '../analyses/analysis.entity';
-import { Invitation } from './invitations/invitation.entity';
+import type { User } from '../users/users.entity';
+import type { Notification } from '../notifications/notification.entity';
+import type { Integration } from '../integrations/integrations.entity';
+import type { Log } from './log/log.entity';
+import type { Policy } from '../../codeclarity_modules/policies/policy.entity';
+import type { Project } from '../projects/project.entity';
+import type { Analyzer } from '../analyzers/analyzer.entity';
+import type { Analysis } from '../analyses/analysis.entity';
+import type { Invitation } from './invitations/invitation.entity';
 
 @Entity()
 export class Organization {
@@ -60,10 +60,10 @@ export class Organization {
     // Foreign keys
     @ApiProperty()
     @Expose()
-    @ManyToOne(() => User, (user) => user.organizations_created)
+    @ManyToOne('User', 'organizations_created')
     created_by: Relation<User>;
 
-    @OneToMany(() => Invitation, (invitation) => invitation.organization)
+    @OneToMany('Invitation', 'organization')
     invitations?: Relation<Invitation[]>;
 
     @ApiProperty()
@@ -71,39 +71,39 @@ export class Organization {
     @OneToMany(() => OrganizationMemberships, (membership) => membership.organization)
     organizationMemberships: Relation<OrganizationMemberships[]>;
 
-    @ManyToMany(() => User, (user) => user.ownerships)
+    @ManyToMany('User', 'ownerships')
     @JoinTable()
     owners?: Relation<User[]>;
 
-    @OneToMany(() => User, (user) => user.default_org)
+    @OneToMany('User', 'default_org')
     default: Relation<User[]>;
 
-    @ManyToMany(() => Notification, (notification) => notification.organizations)
+    @ManyToMany('Notification', 'organizations')
     @JoinTable()
     notifications?: Relation<Notification[]>;
 
     @ApiProperty()
     @Expose()
-    @ManyToMany(() => Integration, (integration) => integration.organizations)
+    @ManyToMany('Integration', 'organizations')
     @JoinTable()
     integrations?: Relation<Integration[]>;
 
-    @ManyToMany(() => Policy, (policy) => policy.organizations)
+    @ManyToMany('Policy', 'organizations')
     @JoinTable()
     policies?: Relation<Policy[]>;
 
     @ApiProperty()
     @Expose()
-    @ManyToMany(() => Project, (project) => project.organizations)
+    @ManyToMany('Project', 'organizations')
     @JoinTable()
     projects: Relation<Project[]>;
 
-    @OneToMany(() => Analyzer, (analyzer) => analyzer.organization)
+    @OneToMany('Analyzer', 'organization')
     analyzers: Relation<Analyzer[]>;
 
-    @OneToMany(() => Analysis, (analysis) => analysis.organization)
+    @OneToMany('Analysis', 'organization')
     analyses: Relation<Analysis[]>;
 
-    @OneToMany(() => Log, (log) => log.organization)
+    @OneToMany('Log', 'organization')
     logs: Relation<Log[]>;
 }

@@ -99,6 +99,15 @@ export class GitlabIntegrationTokenService {
             return [false, undefined]; // Token does not have an expiry date
         } catch (error) {
             console.error('Error fetching access token expiry:', error);
+            if (error instanceof Error && error.message.includes('Invalid or revoked token')) {
+                throw error;
+            }
+            if (
+                error instanceof Error &&
+                error.message.includes('Failed to fetch access token info')
+            ) {
+                throw error;
+            }
             throw new Error('Failed to retrieve access token expiry');
         }
     }

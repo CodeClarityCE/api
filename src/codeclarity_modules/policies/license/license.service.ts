@@ -59,7 +59,7 @@ export class LicensePolicyService {
             content: create.licenses,
             organizations: [organization],
             analyses: []
-        });
+        } as Partial<Policy>);
 
         return policy.id;
     }

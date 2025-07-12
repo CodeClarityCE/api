@@ -232,7 +232,7 @@ export class GitlabRepositoriesService {
         if (!lastUpdated) return false;
 
         const invalidatedDate = new Date(
-            ms(`-${CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES}m`)
+            Date.now() + ms(`-${CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES}m`)
         );
         if (lastUpdated <= invalidatedDate) {
             return false;

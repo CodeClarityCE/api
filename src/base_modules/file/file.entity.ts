@@ -1,8 +1,8 @@
 import { Entity, Column, PrimaryGeneratedColumn, Relation, ManyToOne } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { User } from '../users/users.entity';
-import { Project } from '../projects/project.entity';
+import type { User } from '../users/users.entity';
+import type { Project } from '../projects/project.entity';
 
 @Entity()
 export class File {
@@ -26,12 +26,12 @@ export class File {
     @Expose()
     name: string;
 
-    @ManyToOne(() => Project, (project) => project.files)
+    @ManyToOne('Project', 'files')
     @ApiProperty()
     @Expose()
     project: Relation<Project>;
 
-    @ManyToOne(() => User, (user) => user.files_imported)
+    @ManyToOne('User', 'files_imported')
     @ApiProperty()
     @Expose()
     added_by: Relation<User>;
