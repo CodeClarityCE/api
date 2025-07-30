@@ -57,4 +57,15 @@ export class AnalysisResultsRepository {
             }
         });
     }
+
+    async getAllByAnalysisId(analysisId: string): Promise<Result[]> {
+        return this.resultRepository.find({
+            where: {
+                analysis: { id: analysisId }
+            },
+            order: {
+                plugin: 'ASC'
+            }
+        });
+    }
 }

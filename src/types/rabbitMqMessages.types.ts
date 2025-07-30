@@ -16,6 +16,11 @@ export interface AnalysisStartMessageCreate {
      * The ID of the organization owning this analysis.
      */
     organization_id: string;
+
+    /**
+     * The ID of the project this analysis belongs to.
+     */
+    project_id: string;
 }
 
 /**

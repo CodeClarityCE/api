@@ -44,7 +44,8 @@ export class SBOMController {
         @Param('project_id') project_id: string,
         @Param('analysis_id') analysis_id: string,
         @AuthUser() user: AuthenticatedUser,
-        @Query('workspace') workspace: string
+        @Query('workspace') workspace: string,
+        @Query('run_index') _run_index?: string
     ): Promise<Response> {
         return {
             data: await this.sbomService.getStats(org_id, project_id, analysis_id, workspace, user)
