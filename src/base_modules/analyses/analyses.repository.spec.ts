@@ -37,7 +37,11 @@ describe('AnalysesRepository', () => {
         results: [],
         organization: { id: 'org-123' } as any,
         integration: { id: 'integration-123' } as any,
-        created_by: { id: 'user-123' } as any
+        created_by: { id: 'user-123' } as any,
+        is_active: true,
+        schedule_type: 'once',
+        next_scheduled_run: undefined,
+        last_scheduled_run: undefined
     };
 
     const mockQueryBuilder = {

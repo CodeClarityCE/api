@@ -18,7 +18,8 @@ describe('AnalysisResultsRepository', () => {
         analysis: {
             id: 'analysis-123',
             created_on: new Date('2024-01-01')
-        } as any
+        } as any,
+        created_on: new Date('2024-01-01')
     };
 
     const mockResultRepository = {
