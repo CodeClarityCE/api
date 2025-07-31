@@ -569,8 +569,8 @@ export class AnalysesService {
         // Set scheduling fields to indicate this is a scheduled execution
         newAnalysis.schedule_type = 'once'; // This execution is a one-time run
         newAnalysis.is_active = true;
-        newAnalysis.next_scheduled_run = null; // Not applicable for execution records
-        newAnalysis.last_scheduled_run = null; // Will be set by scheduler
+        newAnalysis.next_scheduled_run = undefined; // Not applicable for execution records
+        newAnalysis.last_scheduled_run = undefined; // Will be set by scheduler
 
         // Save the new analysis
         const savedAnalysis = await this.analysesRepository.saveAnalysis(newAnalysis);
