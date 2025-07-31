@@ -214,7 +214,7 @@ export class AnalysesController {
      * Create a new analysis execution for scheduled analysis
      * This endpoint duplicates an existing scheduled analysis to create a new execution record
      * Used internally by the scheduler service to preserve historical results
-     * 
+     *
      * @example POST /org/123/projects/456/analyses/789/execute
      * @returns { id: "new-analysis-uuid" }
      * @internal This endpoint is intended for use by the scheduler service only

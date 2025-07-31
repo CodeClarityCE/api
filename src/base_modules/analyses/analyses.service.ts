@@ -531,10 +531,10 @@ export class AnalysesService {
 
     /**
      * Create a new analysis record for scheduled execution
-     * 
+     *
      * This duplicates the configuration of an existing scheduled analysis to create a new execution.
      * Each scheduled run gets its own Analysis record, preserving historical results.
-     * 
+     *
      * @param originalAnalysisId - ID of the original scheduled analysis to duplicate
      * @returns Promise resolving to the ID of the new analysis record
      * @internal This method is intended for use by the scheduler service only
@@ -558,14 +558,14 @@ export class AnalysesService {
         newAnalysis.branch = originalAnalysis.branch;
         newAnalysis.commit_hash = originalAnalysis.commit_hash;
         newAnalysis.created_on = new Date();
-        
+
         // Copy relationships
         newAnalysis.created_by = originalAnalysis.created_by;
         newAnalysis.analyzer = originalAnalysis.analyzer;
         newAnalysis.project = originalAnalysis.project;
         newAnalysis.organization = originalAnalysis.organization;
         newAnalysis.integration = originalAnalysis.integration;
-        
+
         // Set scheduling fields to indicate this is a scheduled execution
         newAnalysis.schedule_type = 'once'; // This execution is a one-time run
         newAnalysis.is_active = true;
@@ -574,7 +574,7 @@ export class AnalysesService {
 
         // Save the new analysis
         const savedAnalysis = await this.analysesRepository.saveAnalysis(newAnalysis);
-        
+
         return savedAnalysis.id;
     }
 
