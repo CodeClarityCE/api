@@ -3,7 +3,7 @@ import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
 import { TypedPaginatedData } from 'src/types/pagination.types';
 import { Analysis } from 'src/base_modules/analyses/analysis.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 
 /**
  * A repository for handling analysis-related database operations.
@@ -128,5 +128,31 @@ export class AnalysesRepository {
         if (!belongs) {
             throw new NotAuthorized();
         }
+    }
+
+    /**
+     * Retrieve all active scheduled analyses for a specific project
+     *
+     * Returns analyses that are configured for recurring execution (daily/weekly)
+     * and are currently active. Used to display scheduled analyses to users
+     * and by the scheduler to determine which analyses to execute.
+     *
+     * @param projectId - The ID of the project to get scheduled analyses for
+     * @returns Promise resolving to array of scheduled Analysis objects
+     * @returns Includes analyzer and created_by relations for display purposes
+     * @returns Sorted by next_scheduled_run (earliest first) for scheduler priority
+     */
+    async getScheduledAnalysesByProjectId(projectId: string): Promise<Analysis[]> {
+        return this.analysisRepository.find({
+            where: {
+                project: { id: projectId },
+                schedule_type: In(['daily', 'weekly']), // Only recurring schedules
+                is_active: true // Only active schedules
+            },
+            relations: ['analyzer', 'created_by'], // Include related data for display
+            order: {
+                next_scheduled_run: 'ASC' // Earliest scheduled runs first
+            }
+        });
     }
 }

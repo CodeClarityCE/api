@@ -36,6 +36,7 @@ describe('ProjectsRepository', () => {
         where: jest.fn().mockReturnThis(),
         leftJoinAndSelect: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnThis(),
         offset: jest.fn().mockReturnThis(),
@@ -392,7 +393,8 @@ describe('ProjectsRepository', () => {
                 'project.added_by',
                 'added_by'
             );
-            expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('analyses.created_on', 'DESC');
+            expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('project.added_on', 'DESC');
+            expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith('analyses.created_on', 'DESC');
         });
     });
 });

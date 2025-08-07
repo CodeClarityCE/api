@@ -151,7 +151,8 @@ describe('AnalysesService', () => {
                 {
                     provide: ProjectsRepository,
                     useValue: {
-                        getProjectById: jest.fn()
+                        getProjectById: jest.fn(),
+                        doesProjectBelongToOrg: jest.fn()
                     }
                 },
                 {
@@ -163,7 +164,8 @@ describe('AnalysesService', () => {
                 {
                     provide: AnalysisResultsRepository,
                     useValue: {
-                        delete: jest.fn()
+                        delete: jest.fn(),
+                        getAllByAnalysisId: jest.fn()
                     }
                 },
                 {
@@ -191,7 +193,9 @@ describe('AnalysesService', () => {
                         getAnalysisById: jest.fn(),
                         doesAnalysesBelongToProject: jest.fn(),
                         getAnalysisByProjectId: jest.fn(),
-                        deleteAnalysis: jest.fn()
+                        deleteAnalysis: jest.fn(),
+                        getScheduledAnalysesByProjectId: jest.fn(),
+                        getAllByAnalysisId: jest.fn()
                     }
                 }
             ]
@@ -257,7 +261,8 @@ describe('AnalysesService', () => {
                     JSON.stringify({
                         analysis_id: 'analysis-123',
                         integration_id: 'integration-123',
-                        organization_id: 'org-123'
+                        organization_id: 'org-123',
+                        project_id: 'project-123'
                     })
                 )
             );
@@ -355,7 +360,8 @@ describe('AnalysesService', () => {
                     JSON.stringify({
                         analysis_id: 'analysis-123',
                         integration_id: null,
-                        organization_id: 'org-123'
+                        organization_id: 'org-123',
+                        project_id: 'project-123'
                     })
                 )
             );
@@ -625,6 +631,70 @@ describe('AnalysesService', () => {
             // Assert
             expect(resultsRepository.delete).not.toHaveBeenCalled();
             expect(analysesRepository.deleteAnalysis).toHaveBeenCalledWith('analysis-123');
+        });
+    });
+
+    describe('createScheduledExecution', () => {
+        it('should create a new analysis execution successfully', async () => {
+            // Arrange
+            const originalAnalysis = {
+                ...mockAnalysis,
+                schedule_type: 'daily',
+                next_scheduled_run: new Date('2024-01-15T10:00:00Z')
+            };
+            const newAnalysis = {
+                ...originalAnalysis,
+                id: 'new-analysis-123',
+                schedule_type: 'once',
+                next_scheduled_run: undefined,
+                last_scheduled_run: undefined
+            };
+
+            jest.spyOn(analysesRepository, 'getAnalysisById').mockResolvedValue(originalAnalysis);
+            jest.spyOn(analysesRepository, 'saveAnalysis').mockResolvedValue(newAnalysis);
+
+            // Act
+            const result = await service.createScheduledExecution('analysis-123');
+
+            // Assert
+            expect(result).toBe('new-analysis-123');
+            expect(analysesRepository.getAnalysisById).toHaveBeenCalledWith('analysis-123', {
+                analyzer: true,
+                project: { integration: true },
+                organization: true,
+                created_by: true
+            });
+            expect(analysesRepository.saveAnalysis).toHaveBeenCalled();
+            const savedAnalysis = (analysesRepository.saveAnalysis as jest.Mock).mock.calls[0][0];
+            expect(savedAnalysis.schedule_type).toBe('once');
+            expect(savedAnalysis.is_active).toBe(true);
+            expect(savedAnalysis.next_scheduled_run).toBeUndefined();
+            expect(savedAnalysis.last_scheduled_run).toBeUndefined();
+        });
+
+        it('should handle database error during fetch', async () => {
+            // Arrange
+            jest.spyOn(analysesRepository, 'getAnalysisById').mockRejectedValue(
+                new Error('Database error')
+            );
+
+            // Act & Assert
+            await expect(service.createScheduledExecution('analysis-123')).rejects.toThrow(
+                'Database error'
+            );
+        });
+
+        it('should handle database error during save', async () => {
+            // Arrange
+            jest.spyOn(analysesRepository, 'getAnalysisById').mockResolvedValue(mockAnalysis);
+            jest.spyOn(analysesRepository, 'saveAnalysis').mockRejectedValue(
+                new Error('Save error')
+            );
+
+            // Act & Assert
+            await expect(service.createScheduledExecution('analysis-123')).rejects.toThrow(
+                'Save error'
+            );
         });
     });
 });

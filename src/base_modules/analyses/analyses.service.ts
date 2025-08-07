@@ -149,46 +149,66 @@ export class AnalysesService {
         analysis.organization = organization;
         analysis.integration = project.integration;
 
+        // ===== CONFIGURE SCHEDULING =====
+        // Set scheduling fields using simplified approach for better maintainability
+
+        // Default to 'once' (immediate execution) if no schedule type specified
+        analysis.schedule_type = analysisData.schedule_type || 'once';
+
+        // Set active status - defaults to true for all analyses
+        analysis.is_active = analysisData.is_active !== undefined ? analysisData.is_active : true;
+
+        // Configure when the analysis should next run
+        // For 'once': this field is ignored, analysis runs immediately
+        // For 'daily'/'weekly': this sets the first/next execution time
+        if (analysisData.next_scheduled_run) {
+            analysis.next_scheduled_run = new Date(analysisData.next_scheduled_run);
+        }
+
         // Save the newly created analysis to the database
         const created_analysis = await this.analysesRepository.saveAnalysis(analysis);
 
-        // Prepare to send a message to RabbitMQ to start the analysis process
-        const queue = this.configService.getOrThrow<string>('AMQP_ANALYSES_QUEUE');
-        const amqpHost = `${this.configService.getOrThrow<string>(
-            'AMQP_PROTOCOL'
-        )}://${this.configService.getOrThrow<string>('AMQP_USER')}:${
-            process.env.AMQP_PASSWORD
-        }@${this.configService.getOrThrow<string>(
-            'AMQP_HOST'
-        )}:${this.configService.getOrThrow<string>('AMQP_PORT')}`;
+        // Only send message immediately for 'once' type analyses
+        // Scheduled analyses (daily/weekly) will be triggered by the scheduler at the appropriate time
+        if (analysis.schedule_type === 'once') {
+            const queue = this.configService.getOrThrow<string>('AMQP_ANALYSES_QUEUE');
+            const amqpHost = `${this.configService.getOrThrow<string>(
+                'AMQP_PROTOCOL'
+            )}://${this.configService.getOrThrow<string>('AMQP_USER')}:${
+                process.env.AMQP_PASSWORD
+            }@${this.configService.getOrThrow<string>(
+                'AMQP_HOST'
+            )}:${this.configService.getOrThrow<string>('AMQP_PORT')}`;
 
-        try {
-            // Connect to RabbitMQ using the configured settings
-            const conn = await amqp.connect(amqpHost);
-            const ch1 = await conn.createChannel();
-            await ch1.assertQueue(queue);
+            try {
+                // Connect to RabbitMQ using the configured settings
+                const conn = await amqp.connect(amqpHost);
+                const ch1 = await conn.createChannel();
+                await ch1.assertQueue(queue);
 
-            // Determine the integration ID if the project has an associated integration
-            let integration_id = null;
-            if (project.integration) {
-                integration_id = project.integration.id;
+                // Determine the integration ID if the project has an associated integration
+                let integration_id = null;
+                if (project.integration) {
+                    integration_id = project.integration.id;
+                }
+
+                // Create the message payload to start the analysis process
+                const message: AnalysisStartMessageCreate = {
+                    analysis_id: created_analysis.id,
+                    integration_id: integration_id,
+                    organization_id: orgId,
+                    project_id: projectId
+                };
+
+                // Send the message to RabbitMQ queue
+                ch1.sendToQueue(queue, Buffer.from(JSON.stringify(message)));
+
+                // Close the channel after sending the message
+                await ch1.close();
+            } catch (err) {
+                // Throw an error if there is a problem with connecting or messaging via RabbitMQ
+                throw new RabbitMQError(err);
             }
-
-            // Create the message payload to start the analysis process
-            const message: AnalysisStartMessageCreate = {
-                analysis_id: created_analysis.id,
-                integration_id: integration_id,
-                organization_id: orgId
-            };
-
-            // Send the message to RabbitMQ queue
-            ch1.sendToQueue(queue, Buffer.from(JSON.stringify(message)));
-
-            // Close the channel after sending the message
-            await ch1.close();
-        } catch (err) {
-            // Throw an error if there is a problem with connecting or messaging via RabbitMQ
-            throw new RabbitMQError(err);
         }
 
         // Return the ID of the created analysis as a confirmation
@@ -408,5 +428,229 @@ export class AnalysesService {
             await this.resultsRepository.delete(result.id);
         }
         await this.analysesRepository.deleteAnalysis(analysis.id);
+    }
+
+    /**
+     * Retrieve all active scheduled analyses for a project
+     *
+     * This method returns analyses that have recurring schedules (daily/weekly) and are currently active.
+     * Used by the frontend to display scheduled analyses to users.
+     *
+     * @param orgId - Organization ID that owns the project
+     * @param projectId - Project ID to get scheduled analyses for
+     * @param user - Authenticated user making the request
+     * @returns Promise resolving to array of scheduled Analysis objects
+     * @throws NotAuthorized if user lacks access to organization
+     * @throws NotAuthorized if project doesn't belong to organization
+     */
+    async getScheduledAnalyses(
+        orgId: string,
+        projectId: string,
+        user: AuthenticatedUser
+    ): Promise<Analysis[]> {
+        // Verify user has access to the organization
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+
+        // Verify project belongs to the organization
+        await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
+
+        // Return only active scheduled analyses (daily/weekly)
+        return this.analysesRepository.getScheduledAnalysesByProjectId(projectId);
+    }
+
+    /**
+     * Update scheduling configuration for an existing analysis
+     *
+     * Allows modifying the schedule type, next execution time, and active status.
+     * Changes take effect immediately for future scheduled runs.
+     *
+     * @param orgId - Organization ID that owns the project
+     * @param projectId - Project ID containing the analysis
+     * @param analysisId - Analysis ID to update
+     * @param scheduleData - New scheduling configuration
+     * @param scheduleData.schedule_type - New frequency: 'once', 'daily', or 'weekly'
+     * @param scheduleData.next_scheduled_run - When to next execute (ISO 8601 string)
+     * @param scheduleData.is_active - Whether scheduling is enabled
+     * @param user - Authenticated user making the request
+     * @throws NotAuthorized if user lacks access
+     * @throws EntityNotFound if analysis doesn't exist
+     */
+    async updateSchedule(
+        orgId: string,
+        projectId: string,
+        analysisId: string,
+        scheduleData: { schedule_type: string; next_scheduled_run: string; is_active: boolean },
+        user: AuthenticatedUser
+    ): Promise<void> {
+        // Verify permissions
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
+        await this.analysesRepository.doesAnalysesBelongToProject(analysisId, projectId);
+
+        // Get the analysis and update scheduling fields
+        const analysis = await this.analysesRepository.getAnalysisById(analysisId);
+
+        analysis.schedule_type = scheduleData.schedule_type as any;
+        analysis.next_scheduled_run = new Date(scheduleData.next_scheduled_run);
+        analysis.is_active = scheduleData.is_active;
+
+        // Save the updated configuration
+        await this.analysesRepository.saveAnalysis(analysis);
+    }
+
+    /**
+     * Cancel/disable a scheduled analysis
+     *
+     * Sets the analysis to inactive, preventing future scheduled executions.
+     * The analysis record remains but won't be executed by the scheduler.
+     *
+     * @param orgId - Organization ID that owns the project
+     * @param projectId - Project ID containing the analysis
+     * @param analysisId - Analysis ID to cancel
+     * @param user - Authenticated user making the request
+     * @throws NotAuthorized if user lacks access
+     * @throws EntityNotFound if analysis doesn't exist
+     */
+    async cancelSchedule(
+        orgId: string,
+        projectId: string,
+        analysisId: string,
+        user: AuthenticatedUser
+    ): Promise<void> {
+        // Verify permissions
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
+        await this.analysesRepository.doesAnalysesBelongToProject(analysisId, projectId);
+
+        // Disable the scheduled analysis
+        const analysis = await this.analysesRepository.getAnalysisById(analysisId);
+        analysis.is_active = false;
+
+        await this.analysesRepository.saveAnalysis(analysis);
+    }
+
+    /**
+     * Create a new analysis record for scheduled execution
+     *
+     * This duplicates the configuration of an existing scheduled analysis to create a new execution.
+     * Each scheduled run gets its own Analysis record, preserving historical results.
+     *
+     * @param originalAnalysisId - ID of the original scheduled analysis to duplicate
+     * @returns Promise resolving to the ID of the new analysis record
+     * @internal This method is intended for use by the scheduler service only
+     */
+    async createScheduledExecution(originalAnalysisId: string): Promise<string> {
+        // Get the original analysis with all relationships
+        const originalAnalysis = await this.analysesRepository.getAnalysisById(originalAnalysisId, {
+            analyzer: true,
+            project: { integration: true },
+            organization: true,
+            created_by: true
+        });
+
+        // Create a new analysis with the same configuration
+        const newAnalysis = new Analysis();
+        newAnalysis.status = AnalysisStatus.REQUESTED;
+        newAnalysis.stage = 0;
+        newAnalysis.config = originalAnalysis.config;
+        newAnalysis.steps = originalAnalysis.steps;
+        newAnalysis.tag = originalAnalysis.tag;
+        newAnalysis.branch = originalAnalysis.branch;
+        newAnalysis.commit_hash = originalAnalysis.commit_hash;
+        newAnalysis.created_on = new Date();
+
+        // Copy relationships
+        newAnalysis.created_by = originalAnalysis.created_by;
+        newAnalysis.analyzer = originalAnalysis.analyzer;
+        newAnalysis.project = originalAnalysis.project;
+        newAnalysis.organization = originalAnalysis.organization;
+        newAnalysis.integration = originalAnalysis.integration;
+
+        // Set scheduling fields to indicate this is a scheduled execution
+        newAnalysis.schedule_type = 'once'; // This execution is a one-time run
+        newAnalysis.is_active = true;
+        newAnalysis.next_scheduled_run = undefined; // Not applicable for execution records
+        newAnalysis.last_scheduled_run = undefined; // Will be set by scheduler
+
+        // Save the new analysis
+        const savedAnalysis = await this.analysesRepository.saveAnalysis(newAnalysis);
+
+        return savedAnalysis.id;
+    }
+
+    /**
+     * Get execution history for a specific analysis
+     *
+     * Returns a summary of when the analysis was executed and what results were generated.
+     * Results are grouped by day to provide a clear timeline of analysis executions.
+     *
+     * @param orgId - Organization ID that owns the project
+     * @param projectId - Project ID containing the analysis
+     * @param analysisId - Analysis ID to get execution history for
+     * @param user - Authenticated user making the request
+     * @returns Promise resolving to array of run summary objects
+     * @returns run.run_date - Date when the analysis was executed
+     * @returns run.result_count - Number of results generated in this run
+     * @returns run.plugins - Array of plugin names that executed
+     * @returns run.plugin_count - Number of unique plugins that executed
+     * @throws NotAuthorized if user lacks access
+     * @throws EntityNotFound if analysis doesn't exist
+     */
+    async getAnalysisRuns(
+        orgId: string,
+        projectId: string,
+        analysisId: string,
+        user: AuthenticatedUser
+    ): Promise<any[]> {
+        // Verify permissions
+        await this.projectsRepository.doesProjectBelongToOrg(projectId, orgId);
+        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.analysesRepository.doesAnalysesBelongToProject(analysisId, projectId);
+
+        // Get all results generated by this analysis
+        const results = await this.resultsRepository.getAllByAnalysisId(analysisId);
+
+        // Group results by day to show execution timeline
+        const runs = this.groupResultsByDay(results);
+
+        return runs;
+    }
+
+    /**
+     * Group analysis results by the day they were created
+     *
+     * This provides a simplified view of when analyses were executed.
+     * Results created on the same day are grouped together to represent a single "run".
+     *
+     * @param results - Array of result objects from the database
+     * @returns Array of run summary objects, sorted by date (newest first)
+     * @private
+     */
+    private groupResultsByDay(results: any[]): any[] {
+        if (!results || results.length === 0) return [];
+
+        // Group results by the day they were created
+        const grouped = results.reduce(
+            (acc, result) => {
+                // Use creation date or fallback to plugin name as key
+                const day = new Date(result.created_on || result.plugin).toDateString();
+                if (!acc[day]) {
+                    acc[day] = [];
+                }
+                acc[day].push(result);
+                return acc;
+            },
+            {} as Record<string, any[]>
+        );
+
+        // Convert grouped data to frontend-expected format
+        return Object.entries(grouped)
+            .map(([_day, dayResults]) => ({
+                run_date: (dayResults as any[])[0].created_on || new Date(),
+                result_count: (dayResults as any[]).length,
+                plugins: [...new Set((dayResults as any[]).map((r) => r.plugin))], // Unique plugin names
+                plugin_count: [...new Set((dayResults as any[]).map((r) => r.plugin))].length
+            }))
+            .sort((a, b) => new Date(b.run_date).getTime() - new Date(a.run_date).getTime()); // Newest first
     }
 }

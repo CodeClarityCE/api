@@ -93,15 +93,16 @@ export class ProjectsRepository {
         _sortBy?: AllowedOrderByGetProjects,
         _sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<Project>> {
-        let queryBuilder = await this.projectRepository
+        let queryBuilder = this.projectRepository
             .createQueryBuilder('project')
             .leftJoin('project.organizations', 'organizations')
             .where('organizations.id = :orgId', { orgId: orgId })
             .leftJoinAndSelect('project.analyses', 'analyses')
-            .orderBy('analyses.created_on', 'DESC')
             .leftJoinAndSelect('analyses.analyzer', 'analyzer')
             .leftJoinAndSelect('project.files', 'files')
-            .leftJoinAndSelect('project.added_by', 'added_by');
+            .leftJoinAndSelect('project.added_by', 'added_by')
+            .orderBy('project.added_on', 'DESC')
+            .addOrderBy('analyses.created_on', 'DESC');
 
         // if (sortBy && sortDirection) {
         //     if (sortBy == AllowedOrderByGetProjects.NAME)

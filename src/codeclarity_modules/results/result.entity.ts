@@ -21,6 +21,11 @@ export class Result {
     @Expose()
     @Column()
     plugin: string;
+
+    @ApiProperty()
+    @Expose()
+    @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+    created_on: Date;
 }
 
 export interface ResultByAnalysisId {

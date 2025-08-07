@@ -118,4 +118,72 @@ export class Analysis {
 
     @ManyToOne(() => User, (user) => user.analyses)
     created_by: Relation<User>;
+
+    // ===== ANALYSIS SCHEDULING FIELDS =====
+    // Added to support recurring analysis execution
+    // Simplified from original complex scheduling system to improve maintainability
+
+    /**
+     * Defines how often this analysis should run
+     * - 'once': Run immediately when created (default behavior)
+     * - 'daily': Run every day at the specified time
+     * - 'weekly': Run every week at the specified time
+     */
+    @ApiProperty({
+        description: 'Schedule frequency for recurring analysis',
+        enum: ['once', 'daily', 'weekly'],
+        default: 'once',
+        example: 'daily'
+    })
+    @Expose()
+    @Column({
+        type: 'enum',
+        enum: ['once', 'daily', 'weekly'],
+        default: 'once',
+        nullable: true
+    })
+    schedule_type?: 'once' | 'daily' | 'weekly';
+
+    /**
+     * When this analysis should next be executed
+     * - For 'once': ignored (runs immediately)
+     * - For 'daily'/'weekly': the specific date/time for first/next execution
+     */
+    @ApiProperty({
+        description: 'Next scheduled execution time',
+        type: Date,
+        example: '2024-01-15T10:00:00Z'
+    })
+    @Expose()
+    @Column('timestamptz', { nullable: true })
+    next_scheduled_run?: Date;
+
+    /**
+     * Whether this scheduled analysis is currently active
+     * - true: Analysis will run according to schedule_type
+     * - false: Analysis is paused/disabled
+     */
+    @ApiProperty({
+        description: 'Whether the scheduled analysis is active',
+        default: true,
+        example: true
+    })
+    @Expose()
+    @Column({ default: true })
+    is_active: boolean;
+
+    /**
+     * When this analysis was last executed by the scheduler
+     * Used to calculate the next execution time for recurring schedules
+     * - null: Analysis has never been executed
+     * - Date: Last execution timestamp
+     */
+    @ApiProperty({
+        description: 'Last scheduled execution time',
+        type: Date,
+        example: '2024-01-15T10:00:00Z'
+    })
+    @Expose()
+    @Column('timestamptz', { nullable: true })
+    last_scheduled_run?: Date;
 }

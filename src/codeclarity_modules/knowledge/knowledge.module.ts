@@ -21,6 +21,7 @@ import {
 } from '../results/vulnerabilities/services/reportGenerator';
 import { EPSS } from './epss/epss.entity';
 import { EPSSRepository } from './epss/epss.repository';
+import { DatabaseService } from '../../services/database.service';
 
 @Module({
     imports: [
@@ -51,7 +52,8 @@ import { EPSSRepository } from './epss/epss.repository';
         VersionsRepository,
         NVDReportGenerator,
         OSVReportGenerator,
-        EPSSRepository
+        EPSSRepository,
+        DatabaseService
     ],
     controllers: [LicenseController]
 })
