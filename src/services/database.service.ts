@@ -34,7 +34,7 @@ export class DatabaseService implements OnApplicationBootstrap {
                 options: 'jsonb_path_ops'
             },
             {
-                name: 'osv_affected_gin_pathops_idx', 
+                name: 'osv_affected_gin_pathops_idx',
                 table: 'osv',
                 column: '"affected"',
                 type: 'GIN',
@@ -58,13 +58,16 @@ export class DatabaseService implements OnApplicationBootstrap {
         options?: string;
     }): Promise<void> {
         const { name, table, column, type, options } = indexConfig;
-        
+
         try {
             // Check if index already exists
-            const indexExists = await this.knowledgeDataSource.query(`
+            const indexExists = await this.knowledgeDataSource.query(
+                `
                 SELECT 1 FROM pg_indexes 
                 WHERE indexname = $1 AND tablename = $2
-            `, [name, table]);
+            `,
+                [name, table]
+            );
 
             if (indexExists.length > 0) {
                 this.logger.debug(`Index ${name} already exists`);
