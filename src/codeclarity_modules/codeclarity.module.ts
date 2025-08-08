@@ -20,7 +20,8 @@ import { defaultOptions } from 'src/app.module';
             useFactory: () => ({
                 ...defaultOptions,
                 autoLoadEntities: true,
-                database: 'knowledge'
+                database: 'knowledge',
+                migrations: ['dist/src/migrations/knowledge/*.js']
             })
         }),
         TypeOrmModule.forRootAsync({
@@ -29,7 +30,8 @@ import { defaultOptions } from 'src/app.module';
             useFactory: () => ({
                 ...defaultOptions,
                 autoLoadEntities: true,
-                database: 'codeclarity'
+                database: 'codeclarity',
+                migrations: ['dist/src/migrations/codeclarity/*.js']
             })
         })
     ]

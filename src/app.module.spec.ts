@@ -32,13 +32,6 @@ describe('AppModule', () => {
             expect(moduleContent).toContain('process.env.PG_DB_PORT');
         });
 
-        it('should configure production synchronize behavior', () => {
-            const moduleContent = readFileSync(join(__dirname, 'app.module.ts'), 'utf8');
-
-            expect(moduleContent).toContain("ENV != 'prod'");
-            expect(moduleContent).toContain('synchronize:');
-        });
-
         it('should use default port fallback', () => {
             const moduleContent = readFileSync(join(__dirname, 'app.module.ts'), 'utf8');
 
@@ -73,11 +66,9 @@ describe('AppModule', () => {
     });
 
     describe('Environment Configuration Logic', () => {
-        it('should have environment-based synchronize setting', () => {
+        it('should allow force sync via DB_FORCE_SYNC variable', () => {
             const moduleContent = readFileSync(join(__dirname, 'app.module.ts'), 'utf8');
-
-            expect(moduleContent).toContain('const ENV = process.env.ENV');
-            expect(moduleContent).toContain("synchronize: ENV != 'prod'");
+            expect(moduleContent).toContain('DB_FORCE_SYNC');
         });
 
         it('should have configurable environment file paths', () => {

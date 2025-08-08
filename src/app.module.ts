@@ -19,7 +19,9 @@ export const defaultOptions: PostgresConnectionOptions = {
     port: port,
     username: user,
     password: password,
-    synchronize: ENV != 'prod', // Only sync if not in prod
+    // synchronize is now disabled by default; can be force-enabled in local/dev ONLY.
+    // Use proper TypeORM migrations instead (see src/migrations/* and datasource files).
+    synchronize: process.env.DB_FORCE_SYNC === 'true',
     logging: false
     // dropSchema: true
 };

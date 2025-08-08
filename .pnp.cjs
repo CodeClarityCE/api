@@ -28,6 +28,7 @@ const RAW_RUNTIME_STATE =
       [null, {\
         "packageLocation": "./",\
         "packageDependencies": [\
+          ["@css-inline/css-inline", "npm:0.14.1"],\
           ["@eslint/js", "npm:9.32.0"],\
           ["@fastify/compress", "npm:8.1.0"],\
           ["@fastify/multipart", "npm:9.0.3"],\
@@ -5094,6 +5095,7 @@ const RAW_RUNTIME_STATE =
       ["workspace:.", {\
         "packageLocation": "./",\
         "packageDependencies": [\
+          ["@css-inline/css-inline", "npm:0.14.1"],\
           ["@eslint/js", "npm:9.32.0"],\
           ["@fastify/compress", "npm:8.1.0"],\
           ["@fastify/multipart", "npm:9.0.3"],\

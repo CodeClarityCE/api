@@ -35,5 +35,6 @@ COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/.yarnrc.yml ./.yarnrc
 COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/.pnp* .
 COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/cvss-parser-js ./cvss-parser-js
 # COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app .
-CMD ["yarn", "node", "dist/src/main" ]
+# Run migrations then start the API (ENV must be set e.g. via .env.api -> ENV=prod)
+CMD ["/bin/sh", "-c", "yarn node dist/src/scripts/run-migrations.js && yarn node dist/src/main"]
 # CMD  /bin/sh -c "while sleep 1000; do :; done"

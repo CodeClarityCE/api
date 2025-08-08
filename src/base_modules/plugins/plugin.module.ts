@@ -15,7 +15,8 @@ import { PluginsRepository } from './plugin.repository';
             useFactory: () => ({
                 ...defaultOptions,
                 database: 'plugins',
-                entities: [Plugin]
+                entities: [Plugin],
+                migrations: ['dist/src/migrations/plugins/*.js']
             })
         }),
         TypeOrmModule.forFeature([Plugin], 'plugin')
