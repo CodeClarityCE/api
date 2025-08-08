@@ -7,9 +7,9 @@ const entities = [isTs ? 'src/**/*.entity.ts' : 'dist/src/**/*.entity.js'];
 const migrations = [isTs ? 'src/migrations/plugins/*.ts' : 'dist/src/migrations/plugins/*.js'];
 
 export const PluginsDataSource = new DataSource({
-  ...buildBaseOptions(),
-  name: 'plugins',
-  database: 'plugins',
-  entities,
-  migrations
+    ...buildBaseOptions(),
+    name: 'plugins',
+    database: 'plugins',
+    entities,
+    migrations
 });
