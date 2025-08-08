@@ -13,7 +13,7 @@
     "start:staging": "nest build && ENV=staging node ./dist/src/utils/validate-env.js && ENV=staging nest start",
     "start:test": "nest build && ENV=test node ./dist/src/utils/validate-env.js && ENV=test nest start --watch",
     "start:debug": "nest build && ENV=dev node ./dist/src/utils/validate-env.js && ENV=dev nest start --debug 0.0.0.0:9229 --watch",
-    "start:prod": "nest build && ENV=prod node ./dist/src/utils/validate-env.js && ENV=prod node dist/src/main",
+    "start:prod": "nest build && ENV=prod node dist/src/scripts/run-migrations.js && ENV=prod node dist/src/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "typecheck": "tsc --noEmit",
     "check": "yarn lint && yarn typecheck && yarn format && yarn test && yarn test:e2e test/integration/*contract*.e2e-spec.ts",
@@ -21,7 +21,16 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "migration:generate:codeclarity": "typeorm-ts-node-commonjs migration:generate src/migrations/codeclarity/Init -d src/datasources/codeclarity.datasource.ts",
+    "migration:generate:knowledge": "typeorm-ts-node-commonjs migration:generate src/migrations/knowledge/Init -d src/datasources/knowledge.datasource.ts",
+    "migration:generate:plugins": "typeorm-ts-node-commonjs migration:generate src/migrations/plugins/Init -d src/datasources/plugins.datasource.ts",
+    "migration:run:codeclarity": "ts-node -r tsconfig-paths/register src/scripts/run-migration-cli.ts codeclarity",
+    "migration:run:knowledge": "ts-node -r tsconfig-paths/register src/scripts/run-migration-cli.ts knowledge",
+    "migration:run:plugins": "ts-node -r tsconfig-paths/register src/scripts/run-migration-cli.ts plugins",
+    "migration:revert:codeclarity": "typeorm-ts-node-commonjs migration:revert -d src/datasources/codeclarity.datasource.ts",
+    "migration:revert:knowledge": "typeorm-ts-node-commonjs migration:revert -d src/datasources/knowledge.datasource.ts",
+    "migration:revert:plugins": "typeorm-ts-node-commonjs migration:revert -d src/datasources/plugins.datasource.ts"
   },
   "dependencies": {
     "@fastify/compress": "8.1.0",
