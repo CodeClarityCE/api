@@ -4,7 +4,12 @@ import * as dotenv from 'dotenv';
 const ENV = process.env.ENV || 'dev';
 try {
     dotenv.config({ path: `env/.env.${ENV}` });
-} catch (_) {}
+} catch (err) {
+    // Intentionally ignore missing env file; defaults will be used.
+    if (process.env.DEBUG_MIGRATIONS) {
+        console.warn('Env load failed:', err);
+    }
+}
 
 import { CodeClarityDataSource } from '../datasources/codeclarity.datasource';
 import { KnowledgeDataSource } from '../datasources/knowledge.datasource';
