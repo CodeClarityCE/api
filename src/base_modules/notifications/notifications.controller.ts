@@ -66,12 +66,26 @@ export class NotificationsController {
             .andWhere('u.id = :uid', { uid: user.userId })
             .getOne();
         if (!notif) throw new HttpException('Not found', HttpStatus.NOT_FOUND);
-        // Instead of removing globally, just detach this user
+        
+        // Detach this user from the notification
         await this.notificationsRepo
             .createQueryBuilder()
             .relation(Notification, 'users')
             .of(notif)
             .remove(user.userId);
+            
+        // Check if notification has any remaining users by counting the join table entries
+        const remainingUserCount = await this.notificationsRepo
+            .createQueryBuilder('n')
+            .innerJoin('n.users', 'u')
+            .where('n.id = :nid', { nid: notification_id })
+            .getCount();
+            
+        // If no users are linked to this notification, delete it completely
+        if (remainingUserCount === 0) {
+            await this.notificationsRepo.delete(notification_id);
+        }
+        
         return {};
     }
 
@@ -83,13 +97,38 @@ export class NotificationsController {
             .leftJoin('n.users', 'u')
             .where('u.id = :uid', { uid: user.userId })
             .getMany();
+            
+        const notificationsToDelete: string[] = [];
+        
         if (notifs.length > 0) {
             for (const notif of notifs) {
+                // Detach user from notification
                 await this.notificationsRepo
                     .createQueryBuilder()
                     .relation(Notification, 'users')
                     .of(notif)
                     .remove(user.userId);
+                    
+                // Check if notification has any remaining users by counting the join table entries
+                const remainingUserCount = await this.notificationsRepo
+                    .createQueryBuilder('n')
+                    .innerJoin('n.users', 'u')
+                    .where('n.id = :nid', { nid: notif.id })
+                    .getCount();
+                    
+                // If no users are linked to this notification, mark for deletion
+                if (remainingUserCount === 0) {
+                    notificationsToDelete.push(notif.id);
+                }
+            }
+            
+            // Delete all notifications that have no remaining users
+            if (notificationsToDelete.length > 0) {
+                await this.notificationsRepo
+                    .createQueryBuilder()
+                    .delete()
+                    .where('id IN (:...ids)', { ids: notificationsToDelete })
+                    .execute();
             }
         }
         return {};
