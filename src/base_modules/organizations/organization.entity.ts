@@ -12,7 +12,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { OrganizationMemberships } from './memberships/organization.memberships.entity';
 import type { User } from '../users/users.entity';
-import type { Notification } from '../notifications/notification.entity';
 import type { Integration } from '../integrations/integrations.entity';
 import type { Log } from './log/log.entity';
 import type { Policy } from '../../codeclarity_modules/policies/policy.entity';
@@ -77,10 +76,6 @@ export class Organization {
 
     @OneToMany('User', 'default_org')
     default: Relation<User[]>;
-
-    @ManyToMany('Notification', 'organizations')
-    @JoinTable()
-    notifications?: Relation<Notification[]>;
 
     @ApiProperty()
     @Expose()
