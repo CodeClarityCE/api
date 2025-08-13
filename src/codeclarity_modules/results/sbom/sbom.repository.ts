@@ -3,7 +3,7 @@ import { Output as SBOMOutput, Status } from 'src/codeclarity_modules/results/sb
 import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 
 @Injectable()
 export class SBOMRepository {
@@ -13,13 +13,14 @@ export class SBOMRepository {
     ) {}
 
     async getSbomResult(analysis_id: string): Promise<SBOMOutput> {
+        // Look for either js-sbom or php-sbom results
         const result = await this.resultRepository.findOne({
             relations: { analysis: true },
             where: {
                 analysis: {
                     id: analysis_id
                 },
-                plugin: 'js-sbom'
+                plugin: In(['js-sbom', 'php-sbom'])
             },
             order: {
                 analysis: {
@@ -28,6 +29,7 @@ export class SBOMRepository {
             },
             cache: true
         });
+        
         if (!result) {
             throw new PluginResultNotAvailable();
         }

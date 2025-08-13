@@ -7,7 +7,7 @@ import {
 import { Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { PluginFailed, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/error.types';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { VulnerabilitiesUtilsService } from '../../vulnerabilities/utils/utils.service';
@@ -48,7 +48,7 @@ export class SbomUtilsService {
                 analysis: {
                     id: analysis_id
                 },
-                plugin: 'js-sbom'
+                plugin: In(['js-sbom', 'php-sbom'])
             },
             order: {
                 analysis: {

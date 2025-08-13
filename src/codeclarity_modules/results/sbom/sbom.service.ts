@@ -21,7 +21,7 @@ import {
 } from 'src/codeclarity_modules/results/sbom/sbom_stats.types';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
 import { GraphDependency, GraphTraversalUtils } from './sbom_graph.types';
 
@@ -59,7 +59,7 @@ export class SBOMService {
                         id: projectId
                     }
                 },
-                plugin: 'js-sbom'
+                plugin: In(['js-sbom', 'php-sbom'])
             },
             order: {
                 analysis: {
