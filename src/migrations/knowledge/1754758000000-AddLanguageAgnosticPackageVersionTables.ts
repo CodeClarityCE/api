@@ -4,82 +4,106 @@ export class AddLanguageAgnosticPackageVersionTables1754758000000 implements Mig
     name = 'AddLanguageAgnosticPackageVersionTables1754758000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // Create language-agnostic package_version table
+        // Add language field to existing package table
         await queryRunner.query(`
-            CREATE TABLE "package_version" (
+            ALTER TABLE "package" ADD COLUMN "language" character varying(50) DEFAULT 'javascript'
+        `);
+
+        // Create index on language field
+        await queryRunner.query(`
+            CREATE INDEX "IDX_package_language" ON "package" ("language")
+        `);
+
+        // Update unique constraint to include language (drop old unique constraint first)
+        await queryRunner.query(`
+            DROP INDEX "IDX_b23e12326a4218d09bd72301aa"
+        `);
+        
+        await queryRunner.query(`
+            CREATE UNIQUE INDEX "IDX_package_name_language" ON "package" ("name", "language")
+        `);
+
+        // Create generic version table to replace js_version
+        await queryRunner.query(`
+            CREATE TABLE "version" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
-                "ecosystem" character varying(50) NOT NULL,
-                "package_name" character varying(255) NOT NULL,
-                "version" character varying(100) NOT NULL,
-                "metadata" jsonb,
+                "package_id" uuid NOT NULL,
+                "version" character varying(255) NOT NULL,
+                "dependencies" jsonb,
+                "dev_dependencies" jsonb,
+                "extra" jsonb,
                 "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
                 "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-                CONSTRAINT "PK_package_version_id" PRIMARY KEY ("id")
+                CONSTRAINT "PK_version_id" PRIMARY KEY ("id"),
+                CONSTRAINT "FK_version_package" FOREIGN KEY ("package_id") REFERENCES "package"("id") ON DELETE CASCADE
             )
         `);
 
         // Create indexes for efficient querying
         await queryRunner.query(`
-            CREATE INDEX "IDX_package_version_ecosystem" ON "package_version" ("ecosystem")
+            CREATE INDEX "IDX_version_package_id" ON "version" ("package_id")
         `);
         
         await queryRunner.query(`
-            CREATE INDEX "IDX_package_version_package_name" ON "package_version" ("package_name")
+            CREATE INDEX "IDX_version_version" ON "version" ("version")
         `);
         
         await queryRunner.query(`
-            CREATE INDEX "IDX_package_version_ecosystem_package_name" ON "package_version" ("ecosystem", "package_name")
+            CREATE UNIQUE INDEX "IDX_version_unique" ON "version" ("package_id", "version")
         `);
 
+        // Add GIN index for JSONB columns for efficient JSON queries
         await queryRunner.query(`
-            CREATE UNIQUE INDEX "IDX_package_version_unique" ON "package_version" ("ecosystem", "package_name", "version")
+            CREATE INDEX "IDX_version_dependencies_gin" ON "version" USING gin ("dependencies")
+        `);
+        
+        await queryRunner.query(`
+            CREATE INDEX "IDX_version_extra_gin" ON "version" USING gin ("extra")
         `);
 
-        // Create PHP-specific package metadata table
+        // Migrate data from js_version to new version table
         await queryRunner.query(`
-            CREATE TABLE "php_package_metadata" (
-                "package_version_id" uuid NOT NULL,
-                "php_version_constraint" character varying(100),
-                "composer_type" character varying(50),
-                "autoload" jsonb,
-                "authors" jsonb,
-                "license" jsonb,
-                "keywords" jsonb,
-                "homepage" character varying(255),
-                "support" jsonb,
-                "funding" jsonb,
-                CONSTRAINT "PK_php_package_metadata" PRIMARY KEY ("package_version_id"),
-                CONSTRAINT "FK_php_package_metadata_package_version" FOREIGN KEY ("package_version_id") REFERENCES "package_version"("id") ON DELETE CASCADE
-            )
+            INSERT INTO "version" ("package_id", "version", "dependencies", "dev_dependencies", "extra")
+            SELECT 
+                jv."packageId" as package_id,
+                jv."version",
+                jv."dependencies",
+                jv."dev_dependencies", 
+                jv."extra"
+            FROM "js_version" jv
+            WHERE jv."packageId" IS NOT NULL
         `);
 
-        // Create ecosystem-specific version indices for performance
+        // Update all existing packages to have 'javascript' language
         await queryRunner.query(`
-            CREATE INDEX "IDX_package_version_npm" ON "package_version" ("package_name", "version") WHERE "ecosystem" = 'npm'
+            UPDATE "package" SET "language" = 'javascript' WHERE "language" IS NULL
         `);
 
+        // Make language field not nullable after setting default values
         await queryRunner.query(`
-            CREATE INDEX "IDX_package_version_packagist" ON "package_version" ("package_name", "version") WHERE "ecosystem" = 'packagist'
-        `);
-
-        // Add GIN index for metadata JSONB column for efficient JSON queries
-        await queryRunner.query(`
-            CREATE INDEX "IDX_package_version_metadata_gin" ON "package_version" USING gin ("metadata")
+            ALTER TABLE "package" ALTER COLUMN "language" SET NOT NULL
         `);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
-        // Drop indexes first
-        await queryRunner.query(`DROP INDEX "IDX_package_version_metadata_gin"`);
-        await queryRunner.query(`DROP INDEX "IDX_package_version_packagist"`);
-        await queryRunner.query(`DROP INDEX "IDX_package_version_npm"`);
-        await queryRunner.query(`DROP INDEX "IDX_package_version_unique"`);
-        await queryRunner.query(`DROP INDEX "IDX_package_version_ecosystem_package_name"`);
-        await queryRunner.query(`DROP INDEX "IDX_package_version_package_name"`);
-        await queryRunner.query(`DROP INDEX "IDX_package_version_ecosystem"`);
+        // Remove indexes
+        await queryRunner.query(`DROP INDEX "IDX_version_extra_gin"`);
+        await queryRunner.query(`DROP INDEX "IDX_version_dependencies_gin"`);
+        await queryRunner.query(`DROP INDEX "IDX_version_unique"`);
+        await queryRunner.query(`DROP INDEX "IDX_version_version"`);
+        await queryRunner.query(`DROP INDEX "IDX_version_package_id"`);
 
-        // Drop tables
-        await queryRunner.query(`DROP TABLE "php_package_metadata"`);
-        await queryRunner.query(`DROP TABLE "package_version"`);
+        // Drop new table
+        await queryRunner.query(`DROP TABLE "version"`);
+
+        // Restore original package table structure
+        await queryRunner.query(`DROP INDEX "IDX_package_name_language"`);
+        await queryRunner.query(`DROP INDEX "IDX_package_language"`);
+        await queryRunner.query(`ALTER TABLE "package" DROP COLUMN "language"`);
+        
+        // Restore original unique constraint
+        await queryRunner.query(`
+            CREATE UNIQUE INDEX "IDX_b23e12326a4218d09bd72301aa" ON "package" ("name")
+        `);
     }
 }

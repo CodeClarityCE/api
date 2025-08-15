@@ -15,13 +15,14 @@ export class VersionsRepository {
         private versionRepository: Repository<Version>
     ) {}
 
-    async getVersion(dependencyName: string, dependencyVersion: string): Promise<Version> {
+    async getVersion(dependencyName: string, dependencyVersion: string, language: string = 'javascript'): Promise<Version> {
         if (dependencyName.includes('/')) {
             dependencyName.replace('/', ':');
         }
         const pack = await this.packageRepository.findOne({
             where: {
-                name: dependencyName
+                name: dependencyName,
+                language: language
             }
         });
         if (!pack) {
@@ -40,13 +41,14 @@ export class VersionsRepository {
         return version;
     }
 
-    async getDependencyVersions(dependency: string): Promise<Version[]> {
+    async getDependencyVersions(dependency: string, language: string = 'javascript'): Promise<Version[]> {
         if (dependency.includes('/')) {
             dependency.replace('/', ':');
         }
         const pack = await this.packageRepository.findOne({
             where: {
-                name: dependency
+                name: dependency,
+                language: language
             },
             relations: {
                 versions: true

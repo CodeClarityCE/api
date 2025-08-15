@@ -11,6 +11,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 
 @Entity('package')
+@Index(['name', 'language'], { unique: true })
 export class Package {
     @PrimaryGeneratedColumn('uuid')
     @ApiProperty()
@@ -20,10 +21,22 @@ export class Package {
     @Column({
         length: 255
     })
-    @Index({ unique: true })
     @ApiProperty()
     @Expose()
     name: string;
+
+    @Column({
+        length: 50,
+        default: 'javascript',
+        nullable: true
+    })
+    @Index()
+    @ApiProperty({
+        description: 'Programming language ecosystem (javascript, php, python, etc.)',
+        example: 'javascript'
+    })
+    @Expose()
+    language?: string;
 
     @Column({
         length: 255,
@@ -89,7 +102,8 @@ export class Package {
     versions: Relation<Version[]>;
 }
 
-@Entity('js_version')
+@Entity('version')
+@Index(['package_id', 'version'], { unique: true })
 export class Version {
     @PrimaryGeneratedColumn('uuid')
     @ApiProperty()
@@ -99,7 +113,7 @@ export class Version {
     @Column({
         length: 255
     })
-    @Index('idx_js_version_version')
+    @Index()
     @ApiProperty()
     @Expose()
     version: string;
@@ -118,6 +132,10 @@ export class Version {
     @ApiProperty()
     @Expose()
     extra: { [key: string]: any };
+
+    @Column({ name: 'package_id', nullable: true })
+    @Index()
+    package_id?: string;
 
     @ManyToOne(() => Package, (pack) => pack.versions)
     package: Relation<Package>;

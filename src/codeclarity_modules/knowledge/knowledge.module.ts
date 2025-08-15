@@ -11,13 +11,8 @@ import { OSVRepository } from './osv/osv.repository';
 import { OWASPRepository } from './owasp/owasp.repository';
 import { PackageRepository } from './package/package.repository';
 import { VersionsRepository } from './package/packageVersions.repository';
-import { PackageVersionRepository } from './package/packageVersion.repository';
-import { PhpPackageMetadataRepository } from './package/phpPackageMetadata.repository';
-import { PackageVersionService } from './package/packageVersion.service';
 import { CWE } from 'src/codeclarity_modules/knowledge/cwe/cwe.entity';
 import { Package, Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
-import { PackageVersion } from 'src/codeclarity_modules/knowledge/package/packageVersion.entity';
-import { PhpPackageMetadata } from 'src/codeclarity_modules/knowledge/package/phpPackageMetadata.entity';
 import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
 import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
 import {
@@ -30,7 +25,7 @@ import { DatabaseService } from '../../services/database.service';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([License, CWE, Package, NVD, OSV, Version, EPSS, PackageVersion, PhpPackageMetadata], 'knowledge')
+        TypeOrmModule.forFeature([License, CWE, Package, NVD, OSV, Version, EPSS], 'knowledge')
     ],
     exports: [
         LicenseRepository,
@@ -41,9 +36,6 @@ import { DatabaseService } from '../../services/database.service';
         OWASPRepository,
         PackageRepository,
         VersionsRepository,
-        PackageVersionRepository,
-        PhpPackageMetadataRepository,
-        PackageVersionService,
         NVDReportGenerator,
         OSVReportGenerator,
         EPSSRepository
@@ -58,9 +50,6 @@ import { DatabaseService } from '../../services/database.service';
         OWASPRepository,
         PackageRepository,
         VersionsRepository,
-        PackageVersionRepository,
-        PhpPackageMetadataRepository,
-        PackageVersionService,
         NVDReportGenerator,
         OSVReportGenerator,
         EPSSRepository,
