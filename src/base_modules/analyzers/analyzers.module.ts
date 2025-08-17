@@ -1,6 +1,7 @@
 import { forwardRef, Module } from '@nestjs/common';
-import { AnalyzersController } from './analyzers.controller';
+import { AnalyzersController, AnalyzerTemplatesController } from './analyzers.controller';
 import { AnalyzersService } from './analyzers.service';
+import { AnalyzerTemplatesService } from './analyzer-templates.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Analyzer } from 'src/base_modules/analyzers/analyzer.entity';
 import { UsersModule } from '../users/users.module';
@@ -13,8 +14,8 @@ import { AnalyzersRepository } from './analyzers.repository';
         OrganizationsModule,
         TypeOrmModule.forFeature([Analyzer], 'codeclarity')
     ],
-    exports: [AnalyzersService, AnalyzersRepository],
-    providers: [AnalyzersService, AnalyzersRepository],
-    controllers: [AnalyzersController]
+    exports: [AnalyzersService, AnalyzersRepository, AnalyzerTemplatesService],
+    providers: [AnalyzersService, AnalyzersRepository, AnalyzerTemplatesService],
+    controllers: [AnalyzersController, AnalyzerTemplatesController]
 })
 export class AnalyzersModule {}

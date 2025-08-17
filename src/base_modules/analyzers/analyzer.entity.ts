@@ -38,6 +38,52 @@ export class Analyzer {
     @Expose()
     steps: StageBase[][];
 
+    @Column({ 
+        type: 'varchar', 
+        array: true, 
+        default: ['javascript'],
+        nullable: false
+    })
+    @ApiProperty({ 
+        description: 'List of programming languages supported by this analyzer',
+        example: ['javascript', 'php'],
+        type: [String]
+    })
+    @Expose()
+    supported_languages: string[];
+
+    @Column({ 
+        type: 'jsonb', 
+        nullable: true 
+    })
+    @ApiProperty({ 
+        description: 'Language-specific configuration for analysis plugins',
+        example: {
+            javascript: { plugins: ['js-sbom', 'vuln-finder'] },
+            php: { plugins: ['php-sbom', 'vuln-finder'] }
+        },
+        required: false
+    })
+    @Expose()
+    language_config?: {
+        javascript?: { plugins: string[] };
+        php?: { plugins: string[] };
+        [key: string]: { plugins: string[] } | undefined;
+    };
+
+    @Column({ 
+        length: 50,
+        default: 'js',
+        nullable: false
+    })
+    @ApiProperty({ 
+        description: 'Logo identifier for the analyzer (js, php, multi, etc.)',
+        example: 'multi',
+        default: 'js'
+    })
+    @Expose()
+    logo: string;
+
     // Foreign keys
     @OneToMany('Analysis', 'analyzer')
     analyses: Relation<Analysis[]>;
