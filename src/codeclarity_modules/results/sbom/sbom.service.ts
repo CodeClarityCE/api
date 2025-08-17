@@ -50,38 +50,13 @@ export class SBOMService {
         // Get merged SBOM results from all supported plugins
         const { mergedSbom } = await this.sbomUtilsService.getMergedSbomResults(analysisId);
 
-        console.log(
-            '📊 Stats - Total dependencies before filtering:',
-            Object.keys(mergedSbom.workspaces[workspace]?.dependencies || {}).length
-        );
-
         // Apply ecosystem filter if specified
         const sbom: SBOMOutput = ecosystem_filter
             ? this.sbomUtilsService.filterSbomByEcosystem(mergedSbom, ecosystem_filter)
             : mergedSbom;
 
-        console.log(
-            '📊 Stats - Total dependencies after filtering:',
-            Object.keys(sbom.workspaces[workspace]?.dependencies || {}).length
-        );
-
         const workspacesOutput = sbom.workspaces[workspace];
         const dependencies = workspacesOutput.dependencies;
-
-        // Debug: Log a sample dependency structure for PHP
-        if (ecosystem_filter === 'packagist' && Object.keys(dependencies).length > 0) {
-            const firstDep = Object.keys(dependencies)[0];
-            const firstVersion = Object.keys(dependencies[firstDep])[0];
-            const sampleDep = dependencies[firstDep][firstVersion];
-            console.log('🔍 Sample PHP dependency for stats:', {
-                name: firstDep,
-                version: firstVersion,
-                direct: (sampleDep as any).direct,
-                transitive: (sampleDep as any).transitive,
-                Direct: sampleDep.Direct,
-                Transitive: sampleDep.Transitive
-            });
-        }
 
         // For previous stats comparison, we currently just use the same filtered data
         // TODO: Could be enhanced to get previous analysis data as well
@@ -236,20 +211,10 @@ export class SBOMService {
         // Get merged SBOM results from all supported plugins
         const { mergedSbom } = await this.sbomUtilsService.getMergedSbomResults(analysisId);
 
-        console.log(
-            '🔍 Total dependencies before filtering:',
-            Object.keys(mergedSbom.workspaces[workspace]?.dependencies || {}).length
-        );
-
         // Apply ecosystem filter if specified
         const sbom: SBOMOutput = ecosystem_filter
             ? this.sbomUtilsService.filterSbomByEcosystem(mergedSbom, ecosystem_filter)
             : mergedSbom;
-
-        console.log(
-            '🔍 Total dependencies after filtering:',
-            Object.keys(sbom.workspaces[workspace]?.dependencies || {}).length
-        );
 
         const dependenciesArray: SbomDependency[] = [];
 
@@ -312,15 +277,6 @@ export class SBOMService {
                 // It can be used in another workspace
                 if (sbomDependency.dev || sbomDependency.prod) {
                     dependenciesArray.push(sbomDependency);
-                } else {
-                    console.log('🚫 Dependency filtered out (no dev/prod flag):', {
-                        name: dep_key,
-                        version: version_key,
-                        dev: sbomDependency.dev,
-                        prod: sbomDependency.prod,
-                        ecosystem: (version as any).ecosystem,
-                        originalDep: version
-                    });
                 }
             }
         }
