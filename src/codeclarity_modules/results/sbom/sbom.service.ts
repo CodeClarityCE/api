@@ -47,44 +47,45 @@ export class SBOMService {
         projectId: string,
         analysisId: string,
         workspace: string,
-        user: AuthenticatedUser
+        user: AuthenticatedUser,
+        ecosystem_filter?: string | undefined
     ): Promise<AnalysisStats> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
-        const result = await this.resultRepository.find({
-            relations: { analysis: { project: true } },
-            where: {
-                analysis: {
-                    project: {
-                        id: projectId
-                    }
-                },
-                plugin: In(['js-sbom', 'php-sbom'])
-            },
-            order: {
-                analysis: {
-                    created_on: 'DESC'
-                }
-            },
-            take: 2,
-            cache: true
-        });
-        if (result.length == 0) {
-            throw new PluginResultNotAvailable();
-        }
+        // Get merged SBOM results from all supported plugins
+        const { mergedSbom } = await this.sbomUtilsService.getMergedSbomResults(analysisId);
+        
+        console.log('📊 Stats - Total dependencies before filtering:', Object.keys(mergedSbom.workspaces[workspace]?.dependencies || {}).length);
+        
+        // Apply ecosystem filter if specified
+        const sbom: SBOMOutput = ecosystem_filter 
+            ? this.sbomUtilsService.filterSbomByEcosystem(mergedSbom, ecosystem_filter)
+            : mergedSbom;
+            
+        console.log('📊 Stats - Total dependencies after filtering:', Object.keys(sbom.workspaces[workspace]?.dependencies || {}).length);
 
-        const sbom: SBOMOutput = result[0].result as unknown as SBOMOutput;
         const workspacesOutput = sbom.workspaces[workspace];
         const dependencies = workspacesOutput.dependencies;
+        
+        // Debug: Log a sample dependency structure for PHP
+        if (ecosystem_filter === 'packagist' && Object.keys(dependencies).length > 0) {
+            const firstDep = Object.keys(dependencies)[0];
+            const firstVersion = Object.keys(dependencies[firstDep])[0];
+            const sampleDep = dependencies[firstDep][firstVersion];
+            console.log('🔍 Sample PHP dependency for stats:', {
+                name: firstDep,
+                version: firstVersion,
+                direct: (sampleDep as any).direct,
+                transitive: (sampleDep as any).transitive,
+                Direct: sampleDep.Direct,
+                Transitive: sampleDep.Transitive
+            });
+        }
 
+        // For previous stats comparison, we currently just use the same filtered data
+        // TODO: Could be enhanced to get previous analysis data as well
         let sbomPrevious: SBOMOutput = sbom;
         let dependenciesPrevious = dependencies;
-
-        if (result.length > 1) {
-            sbomPrevious = result[1].result as unknown as SBOMOutput;
-            const workspacesOutput = sbomPrevious.workspaces[workspace];
-            dependenciesPrevious = workspacesOutput.dependencies;
-        }
 
         const wPrevStats: AnalysisStats = newAnalysisStats();
         const wStats: AnalysisStats = newAnalysisStats();
@@ -99,28 +100,81 @@ export class SBOMService {
         wPrevStats.number_of_dev_dependencies =
             sbomPrevious.workspaces[workspace]?.start.dev_dependencies?.length || 0;
 
-        for (const dep of Object.values(dependencies)) {
-            for (const version of Object.values(dep)) {
-                if (version.Bundled) wStats.number_of_bundled_dependencies += 1;
-                if (version.Optional) wStats.number_of_optional_dependencies += 1;
-                if (version.Transitive && version.Direct)
-                    wStats.number_of_both_direct_transitive_dependencies += 1;
-                else if (version.Transitive) wStats.number_of_transitive_dependencies += 1;
-                else if (version.Direct) wStats.number_of_direct_dependencies += 1;
+        for (const [dep_key, dep] of Object.entries(dependencies)) {
+            for (const [version_key, version] of Object.entries(dep)) {
+                // Handle case sensitivity for different plugin formats
+                const isDirect = version.Direct || (version as any).direct;
+                const isTransitive = version.Transitive || (version as any).transitive;
+                const isBundled = version.Bundled || (version as any).bundled;
+                const isOptional = version.Optional || (version as any).optional;
+                const isDev = version.Dev || (version as any).dev || false;
+                const isProd = version.Prod || (version as any).prod || false;
+                
+                // Only count dependencies that are actually used (have dev or prod flags)
+                if (isDev || isProd) {
+                    if (isBundled) wStats.number_of_bundled_dependencies += 1;
+                    if (isOptional) wStats.number_of_optional_dependencies += 1;
+                    if (isTransitive && isDirect)
+                        wStats.number_of_both_direct_transitive_dependencies += 1;
+                    else if (isTransitive) wStats.number_of_transitive_dependencies += 1;
+                    else if (isDirect) wStats.number_of_direct_dependencies += 1;
 
-                wStats.number_of_dependencies += 1;
+                    // Check if dependency is outdated by comparing with latest version
+                    // Determine the language based on the ecosystem
+                    const ecosystem = (version as any).ecosystem;
+                    let language = 'javascript'; // default
+                    if (ecosystem === 'packagist') {
+                        language = 'php';
+                    } else if (ecosystem === 'pypi') {
+                        language = 'python';
+                    }
+                    
+                    const pack = await this.packageRepository.getPackageInfoWithoutFailing(dep_key, language);
+                    if (pack && pack.latest_version && pack.latest_version !== version_key) {
+                        wStats.number_of_outdated_dependencies += 1;
+                    }
+
+                    wStats.number_of_dependencies += 1;
+                }
             }
         }
 
-        for (const dep of Object.values(dependenciesPrevious)) {
-            for (const version of Object.values(dep)) {
-                if (version.Bundled) wPrevStats.number_of_bundled_dependencies += 1;
-                if (version.Optional) wPrevStats.number_of_optional_dependencies += 1;
-                if (version.Transitive && version.Direct)
-                    wPrevStats.number_of_both_direct_transitive_dependencies += 1;
-                else if (version.Transitive) wPrevStats.number_of_transitive_dependencies += 1;
-                else if (version.Direct) wPrevStats.number_of_direct_dependencies += 1;
-                wPrevStats.number_of_dependencies += 1;
+        for (const [dep_key, dep] of Object.entries(dependenciesPrevious)) {
+            for (const [version_key, version] of Object.entries(dep)) {
+                // Handle case sensitivity for different plugin formats
+                const isDirect = version.Direct || (version as any).direct;
+                const isTransitive = version.Transitive || (version as any).transitive;
+                const isBundled = version.Bundled || (version as any).bundled;
+                const isOptional = version.Optional || (version as any).optional;
+                const isDev = version.Dev || (version as any).dev || false;
+                const isProd = version.Prod || (version as any).prod || false;
+                
+                // Only count dependencies that are actually used (have dev or prod flags)
+                if (isDev || isProd) {
+                    if (isBundled) wPrevStats.number_of_bundled_dependencies += 1;
+                    if (isOptional) wPrevStats.number_of_optional_dependencies += 1;
+                    if (isTransitive && isDirect)
+                        wPrevStats.number_of_both_direct_transitive_dependencies += 1;
+                    else if (isTransitive) wPrevStats.number_of_transitive_dependencies += 1;
+                    else if (isDirect) wPrevStats.number_of_direct_dependencies += 1;
+
+                    // Check if dependency is outdated by comparing with latest version
+                    // Determine the language based on the ecosystem
+                    const ecosystem = (version as any).ecosystem;
+                    let language = 'javascript'; // default
+                    if (ecosystem === 'packagist') {
+                        language = 'php';
+                    } else if (ecosystem === 'pypi') {
+                        language = 'python';
+                    }
+                    
+                    const pack = await this.packageRepository.getPackageInfoWithoutFailing(dep_key, language);
+                    if (pack && pack.latest_version && pack.latest_version !== version_key) {
+                        wPrevStats.number_of_outdated_dependencies += 1;
+                    }
+
+                    wPrevStats.number_of_dependencies += 1;
+                }
             }
         }
 
@@ -163,7 +217,8 @@ export class SBOMService {
         sort_by: string | undefined,
         sort_direction: string | undefined,
         active_filters_string: string | undefined,
-        search_key: string | undefined
+        search_key: string | undefined,
+        ecosystem_filter?: string | undefined
     ): Promise<PaginatedResponse> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
@@ -171,7 +226,17 @@ export class SBOMService {
         if (active_filters_string != null)
             active_filters = active_filters_string.replace('[', '').replace(']', '').split(',');
 
-        const sbom: SBOMOutput = await this.sbomUtilsService.getSbomResult(analysisId);
+        // Get merged SBOM results from all supported plugins
+        const { mergedSbom } = await this.sbomUtilsService.getMergedSbomResults(analysisId);
+        
+        console.log('🔍 Total dependencies before filtering:', Object.keys(mergedSbom.workspaces[workspace]?.dependencies || {}).length);
+        
+        // Apply ecosystem filter if specified
+        const sbom: SBOMOutput = ecosystem_filter 
+            ? this.sbomUtilsService.filterSbomByEcosystem(mergedSbom, ecosystem_filter)
+            : mergedSbom;
+            
+        console.log('🔍 Total dependencies after filtering:', Object.keys(sbom.workspaces[workspace]?.dependencies || {}).length);
 
         const dependenciesArray: SbomDependency[] = [];
 
@@ -205,13 +270,25 @@ export class SBOMService {
                     name: dep_key,
                     version: version_key,
                     newest_release: version_key,
-                    dev: version.Dev,
-                    prod: version.Prod,
+                    dev: version.Dev || (version as any).dev || false,
+                    prod: version.Prod || (version as any).prod || false,
                     is_direct_count: is_direct,
-                    is_transitive_count: version.Transitive ? 1 : 0
+                    is_transitive_count: (version.Transitive || (version as any).transitive) ? 1 : 0,
+                    // Add ecosystem and source plugin information
+                    ecosystem: (version as any).ecosystem,
+                    source_plugin: (version as any).source_plugin
                 };
 
-                const pack = await this.packageRepository.getPackageInfoWithoutFailing(dep_key);
+                // Determine the language based on the ecosystem
+                const ecosystem = (version as any).ecosystem;
+                let language = 'javascript'; // default
+                if (ecosystem === 'packagist') {
+                    language = 'php';
+                } else if (ecosystem === 'pypi') {
+                    language = 'python';
+                }
+
+                const pack = await this.packageRepository.getPackageInfoWithoutFailing(dep_key, language);
                 if (pack) sbomDependency.newest_release = pack.latest_version;
 
                 // If the dependency is not tagged as prod or dev,
@@ -219,6 +296,15 @@ export class SBOMService {
                 // It can be used in another workspace
                 if (sbomDependency.dev || sbomDependency.prod) {
                     dependenciesArray.push(sbomDependency);
+                } else {
+                    console.log('🚫 Dependency filtered out (no dev/prod flag):', {
+                        name: dep_key,
+                        version: version_key,
+                        dev: sbomDependency.dev,
+                        prod: sbomDependency.prod,
+                        ecosystem: (version as any).ecosystem,
+                        originalDep: version
+                    });
                 }
             }
         }

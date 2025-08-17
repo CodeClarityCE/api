@@ -2,7 +2,9 @@ import {
     Dependency,
     DependencyDetails,
     Output as SBOMOutput,
-    Status
+    Status,
+    WorkSpaceData,
+    WorkSpaceDependency
 } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { PluginFailed, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/error.types';
@@ -13,6 +15,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { VulnerabilitiesUtilsService } from '../../vulnerabilities/utils/utils.service';
 import { LicensesUtilsService } from '../../licenses/utils/utils';
 import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
+import { EcosystemMapper } from './ecosystem-mapper';
 
 @Injectable()
 export class SbomUtilsService {
@@ -66,6 +69,195 @@ export class SbomUtilsService {
             throw new PluginFailed();
         }
         return sbom;
+    }
+
+    /**
+     * Gets all SBOM results from all supported plugins and merges them
+     * This method is designed to be language-agnostic and extensible
+     */
+    async getMergedSbomResults(analysis_id: string): Promise<{
+        mergedSbom: SBOMOutput;
+        pluginResults: Array<{ plugin: string; sbom: SBOMOutput; ecosystem: string }>;
+    }> {
+        // Get all supported SBOM plugins dynamically
+        const supportedPlugins = EcosystemMapper.getSupportedSbomPlugins();
+        
+        const results = await this.resultRepository.find({
+            relations: { analysis: true },
+            where: {
+                analysis: {
+                    id: analysis_id
+                },
+                plugin: In(supportedPlugins)
+            },
+            order: {
+                plugin: 'ASC' // Consistent ordering
+            },
+            cache: true
+        });
+
+        if (results.length === 0) {
+            throw new PluginResultNotAvailable();
+        }
+
+        // Process each plugin result with ecosystem info
+        const pluginResults = results
+            .map(result => {
+                const sbom = result.result as unknown as SBOMOutput;
+                const ecosystemInfo = EcosystemMapper.getEcosystemInfo(result.plugin);
+                
+                if (!ecosystemInfo) {
+                    console.warn(`Unknown plugin: ${result.plugin}`);
+                    return null;
+                }
+
+                // Check if the plugin succeeded
+                if (sbom.analysis_info.status === Status.Failure) {
+                    console.warn(`Plugin ${result.plugin} failed, skipping`);
+                    return null;
+                }
+
+                return {
+                    plugin: result.plugin,
+                    sbom,
+                    ecosystem: ecosystemInfo.ecosystem
+                };
+            })
+            .filter((result): result is { plugin: string; sbom: SBOMOutput; ecosystem: string } => result !== null);
+
+        if (pluginResults.length === 0) {
+            throw new PluginFailed();
+        }
+
+        // Merge all SBOMs into a unified structure
+        const mergedSbom = this.mergeSbomResults(pluginResults);
+
+        return {
+            mergedSbom,
+            pluginResults
+        };
+    }
+
+    /**
+     * Merges multiple SBOM results into a unified structure
+     * while preserving ecosystem information for each dependency
+     */
+    private mergeSbomResults(pluginResults: Array<{ plugin: string; sbom: SBOMOutput; ecosystem: string }>): SBOMOutput {
+        if (pluginResults.length === 0) {
+            throw new Error('No plugin results to merge');
+        }
+
+        // Use the first result as the base structure
+        const baseSbom = JSON.parse(JSON.stringify(pluginResults[0].sbom)) as SBOMOutput;
+        
+        // Collect all unique workspaces across plugins
+        const allWorkspaces = new Set<string>();
+        pluginResults.forEach(({ sbom }) => {
+            Object.keys(sbom.workspaces).forEach(workspace => allWorkspaces.add(workspace));
+        });
+
+        // Merge workspaces
+        for (const workspace of allWorkspaces) {
+            const mergedWorkspace = this.mergeWorkspaceData(workspace, pluginResults);
+            baseSbom.workspaces[workspace] = mergedWorkspace;
+        }
+
+        // Update analysis info to reflect merged status
+        baseSbom.analysis_info = {
+            ...baseSbom.analysis_info,
+            project_name: baseSbom.analysis_info.project_name || 'Multi-language Project',
+            package_manager: 'multi-language', // Indicate this is a merged result
+        };
+
+        return baseSbom;
+    }
+
+    /**
+     * Merges workspace data from multiple plugins
+     */
+    private mergeWorkspaceData(
+        workspace: string, 
+        pluginResults: Array<{ plugin: string; sbom: SBOMOutput; ecosystem: string }>
+    ): WorkSpaceData {
+        const mergedDependencies: { [key: string]: { [key: string]: Dependency } } = {};
+        const mergedStartDependencies: WorkSpaceDependency[] = [];
+        const mergedStartDevDependencies: WorkSpaceDependency[] = [];
+
+        for (const { sbom, ecosystem, plugin } of pluginResults) {
+            const workspaceData = sbom.workspaces[workspace];
+            if (!workspaceData) continue;
+
+            // Merge dependencies with ecosystem tracking
+            for (const [depName, versions] of Object.entries(workspaceData.dependencies || {})) {
+                if (!mergedDependencies[depName]) {
+                    mergedDependencies[depName] = {};
+                }
+
+                for (const [version, dependency] of Object.entries(versions)) {
+                    // Add ecosystem and source plugin information
+                    const enhancedDependency = {
+                        ...dependency,
+                        ecosystem,
+                        source_plugin: plugin
+                    };
+
+                    mergedDependencies[depName][version] = enhancedDependency;
+                }
+            }
+
+            // Merge start dependencies
+            if (workspaceData.start.dependencies) {
+                mergedStartDependencies.push(...workspaceData.start.dependencies);
+            }
+            if (workspaceData.start.dev_dependencies) {
+                mergedStartDevDependencies.push(...workspaceData.start.dev_dependencies);
+            }
+        }
+
+        return {
+            dependencies: mergedDependencies,
+            start: {
+                dependencies: mergedStartDependencies.length > 0 ? mergedStartDependencies : undefined,
+                dev_dependencies: mergedStartDevDependencies.length > 0 ? mergedStartDevDependencies : undefined
+            }
+        };
+    }
+
+    /**
+     * Filters merged SBOM data by ecosystem
+     */
+    filterSbomByEcosystem(sbom: SBOMOutput, ecosystem: string): SBOMOutput {
+        if (!EcosystemMapper.isValidEcosystem(ecosystem)) {
+            throw new Error(`Invalid ecosystem filter: ${ecosystem}`);
+        }
+
+        const filteredSbom = JSON.parse(JSON.stringify(sbom)) as SBOMOutput;
+
+        for (const [workspaceName, workspaceData] of Object.entries(filteredSbom.workspaces)) {
+            const filteredDependencies: { [key: string]: { [key: string]: Dependency } } = {};
+
+            // Filter dependencies by ecosystem
+            for (const [depName, versions] of Object.entries(workspaceData.dependencies || {})) {
+                const filteredVersions: { [key: string]: Dependency } = {};
+
+                for (const [version, dependency] of Object.entries(versions)) {
+                    if ((dependency as any).ecosystem === ecosystem) {
+                        filteredVersions[version] = dependency;
+                    }
+                }
+
+                if (Object.keys(filteredVersions).length > 0) {
+                    filteredDependencies[depName] = filteredVersions;
+                }
+            }
+
+            filteredSbom.workspaces[workspaceName] = {
+                ...workspaceData,
+                dependencies: filteredDependencies
+            };
+        }
+
+        return filteredSbom;
     }
 
     async getDependencyData(

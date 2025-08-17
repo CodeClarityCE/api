@@ -20,8 +20,10 @@ export class SBOMController {
         @Query('sort_by') sort_by?: string,
         @Query('sort_direction') sort_direction?: string,
         @Query('active_filters') active_filters?: string,
-        @Query('search_key') search_key?: string
+        @Query('search_key') search_key?: string,
+        @Query('ecosystem_filter') ecosystem_filter?: string
     ): Promise<PaginatedResponse> {
+        console.log('🎯 SBOM API called with ecosystem_filter:', ecosystem_filter);
         const sbom = await this.sbomService.getSbom(
             org_id,
             project_id,
@@ -33,7 +35,8 @@ export class SBOMController {
             sort_by,
             sort_direction,
             active_filters,
-            search_key
+            search_key,
+            ecosystem_filter
         );
         return sbom;
     }
@@ -45,10 +48,12 @@ export class SBOMController {
         @Param('analysis_id') analysis_id: string,
         @AuthUser() user: AuthenticatedUser,
         @Query('workspace') workspace: string,
+        @Query('ecosystem_filter') ecosystem_filter?: string,
         @Query('run_index') _run_index?: string
     ): Promise<Response> {
+        console.log('🎯 SBOM Stats API called with ecosystem_filter:', ecosystem_filter);
         return {
-            data: await this.sbomService.getStats(org_id, project_id, analysis_id, workspace, user)
+            data: await this.sbomService.getStats(org_id, project_id, analysis_id, workspace, user, ecosystem_filter)
         };
     }
 
