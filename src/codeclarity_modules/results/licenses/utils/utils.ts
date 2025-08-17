@@ -14,13 +14,14 @@ export class LicensesUtilsService {
     ) {}
 
     async getLicensesResult(analysis_id: string): Promise<LicensesOutput> {
-        const result = await this.resultRepository.findOne({
+        // Try to get results from the multi-language license-finder plugin first
+        let result = await this.resultRepository.findOne({
             relations: { analysis: true },
             where: {
                 analysis: {
                     id: analysis_id
                 },
-                plugin: 'js-license'
+                plugin: 'license-finder'
             },
             order: {
                 analysis: {
@@ -29,6 +30,26 @@ export class LicensesUtilsService {
             },
             cache: true
         });
+
+        // Fall back to js-license for backward compatibility
+        if (!result) {
+            result = await this.resultRepository.findOne({
+                relations: { analysis: true },
+                where: {
+                    analysis: {
+                        id: analysis_id
+                    },
+                    plugin: 'js-license'
+                },
+                order: {
+                    analysis: {
+                        created_on: 'DESC'
+                    }
+                },
+                cache: true
+            });
+        }
+
         if (!result) {
             throw new PluginResultNotAvailable();
         }
@@ -38,5 +59,62 @@ export class LicensesUtilsService {
             throw new PluginFailed();
         }
         return licenses;
+    }
+
+    /**
+     * Filters license dependencies by ecosystem (e.g., 'npm', 'packagist')
+     * Uses package naming patterns to determine ecosystem
+     */
+    filterLicensesByEcosystem(licensesOutput: LicensesOutput, ecosystem: string, workspace: string): LicensesOutput {
+        const filtered: LicensesOutput = {
+            ...licensesOutput,
+            workspaces: {
+                ...licensesOutput.workspaces,
+                [workspace]: {
+                    ...licensesOutput.workspaces[workspace],
+                    LicensesDepMap: {},
+                    NonSpdxLicensesDepMap: {}
+                }
+            }
+        };
+
+        const workspaceData = licensesOutput.workspaces[workspace];
+        
+        // Filter LicensesDepMap
+        for (const [licenseId, dependencies] of Object.entries(workspaceData.LicensesDepMap)) {
+            const filteredDeps = dependencies.filter(dep => this.detectPackageEcosystem(dep) === ecosystem);
+            if (filteredDeps.length > 0) {
+                filtered.workspaces[workspace].LicensesDepMap[licenseId] = filteredDeps;
+            }
+        }
+
+        // Filter NonSpdxLicensesDepMap
+        for (const [licenseId, dependencies] of Object.entries(workspaceData.NonSpdxLicensesDepMap)) {
+            const filteredDeps = dependencies.filter(dep => this.detectPackageEcosystem(dep) === ecosystem);
+            if (filteredDeps.length > 0) {
+                filtered.workspaces[workspace].NonSpdxLicensesDepMap[licenseId] = filteredDeps;
+            }
+        }
+
+        return filtered;
+    }
+
+    /**
+     * Detects the ecosystem of a package based on naming patterns
+     */
+    private detectPackageEcosystem(packageName: string): string {
+        // PHP packages often have vendor/package format
+        if (packageName.includes('/') && !packageName.startsWith('@')) {
+            return 'packagist';
+        }
+        
+        // Scoped npm packages start with @
+        if (packageName.startsWith('@')) {
+            return 'npm';
+        }
+        
+        // Most other single-name packages are likely npm
+        // This is a heuristic that may need refinement
+        return 'npm';
     }
 }

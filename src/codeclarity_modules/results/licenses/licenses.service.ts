@@ -43,7 +43,8 @@ export class LicensesService {
         sort_by: string | undefined,
         sort_direction: string | undefined,
         active_filters_string: string | undefined,
-        search_key: string | undefined
+        search_key: string | undefined,
+        ecosystem_filter?: string
     ): Promise<PaginatedResponse> {
         // Check if the user is allowed to view this analysis result
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
@@ -52,8 +53,17 @@ export class LicensesService {
         if (active_filters_string != null)
             active_filters = active_filters_string.replace('[', '').replace(']', '').split(',');
 
-        const licensesOutput: LicensesOutput =
+        let licensesOutput: LicensesOutput =
             await this.licensesUtilsService.getLicensesResult(analysisId);
+
+        // Apply ecosystem filter if specified
+        if (ecosystem_filter) {
+            licensesOutput = this.licensesUtilsService.filterLicensesByEcosystem(
+                licensesOutput,
+                ecosystem_filter,
+                workspace
+            );
+        }
 
         const licensesWorkspaceInfo = licensesOutput.workspaces[workspace];
         const licenseMap: { [key: string]: LicenseInfo } = {};
