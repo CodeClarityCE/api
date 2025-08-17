@@ -14,7 +14,6 @@ export interface AnalyzerTemplate {
 
 @Injectable()
 export class AnalyzerTemplatesService {
-    
     /**
      * Get all available analyzer templates
      */
@@ -50,11 +49,12 @@ export class AnalyzerTemplatesService {
     private getJavaScriptTemplate(): AnalyzerTemplate {
         return {
             name: 'JavaScript Analyzer',
-            description: 'Analyzes JavaScript and Node.js projects for dependencies, vulnerabilities, and license compliance',
+            description:
+                'Analyzes JavaScript and Node.js projects for dependencies, vulnerabilities, and license compliance',
             supported_languages: ['javascript'],
             language_config: {
-                javascript: { 
-                    plugins: ['js-sbom', 'vuln-finder', 'license-finder'] 
+                javascript: {
+                    plugins: ['js-sbom', 'vuln-finder', 'license-finder']
                 }
             },
             logo: 'js',
@@ -111,11 +111,12 @@ export class AnalyzerTemplatesService {
     private getPHPTemplate(): AnalyzerTemplate {
         return {
             name: 'PHP Analyzer',
-            description: 'Analyzes PHP projects for dependencies, vulnerabilities, and license compliance using Composer',
+            description:
+                'Analyzes PHP projects for dependencies, vulnerabilities, and license compliance using Composer',
             supported_languages: ['php'],
             language_config: {
-                php: { 
-                    plugins: ['php-sbom', 'vuln-finder', 'license-finder'] 
+                php: {
+                    plugins: ['php-sbom', 'vuln-finder', 'license-finder']
                 }
             },
             logo: 'php',
@@ -172,14 +173,15 @@ export class AnalyzerTemplatesService {
     private getMultiLanguageTemplate(): AnalyzerTemplate {
         return {
             name: 'Multi-Language Analyzer',
-            description: 'Analyzes JavaScript and PHP projects for dependencies, vulnerabilities, and license compliance',
+            description:
+                'Analyzes JavaScript and PHP projects for dependencies, vulnerabilities, and license compliance',
             supported_languages: ['javascript', 'php'],
             language_config: {
-                javascript: { 
-                    plugins: ['js-sbom', 'vuln-finder', 'license-finder'] 
+                javascript: {
+                    plugins: ['js-sbom', 'vuln-finder', 'license-finder']
                 },
-                php: { 
-                    plugins: ['php-sbom', 'vuln-finder', 'license-finder'] 
+                php: {
+                    plugins: ['php-sbom', 'vuln-finder', 'license-finder']
                 }
             },
             logo: 'multi',

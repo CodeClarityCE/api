@@ -6,7 +6,7 @@ export class UpdateAnalyzerPluginNames1754764000000 implements MigrationInterfac
     public async up(queryRunner: QueryRunner): Promise<void> {
         // Update analyzer configurations to use new generic plugin names
         // This updates the 'steps' JSONB field in the analyzer table
-        
+
         // Update js-sbom to include both js-sbom and php-sbom plugins
         await queryRunner.query(`
             UPDATE "analyzer" 

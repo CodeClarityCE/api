@@ -11,7 +11,10 @@ export class PackageRepository {
         private packageRepository: Repository<Package>
     ) {}
 
-    async getPackageInfo(dependencyName: string, language: string = 'javascript'): Promise<Package> {
+    async getPackageInfo(
+        dependencyName: string,
+        language: string = 'javascript'
+    ): Promise<Package> {
         if (dependencyName.includes('/')) {
             dependencyName.replace('/', ':');
         }
@@ -22,7 +25,10 @@ export class PackageRepository {
         return pack;
     }
 
-    async getPackageInfoWithoutFailing(dependencyName: string, language: string = 'javascript'): Promise<Package | null> {
+    async getPackageInfoWithoutFailing(
+        dependencyName: string,
+        language: string = 'javascript'
+    ): Promise<Package | null> {
         if (dependencyName.includes('/')) {
             dependencyName.replace('/', ':');
         }
@@ -34,7 +40,11 @@ export class PackageRepository {
         });
     }
 
-    async getVersionInfo(dependency_name: string, dependency_version: string, language: string = 'javascript'): Promise<Package> {
+    async getVersionInfo(
+        dependency_name: string,
+        dependency_version: string,
+        language: string = 'javascript'
+    ): Promise<Package> {
         const package_version = await this.packageRepository.findOne({
             where: {
                 name: dependency_name,

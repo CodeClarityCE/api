@@ -38,13 +38,13 @@ export class Analyzer {
     @Expose()
     steps: StageBase[][];
 
-    @Column({ 
-        type: 'varchar', 
-        array: true, 
+    @Column({
+        type: 'varchar',
+        array: true,
         default: ['javascript'],
         nullable: false
     })
-    @ApiProperty({ 
+    @ApiProperty({
         description: 'List of programming languages supported by this analyzer',
         example: ['javascript', 'php'],
         type: [String]
@@ -52,11 +52,11 @@ export class Analyzer {
     @Expose()
     supported_languages: string[];
 
-    @Column({ 
-        type: 'jsonb', 
-        nullable: true 
+    @Column({
+        type: 'jsonb',
+        nullable: true
     })
-    @ApiProperty({ 
+    @ApiProperty({
         description: 'Language-specific configuration for analysis plugins',
         example: {
             javascript: { plugins: ['js-sbom', 'vuln-finder'] },
@@ -71,12 +71,12 @@ export class Analyzer {
         [key: string]: { plugins: string[] } | undefined;
     };
 
-    @Column({ 
+    @Column({
         length: 50,
         default: 'js',
         nullable: false
     })
-    @ApiProperty({ 
+    @ApiProperty({
         description: 'Logo identifier for the analyzer (js, php, multi, etc.)',
         example: 'multi',
         default: 'js'

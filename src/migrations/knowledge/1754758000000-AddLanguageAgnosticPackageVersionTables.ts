@@ -18,7 +18,7 @@ export class AddLanguageAgnosticPackageVersionTables1754758000000 implements Mig
         await queryRunner.query(`
             DROP INDEX "IDX_b23e12326a4218d09bd72301aa"
         `);
-        
+
         await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_package_name_language" ON "package" ("name", "language")
         `);
@@ -43,11 +43,11 @@ export class AddLanguageAgnosticPackageVersionTables1754758000000 implements Mig
         await queryRunner.query(`
             CREATE INDEX "IDX_version_package_id" ON "version" ("package_id")
         `);
-        
+
         await queryRunner.query(`
             CREATE INDEX "IDX_version_version" ON "version" ("version")
         `);
-        
+
         await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_version_unique" ON "version" ("package_id", "version")
         `);
@@ -56,7 +56,7 @@ export class AddLanguageAgnosticPackageVersionTables1754758000000 implements Mig
         await queryRunner.query(`
             CREATE INDEX "IDX_version_dependencies_gin" ON "version" USING gin ("dependencies")
         `);
-        
+
         await queryRunner.query(`
             CREATE INDEX "IDX_version_extra_gin" ON "version" USING gin ("extra")
         `);
@@ -100,7 +100,7 @@ export class AddLanguageAgnosticPackageVersionTables1754758000000 implements Mig
         await queryRunner.query(`DROP INDEX "IDX_package_name_language"`);
         await queryRunner.query(`DROP INDEX "IDX_package_language"`);
         await queryRunner.query(`ALTER TABLE "package" DROP COLUMN "language"`);
-        
+
         // Restore original unique constraint
         await queryRunner.query(`
             CREATE UNIQUE INDEX "IDX_b23e12326a4218d09bd72301aa" ON "package" ("name")

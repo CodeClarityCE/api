@@ -15,7 +15,11 @@ export class VersionsRepository {
         private versionRepository: Repository<Version>
     ) {}
 
-    async getVersion(dependencyName: string, dependencyVersion: string, language: string = 'javascript'): Promise<Version> {
+    async getVersion(
+        dependencyName: string,
+        dependencyVersion: string,
+        language: string = 'javascript'
+    ): Promise<Version> {
         if (dependencyName.includes('/')) {
             dependencyName.replace('/', ':');
         }
@@ -41,7 +45,10 @@ export class VersionsRepository {
         return version;
     }
 
-    async getDependencyVersions(dependency: string, language: string = 'javascript'): Promise<Version[]> {
+    async getDependencyVersions(
+        dependency: string,
+        language: string = 'javascript'
+    ): Promise<Version[]> {
         if (dependency.includes('/')) {
             dependency.replace('/', ':');
         }

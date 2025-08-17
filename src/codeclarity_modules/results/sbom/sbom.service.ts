@@ -13,15 +13,12 @@ import { paginate } from 'src/codeclarity_modules/results/utils/utils';
 import { SbomUtilsService } from 'src/codeclarity_modules/results/sbom/utils/utils';
 import { filter } from './utils/filter';
 import { sort } from './utils/sort';
-import { EntityNotFound, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/error.types';
+import { EntityNotFound, UnknownWorkspace } from 'src/types/error.types';
 import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
 import {
     AnalysisStats,
     newAnalysisStats
 } from 'src/codeclarity_modules/results/sbom/sbom_stats.types';
-import { Result } from 'src/codeclarity_modules/results/result.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
 import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
 import { GraphDependency, GraphTraversalUtils } from './sbom_graph.types';
 
@@ -37,9 +34,7 @@ export class SBOMService {
     constructor(
         private readonly analysisResultsService: AnalysisResultsService,
         private readonly sbomUtilsService: SbomUtilsService,
-        private readonly packageRepository: PackageRepository,
-        @InjectRepository(Result, 'codeclarity')
-        private resultRepository: Repository<Result>
+        private readonly packageRepository: PackageRepository
     ) {}
 
     async getStats(
@@ -54,19 +49,25 @@ export class SBOMService {
 
         // Get merged SBOM results from all supported plugins
         const { mergedSbom } = await this.sbomUtilsService.getMergedSbomResults(analysisId);
-        
-        console.log('📊 Stats - Total dependencies before filtering:', Object.keys(mergedSbom.workspaces[workspace]?.dependencies || {}).length);
-        
+
+        console.log(
+            '📊 Stats - Total dependencies before filtering:',
+            Object.keys(mergedSbom.workspaces[workspace]?.dependencies || {}).length
+        );
+
         // Apply ecosystem filter if specified
-        const sbom: SBOMOutput = ecosystem_filter 
+        const sbom: SBOMOutput = ecosystem_filter
             ? this.sbomUtilsService.filterSbomByEcosystem(mergedSbom, ecosystem_filter)
             : mergedSbom;
-            
-        console.log('📊 Stats - Total dependencies after filtering:', Object.keys(sbom.workspaces[workspace]?.dependencies || {}).length);
+
+        console.log(
+            '📊 Stats - Total dependencies after filtering:',
+            Object.keys(sbom.workspaces[workspace]?.dependencies || {}).length
+        );
 
         const workspacesOutput = sbom.workspaces[workspace];
         const dependencies = workspacesOutput.dependencies;
-        
+
         // Debug: Log a sample dependency structure for PHP
         if (ecosystem_filter === 'packagist' && Object.keys(dependencies).length > 0) {
             const firstDep = Object.keys(dependencies)[0];
@@ -84,8 +85,8 @@ export class SBOMService {
 
         // For previous stats comparison, we currently just use the same filtered data
         // TODO: Could be enhanced to get previous analysis data as well
-        let sbomPrevious: SBOMOutput = sbom;
-        let dependenciesPrevious = dependencies;
+        const sbomPrevious: SBOMOutput = sbom;
+        const dependenciesPrevious = dependencies;
 
         const wPrevStats: AnalysisStats = newAnalysisStats();
         const wStats: AnalysisStats = newAnalysisStats();
@@ -109,7 +110,7 @@ export class SBOMService {
                 const isOptional = version.Optional || (version as any).optional;
                 const isDev = version.Dev || (version as any).dev || false;
                 const isProd = version.Prod || (version as any).prod || false;
-                
+
                 // Only count dependencies that are actually used (have dev or prod flags)
                 if (isDev || isProd) {
                     if (isBundled) wStats.number_of_bundled_dependencies += 1;
@@ -128,8 +129,11 @@ export class SBOMService {
                     } else if (ecosystem === 'pypi') {
                         language = 'python';
                     }
-                    
-                    const pack = await this.packageRepository.getPackageInfoWithoutFailing(dep_key, language);
+
+                    const pack = await this.packageRepository.getPackageInfoWithoutFailing(
+                        dep_key,
+                        language
+                    );
                     if (pack && pack.latest_version && pack.latest_version !== version_key) {
                         wStats.number_of_outdated_dependencies += 1;
                     }
@@ -148,7 +152,7 @@ export class SBOMService {
                 const isOptional = version.Optional || (version as any).optional;
                 const isDev = version.Dev || (version as any).dev || false;
                 const isProd = version.Prod || (version as any).prod || false;
-                
+
                 // Only count dependencies that are actually used (have dev or prod flags)
                 if (isDev || isProd) {
                     if (isBundled) wPrevStats.number_of_bundled_dependencies += 1;
@@ -167,8 +171,11 @@ export class SBOMService {
                     } else if (ecosystem === 'pypi') {
                         language = 'python';
                     }
-                    
-                    const pack = await this.packageRepository.getPackageInfoWithoutFailing(dep_key, language);
+
+                    const pack = await this.packageRepository.getPackageInfoWithoutFailing(
+                        dep_key,
+                        language
+                    );
                     if (pack && pack.latest_version && pack.latest_version !== version_key) {
                         wPrevStats.number_of_outdated_dependencies += 1;
                     }
@@ -228,15 +235,21 @@ export class SBOMService {
 
         // Get merged SBOM results from all supported plugins
         const { mergedSbom } = await this.sbomUtilsService.getMergedSbomResults(analysisId);
-        
-        console.log('🔍 Total dependencies before filtering:', Object.keys(mergedSbom.workspaces[workspace]?.dependencies || {}).length);
-        
+
+        console.log(
+            '🔍 Total dependencies before filtering:',
+            Object.keys(mergedSbom.workspaces[workspace]?.dependencies || {}).length
+        );
+
         // Apply ecosystem filter if specified
-        const sbom: SBOMOutput = ecosystem_filter 
+        const sbom: SBOMOutput = ecosystem_filter
             ? this.sbomUtilsService.filterSbomByEcosystem(mergedSbom, ecosystem_filter)
             : mergedSbom;
-            
-        console.log('🔍 Total dependencies after filtering:', Object.keys(sbom.workspaces[workspace]?.dependencies || {}).length);
+
+        console.log(
+            '🔍 Total dependencies after filtering:',
+            Object.keys(sbom.workspaces[workspace]?.dependencies || {}).length
+        );
 
         const dependenciesArray: SbomDependency[] = [];
 
@@ -273,7 +286,7 @@ export class SBOMService {
                     dev: version.Dev || (version as any).dev || false,
                     prod: version.Prod || (version as any).prod || false,
                     is_direct_count: is_direct,
-                    is_transitive_count: (version.Transitive || (version as any).transitive) ? 1 : 0,
+                    is_transitive_count: version.Transitive || (version as any).transitive ? 1 : 0,
                     // Add ecosystem and source plugin information
                     ecosystem: (version as any).ecosystem,
                     source_plugin: (version as any).source_plugin
@@ -288,7 +301,10 @@ export class SBOMService {
                     language = 'python';
                 }
 
-                const pack = await this.packageRepository.getPackageInfoWithoutFailing(dep_key, language);
+                const pack = await this.packageRepository.getPackageInfoWithoutFailing(
+                    dep_key,
+                    language
+                );
                 if (pack) sbomDependency.newest_release = pack.latest_version;
 
                 // If the dependency is not tagged as prod or dev,

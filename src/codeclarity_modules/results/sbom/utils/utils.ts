@@ -81,7 +81,7 @@ export class SbomUtilsService {
     }> {
         // Get all supported SBOM plugins dynamically
         const supportedPlugins = EcosystemMapper.getSupportedSbomPlugins();
-        
+
         const results = await this.resultRepository.find({
             relations: { analysis: true },
             where: {
@@ -102,10 +102,10 @@ export class SbomUtilsService {
 
         // Process each plugin result with ecosystem info
         const pluginResults = results
-            .map(result => {
+            .map((result) => {
                 const sbom = result.result as unknown as SBOMOutput;
                 const ecosystemInfo = EcosystemMapper.getEcosystemInfo(result.plugin);
-                
+
                 if (!ecosystemInfo) {
                     console.warn(`Unknown plugin: ${result.plugin}`);
                     return null;
@@ -123,7 +123,10 @@ export class SbomUtilsService {
                     ecosystem: ecosystemInfo.ecosystem
                 };
             })
-            .filter((result): result is { plugin: string; sbom: SBOMOutput; ecosystem: string } => result !== null);
+            .filter(
+                (result): result is { plugin: string; sbom: SBOMOutput; ecosystem: string } =>
+                    result !== null
+            );
 
         if (pluginResults.length === 0) {
             throw new PluginFailed();
@@ -142,18 +145,20 @@ export class SbomUtilsService {
      * Merges multiple SBOM results into a unified structure
      * while preserving ecosystem information for each dependency
      */
-    private mergeSbomResults(pluginResults: Array<{ plugin: string; sbom: SBOMOutput; ecosystem: string }>): SBOMOutput {
+    private mergeSbomResults(
+        pluginResults: Array<{ plugin: string; sbom: SBOMOutput; ecosystem: string }>
+    ): SBOMOutput {
         if (pluginResults.length === 0) {
             throw new Error('No plugin results to merge');
         }
 
         // Use the first result as the base structure
         const baseSbom = JSON.parse(JSON.stringify(pluginResults[0].sbom)) as SBOMOutput;
-        
+
         // Collect all unique workspaces across plugins
         const allWorkspaces = new Set<string>();
         pluginResults.forEach(({ sbom }) => {
-            Object.keys(sbom.workspaces).forEach(workspace => allWorkspaces.add(workspace));
+            Object.keys(sbom.workspaces).forEach((workspace) => allWorkspaces.add(workspace));
         });
 
         // Merge workspaces
@@ -166,7 +171,7 @@ export class SbomUtilsService {
         baseSbom.analysis_info = {
             ...baseSbom.analysis_info,
             project_name: baseSbom.analysis_info.project_name || 'Multi-language Project',
-            package_manager: 'multi-language', // Indicate this is a merged result
+            package_manager: 'multi-language' // Indicate this is a merged result
         };
 
         return baseSbom;
@@ -176,7 +181,7 @@ export class SbomUtilsService {
      * Merges workspace data from multiple plugins
      */
     private mergeWorkspaceData(
-        workspace: string, 
+        workspace: string,
         pluginResults: Array<{ plugin: string; sbom: SBOMOutput; ecosystem: string }>
     ): WorkSpaceData {
         const mergedDependencies: { [key: string]: { [key: string]: Dependency } } = {};
@@ -217,8 +222,10 @@ export class SbomUtilsService {
         return {
             dependencies: mergedDependencies,
             start: {
-                dependencies: mergedStartDependencies.length > 0 ? mergedStartDependencies : undefined,
-                dev_dependencies: mergedStartDevDependencies.length > 0 ? mergedStartDevDependencies : undefined
+                dependencies:
+                    mergedStartDependencies.length > 0 ? mergedStartDependencies : undefined,
+                dev_dependencies:
+                    mergedStartDevDependencies.length > 0 ? mergedStartDevDependencies : undefined
             }
         };
     }

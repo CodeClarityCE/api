@@ -53,7 +53,14 @@ export class SBOMController {
     ): Promise<Response> {
         console.log('🎯 SBOM Stats API called with ecosystem_filter:', ecosystem_filter);
         return {
-            data: await this.sbomService.getStats(org_id, project_id, analysis_id, workspace, user, ecosystem_filter)
+            data: await this.sbomService.getStats(
+                org_id,
+                project_id,
+                analysis_id,
+                workspace,
+                user,
+                ecosystem_filter
+            )
         };
     }
 

@@ -1,6 +1,6 @@
 /**
  * Ecosystem Mapper for SBOM Multi-Language Support
- * 
+ *
  * This service maps SBOM plugins to their corresponding package ecosystems.
  * Designed to be easily extensible for future language support.
  */
@@ -15,7 +15,7 @@ export interface EcosystemInfo {
 
 /**
  * Plugin to ecosystem mapping
- * 
+ *
  * To add a new language:
  * 1. Add the plugin name as a key
  * 2. Define the ecosystem information
@@ -100,14 +100,16 @@ export class EcosystemMapper {
      * Gets all supported ecosystems
      */
     static getSupportedEcosystems(): string[] {
-        return Object.values(PLUGIN_ECOSYSTEM_MAP).map(info => info.ecosystem);
+        return Object.values(PLUGIN_ECOSYSTEM_MAP).map((info) => info.ecosystem);
     }
 
     /**
      * Gets ecosystem info by ecosystem name
      */
     static getEcosystemByName(ecosystem: string): EcosystemInfo | null {
-        const entry = Object.values(PLUGIN_ECOSYSTEM_MAP).find(info => info.ecosystem === ecosystem);
+        const entry = Object.values(PLUGIN_ECOSYSTEM_MAP).find(
+            (info) => info.ecosystem === ecosystem
+        );
         return entry || null;
     }
 
@@ -145,14 +147,14 @@ export class EcosystemMapper {
 
             // Map PURL types to our ecosystem names
             const purlToEcosystem: Record<string, string> = {
-                'npm': 'npm',
-                'composer': 'packagist',
-                'pypi': 'pypi',
-                'cargo': 'cargo',
-                'maven': 'maven',
-                'nuget': 'nuget',
-                'golang': 'go',
-                'gem': 'rubygems'
+                npm: 'npm',
+                composer: 'packagist',
+                pypi: 'pypi',
+                cargo: 'cargo',
+                maven: 'maven',
+                nuget: 'nuget',
+                golang: 'go',
+                gem: 'rubygems'
             };
 
             return purlToEcosystem[type] || null;
@@ -169,7 +171,7 @@ export class EcosystemMapper {
         if (name.includes('/') && !name.startsWith('@')) {
             return 'packagist';
         }
-        
+
         // npm scoped packages start with @
         if (name.startsWith('@')) {
             return 'npm';

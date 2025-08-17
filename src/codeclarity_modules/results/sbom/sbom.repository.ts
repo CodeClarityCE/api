@@ -29,7 +29,7 @@ export class SBOMRepository {
             },
             cache: true
         });
-        
+
         if (!result) {
             throw new PluginResultNotAvailable();
         }
