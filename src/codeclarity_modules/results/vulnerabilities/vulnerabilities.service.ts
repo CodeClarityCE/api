@@ -52,7 +52,8 @@ export class VulnerabilitiesService {
         projectId: string,
         analysisId: string,
         user: AuthenticatedUser,
-        workspace: string
+        workspace: string,
+        ecosystem_filter?: string
     ): Promise<AnalysisStats> {
         // Check if the user is allowed to view this analysis result
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
@@ -91,7 +92,8 @@ export class VulnerabilitiesService {
         //     sbomOutput.workspaces[workspace].dependencies;
         const findingsArray: Vulnerability[] = await this.findingsUtilsService.getFindingsData(
             analysisId,
-            workspace
+            workspace,
+            ecosystem_filter
         );
 
         try {
@@ -106,7 +108,7 @@ export class VulnerabilitiesService {
             // }
 
             // // dependencyMapPrevious = sbomOutputPrevious.workspaces[workspace].dependencies;
-            // findingsArrayPrevious = await getFindingsData(previousAnalysis.id, workspace);
+            // findingsArrayPrevious = await getFindingsData(previousAnalysis.id, workspace, ecosystem_filter);
         } catch (error) {
             console.error(error);
             // dependencyMapPrevious = {};
@@ -408,7 +410,8 @@ export class VulnerabilitiesService {
         sort_by: string | undefined,
         sort_direction: string | undefined,
         active_filters_string: string | undefined,
-        search_key: string | undefined
+        search_key: string | undefined,
+        ecosystem_filter?: string
     ): Promise<PaginatedResponse> {
         // Check if the user is allowed to view this analysis result
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
@@ -425,7 +428,8 @@ export class VulnerabilitiesService {
         // }
         const findings: Vulnerability[] = await this.findingsUtilsService.getFindingsData(
             analysisId,
-            workspace
+            workspace,
+            ecosystem_filter
         );
 
         const findingsMerged: Map<string, VulnerabilityMerged> = new Map<
