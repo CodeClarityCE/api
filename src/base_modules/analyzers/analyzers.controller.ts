@@ -113,3 +113,23 @@ export class AnalyzerTemplatesController {
         return { data: this.analyzerTemplatesService.getTemplateByLanguage(language) };
     }
 }
+
+// Languages controller (not organization-specific)
+@ApiBearerAuth()
+@Controller('/languages')
+export class LanguagesController {
+    constructor(private readonly analyzerTemplatesService: AnalyzerTemplatesService) {}
+
+    @Get('')
+    async getSupportedLanguages(): Promise<TypedResponse<string[]>> {
+        // Extract unique languages from all templates
+        const templates = this.analyzerTemplatesService.getTemplates();
+        const languages = new Set<string>();
+        
+        templates.forEach(template => {
+            template.supported_languages.forEach(lang => languages.add(lang));
+        });
+        
+        return { data: Array.from(languages).sort() };
+    }
+}

@@ -28,6 +28,15 @@ export class AnalysisCreateBody {
     tag?: string;
 
     @ApiProperty({
+        description: 'Programming language(s) to analyze. If not specified, will be auto-detected.',
+        example: ['javascript', 'php'],
+        type: [String],
+        required: false
+    })
+    @IsOptional()
+    languages?: string[];
+
+    @ApiProperty({
         description: 'Which commit of the repository to analyze',
         example: '063fc4320a8d1f901...'
     })

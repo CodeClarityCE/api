@@ -30,6 +30,11 @@ describe('AnalyzersController', () => {
                 }
             ]
         ],
+        supported_languages: ['javascript'],
+        language_config: {
+            javascript: { plugins: ['test-plugin'] }
+        },
+        logo: 'js',
         analyses: [] as any,
         organization: {} as any,
         created_by: {} as any

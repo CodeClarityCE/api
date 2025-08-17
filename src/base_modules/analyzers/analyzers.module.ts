@@ -1,5 +1,5 @@
 import { forwardRef, Module } from '@nestjs/common';
-import { AnalyzersController, AnalyzerTemplatesController } from './analyzers.controller';
+import { AnalyzersController, AnalyzerTemplatesController, LanguagesController } from './analyzers.controller';
 import { AnalyzersService } from './analyzers.service';
 import { AnalyzerTemplatesService } from './analyzer-templates.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -16,6 +16,6 @@ import { AnalyzersRepository } from './analyzers.repository';
     ],
     exports: [AnalyzersService, AnalyzersRepository, AnalyzerTemplatesService],
     providers: [AnalyzersService, AnalyzersRepository, AnalyzerTemplatesService],
-    controllers: [AnalyzersController, AnalyzerTemplatesController]
+    controllers: [AnalyzersController, AnalyzerTemplatesController, LanguagesController]
 })
 export class AnalyzersModule {}
