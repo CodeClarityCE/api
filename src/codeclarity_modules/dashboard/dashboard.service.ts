@@ -77,7 +77,7 @@ export class DashboardService {
             .leftJoinAndSelect('analyses.results', 'results')
             .andWhere('analyses.created_on >= :start_date', { start_date: dateRangeStart })
             .orderBy('analyses.created_on')
-            .andWhere('results.plugin = :plugin_name', { plugin_name: 'js-vuln-finder' })
+            .andWhere('results.plugin IN (:...plugin_names)', { plugin_names: ['vuln-finder', 'js-vuln-finder'] })
             .getOne();
 
         if (!res) {
@@ -167,7 +167,7 @@ export class DashboardService {
             .leftJoinAndSelect('projects.analyses', 'analyses')
             .leftJoinAndSelect('analyses.results', 'results')
             .andWhere('analyses.created_on >= :start_date', { start_date: dateRangeStart })
-            .andWhere('results.plugin = :plugin_name', { plugin_name: 'js-vuln-finder' })
+            .andWhere('results.plugin IN (:...plugin_names)', { plugin_names: ['vuln-finder', 'js-vuln-finder'] })
             .getOne();
 
         if (!res) {
@@ -236,7 +236,7 @@ export class DashboardService {
             .leftJoinAndSelect('projects.analyses', 'analyses')
             .leftJoinAndSelect('analyses.results', 'results')
             .andWhere('analyses.created_on >= :start_date', { start_date: dateRangeStart })
-            .andWhere('results.plugin = :plugin_name', { plugin_name: 'js-vuln-finder' })
+            .andWhere('results.plugin IN (:...plugin_names)', { plugin_names: ['vuln-finder', 'js-vuln-finder'] })
             .getOne();
 
         if (!res) {
@@ -304,7 +304,7 @@ export class DashboardService {
             .leftJoinAndSelect('projects.analyses', 'analyses')
             .leftJoinAndSelect('analyses.results', 'results')
             .andWhere('analyses.created_on >= :start_date', { start_date: dateRangeStart })
-            .andWhere('results.plugin = :plugin_name', { plugin_name: 'js-license' })
+            .andWhere('results.plugin IN (:...plugin_names)', { plugin_names: ['license-finder', 'js-license'] })
             .getOne();
 
         if (!res) {
@@ -360,7 +360,7 @@ export class DashboardService {
             .leftJoinAndSelect('projects.analyses', 'analyses')
             .leftJoinAndSelect('analyses.results', 'results')
             .andWhere('analyses.created_on >= :start_date', { start_date: dateRangeStart })
-            .andWhere('results.plugin = :plugin_name', { plugin_name: 'js-vuln-finder' })
+            .andWhere('results.plugin IN (:...plugin_names)', { plugin_names: ['vuln-finder', 'js-vuln-finder'] })
             .getOne();
 
         if (!res) {
@@ -440,7 +440,7 @@ export class DashboardService {
             .leftJoinAndSelect('projects.analyses', 'analyses')
             .leftJoinAndSelect('analyses.results', 'results')
             .andWhere('analyses.created_on >= :start_date', { start_date: dateRangeStart })
-            .andWhere('results.plugin = :plugin_name', { plugin_name: 'js-vuln-finder' })
+            .andWhere('results.plugin IN (:...plugin_names)', { plugin_names: ['vuln-finder', 'js-vuln-finder'] })
             .getOne();
 
         if (!res) {
