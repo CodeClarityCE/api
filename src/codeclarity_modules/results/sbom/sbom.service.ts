@@ -305,21 +305,22 @@ export class SBOMService {
     ): Promise<StatusResponse> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
-        const sbom: SBOMOutput = await this.sbomUtilsService.getSbomResult(analysisId);
+        // Get merged SBOM results from all supported plugins
+        const { mergedSbom } = await this.sbomUtilsService.getMergedSbomResults(analysisId);
 
-        if (sbom.analysis_info.private_errors.length) {
+        if (mergedSbom.analysis_info.private_errors.length) {
             return {
-                public_errors: sbom.analysis_info.public_errors,
-                private_errors: sbom.analysis_info.private_errors,
-                stage_start: sbom.analysis_info.analysis_start_time,
-                stage_end: sbom.analysis_info.analysis_end_time
+                public_errors: mergedSbom.analysis_info.public_errors,
+                private_errors: mergedSbom.analysis_info.private_errors,
+                stage_start: mergedSbom.analysis_info.analysis_start_time,
+                stage_end: mergedSbom.analysis_info.analysis_end_time
             };
         }
         return {
             public_errors: [],
             private_errors: [],
-            stage_start: sbom.analysis_info.analysis_start_time,
-            stage_end: sbom.analysis_info.analysis_end_time
+            stage_start: mergedSbom.analysis_info.analysis_start_time,
+            stage_end: mergedSbom.analysis_info.analysis_end_time
         };
     }
 
@@ -331,11 +332,12 @@ export class SBOMService {
     ): Promise<WorkspacesOutput> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
-        const sbom: SBOMOutput = await this.sbomUtilsService.getSbomResult(analysisId);
+        // Get merged SBOM results from all supported plugins
+        const { mergedSbom } = await this.sbomUtilsService.getMergedSbomResults(analysisId);
 
         return {
-            workspaces: Object.keys(sbom.workspaces),
-            package_manager: sbom.analysis_info.package_manager
+            workspaces: Object.keys(mergedSbom.workspaces),
+            package_manager: mergedSbom.analysis_info.package_manager
         };
     }
 
@@ -349,23 +351,24 @@ export class SBOMService {
     ): Promise<DependencyDetails> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
-        const sbom: SBOMOutput = await this.sbomUtilsService.getSbomResult(analysisId);
+        // Get merged SBOM results from all supported plugins
+        const { mergedSbom } = await this.sbomUtilsService.getMergedSbomResults(analysisId);
 
         // Validate that the workspace exists
-        if (!(workspace in sbom.workspaces)) {
+        if (!(workspace in mergedSbom.workspaces)) {
             throw new UnknownWorkspace();
         }
 
         const [dependencyName, dependencyVersion] = dependency.split('@');
 
-        if (dependencyName in sbom.workspaces[workspace].dependencies) {
-            if (dependencyVersion in sbom.workspaces[workspace].dependencies[dependencyName]) {
+        if (dependencyName in mergedSbom.workspaces[workspace].dependencies) {
+            if (dependencyVersion in mergedSbom.workspaces[workspace].dependencies[dependencyName]) {
                 return await this.sbomUtilsService.getDependencyData(
                     analysisId,
                     workspace,
                     dependencyName,
                     dependencyVersion,
-                    sbom
+                    mergedSbom
                 );
             }
         }
@@ -383,10 +386,11 @@ export class SBOMService {
     ): Promise<Array<GraphDependency>> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
-        const sbom: SBOMOutput = await this.sbomUtilsService.getSbomResult(analysisId);
+        // Get merged SBOM results from all supported plugins
+        const { mergedSbom } = await this.sbomUtilsService.getMergedSbomResults(analysisId);
 
         // Validate that the workspace exists
-        if (!(workspace in sbom.workspaces)) {
+        if (!(workspace in mergedSbom.workspaces)) {
             throw new UnknownWorkspace();
         }
 
@@ -396,7 +400,7 @@ export class SBOMService {
         }
 
         const dependenciesMap: { [depName: string]: { [version: string]: Dependency } } =
-            sbom.workspaces[workspace].dependencies;
+            mergedSbom.workspaces[workspace].dependencies;
 
         // Check if dependencies exist in this workspace
         if (!dependenciesMap || Object.keys(dependenciesMap).length === 0) {
@@ -406,7 +410,7 @@ export class SBOMService {
         // First, build the complete dependency graph
         const completeGraph: Array<GraphDependency> = this.buildCompleteGraph(
             dependenciesMap,
-            sbom.workspaces[workspace]
+            mergedSbom.workspaces[workspace]
         );
 
         // Find the target dependency in the complete graph

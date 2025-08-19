@@ -28,6 +28,7 @@ import { PatchInfo } from 'src/codeclarity_modules/results/patching/patching.typ
 import { OwaspTop10Info } from 'src/codeclarity_modules/knowledge/owasp/owasp.types';
 import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
 import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
+import { FriendsOfPhp } from 'src/codeclarity_modules/knowledge/friendsofphp/friendsofphp.entity';
 import { Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
 
 abstract class BaseReportGenerator {
@@ -152,8 +153,17 @@ abstract class BaseReportGenerator {
 
     async getVulnerableVersionsString(source: string): Promise<string> {
         let affectedData: AffectedInfo = { Ranges: [], Exact: [], Universal: false };
-        if (source == 'NVD') affectedData = this.vulnsData.NVDMatch.AffectedInfo[0];
-        else affectedData = this.vulnsData.OSVMatch.AffectedInfo[0];
+        
+        // Handle null safety for framework vulnerabilities
+        if (source == 'NVD') {
+            if (this.vulnsData.NVDMatch && this.vulnsData.NVDMatch.AffectedInfo && this.vulnsData.NVDMatch.AffectedInfo.length > 0) {
+                affectedData = this.vulnsData.NVDMatch.AffectedInfo[0];
+            }
+        } else {
+            if (this.vulnsData.OSVMatch && this.vulnsData.OSVMatch.AffectedInfo && this.vulnsData.OSVMatch.AffectedInfo.length > 0) {
+                affectedData = this.vulnsData.OSVMatch.AffectedInfo[0];
+            }
+        }
 
         const affectedStringParts: string[] = [];
 
@@ -512,7 +522,8 @@ export class OSVReportGenerator extends BaseReportGenerator {
         packageManager: string,
         dependencyData?: Dependency,
         osvItem?: OSV,
-        nvdItem?: NVD
+        nvdItem?: NVD,
+        friendsOfPhpItem?: FriendsOfPhp
     ): Promise<VulnerabilityDetails> {
         // this.patchesData = patchesData;
         this.vulnsData = vulnsData;
@@ -553,6 +564,13 @@ export class OSVReportGenerator extends BaseReportGenerator {
             vulnInfo.sources.push({
                 name: 'NVD',
                 vuln_url: `https://nvd.nist.gov/vuln/detail/${this.nvdItem.nvd_id}`
+            });
+        }
+
+        if (friendsOfPhpItem) {
+            vulnInfo.sources.push({
+                name: 'FriendsOfPHP',
+                vuln_url: friendsOfPhpItem.link
             });
         }
 
@@ -707,7 +725,8 @@ export class NVDReportGenerator extends BaseReportGenerator {
         packageManager: string,
         dependencyData?: Dependency,
         osvItem?: OSV,
-        nvdItem?: NVD
+        nvdItem?: NVD,
+        friendsOfPhpItem?: FriendsOfPhp
     ): Promise<VulnerabilityDetails> {
         // this.patchesData = patchesData;
         this.vulnsData = vulnsData;
@@ -745,6 +764,13 @@ export class NVDReportGenerator extends BaseReportGenerator {
             vulnInfo.sources.push({
                 name: 'OSV',
                 vuln_url: `https://osv.dev/vulnerability/${this.osvItem.osv_id}`
+            });
+        }
+
+        if (friendsOfPhpItem) {
+            vulnInfo.sources.push({
+                name: 'FriendsOfPHP',
+                vuln_url: friendsOfPhpItem.link
             });
         }
 

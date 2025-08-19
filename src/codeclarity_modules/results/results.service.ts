@@ -47,6 +47,17 @@ export class AnalysisResultsService {
         user: AuthenticatedUser
     ) {
         await this.checkAccess(org_id, project_id, analysis_id, user);
+        
+        // Special handling for SBOM requests - use fallback logic
+        if (type === 'js-sbom' || type === 'php-sbom') {
+            const result = await this.resultsRepository.getPreferredSbomResult(analysis_id, type);
+            if (!result) {
+                throw new EntityNotFound();
+            }
+            return result;
+        }
+        
+        // Regular handling for non-SBOM requests
         const result = await this.resultsRepository.getByAnalysisIdAndPluginType(analysis_id, type);
         if (!result) {
             throw new EntityNotFound();

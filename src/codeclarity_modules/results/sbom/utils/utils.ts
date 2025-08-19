@@ -274,28 +274,48 @@ export class SbomUtilsService {
         dependency_version: string,
         sbom: SBOMOutput
     ): Promise<DependencyDetails> {
-        const package_version = await this.packageRepository.getVersionInfo(
-            dependency_name,
-            dependency_version
-        );
-
         const dependency =
             sbom.workspaces[workspace].dependencies[dependency_name][dependency_version];
 
-        const version = package_version.versions[0];
+        // Determine the language based on the ecosystem
+        const ecosystem = (dependency as any).ecosystem;
+        let language = 'javascript'; // default
+        if (ecosystem === 'packagist') {
+            language = 'php';
+        } else if (ecosystem === 'pypi') {
+            language = 'python';
+        }
+
+        // Try to get package version info, but handle cases where it doesn't exist
+        let package_version;
+        let version;
+        try {
+            package_version = await this.packageRepository.getVersionInfo(
+                dependency_name,
+                dependency_version,
+                language
+            );
+            version = package_version.versions[0];
+        } catch (error) {
+            // If package info is not available in knowledge database, create minimal info
+            console.warn(`Package info not found for ${dependency_name}@${dependency_version} (${language}):`, error.message);
+            package_version = null;
+            version = null;
+        }
+
         const dependency_details: DependencyDetails = {
             name: dependency_name,
-            version: version.version,
-            latest_version: package_version.latest_version,
-            dependencies: version.dependencies,
-            dev_dependencies: version.dev_dependencies,
-            transitive: dependency.Transitive,
-            source: package_version.source,
+            version: version?.version || dependency_version,
+            latest_version: package_version?.latest_version || dependency_version,
+            dependencies: version?.dependencies || {},
+            dev_dependencies: version?.dev_dependencies || {},
+            transitive: dependency.Transitive || (dependency as any).transitive || false,
+            source: package_version?.source,
             package_manager: sbom.analysis_info.package_manager,
-            license: package_version.license,
-            engines: version.extra.Engines,
-            release_date: version.extra.Time,
-            lastest_release_date: package_version.time,
+            license: package_version?.license || '',
+            engines: version?.extra?.Engines || {},
+            release_date: version?.extra?.Time ? new Date(version.extra.Time) : new Date(),
+            lastest_release_date: package_version?.time ? new Date(package_version.time) : new Date(),
             vulnerabilities: [],
             severity_dist: {
                 critical: 0,
