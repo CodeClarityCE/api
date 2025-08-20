@@ -74,17 +74,21 @@ export class LanguageDetectionService {
             detectedFiles.php = phpFiles;
         }
         
-        // If no languages detected, default to JavaScript for backward compatibility
+        // If no languages detected, we should return empty rather than assuming JavaScript
+        // This forces proper repository scanning or manual language specification
         if (detectedLanguages.length === 0) {
-            detectedLanguages.push('javascript');
-            detectedFiles.javascript = ['package.json'];
+            console.warn('No programming languages detected for repository:', repositoryUrl);
+            // Don't assume JavaScript - let the analysis fail properly so it can be investigated
         }
         
         // Determine primary language (first detected or most common)
-        const primaryLanguage = detectedLanguages[0];
+        const primaryLanguage = detectedLanguages.length > 0 ? detectedLanguages[0] : 'unknown';
         
         // Calculate confidence based on number of indicator files found
-        const confidence = Math.min(0.9, 0.3 + (detectedLanguages.length * 0.3));
+        // Lower confidence if no languages detected
+        const confidence = detectedLanguages.length > 0 
+            ? Math.min(0.9, 0.3 + (detectedLanguages.length * 0.3))
+            : 0.0;
         
         return {
             detected_languages: detectedLanguages,
@@ -98,10 +102,26 @@ export class LanguageDetectionService {
      * Check if repository has JavaScript/Node.js indicators
      * This is a simplified check - in practice would scan actual repository
      */
-    private hasJavaScriptIndicators(_repositoryUrl?: string): boolean {
-        // Simplified logic - in practice would check repository contents
-        // For now, assume most repositories have some JavaScript
-        return true;
+    private hasJavaScriptIndicators(repositoryUrl?: string): boolean {
+        if (!repositoryUrl) return false;
+        
+        const jsPatterns = [
+            'node',
+            'npm',
+            'yarn',
+            'react',
+            'vue', 
+            'angular',
+            'express',
+            'next',
+            'javascript',
+            'js',
+            'typescript',
+            'ts'
+        ];
+        
+        const urlLower = repositoryUrl.toLowerCase();
+        return jsPatterns.some(pattern => urlLower.includes(pattern));
     }
     
     /**
@@ -123,7 +143,20 @@ export class LanguageDetectionService {
             'slim',
             'yii',
             'composer',
-            'php'
+            'php',
+            // Add common PHP applications and libraries
+            'magento',     // E-commerce platform
+            'prestashop',  // E-commerce platform  
+            'phpunit',     // Testing framework
+            'doctrine',    // ORM
+            'twig',        // Template engine
+            'monolog',     // Logging library
+            'guzzle',      // HTTP client
+            'phpmailer',   // Email library
+            'phpbb',       // Forum software
+            'mediawiki',   // Wiki software
+            'opencart',    // E-commerce
+            'phpmyadmin'   // Database administration
         ];
         
         const urlLower = repositoryUrl.toLowerCase();

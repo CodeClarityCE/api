@@ -22,6 +22,15 @@ export interface VersionInfo {
     affected_versions_string: string;
     patched_versions_string: string;
     versions: VulnerableVersionInfo[];
+    source_comparison?: {
+        nvd: string;
+        osv: string;
+        agree: boolean;
+        nvdReason: string;
+        osvReason: string;
+        nvdAllVersions: string;
+        osvAllVersions: string;
+    };
 }
 
 export interface VulnerableVersionInfo {

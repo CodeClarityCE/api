@@ -154,6 +154,21 @@ abstract class BaseReportGenerator {
     async getVulnerableVersionsString(source: string): Promise<string> {
         let affectedData: AffectedInfo = { Ranges: [], Exact: [], Universal: false };
         
+        // Debug logging to understand data structure
+        console.log('🔍 getVulnerableVersionsString debug:', {
+            source,
+            vulnId: this.vulnsData.VulnerabilityId,
+            affectedDep: this.vulnsData.AffectedDependency,
+            affectedVer: this.vulnsData.AffectedVersion,
+            hasOSVMatch: !!this.vulnsData.OSVMatch,
+            hasNVDMatch: !!this.vulnsData.NVDMatch,
+            osvAffectedInfo: this.vulnsData.OSVMatch?.AffectedInfo?.length || 0,
+            nvdAffectedInfo: this.vulnsData.NVDMatch?.AffectedInfo?.length || 0
+        });
+        
+        // Check if this is a framework vulnerability (starts with 'framework-')
+        const isFramework = this.vulnsData.AffectedDependency?.startsWith('framework-');
+        
         // Handle null safety for framework vulnerabilities
         if (source == 'NVD') {
             if (this.vulnsData.NVDMatch && this.vulnsData.NVDMatch.AffectedInfo && this.vulnsData.NVDMatch.AffectedInfo.length > 0) {
@@ -167,6 +182,21 @@ abstract class BaseReportGenerator {
 
         const affectedStringParts: string[] = [];
 
+        // First try to get affected versions from the actual vulnerability data
+        // This ensures we show the real CVE data regardless of whether it's a false positive
+        if (source == 'NVD' && this.nvdItem) {
+            const nvdAffectedVersions = await this.extractNVDAffectedVersions();
+            if (nvdAffectedVersions.length > 0) {
+                return nvdAffectedVersions.join(', ');
+            }
+        } else if (source == 'OSV' && this.osvItem) {
+            const osvAffectedVersions = await this.extractOSVAffectedVersions();
+            if (osvAffectedVersions.length > 0) {
+                return osvAffectedVersions.join(', ');
+            }
+        }
+
+        // Fallback to using AffectedInfo from vulnerability analysis results
         if (affectedData.Ranges && affectedData.Ranges.length > 0) {
             for (const range of affectedData.Ranges) {
                 let affectedStringPart = '';
@@ -186,7 +216,117 @@ abstract class BaseReportGenerator {
         } else if (affectedData.Universal) {
             affectedStringParts.push('*');
         }
+        
+        // Final fallback for framework vulnerabilities without proper AffectedInfo
+        if (affectedStringParts.length === 0 && isFramework && this.vulnsData.AffectedVersion) {
+            return this.vulnsData.AffectedVersion + ' (check advisory for details)';
+        }
+        
         return affectedStringParts.join(' || ');
+    }
+
+    // Get affected versions from both sources for comparison - focus on why current version is flagged
+    async getAffectedVersionsBySources(): Promise<{nvd: string, osv: string, agree: boolean, nvdReason: string, osvReason: string, nvdAllVersions: string, osvAllVersions: string}> {
+        let nvdString = '';
+        let osvString = '';
+        let nvdReason = '';
+        let osvReason = '';
+        let nvdAllVersions = '';
+        let osvAllVersions = '';
+        
+        const currentVersion = this.vulnsData.AffectedVersion || '';
+        
+        // Get NVD reasoning and full details
+        if (this.nvdItem) {
+            const nvdVersions = await this.extractNVDAffectedVersions();
+            nvdAllVersions = nvdVersions.join(', ');
+            nvdReason = await this.explainWhyVersionIsVulnerable('NVD', currentVersion);
+            nvdString = nvdReason;
+        }
+        
+        // Get OSV reasoning and full details
+        if (this.osvItem) {
+            const osvVersions = await this.extractOSVAffectedVersions();
+            osvAllVersions = osvVersions.join(', ');
+            osvReason = await this.explainWhyVersionIsVulnerable('OSV', currentVersion);
+            osvString = osvReason;
+        }
+        
+        // Debug logging
+        console.log('🔍 Source comparison debug (reasoning):', {
+            vulnId: this.vulnsData.VulnerabilityId,
+            currentVersion,
+            nvdReason,
+            osvReason,
+            nvdAllVersions,
+            osvAllVersions
+        });
+        
+        // Sources disagree if they both have data but different reasoning
+        const agree = (nvdReason === osvReason) || (!nvdReason && !osvReason);
+        
+        return { 
+            nvd: nvdString, 
+            osv: osvString, 
+            agree, 
+            nvdReason, 
+            osvReason, 
+            nvdAllVersions, 
+            osvAllVersions 
+        };
+    }
+
+    // Explain why a specific version is considered vulnerable by a source
+    async explainWhyVersionIsVulnerable(source: string, version: string): Promise<string> {
+        const cleanVersion = version.startsWith('v') ? version.slice(1) : version;
+        
+        if (source === 'NVD' && this.nvdItem?.affected) {
+            for (const affectedEntry of this.nvdItem.affected) {
+                if (affectedEntry.sources) {
+                    for (const src of affectedEntry.sources) {
+                        // Check if version falls in any range
+                        if (src.versionEndExcluding && !src.versionStartIncluding && !src.versionStartExcluding) {
+                            // All versions before X
+                            return `All versions before ${src.versionEndExcluding} are affected (your v${cleanVersion} < ${src.versionEndExcluding})`;
+                        } else if (src.versionStartIncluding && src.versionEndExcluding) {
+                            // Range from X to Y
+                            return `Versions ${src.versionStartIncluding} to ${src.versionEndExcluding} are affected`;
+                        } else if (src.criteriaDict?.version === '*') {
+                            return 'All versions are affected';
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (source === 'OSV' && this.osvItem?.affected) {
+            const specificVersions: string[] = [];
+            
+            for (const affectedEntry of this.osvItem.affected) {
+                if (affectedEntry.versions && Array.isArray(affectedEntry.versions)) {
+                    for (const v of affectedEntry.versions) {
+                        const cleanV = v.startsWith('v') ? v.slice(1) : v;
+                        // Remove duplicates
+                        if (!specificVersions.includes(cleanV)) {
+                            specificVersions.push(cleanV);
+                        }
+                    }
+                }
+            }
+            
+            if (specificVersions.length > 0) {
+                // Sort versions for consistent display
+                specificVersions.sort();
+                
+                if (specificVersions.includes(cleanVersion)) {
+                    return `Your version ${cleanVersion} is in the list of affected versions: ${specificVersions.join(', ')}`;
+                } else {
+                    return `Only specific versions are affected: ${specificVersions.join(', ')} (your v${cleanVersion} is NOT in this list)`;
+                }
+            }
+        }
+        
+        return 'Unable to determine vulnerability reason';
     }
 
     async getVersionsStatusArray(
@@ -265,8 +405,6 @@ abstract class BaseReportGenerator {
     }
 
     async getDependencyData(): Promise<DependencyInfo> {
-        if (!this.dependencyData) throw new Error('Dependency data missing');
-
         const dependencyInfo: DependencyInfo = {
             name: '',
             published: '',
@@ -275,6 +413,12 @@ abstract class BaseReportGenerator {
             version: '',
             package_manager_links: []
         };
+
+        // If no dependency data is available, return empty info
+        if (!this.dependencyData) {
+            console.warn('No dependency data available for vulnerability report');
+            return dependencyInfo;
+        }
 
         try {
             // const _packageInfo = await this.packageRepository.getPackageInfo('');
@@ -331,6 +475,154 @@ abstract class BaseReportGenerator {
             }
         }
         return null;
+    }
+
+    // Extract affected versions directly from NVD vulnerability data in human-readable format
+    async extractNVDAffectedVersions(): Promise<string[]> {
+        const ranges: string[] = [];
+        
+        if (!this.nvdItem || !this.nvdItem.affected) {
+            return ranges;
+        }
+
+        // Parse the NVD affected field which contains CPE criteria
+        for (const affectedEntry of this.nvdItem.affected) {
+            if (affectedEntry.sources) {
+                for (const source of affectedEntry.sources) {
+                    let rangeDescription = '';
+                    
+                    // Handle version ranges in a user-friendly way
+                    const hasStart = source.versionStartIncluding || source.versionStartExcluding;
+                    const hasEnd = source.versionEndIncluding || source.versionEndExcluding;
+                    
+                    if (hasStart && hasEnd) {
+                        // Range: e.g., "5.4.0 to 5.4.3"
+                        const startVer = source.versionStartIncluding || source.versionStartExcluding;
+                        const endVer = source.versionEndIncluding || source.versionEndExcluding;
+                        const startSymbol = source.versionStartIncluding ? '' : ' (exclusive)';
+                        const endSymbol = source.versionEndIncluding ? ' (inclusive)' : '';
+                        rangeDescription = `${startVer}${startSymbol} to ${endVer}${endSymbol}`;
+                    } else if (hasEnd && !hasStart) {
+                        // Upper bound only: e.g., "before 5.3.15"
+                        const endVer = source.versionEndIncluding || source.versionEndExcluding;
+                        rangeDescription = source.versionEndExcluding ? 
+                            `before ${endVer}` : 
+                            `up to ${endVer} (inclusive)`;
+                    } else if (hasStart && !hasEnd) {
+                        // Lower bound only: e.g., "5.4.0 and later"
+                        const startVer = source.versionStartIncluding || source.versionStartExcluding;
+                        rangeDescription = source.versionStartIncluding ? 
+                            `${startVer} and later` : 
+                            `after ${startVer}`;
+                    } else if (source.criteriaDict?.version && 
+                              source.criteriaDict.version !== '*' && 
+                              source.criteriaDict.version !== '') {
+                        // Specific version
+                        rangeDescription = `exactly ${source.criteriaDict.version}`;
+                    } else if (source.criteriaDict?.version === '*') {
+                        // All versions
+                        rangeDescription = 'all versions';
+                    }
+                    
+                    if (rangeDescription && !ranges.includes(rangeDescription)) {
+                        ranges.push(rangeDescription);
+                    }
+                }
+            }
+        }
+
+        return ranges;
+    }
+
+    // Extract affected versions directly from OSV vulnerability data in human-readable format
+    async extractOSVAffectedVersions(): Promise<string[]> {
+        const descriptions: string[] = [];
+        const allSpecificVersions: string[] = [];
+        const allRanges: string[] = [];
+        
+        if (!this.osvItem || !this.osvItem.affected) {
+            return descriptions;
+        }
+
+        // Parse OSV affected field - collect all data first to avoid duplicates
+        for (const affectedEntry of this.osvItem.affected) {
+            // Collect specific versions
+            if (affectedEntry.versions && Array.isArray(affectedEntry.versions)) {
+                for (const version of affectedEntry.versions) {
+                    const cleanVersion = version.startsWith('v') ? version.slice(1) : version;
+                    if (!allSpecificVersions.includes(cleanVersion)) {
+                        allSpecificVersions.push(cleanVersion);
+                    }
+                }
+            }
+
+            // Collect ranges and convert to readable format
+            if (affectedEntry.ranges && Array.isArray(affectedEntry.ranges)) {
+                for (const range of affectedEntry.ranges) {
+                    if (range.events && Array.isArray(range.events)) {
+                        let introduced = '';
+                        let fixed = '';
+                        let lastAffected = '';
+                        
+                        // Extract event details
+                        for (const event of range.events) {
+                            if (event.introduced && event.introduced !== '0') {
+                                introduced = event.introduced;
+                            }
+                            if (event.fixed) {
+                                fixed = event.fixed;
+                            }
+                            if (event.last_affected) {
+                                lastAffected = event.last_affected;
+                            }
+                        }
+                        
+                        // Create readable range description with clear exclusion/inclusion
+                        if (introduced && fixed) {
+                            const rangeDesc = `${introduced} up to (but not including) ${fixed}`;
+                            if (!allRanges.includes(rangeDesc)) {
+                                allRanges.push(rangeDesc);
+                            }
+                        } else if (introduced && lastAffected) {
+                            const rangeDesc = `${introduced} to ${lastAffected} (inclusive)`;
+                            if (!allRanges.includes(rangeDesc)) {
+                                allRanges.push(rangeDesc);
+                            }
+                        } else if (introduced) {
+                            const rangeDesc = `${introduced} and later`;
+                            if (!allRanges.includes(rangeDesc)) {
+                                allRanges.push(rangeDesc);
+                            }
+                        } else if (fixed) {
+                            const rangeDesc = `before ${fixed} (excluding ${fixed})`;
+                            if (!allRanges.includes(rangeDesc)) {
+                                allRanges.push(rangeDesc);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Combine all unique versions and ranges, removing duplicates
+        const uniqueDescriptions: string[] = [];
+        
+        if (allSpecificVersions.length > 0) {
+            if (allSpecificVersions.length === 1) {
+                uniqueDescriptions.push(`exactly ${allSpecificVersions[0]}`);
+            } else {
+                uniqueDescriptions.push(`specific versions: ${allSpecificVersions.join(', ')}`);
+            }
+        }
+        
+        // Add unique ranges
+        for (const range of allRanges) {
+            if (!uniqueDescriptions.includes(range)) {
+                uniqueDescriptions.push(range);
+            }
+        }
+
+        return uniqueDescriptions;
     }
 
     async parseCVSS31Vector(vector: string): Promise<CVSS3> {
@@ -581,18 +873,43 @@ export class OSVReportGenerator extends BaseReportGenerator {
             vulnsData.AffectedDependency
         );
 
+        // Get source comparison for disagreements
+        const sourceComparison = await this.getAffectedVersionsBySources();
+
         vulnInfo.version_info.affected_versions_string = affectedVersionsString;
         // vulnInfo.version_info.patched_versions_string = patchedVersionsString;
         vulnInfo.version_info.versions = versionsStatusArray;
+        vulnInfo.version_info.source_comparison = sourceComparison;
 
         /** Dependency Info */
         let dependencyInfo: DependencyInfo | undefined;
         try {
             dependencyInfo = await this.getDependencyData();
-            dependencyInfo.name = vulnsData.AffectedDependency;
-            dependencyInfo.version = vulnsData.AffectedVersion;
+            
+            // For framework vulnerabilities, try to extract the actual package name from OSV data
+            let displayName = vulnsData.AffectedDependency || '';
+            if (displayName.startsWith('framework-') && this.osvItem?.affected) {
+                for (const affected of this.osvItem.affected) {
+                    if (affected.package?.name) {
+                        displayName = affected.package.name;
+                        break;
+                    }
+                }
+            }
+            
+            dependencyInfo.name = displayName;
+            dependencyInfo.version = vulnsData.AffectedVersion || '';
+            
+            // Warn if dependency info is missing
+            if (!vulnsData.AffectedDependency || !vulnsData.AffectedVersion) {
+                console.warn('Missing dependency info in OSV vulnerability data:', {
+                    vulnId: vulnsData.VulnerabilityId,
+                    affectedDep: vulnsData.AffectedDependency,
+                    affectedVersion: vulnsData.AffectedVersion
+                });
+            }
         } catch (error) {
-            console.error(error);
+            console.error('Error getting dependency data (OSV):', error);
         }
 
         /** Common consequences and waeknesses */
@@ -788,18 +1105,60 @@ export class NVDReportGenerator extends BaseReportGenerator {
             vulnsData.AffectedDependency
         );
 
+        // Get source comparison for disagreements
+        const sourceComparison = await this.getAffectedVersionsBySources();
+
         vulnInfo.version_info.affected_versions_string = affectedVersionsString;
         // vulnInfo.version_info.patched_versions_string = patchedVersionsString;
         vulnInfo.version_info.versions = versionsStatusArray;
+        vulnInfo.version_info.source_comparison = sourceComparison;
 
         /** Dependency Info */
         let dependencyInfo: DependencyInfo | undefined;
         try {
             dependencyInfo = await this.getDependencyData();
-            dependencyInfo.name = vulnsData.AffectedDependency;
-            dependencyInfo.version = vulnsData.AffectedVersion;
+            
+            // For framework vulnerabilities, try to extract the actual package name from OSV or NVD data
+            let displayName = vulnsData.AffectedDependency || '';
+            if (displayName.startsWith('framework-')) {
+                // Try OSV data first
+                if (this.osvItem?.affected) {
+                    for (const affected of this.osvItem.affected) {
+                        if (affected.package?.name) {
+                            displayName = affected.package.name;
+                            break;
+                        }
+                    }
+                }
+                // If no OSV data, try to extract from NVD CPE criteria
+                else if (this.nvdItem?.affected) {
+                    for (const affected of this.nvdItem.affected) {
+                        if (affected.sources) {
+                            for (const source of affected.sources) {
+                                if (source.criteriaDict?.product && source.criteriaDict?.vendor) {
+                                    displayName = `${source.criteriaDict.vendor}/${source.criteriaDict.product}`;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!displayName.startsWith('framework-')) break;
+                    }
+                }
+            }
+            
+            dependencyInfo.name = displayName;
+            dependencyInfo.version = vulnsData.AffectedVersion || '';
+            
+            // Warn if dependency info is missing
+            if (!vulnsData.AffectedDependency || !vulnsData.AffectedVersion) {
+                console.warn('Missing dependency info in NVD vulnerability data:', {
+                    vulnId: vulnsData.VulnerabilityId,
+                    affectedDep: vulnsData.AffectedDependency,
+                    affectedVersion: vulnsData.AffectedVersion
+                });
+            }
         } catch (error) {
-            console.error(error);
+            console.error('Error getting dependency data (NVD):', error);
         }
 
         /** Common consequences and waeknesses */

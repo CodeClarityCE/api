@@ -79,38 +79,24 @@ export class AnalysesService {
         // Retrieve organization details based on the organization ID
         const organization = await this.organizationsRepository.getOrganizationById(orgId);
 
-        // Perform language detection if languages not explicitly specified
-        let detectedLanguages = analysisData.languages || [];
-        if (detectedLanguages.length === 0) {
-            const languageDetection = await this.languageDetectionService.detectLanguages(
-                undefined, // projectPath - not available for remote repositories
-                project.url,
-                analysisData.branch
+        // Language detection is now handled by the downloader service after repository cloning
+        // The downloader scans actual files and passes language info to the dispatcher
+        // For now, we'll use the analyzer's supported languages and let the dispatcher filter based on detected languages
+        const languagesToAnalyze = analyzer.supported_languages;
+        
+        console.log(`Using analyzer ${analyzer.name} with supported languages: ${languagesToAnalyze.join(', ')}`);
+        
+        // If specific languages were provided in the analysis request, use those instead
+        if (analysisData.languages && analysisData.languages.length > 0) {
+            console.log(`Analysis requested specific languages: ${analysisData.languages.join(', ')}`);
+            // Filter to only supported languages
+            const supportedRequestedLanguages = analysisData.languages.filter(lang => 
+                analyzer.supported_languages.includes(lang)
             );
-            detectedLanguages = languageDetection.detected_languages;
-            
-            // Log detection results for debugging
-            console.log(`Language detection for project ${project.name}:`, {
-                detected: languageDetection.detected_languages,
-                primary: languageDetection.primary_language,
-                confidence: languageDetection.detection_confidence
-            });
+            if (supportedRequestedLanguages.length > 0) {
+                languagesToAnalyze.splice(0, languagesToAnalyze.length, ...supportedRequestedLanguages);
+            }
         }
-
-        // Validate that the analyzer supports the detected languages
-        const languageValidation = this.languageDetectionService.validateAnalyzerLanguageSupport(
-            detectedLanguages,
-            analyzer.supported_languages
-        );
-
-        if (languageValidation.unsupported.length > 0) {
-            console.warn(`Analyzer does not support detected languages: ${languageValidation.unsupported.join(', ')}`);
-        }
-
-        // Use only supported languages for analysis
-        const languagesToAnalyze = languageValidation.supported.length > 0 
-            ? languageValidation.supported 
-            : ['javascript']; // Fallback to JavaScript for backward compatibility
 
         // Initialize an object to hold the configuration structure for the analyzer steps
         const config_structure: { [key: string]: any } = {};
