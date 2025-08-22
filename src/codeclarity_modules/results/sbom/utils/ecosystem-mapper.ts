@@ -5,12 +5,11 @@
  * Designed to be easily extensible for future language support.
  */
 
-export interface EcosystemInfo {
-    name: string;
-    ecosystem: string;
-    language: string;
-    packageManagerPattern: RegExp;
-    defaultPackageManager: string;
+import type { EcosystemInfo } from './ecosystem-shared';
+
+// Extended interface that includes the RegExp pattern for runtime use
+interface EcosystemInfoRuntime extends Omit<EcosystemInfo, 'packageManagerPattern'> {
+    packageManagerPattern: RegExp; // Override the string pattern with RegExp
 }
 
 /**
@@ -21,20 +20,32 @@ export interface EcosystemInfo {
  * 2. Define the ecosystem information
  * 3. The system will automatically support it
  */
-export const PLUGIN_ECOSYSTEM_MAP: Record<string, EcosystemInfo> = {
+export const PLUGIN_ECOSYSTEM_MAP: Record<string, EcosystemInfoRuntime> = {
     'js-sbom': {
         name: 'npm Registry',
         ecosystem: 'npm',
         language: 'JavaScript',
         packageManagerPattern: /(npm|yarn|pnpm|bun)/i,
-        defaultPackageManager: 'npm'
+        defaultPackageManager: 'npm',
+        icon: 'devicon:javascript',
+        color: '#F7DF1E',
+        website: 'https://www.npmjs.com',
+        purlType: 'npm',
+        registryUrl: 'https://registry.npmjs.org',
+        tools: ['npm', 'yarn', 'pnpm', 'bun']
     },
     'php-sbom': {
         name: 'Packagist',
         ecosystem: 'packagist',
         language: 'PHP',
         packageManagerPattern: /composer/i,
-        defaultPackageManager: 'composer'
+        defaultPackageManager: 'composer',
+        icon: 'devicon:php',
+        color: '#777BB4',
+        website: 'https://packagist.org',
+        purlType: 'composer',
+        registryUrl: 'https://packagist.org',
+        tools: ['composer']
     },
     // Future language support examples:
     'python-sbom': {
@@ -42,42 +53,13 @@ export const PLUGIN_ECOSYSTEM_MAP: Record<string, EcosystemInfo> = {
         ecosystem: 'pypi',
         language: 'Python',
         packageManagerPattern: /(pip|poetry|pipenv|conda)/i,
-        defaultPackageManager: 'pip'
-    },
-    'rust-sbom': {
-        name: 'crates.io',
-        ecosystem: 'cargo',
-        language: 'Rust',
-        packageManagerPattern: /cargo/i,
-        defaultPackageManager: 'cargo'
-    },
-    'java-sbom': {
-        name: 'Maven Central',
-        ecosystem: 'maven',
-        language: 'Java',
-        packageManagerPattern: /(maven|gradle|sbt)/i,
-        defaultPackageManager: 'maven'
-    },
-    'dotnet-sbom': {
-        name: 'NuGet',
-        ecosystem: 'nuget',
-        language: 'C#',
-        packageManagerPattern: /(dotnet|nuget|paket)/i,
-        defaultPackageManager: 'dotnet'
-    },
-    'go-sbom': {
-        name: 'Go Modules',
-        ecosystem: 'go',
-        language: 'Go',
-        packageManagerPattern: /go/i,
-        defaultPackageManager: 'go'
-    },
-    'ruby-sbom': {
-        name: 'RubyGems',
-        ecosystem: 'rubygems',
-        language: 'Ruby',
-        packageManagerPattern: /(gem|bundler)/i,
-        defaultPackageManager: 'gem'
+        defaultPackageManager: 'pip',
+        icon: 'devicon:python',
+        color: '#3776AB',
+        website: 'https://pypi.org',
+        purlType: 'pypi',
+        registryUrl: 'https://pypi.org/simple',
+        tools: ['pip', 'poetry', 'pipenv', 'conda']
     }
 };
 
@@ -85,7 +67,7 @@ export class EcosystemMapper {
     /**
      * Gets ecosystem info for a given plugin name
      */
-    static getEcosystemInfo(pluginName: string): EcosystemInfo | null {
+    static getEcosystemInfo(pluginName: string): EcosystemInfoRuntime | null {
         return PLUGIN_ECOSYSTEM_MAP[pluginName] || null;
     }
 
@@ -106,7 +88,7 @@ export class EcosystemMapper {
     /**
      * Gets ecosystem info by ecosystem name
      */
-    static getEcosystemByName(ecosystem: string): EcosystemInfo | null {
+    static getEcosystemByName(ecosystem: string): EcosystemInfoRuntime | null {
         const entry = Object.values(PLUGIN_ECOSYSTEM_MAP).find(
             (info) => info.ecosystem === ecosystem
         );
