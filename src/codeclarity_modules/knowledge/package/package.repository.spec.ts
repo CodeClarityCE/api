@@ -106,7 +106,7 @@ describe('PackageRepository', () => {
 
             expect(result).toEqual(mockPackage);
             expect(mockRepository.findOne).toHaveBeenCalledWith({
-                where: { name: 'express' }
+                where: { name: 'express', language: 'javascript' }
             });
             expect(mockRepository.findOne).toHaveBeenCalledTimes(1);
         });
@@ -118,7 +118,7 @@ describe('PackageRepository', () => {
                 EntityNotFound
             );
             expect(mockRepository.findOne).toHaveBeenCalledWith({
-                where: { name: 'nonexistent-package' }
+                where: { name: 'nonexistent-package', language: 'javascript' }
             });
         });
 
@@ -130,7 +130,7 @@ describe('PackageRepository', () => {
                 'Database connection failed'
             );
             expect(mockRepository.findOne).toHaveBeenCalledWith({
-                where: { name: 'express' }
+                where: { name: 'express', language: 'javascript' }
             });
         });
 
@@ -144,7 +144,7 @@ describe('PackageRepository', () => {
             expect(result).toEqual(mockPackage);
             // The slash replacement doesn't work in current implementation
             expect(mockRepository.findOne).toHaveBeenCalledWith({
-                where: { name: 'org/package' }
+                where: { name: 'org/package', language: 'javascript' }
             });
         });
 
@@ -165,7 +165,7 @@ describe('PackageRepository', () => {
 
                 expect(result.name).toBe(packageName);
                 expect(mockRepository.findOne).toHaveBeenCalledWith({
-                    where: { name: packageName }
+                    where: { name: packageName, language: 'javascript' }
                 });
             }
         });
@@ -175,7 +175,7 @@ describe('PackageRepository', () => {
 
             await expect(packageRepository.getPackageInfo('')).rejects.toThrow(EntityNotFound);
             expect(mockRepository.findOne).toHaveBeenCalledWith({
-                where: { name: '' }
+                where: { name: '', language: 'javascript' }
             });
         });
 
@@ -187,7 +187,7 @@ describe('PackageRepository', () => {
                 EntityNotFound
             );
             expect(mockRepository.findOne).toHaveBeenCalledWith({
-                where: { name: specialPackageName }
+                where: { name: specialPackageName, language: 'javascript' }
             });
         });
     });
@@ -200,7 +200,7 @@ describe('PackageRepository', () => {
 
             expect(result).toEqual(mockPackage);
             expect(mockRepository.findOne).toHaveBeenCalledWith({
-                where: { name: 'express' }
+                where: { name: 'express', language: 'javascript' }
             });
         });
 
@@ -212,7 +212,7 @@ describe('PackageRepository', () => {
 
             expect(result).toBeNull();
             expect(mockRepository.findOne).toHaveBeenCalledWith({
-                where: { name: 'nonexistent-package' }
+                where: { name: 'nonexistent-package', language: 'javascript' }
             });
         });
 
@@ -233,7 +233,7 @@ describe('PackageRepository', () => {
             expect(result).toEqual(mockPackage);
             // Testing current behavior - slash replacement doesn't work
             expect(mockRepository.findOne).toHaveBeenCalledWith({
-                where: { name: 'org/package' }
+                where: { name: 'org/package', language: 'javascript' }
             });
         });
 
@@ -257,7 +257,7 @@ describe('PackageRepository', () => {
 
             expect(result).toBeNull();
             expect(mockRepository.findOne).toHaveBeenCalledWith({
-                where: { name: longPackageName }
+                where: { name: longPackageName, language: 'javascript' }
             });
         });
     });
@@ -272,6 +272,7 @@ describe('PackageRepository', () => {
             expect(mockRepository.findOne).toHaveBeenCalledWith({
                 where: {
                     name: 'express',
+                    language: 'javascript',
                     versions: {
                         version: '4.18.2'
                     }
@@ -292,6 +293,7 @@ describe('PackageRepository', () => {
             expect(mockRepository.findOne).toHaveBeenCalledWith({
                 where: {
                     name: 'express',
+                    language: 'javascript',
                     versions: {
                         version: '999.999.999'
                     }
@@ -312,6 +314,7 @@ describe('PackageRepository', () => {
             expect(mockRepository.findOne).toHaveBeenCalledWith({
                 where: {
                     name: 'express',
+                    language: 'javascript',
                     versions: {
                         version: '4.18.2'
                     }
@@ -349,6 +352,7 @@ describe('PackageRepository', () => {
                 expect(mockRepository.findOne).toHaveBeenCalledWith({
                     where: {
                         name: 'test-package',
+                        language: 'javascript',
                         versions: {
                             version: version
                         }
@@ -373,6 +377,7 @@ describe('PackageRepository', () => {
             expect(mockRepository.findOne).toHaveBeenCalledWith({
                 where: {
                     name: '@types/node',
+                    language: 'javascript',
                     versions: {
                         version: '20.10.5'
                     }
@@ -390,6 +395,7 @@ describe('PackageRepository', () => {
             expect(mockRepository.findOne).toHaveBeenCalledWith({
                 where: {
                     name: '',
+                    language: 'javascript',
                     versions: {
                         version: ''
                     }
@@ -411,6 +417,7 @@ describe('PackageRepository', () => {
             expect(mockRepository.findOne).toHaveBeenCalledWith({
                 where: {
                     name: specialPackageName,
+                    language: 'javascript',
                     versions: {
                         version: specialVersion
                     }

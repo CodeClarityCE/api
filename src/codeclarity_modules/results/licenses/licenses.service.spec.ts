@@ -321,12 +321,19 @@ describe('LicensesService', () => {
     });
 
     describe('getDependencyVersions (private method)', () => {
-        it('should throw not implemented error', async () => {
+        it('should return dependency versions data', async () => {
             // Access private method through reflection for testing
             const getDependencyVersions = (service as any).getDependencyVersions;
 
-            await expect(getDependencyVersions.call(service, ['package:1.0.0'])).rejects.toThrow(
-                'Not implemented'
+            const result = await getDependencyVersions.call(service, ['package:1.0.0']);
+            expect(result).toEqual(
+                expect.objectContaining({
+                    'package:1.0.0': expect.objectContaining({
+                        version: '1.0.0',
+                        dependencies: expect.any(Object),
+                        dev_dependencies: expect.any(Object)
+                    })
+                })
             );
         });
     });

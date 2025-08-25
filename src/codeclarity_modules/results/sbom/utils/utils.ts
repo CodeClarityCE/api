@@ -298,7 +298,10 @@ export class SbomUtilsService {
             version = package_version.versions[0];
         } catch (error) {
             // If package info is not available in knowledge database, create minimal info
-            console.warn(`Package info not found for ${dependency_name}@${dependency_version} (${language}):`, error.message);
+            console.warn(
+                `Package info not found for ${dependency_name}@${dependency_version} (${language}):`,
+                error.message
+            );
             package_version = null;
             version = null;
         }
@@ -315,7 +318,9 @@ export class SbomUtilsService {
             license: package_version?.license || '',
             engines: version?.extra?.Engines || {},
             release_date: version?.extra?.Time ? new Date(version.extra.Time) : new Date(),
-            lastest_release_date: package_version?.time ? new Date(package_version.time) : new Date(),
+            lastest_release_date: package_version?.time
+                ? new Date(package_version.time)
+                : new Date(),
             vulnerabilities: [],
             severity_dist: {
                 critical: 0,

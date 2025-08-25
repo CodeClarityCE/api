@@ -27,7 +27,10 @@ import { DatabaseService } from '../../services/database.service';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([License, CWE, Package, NVD, OSV, Version, EPSS, FriendsOfPhp], 'knowledge')
+        TypeOrmModule.forFeature(
+            [License, CWE, Package, NVD, OSV, Version, EPSS, FriendsOfPhp],
+            'knowledge'
+        )
     ],
     exports: [
         LicenseRepository,

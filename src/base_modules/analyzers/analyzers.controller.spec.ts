@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AnalyzersController } from './analyzers.controller';
 import { AnalyzersService } from './analyzers.service';
+import { AnalyzerTemplatesService } from './analyzer-templates.service';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { AnalyzerCreateBody } from './analyzer.types';
 import { Analyzer } from './analyzer.entity';
@@ -65,9 +66,19 @@ describe('AnalyzersController', () => {
             delete: jest.fn()
         };
 
+        const mockAnalyzerTemplatesService = {
+            getTemplates: jest.fn(),
+            createTemplate: jest.fn(),
+            updateTemplate: jest.fn(),
+            deleteTemplate: jest.fn()
+        };
+
         const module: TestingModule = await Test.createTestingModule({
             controllers: [AnalyzersController],
-            providers: [{ provide: AnalyzersService, useValue: mockAnalyzersService }]
+            providers: [
+                { provide: AnalyzersService, useValue: mockAnalyzersService },
+                { provide: AnalyzerTemplatesService, useValue: mockAnalyzerTemplatesService }
+            ]
         }).compile();
 
         controller = module.get<AnalyzersController>(AnalyzersController);

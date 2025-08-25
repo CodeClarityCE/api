@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { SbomUtilsService } from './utils';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { VulnerabilitiesUtilsService } from '../../vulnerabilities/utils/utils.service';
@@ -163,7 +163,7 @@ describe('SbomUtilsService', () => {
                 relations: { analysis: true },
                 where: {
                     analysis: { id: mockAnalysisId },
-                    plugin: 'js-sbom'
+                    plugin: In(['js-sbom', 'php-sbom'])
                 },
                 order: { analysis: { created_on: 'DESC' } },
                 cache: true
@@ -214,7 +214,7 @@ describe('SbomUtilsService', () => {
                 relations: { analysis: true },
                 where: {
                     analysis: { id: mockAnalysisId },
-                    plugin: 'js-sbom'
+                    plugin: In(['js-sbom', 'php-sbom'])
                 },
                 order: { analysis: { created_on: 'DESC' } },
                 cache: true
@@ -251,7 +251,7 @@ describe('SbomUtilsService', () => {
                 relations: { analysis: true },
                 where: {
                     analysis: { id: mockAnalysisId },
-                    plugin: 'js-sbom'
+                    plugin: In(['js-sbom', 'php-sbom'])
                 },
                 order: { analysis: { created_on: 'DESC' } },
                 cache: true
@@ -331,7 +331,8 @@ describe('SbomUtilsService', () => {
 
             expect(packageRepository.getVersionInfo).toHaveBeenCalledWith(
                 dependencyName,
-                dependencyVersion
+                dependencyVersion,
+                'javascript'
             );
             expect(vulnerabilitiesUtilsService.getVulnsResult).toHaveBeenCalledWith(mockAnalysisId);
         });
@@ -598,21 +599,30 @@ describe('SbomUtilsService', () => {
             ).rejects.toThrow(error);
         });
 
-        it('should propagate package repository errors', async () => {
+        it('should handle package repository errors gracefully', async () => {
             const mockSBOM = createMockSBOMOutput();
+            const mockVulns = createMockVulnsOutput();
             const error = new Error('Package repository failed');
 
+            vulnerabilitiesUtilsService.getVulnsResult.mockResolvedValue(mockVulns);
             packageRepository.getVersionInfo.mockRejectedValue(error);
 
-            await expect(
-                service.getDependencyData(
-                    mockAnalysisId,
-                    mockWorkspace,
-                    'test-package',
-                    '1.0.0',
-                    mockSBOM
-                )
-            ).rejects.toThrow(error);
+            const result = await service.getDependencyData(
+                mockAnalysisId,
+                mockWorkspace,
+                'test-package',
+                '1.0.0',
+                mockSBOM
+            );
+
+            // Should return dependency info even when package repository fails
+            expect(result).toEqual(
+                expect.objectContaining({
+                    name: 'test-package',
+                    version: '1.0.0',
+                    vulnerabilities: expect.any(Array)
+                })
+            );
         });
     });
 

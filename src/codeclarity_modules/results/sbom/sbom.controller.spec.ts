@@ -80,6 +80,7 @@ describe('SBOMController', () => {
                 'name',
                 'asc',
                 undefined,
+                undefined,
                 undefined
             );
         });
@@ -124,7 +125,8 @@ describe('SBOMController', () => {
                 'version',
                 'desc',
                 '[direct,transitive]',
-                'package'
+                'package',
+                undefined
             );
         });
 
@@ -162,6 +164,7 @@ describe('SBOMController', () => {
                 undefined,
                 undefined,
                 undefined,
+                undefined,
                 undefined
             );
         });
@@ -191,7 +194,8 @@ describe('SBOMController', () => {
                 'project-123',
                 'analysis-123',
                 'default',
-                mockUser
+                mockUser,
+                undefined
             );
         });
     });

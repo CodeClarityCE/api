@@ -10,7 +10,7 @@ export class MetricsService {
         this.healthGauge = new Gauge({
             name: 'service_health_status',
             help: 'Health status of the service (1 = healthy, 0 = unhealthy)',
-            labelNames: ['service', 'component'],
+            labelNames: ['service', 'component']
         });
 
         // Set initial health status to healthy

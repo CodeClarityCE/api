@@ -74,7 +74,10 @@ export class LicensesService {
         const licenseMap: { [key: string]: LicenseInfo } = {};
 
         // Ensure LicensesDepMap exists and is an object
-        if (!licensesWorkspaceInfo.LicensesDepMap || typeof licensesWorkspaceInfo.LicensesDepMap !== 'object') {
+        if (
+            !licensesWorkspaceInfo.LicensesDepMap ||
+            typeof licensesWorkspaceInfo.LicensesDepMap !== 'object'
+        ) {
             licensesWorkspaceInfo.LicensesDepMap = {};
         }
 
@@ -116,15 +119,20 @@ export class LicensesService {
             licenseMap[licenseId] = licenseInfo;
         }
         // Ensure NonSpdxLicensesDepMap exists before iterating
-        if (licensesWorkspaceInfo.NonSpdxLicensesDepMap && typeof licensesWorkspaceInfo.NonSpdxLicensesDepMap === 'object') {
+        if (
+            licensesWorkspaceInfo.NonSpdxLicensesDepMap &&
+            typeof licensesWorkspaceInfo.NonSpdxLicensesDepMap === 'object'
+        ) {
             for (const [licenseId, depsUsingLicense] of Object.entries(
                 licensesWorkspaceInfo.NonSpdxLicensesDepMap
             )) {
                 licenseMap[licenseId] = {
                     id: licenseId,
                     license_compliance_violation:
-                        licensesWorkspaceInfo.LicenseComplianceViolations?.includes(licenseId) ?? false,
-                    unable_to_infer: licenseId in (licensesWorkspaceInfo.NonSpdxLicensesDepMap ?? {}),
+                        licensesWorkspaceInfo.LicenseComplianceViolations?.includes(licenseId) ??
+                        false,
+                    unable_to_infer:
+                        licenseId in (licensesWorkspaceInfo.NonSpdxLicensesDepMap ?? {}),
                     name: '',
                     description: '',
                     deps_using_license: Array.from(new Set(depsUsingLicense)),
@@ -262,12 +270,13 @@ export class LicensesService {
         // For now, return empty versions to avoid 500 errors
         // This means dependency details won't show version info, but licenses will work
         console.warn('getDependencyVersions not implemented - returning empty versions');
-        
+
         // Create minimal version objects for each requested package
         for (const version of safeVersionsArray) {
             const versionParts = version.split(':');
-            const versionNumber = versionParts.length > 1 ? versionParts[versionParts.length - 1] : 'unknown';
-            
+            const versionNumber =
+                versionParts.length > 1 ? versionParts[versionParts.length - 1] : 'unknown';
+
             versions[version] = {
                 id: '', // Empty ID since we're not looking up from database
                 version: versionNumber,

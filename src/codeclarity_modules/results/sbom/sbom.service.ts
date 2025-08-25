@@ -362,7 +362,9 @@ export class SBOMService {
         const [dependencyName, dependencyVersion] = dependency.split('@');
 
         if (dependencyName in mergedSbom.workspaces[workspace].dependencies) {
-            if (dependencyVersion in mergedSbom.workspaces[workspace].dependencies[dependencyName]) {
+            if (
+                dependencyVersion in mergedSbom.workspaces[workspace].dependencies[dependencyName]
+            ) {
                 return await this.sbomUtilsService.getDependencyData(
                     analysisId,
                     workspace,

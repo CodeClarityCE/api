@@ -65,7 +65,11 @@ export class VulnerabilitiesUtilsService {
         return vulns;
     }
 
-    async getFindingsData(analysis_id: string, workspace: string, ecosystem_filter?: string): Promise<Vulnerability[]> {
+    async getFindingsData(
+        analysis_id: string,
+        workspace: string,
+        ecosystem_filter?: string
+    ): Promise<Vulnerability[]> {
         const findings: VulnsOutput = await this.getVulnsResult(analysis_id);
 
         // Validate that the workspace exists
@@ -77,7 +81,10 @@ export class VulnerabilitiesUtilsService {
 
         // Apply ecosystem filter if specified
         if (ecosystem_filter) {
-            vulnerabilities = this.filterVulnerabilitiesByEcosystem(vulnerabilities, ecosystem_filter);
+            vulnerabilities = this.filterVulnerabilitiesByEcosystem(
+                vulnerabilities,
+                ecosystem_filter
+            );
         }
 
         // // Attach sbom info
@@ -157,8 +164,11 @@ export class VulnerabilitiesUtilsService {
      * Filters vulnerabilities by ecosystem (e.g., 'npm', 'packagist')
      * Uses package naming patterns to determine ecosystem
      */
-    private filterVulnerabilitiesByEcosystem(vulnerabilities: Vulnerability[], ecosystem: string): Vulnerability[] {
-        return vulnerabilities.filter(vuln => {
+    private filterVulnerabilitiesByEcosystem(
+        vulnerabilities: Vulnerability[],
+        ecosystem: string
+    ): Vulnerability[] {
+        return vulnerabilities.filter((vuln) => {
             const packageName = vuln.AffectedDependency;
             const detectedEcosystem = this.detectPackageEcosystem(packageName);
             return detectedEcosystem === ecosystem;
@@ -173,12 +183,12 @@ export class VulnerabilitiesUtilsService {
         if (packageName.includes('/') && !packageName.startsWith('@')) {
             return 'packagist';
         }
-        
+
         // Scoped npm packages start with @
         if (packageName.startsWith('@')) {
             return 'npm';
         }
-        
+
         // Most other single-name packages are likely npm
         // This is a heuristic that may need refinement
         return 'npm';

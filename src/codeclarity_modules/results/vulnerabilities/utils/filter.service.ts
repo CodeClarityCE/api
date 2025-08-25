@@ -242,17 +242,23 @@ export class VulnerabilitiesFilterService {
                         continue;
                 }
                 if (filters.includes('hide_correct_matching')) {
-                    if (vulnerability.Conflict.ConflictFlag == ConflictFlag.MATCH_CORRECT ||
-                        (vulnerability.Conflict.ConflictFlag as any) === 'MATCH_CORRECT') continue;
+                    if (
+                        vulnerability.Conflict.ConflictFlag == ConflictFlag.MATCH_CORRECT ||
+                        (vulnerability.Conflict.ConflictFlag as any) === 'MATCH_CORRECT'
+                    )
+                        continue;
                 }
                 if (filters.includes('hide_incorrect_matching')) {
-                    if (vulnerability.Conflict.ConflictFlag == ConflictFlag.MATCH_INCORRECT ||
-                        (vulnerability.Conflict.ConflictFlag as any) === 'MATCH_INCORRECT')
+                    if (
+                        vulnerability.Conflict.ConflictFlag == ConflictFlag.MATCH_INCORRECT ||
+                        (vulnerability.Conflict.ConflictFlag as any) === 'MATCH_INCORRECT'
+                    )
                         continue;
                 }
                 if (filters.includes('hide_possibly_incorrect_matching')) {
                     if (
-                        vulnerability.Conflict.ConflictFlag == ConflictFlag.MATCH_POSSIBLE_INCORRECT ||
+                        vulnerability.Conflict.ConflictFlag ==
+                            ConflictFlag.MATCH_POSSIBLE_INCORRECT ||
                         (vulnerability.Conflict.ConflictFlag as any) === 'MATCH_POSSIBLE_INCORRECT'
                     ) {
                         continue;

@@ -272,7 +272,8 @@ describe('VulnerabilitiesService', () => {
             );
             expect(findingsUtilsService.getFindingsData).toHaveBeenCalledWith(
                 'analysis-123',
-                'default'
+                'default',
+                undefined // ecosystem_filter
             );
         });
 
@@ -591,7 +592,8 @@ describe('VulnerabilitiesService', () => {
             );
             expect(findingsUtilsService.getFindingsData).toHaveBeenCalledWith(
                 'analysis-123',
-                'default'
+                'default',
+                undefined // ecosystem_filter
             );
         });
 

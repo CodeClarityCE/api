@@ -277,7 +277,8 @@ describe('FindingsController', () => {
                 undefined, // sort_by
                 undefined, // sort_direction
                 undefined, // active_filters
-                undefined // search_key
+                undefined, // search_key
+                undefined // ecosystem_filter
             );
             expect(result).toEqual(mockPaginatedResponse);
         });
@@ -321,7 +322,8 @@ describe('FindingsController', () => {
                 'severity', // sort_by
                 'desc', // sort_direction
                 'severity:HIGH', // active_filters
-                'test search' // search_key
+                'test search', // search_key
+                undefined // ecosystem_filter
             );
             expect(result).toEqual(mockPaginatedResponse);
         });
@@ -350,10 +352,11 @@ describe('FindingsController', () => {
                 baseParams.workspace,
                 -1, // Converted from 0 to -1
                 -1, // Converted from 0 to -1
-                undefined,
-                undefined,
-                undefined,
-                undefined
+                undefined, // sort_by
+                undefined, // sort_direction
+                undefined, // active_filters
+                undefined, // search_key
+                undefined // ecosystem_filter
             );
             expect(result).toEqual(mockPaginatedResponse);
         });
@@ -387,9 +390,10 @@ describe('FindingsController', () => {
                 -1,
                 -1,
                 '', // Empty strings are passed as is
-                '',
-                '',
-                ''
+                '', // sort_direction
+                '', // active_filters
+                '', // search_key
+                undefined // ecosystem_filter
             );
             expect(result).toEqual(mockPaginatedResponse);
         });
@@ -476,7 +480,8 @@ describe('FindingsController', () => {
                 baseParams.project_id,
                 baseParams.analysis_id,
                 baseParams.user,
-                baseParams.workspace
+                baseParams.workspace,
+                undefined // ecosystem_filter
             );
             expect(result).toEqual({
                 data: mockStatsResponse
@@ -801,10 +806,11 @@ describe('FindingsController', () => {
                 baseParams.workspace,
                 999999,
                 50,
-                undefined,
-                undefined,
-                undefined,
-                undefined
+                undefined, // sort_by
+                undefined, // sort_direction
+                undefined, // active_filters
+                undefined, // search_key
+                undefined // ecosystem_filter
             );
             expect(result).toEqual(mockPaginatedResponse);
         });
@@ -841,7 +847,8 @@ describe('FindingsController', () => {
                 'severity',
                 'desc',
                 longFilter,
-                'search'
+                'search', // search_key
+                undefined // ecosystem_filter
             );
             expect(result).toEqual(mockPaginatedResponse);
         });
@@ -875,10 +882,11 @@ describe('FindingsController', () => {
                 baseParams.workspace,
                 1,
                 10,
-                specialChars,
-                specialChars,
-                specialChars,
-                specialChars
+                specialChars, // sort_by
+                specialChars, // sort_direction
+                specialChars, // active_filters
+                specialChars, // search_key
+                undefined // ecosystem_filter
             );
             expect(result).toEqual(mockPaginatedResponse);
         });

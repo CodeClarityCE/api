@@ -65,7 +65,11 @@ export class LicensesUtilsService {
      * Filters license dependencies by ecosystem (e.g., 'npm', 'packagist')
      * Uses package naming patterns to determine ecosystem
      */
-    filterLicensesByEcosystem(licensesOutput: LicensesOutput, ecosystem: string, workspace: string): LicensesOutput {
+    filterLicensesByEcosystem(
+        licensesOutput: LicensesOutput,
+        ecosystem: string,
+        workspace: string
+    ): LicensesOutput {
         const filtered: LicensesOutput = {
             ...licensesOutput,
             workspaces: {
@@ -79,18 +83,24 @@ export class LicensesUtilsService {
         };
 
         const workspaceData = licensesOutput.workspaces[workspace];
-        
+
         // Filter LicensesDepMap
         for (const [licenseId, dependencies] of Object.entries(workspaceData.LicensesDepMap)) {
-            const filteredDeps = dependencies.filter(dep => this.detectPackageEcosystem(dep) === ecosystem);
+            const filteredDeps = dependencies.filter(
+                (dep) => this.detectPackageEcosystem(dep) === ecosystem
+            );
             if (filteredDeps.length > 0) {
                 filtered.workspaces[workspace].LicensesDepMap[licenseId] = filteredDeps;
             }
         }
 
         // Filter NonSpdxLicensesDepMap
-        for (const [licenseId, dependencies] of Object.entries(workspaceData.NonSpdxLicensesDepMap)) {
-            const filteredDeps = dependencies.filter(dep => this.detectPackageEcosystem(dep) === ecosystem);
+        for (const [licenseId, dependencies] of Object.entries(
+            workspaceData.NonSpdxLicensesDepMap
+        )) {
+            const filteredDeps = dependencies.filter(
+                (dep) => this.detectPackageEcosystem(dep) === ecosystem
+            );
             if (filteredDeps.length > 0) {
                 filtered.workspaces[workspace].NonSpdxLicensesDepMap[licenseId] = filteredDeps;
             }
@@ -107,12 +117,12 @@ export class LicensesUtilsService {
         if (packageName.includes('/') && !packageName.startsWith('@')) {
             return 'packagist';
         }
-        
+
         // Scoped npm packages start with @
         if (packageName.startsWith('@')) {
             return 'npm';
         }
-        
+
         // Most other single-name packages are likely npm
         // This is a heuristic that may need refinement
         return 'npm';

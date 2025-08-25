@@ -420,7 +420,6 @@ export class VulnerabilitiesService {
         let active_filters: string[] = [];
         if (active_filters_string != null)
             active_filters = active_filters_string.replace('[', '').replace(']', '').split(',');
-        
 
         // GET SBOM DATA
         // const dependenciesArray: Dependency[] = await getSbomData(analysisId, workspace);
@@ -487,20 +486,23 @@ export class VulnerabilitiesService {
                         Confidence: finding.OSVMatch.Vulnerability.Vlai_confidence
                     });
                 }
-                
+
                 // Check for source disagreements
                 // For PHP vulnerabilities, the OSVMatch is often missing even when OSV data exists
                 // So we check if both NVD data exists and it's a CVE (which likely has OSV data)
                 const isCve = finding.VulnerabilityId.includes('CVE-');
-                
-                if (finding.NVDMatch && isCve && 
-                    (mergedFinding.Conflict.ConflictFlag === ConflictFlag.NO_CONFLICT || 
-                     (mergedFinding.Conflict.ConflictFlag as any) === '')) {
+
+                if (
+                    finding.NVDMatch &&
+                    isCve &&
+                    (mergedFinding.Conflict.ConflictFlag === ConflictFlag.NO_CONFLICT ||
+                        (mergedFinding.Conflict.ConflictFlag as any) === '')
+                ) {
                     // For CVEs with NVD data, assume potential source disagreement
                     // This is a workaround for the OSV matching issue in PHP vulnerabilities
                     mergedFinding.Conflict.ConflictFlag = ConflictFlag.MATCH_POSSIBLE_INCORRECT;
                 }
-                
+
                 findingsMerged.set(finding.VulnerabilityId, mergedFinding);
             }
         }
@@ -512,7 +514,7 @@ export class VulnerabilitiesService {
             search_key,
             active_filters
         );
-        
+
         const sorted = this.findingsSortService.sort(filtered, sort_by, sort_direction);
 
         const paginated = paginate<VulnerabilityMerged>(
@@ -571,12 +573,17 @@ export class VulnerabilitiesService {
             }
 
             // Check for source disagreements when both NVD and OSV data exist
-            if (nvdVuln && osvVuln && (finding.Conflict.ConflictFlag === ConflictFlag.NO_CONFLICT || (finding.Conflict.ConflictFlag as any) === '')) {
+            if (
+                nvdVuln &&
+                osvVuln &&
+                (finding.Conflict.ConflictFlag === ConflictFlag.NO_CONFLICT ||
+                    (finding.Conflict.ConflictFlag as any) === '')
+            ) {
                 // Check if OSV has specific version/range data
-                const osvHasRanges = osvVuln.affected?.some((affected: any) => 
-                    affected.ranges?.length > 0 || affected.versions?.length > 0
+                const osvHasRanges = osvVuln.affected?.some(
+                    (affected: any) => affected.ranges?.length > 0 || affected.versions?.length > 0
                 );
-                
+
                 // When OSV has specific version data and both sources exist,
                 // mark as potential disagreement since they often have different interpretations
                 if (osvHasRanges) {
@@ -723,5 +730,4 @@ export class VulnerabilitiesService {
 
         return selectedSections.join('\n');
     }
-
 }

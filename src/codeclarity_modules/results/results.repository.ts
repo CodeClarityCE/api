@@ -77,13 +77,19 @@ export class AnalysisResultsRepository {
             ],
             select: ['plugin']
         });
-        return results.map(result => result.plugin);
+        return results.map((result) => result.plugin);
     }
 
-    async getPreferredSbomResult(analysisId: string, requestedType?: string): Promise<Result | null> {
+    async getPreferredSbomResult(
+        analysisId: string,
+        requestedType?: string
+    ): Promise<Result | null> {
         // If a specific type is requested and exists, return it
         if (requestedType) {
-            const specificResult = await this.getByAnalysisIdAndPluginType(analysisId, requestedType);
+            const specificResult = await this.getByAnalysisIdAndPluginType(
+                analysisId,
+                requestedType
+            );
             if (specificResult) {
                 return specificResult;
             }
@@ -91,7 +97,7 @@ export class AnalysisResultsRepository {
 
         // Fallback logic: prefer js-sbom, then php-sbom
         const preferenceOrder = ['js-sbom', 'php-sbom'];
-        
+
         for (const pluginType of preferenceOrder) {
             const result = await this.getByAnalysisIdAndPluginType(analysisId, pluginType);
             if (result) {

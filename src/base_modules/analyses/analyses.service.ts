@@ -83,18 +83,26 @@ export class AnalysesService {
         // The downloader scans actual files and passes language info to the dispatcher
         // For now, we'll use the analyzer's supported languages and let the dispatcher filter based on detected languages
         const languagesToAnalyze = analyzer.supported_languages;
-        
-        console.log(`Using analyzer ${analyzer.name} with supported languages: ${languagesToAnalyze.join(', ')}`);
-        
+
+        console.log(
+            `Using analyzer ${analyzer.name} with supported languages: ${languagesToAnalyze.join(', ')}`
+        );
+
         // If specific languages were provided in the analysis request, use those instead
         if (analysisData.languages && analysisData.languages.length > 0) {
-            console.log(`Analysis requested specific languages: ${analysisData.languages.join(', ')}`);
+            console.log(
+                `Analysis requested specific languages: ${analysisData.languages.join(', ')}`
+            );
             // Filter to only supported languages
-            const supportedRequestedLanguages = analysisData.languages.filter(lang => 
+            const supportedRequestedLanguages = analysisData.languages.filter((lang) =>
                 analyzer.supported_languages.includes(lang)
             );
             if (supportedRequestedLanguages.length > 0) {
-                languagesToAnalyze.splice(0, languagesToAnalyze.length, ...supportedRequestedLanguages);
+                languagesToAnalyze.splice(
+                    0,
+                    languagesToAnalyze.length,
+                    ...supportedRequestedLanguages
+                );
             }
         }
 
@@ -108,7 +116,11 @@ export class AnalysesService {
         const stages: AnalysisStage[][] = [];
 
         // Filter analyzer steps based on detected languages and language configuration
-        const applicableSteps = this.filterStepsByLanguage(analyzer.steps, languagesToAnalyze, analyzer.language_config);
+        const applicableSteps = this.filterStepsByLanguage(
+            analyzer.steps,
+            languagesToAnalyze,
+            analyzer.language_config
+        );
 
         // Iterate through each stage defined in the analyzer
         for (const stage of applicableSteps) {
@@ -656,13 +668,11 @@ export class AnalysesService {
 
         // Get all plugins that should run for the detected languages
         const applicablePlugins = new Set<string>();
-        
+
         for (const language of detectedLanguages) {
             const langConfig = languageConfig[language];
             if (langConfig) {
-                langConfig.plugins.forEach(plugin => 
-                    applicablePlugins.add(plugin)
-                );
+                langConfig.plugins.forEach((plugin) => applicablePlugins.add(plugin));
             }
         }
 
@@ -670,20 +680,16 @@ export class AnalysesService {
         if (applicablePlugins.size === 0) {
             const jsConfig = languageConfig.javascript;
             if (jsConfig) {
-                jsConfig.plugins.forEach(plugin => 
-                    applicablePlugins.add(plugin)
-                );
+                jsConfig.plugins.forEach((plugin) => applicablePlugins.add(plugin));
             }
         }
 
         // Filter steps to only include applicable plugins
         const filteredSteps: any[][] = [];
-        
+
         for (const stage of analyzerSteps) {
-            const filteredStage = stage.filter(step => 
-                applicablePlugins.has(step.name)
-            );
-            
+            const filteredStage = stage.filter((step) => applicablePlugins.has(step.name));
+
             if (filteredStage.length > 0) {
                 filteredSteps.push(filteredStage);
             }
