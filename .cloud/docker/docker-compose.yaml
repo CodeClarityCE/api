@@ -22,8 +22,6 @@ services:
                 condition: service_healthy
             db:
                 condition: service_started
-            pg_bouncer:
-                condition: service_started
             adminer:
                 condition: service_started
         deploy:

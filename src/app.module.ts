@@ -6,6 +6,7 @@ import { EnterpriseModule } from './enterprise_modules/enterprise.module';
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions.js';
 import { CodeClarityModule } from './codeclarity_modules/codeclarity.module';
 import { BaseModule } from './base_modules/base.module';
+import { MetricsModule } from './metrics/metrics.module';
 
 const ENV = process.env.ENV;
 const password = process.env.PG_DB_PASSWORD;
@@ -48,7 +49,9 @@ export const defaultOptions: PostgresConnectionOptions = {
         // Module for handling CodeClarity-related functionality, including SBOM and vulnerability reporting.
         CodeClarityModule,
         // Enterprise module that extends the platform's functionality with additional features.
-        EnterpriseModule
+        EnterpriseModule,
+        // Module for exposing Prometheus metrics
+        MetricsModule
     ]
 })
 export class AppModule {}
