@@ -21,11 +21,16 @@ import {
 } from '../results/vulnerabilities/services/reportGenerator';
 import { EPSS } from './epss/epss.entity';
 import { EPSSRepository } from './epss/epss.repository';
+import { FriendsOfPhp } from './friendsofphp/friendsofphp.entity';
+import { FriendsOfPhpRepository } from './friendsofphp/friendsofphp.repository';
 import { DatabaseService } from '../../services/database.service';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([License, CWE, Package, NVD, OSV, Version, EPSS], 'knowledge')
+        TypeOrmModule.forFeature(
+            [License, CWE, Package, NVD, OSV, Version, EPSS, FriendsOfPhp],
+            'knowledge'
+        )
     ],
     exports: [
         LicenseRepository,
@@ -38,7 +43,8 @@ import { DatabaseService } from '../../services/database.service';
         VersionsRepository,
         NVDReportGenerator,
         OSVReportGenerator,
-        EPSSRepository
+        EPSSRepository,
+        FriendsOfPhpRepository
     ],
     providers: [
         LicenseService,
@@ -53,6 +59,7 @@ import { DatabaseService } from '../../services/database.service';
         NVDReportGenerator,
         OSVReportGenerator,
         EPSSRepository,
+        FriendsOfPhpRepository,
         DatabaseService
     ],
     controllers: [LicenseController]

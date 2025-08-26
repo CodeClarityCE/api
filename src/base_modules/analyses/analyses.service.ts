@@ -23,6 +23,7 @@ import { VulnerabilitiesRepository } from 'src/codeclarity_modules/results/vulne
 import { LicensesRepository } from 'src/codeclarity_modules/results/licenses/licenses.repository';
 import { AnalysesRepository } from './analyses.repository';
 import { AnaylzerMissingConfigAttribute } from '../analyzers/analyzers.errors';
+import { LanguageDetectionService } from './language-detection.service';
 
 @Injectable()
 export class AnalysesService {
@@ -37,7 +38,8 @@ export class AnalysesService {
         private readonly sbomRepository: SBOMRepository,
         private readonly vulnerabilitiesRepository: VulnerabilitiesRepository,
         private readonly licensesRepository: LicensesRepository,
-        private readonly analysesRepository: AnalysesRepository
+        private readonly analysesRepository: AnalysesRepository,
+        private readonly languageDetectionService: LanguageDetectionService
     ) {}
 
     /**
@@ -77,6 +79,33 @@ export class AnalysesService {
         // Retrieve organization details based on the organization ID
         const organization = await this.organizationsRepository.getOrganizationById(orgId);
 
+        // Language detection is now handled by the downloader service after repository cloning
+        // The downloader scans actual files and passes language info to the dispatcher
+        // For now, we'll use the analyzer's supported languages and let the dispatcher filter based on detected languages
+        const languagesToAnalyze = analyzer.supported_languages;
+
+        console.log(
+            `Using analyzer ${analyzer.name} with supported languages: ${languagesToAnalyze.join(', ')}`
+        );
+
+        // If specific languages were provided in the analysis request, use those instead
+        if (analysisData.languages && analysisData.languages.length > 0) {
+            console.log(
+                `Analysis requested specific languages: ${analysisData.languages.join(', ')}`
+            );
+            // Filter to only supported languages
+            const supportedRequestedLanguages = analysisData.languages.filter((lang) =>
+                analyzer.supported_languages.includes(lang)
+            );
+            if (supportedRequestedLanguages.length > 0) {
+                languagesToAnalyze.splice(
+                    0,
+                    languagesToAnalyze.length,
+                    ...supportedRequestedLanguages
+                );
+            }
+        }
+
         // Initialize an object to hold the configuration structure for the analyzer steps
         const config_structure: { [key: string]: any } = {};
 
@@ -86,8 +115,15 @@ export class AnalysesService {
         // Array to store stages of the analysis process
         const stages: AnalysisStage[][] = [];
 
+        // Filter analyzer steps based on detected languages and language configuration
+        const applicableSteps = this.filterStepsByLanguage(
+            analyzer.steps,
+            languagesToAnalyze,
+            analyzer.language_config
+        );
+
         // Iterate through each stage defined in the analyzer
-        for (const stage of analyzer.steps) {
+        for (const stage of applicableSteps) {
             // Initialize an array to hold steps within a stage
             const steps: AnalysisStage[] = [];
 
@@ -614,6 +650,52 @@ export class AnalysesService {
         const runs = this.groupResultsByDay(results);
 
         return runs;
+    }
+
+    /**
+     * Filter analyzer steps based on detected languages and language configuration
+     * This ensures only relevant plugins are executed for each language
+     */
+    private filterStepsByLanguage(
+        analyzerSteps: any[][],
+        detectedLanguages: string[],
+        languageConfig?: { [key: string]: { plugins: string[] } | undefined }
+    ): any[][] {
+        if (!languageConfig) {
+            // If no language configuration, return all steps for backward compatibility
+            return analyzerSteps;
+        }
+
+        // Get all plugins that should run for the detected languages
+        const applicablePlugins = new Set<string>();
+
+        for (const language of detectedLanguages) {
+            const langConfig = languageConfig[language];
+            if (langConfig) {
+                langConfig.plugins.forEach((plugin) => applicablePlugins.add(plugin));
+            }
+        }
+
+        // If no applicable plugins found, fallback to JavaScript plugins
+        if (applicablePlugins.size === 0) {
+            const jsConfig = languageConfig.javascript;
+            if (jsConfig) {
+                jsConfig.plugins.forEach((plugin) => applicablePlugins.add(plugin));
+            }
+        }
+
+        // Filter steps to only include applicable plugins
+        const filteredSteps: any[][] = [];
+
+        for (const stage of analyzerSteps) {
+            const filteredStage = stage.filter((step) => applicablePlugins.has(step.name));
+
+            if (filteredStage.length > 0) {
+                filteredSteps.push(filteredStage);
+            }
+        }
+
+        return filteredSteps.length > 0 ? filteredSteps : analyzerSteps;
     }
 
     /**

@@ -4,7 +4,8 @@ import {
     AffectedVuln,
     Source,
     Vulnerability,
-    VulnerabilityMerged
+    VulnerabilityMerged,
+    ConflictFlag
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { AnalysisResultsService } from '../results.service';
@@ -52,7 +53,8 @@ export class VulnerabilitiesService {
         projectId: string,
         analysisId: string,
         user: AuthenticatedUser,
-        workspace: string
+        workspace: string,
+        ecosystem_filter?: string
     ): Promise<AnalysisStats> {
         // Check if the user is allowed to view this analysis result
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
@@ -91,11 +93,12 @@ export class VulnerabilitiesService {
         //     sbomOutput.workspaces[workspace].dependencies;
         const findingsArray: Vulnerability[] = await this.findingsUtilsService.getFindingsData(
             analysisId,
-            workspace
+            workspace,
+            ecosystem_filter
         );
 
         try {
-            throw new Error('Method not implemented.');
+            findingsArrayPrevious = []; // Initialize to empty array since we're not using previous analysis data
             // const previousAnalysis =
             //     await this.analysisRepo.getMostRecentAnalysisOfProject(projectId);
 
@@ -106,7 +109,7 @@ export class VulnerabilitiesService {
             // }
 
             // // dependencyMapPrevious = sbomOutputPrevious.workspaces[workspace].dependencies;
-            // findingsArrayPrevious = await getFindingsData(previousAnalysis.id, workspace);
+            // findingsArrayPrevious = await getFindingsData(previousAnalysis.id, workspace, ecosystem_filter);
         } catch (error) {
             console.error(error);
             // dependencyMapPrevious = {};
@@ -408,7 +411,8 @@ export class VulnerabilitiesService {
         sort_by: string | undefined,
         sort_direction: string | undefined,
         active_filters_string: string | undefined,
-        search_key: string | undefined
+        search_key: string | undefined,
+        ecosystem_filter?: string
     ): Promise<PaginatedResponse> {
         // Check if the user is allowed to view this analysis result
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
@@ -425,7 +429,8 @@ export class VulnerabilitiesService {
         // }
         const findings: Vulnerability[] = await this.findingsUtilsService.getFindingsData(
             analysisId,
-            workspace
+            workspace,
+            ecosystem_filter
         );
 
         const findingsMerged: Map<string, VulnerabilityMerged> = new Map<
@@ -481,16 +486,35 @@ export class VulnerabilitiesService {
                         Confidence: finding.OSVMatch.Vulnerability.Vlai_confidence
                     });
                 }
+
+                // Check for source disagreements
+                // For PHP vulnerabilities, the OSVMatch is often missing even when OSV data exists
+                // So we check if both NVD data exists and it's a CVE (which likely has OSV data)
+                const isCve = finding.VulnerabilityId.includes('CVE-');
+
+                if (
+                    finding.NVDMatch &&
+                    isCve &&
+                    (mergedFinding.Conflict.ConflictFlag === ConflictFlag.NO_CONFLICT ||
+                        (mergedFinding.Conflict.ConflictFlag as any) === '')
+                ) {
+                    // For CVEs with NVD data, assume potential source disagreement
+                    // This is a workaround for the OSV matching issue in PHP vulnerabilities
+                    mergedFinding.Conflict.ConflictFlag = ConflictFlag.MATCH_POSSIBLE_INCORRECT;
+                }
+
                 findingsMerged.set(finding.VulnerabilityId, mergedFinding);
             }
         }
 
         // Filter, sort and paginate the dependnecies list
+        const allFindings = Array.from(findingsMerged.values());
         const [filtered, filterCount] = this.findingsFilterService.filter(
-            Array.from(findingsMerged.values()),
+            allFindings,
             search_key,
             active_filters
         );
+
         const sorted = this.findingsSortService.sort(filtered, sort_by, sort_direction);
 
         const paginated = paginate<VulnerabilityMerged>(
@@ -517,32 +541,53 @@ export class VulnerabilitiesService {
             let nvdDescription = '';
             let osvDescription = '';
             let osvSummary = '';
+            let nvdVuln = null;
+            let osvVuln = null;
 
             if (isCve) {
-                const nvd = await this.nvdRepository.getVulnWithoutFailing(finding.Vulnerability);
+                nvdVuln = await this.nvdRepository.getVulnWithoutFailing(finding.Vulnerability);
 
-                if (nvd) {
-                    nvdDescription = nvd.descriptions[0].value;
+                if (nvdVuln) {
+                    nvdDescription = nvdVuln.descriptions[0].value;
                 }
 
-                const osv = await this.osvRepository.getVulnByCVEIDWithoutFailing(
+                osvVuln = await this.osvRepository.getVulnByCVEIDWithoutFailing(
                     finding.Vulnerability
                 );
 
-                if (osv) {
-                    osvDescription = osv.details;
-                    osvSummary = osv.summary;
+                if (osvVuln) {
+                    osvDescription = osvVuln.details;
+                    osvSummary = osvVuln.summary;
                 }
             }
 
             if (isGhsa) {
-                const osv = await this.osvRepository.getVulnByOSVIDWithoutFailing(
+                osvVuln = await this.osvRepository.getVulnByOSVIDWithoutFailing(
                     finding.Vulnerability
                 );
 
-                if (osv) {
-                    osvDescription = osv.details;
-                    osvSummary = osv.summary;
+                if (osvVuln) {
+                    osvDescription = osvVuln.details;
+                    osvSummary = osvVuln.summary;
+                }
+            }
+
+            // Check for source disagreements when both NVD and OSV data exist
+            if (
+                nvdVuln &&
+                osvVuln &&
+                (finding.Conflict.ConflictFlag === ConflictFlag.NO_CONFLICT ||
+                    (finding.Conflict.ConflictFlag as any) === '')
+            ) {
+                // Check if OSV has specific version/range data
+                const osvHasRanges = osvVuln.affected?.some(
+                    (affected: any) => affected.ranges?.length > 0 || affected.versions?.length > 0
+                );
+
+                // When OSV has specific version data and both sources exist,
+                // mark as potential disagreement since they often have different interpretations
+                if (osvHasRanges) {
+                    finding.Conflict.ConflictFlag = ConflictFlag.MATCH_POSSIBLE_INCORRECT;
                 }
             }
 

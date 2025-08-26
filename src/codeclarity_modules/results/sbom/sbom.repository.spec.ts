@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { In } from 'typeorm';
 import { SBOMRepository } from './sbom.repository';
 import { Result } from '../result.entity';
 import { Status } from './sbom.types';
@@ -92,7 +93,7 @@ describe('SBOMRepository', () => {
                     analysis: {
                         id: 'analysis-123'
                     },
-                    plugin: 'js-sbom'
+                    plugin: In(['js-sbom', 'php-sbom'])
                 },
                 order: {
                     analysis: {
@@ -116,7 +117,7 @@ describe('SBOMRepository', () => {
                     analysis: {
                         id: 'non-existent-analysis'
                     },
-                    plugin: 'js-sbom'
+                    plugin: In(['js-sbom', 'php-sbom'])
                 },
                 order: {
                     analysis: {
@@ -148,7 +149,7 @@ describe('SBOMRepository', () => {
                     analysis: {
                         id: 'analysis-123'
                     },
-                    plugin: 'js-sbom'
+                    plugin: In(['js-sbom', 'php-sbom'])
                 },
                 order: {
                     analysis: {
@@ -278,7 +279,7 @@ describe('SBOMRepository', () => {
             expect(resultRepository.findOne).toHaveBeenCalledWith(
                 expect.objectContaining({
                     where: expect.objectContaining({
-                        plugin: 'js-sbom'
+                        plugin: In(['js-sbom', 'php-sbom'])
                     })
                 })
             );

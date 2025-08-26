@@ -118,7 +118,7 @@ describe('LicensesUtilsService', () => {
                     analysis: {
                         id: analysisId
                     },
-                    plugin: 'js-license'
+                    plugin: 'license-finder'
                 },
                 order: {
                     analysis: {
@@ -142,7 +142,7 @@ describe('LicensesUtilsService', () => {
                     analysis: {
                         id: analysisId
                     },
-                    plugin: 'js-license'
+                    plugin: 'license-finder'
                 },
                 order: {
                     analysis: {
@@ -167,7 +167,7 @@ describe('LicensesUtilsService', () => {
                     analysis: {
                         id: analysisId
                     },
-                    plugin: 'js-license'
+                    plugin: 'license-finder'
                 },
                 order: {
                     analysis: {
@@ -192,7 +192,7 @@ describe('LicensesUtilsService', () => {
                     analysis: {
                         id: analysisId
                     },
-                    plugin: 'js-license'
+                    plugin: 'license-finder'
                 },
                 order: {
                     analysis: {
@@ -212,7 +212,7 @@ describe('LicensesUtilsService', () => {
             await service.getLicensesResult(analysisId);
 
             const callArgs = resultRepository.findOne.mock.calls[0][0];
-            expect((callArgs.where as any).plugin).toBe('js-license');
+            expect((callArgs.where as any).plugin).toBe('license-finder');
         });
 
         it('should order by analysis created_on DESC', async () => {
@@ -265,7 +265,7 @@ describe('LicensesUtilsService', () => {
                     analysis: {
                         id: ''
                     },
-                    plugin: 'js-license'
+                    plugin: 'license-finder'
                 },
                 order: {
                     analysis: {
@@ -290,7 +290,7 @@ describe('LicensesUtilsService', () => {
                     analysis: {
                         id: null
                     },
-                    plugin: 'js-license'
+                    plugin: 'license-finder'
                 },
                 order: {
                     analysis: {
@@ -315,7 +315,7 @@ describe('LicensesUtilsService', () => {
                     analysis: {
                         id: undefined
                     },
-                    plugin: 'js-license'
+                    plugin: 'license-finder'
                 },
                 order: {
                     analysis: {
@@ -644,7 +644,7 @@ describe('LicensesUtilsService', () => {
                     analysis: {
                         id: longAnalysisId
                     },
-                    plugin: 'js-license'
+                    plugin: 'license-finder'
                 },
                 order: {
                     analysis: {
@@ -671,7 +671,7 @@ describe('LicensesUtilsService', () => {
                     analysis: {
                         id: specialAnalysisId
                     },
-                    plugin: 'js-license'
+                    plugin: 'license-finder'
                 },
                 order: {
                     analysis: {

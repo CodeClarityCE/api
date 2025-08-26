@@ -18,13 +18,14 @@ export class VulnerabilitiesUtilsService {
     ) {}
 
     async getVulnsResult(analysis_id: string): Promise<VulnsOutput> {
-        const result = await this.resultRepository.findOne({
+        // Try to get results from the multi-language vuln-finder plugin first
+        let result = await this.resultRepository.findOne({
             relations: { analysis: true },
             where: {
                 analysis: {
                     id: analysis_id
                 },
-                plugin: 'js-vuln-finder'
+                plugin: 'vuln-finder'
             },
             order: {
                 analysis: {
@@ -33,6 +34,26 @@ export class VulnerabilitiesUtilsService {
             },
             cache: true
         });
+
+        // Fall back to js-vuln-finder for backward compatibility
+        if (!result) {
+            result = await this.resultRepository.findOne({
+                relations: { analysis: true },
+                where: {
+                    analysis: {
+                        id: analysis_id
+                    },
+                    plugin: 'js-vuln-finder'
+                },
+                order: {
+                    analysis: {
+                        created_on: 'DESC'
+                    }
+                },
+                cache: true
+            });
+        }
+
         if (!result) {
             throw new PluginResultNotAvailable();
         }
@@ -44,7 +65,11 @@ export class VulnerabilitiesUtilsService {
         return vulns;
     }
 
-    async getFindingsData(analysis_id: string, workspace: string): Promise<Vulnerability[]> {
+    async getFindingsData(
+        analysis_id: string,
+        workspace: string,
+        ecosystem_filter?: string
+    ): Promise<Vulnerability[]> {
         const findings: VulnsOutput = await this.getVulnsResult(analysis_id);
 
         // Validate that the workspace exists
@@ -52,7 +77,15 @@ export class VulnerabilitiesUtilsService {
             throw new UnknownWorkspace();
         }
 
-        const vulnerabilities = findings.workspaces[workspace].Vulnerabilities ?? [];
+        let vulnerabilities = findings.workspaces[workspace].Vulnerabilities ?? [];
+
+        // Apply ecosystem filter if specified
+        if (ecosystem_filter) {
+            vulnerabilities = this.filterVulnerabilitiesByEcosystem(
+                vulnerabilities,
+                ecosystem_filter
+            );
+        }
 
         // // Attach sbom info
         // try {
@@ -125,5 +158,39 @@ export class VulnerabilitiesUtilsService {
         // }
 
         return paths;
+    }
+
+    /**
+     * Filters vulnerabilities by ecosystem (e.g., 'npm', 'packagist')
+     * Uses package naming patterns to determine ecosystem
+     */
+    private filterVulnerabilitiesByEcosystem(
+        vulnerabilities: Vulnerability[],
+        ecosystem: string
+    ): Vulnerability[] {
+        return vulnerabilities.filter((vuln) => {
+            const packageName = vuln.AffectedDependency;
+            const detectedEcosystem = this.detectPackageEcosystem(packageName);
+            return detectedEcosystem === ecosystem;
+        });
+    }
+
+    /**
+     * Detects the ecosystem of a package based on naming patterns
+     */
+    private detectPackageEcosystem(packageName: string): string {
+        // PHP packages often have vendor/package format
+        if (packageName.includes('/') && !packageName.startsWith('@')) {
+            return 'packagist';
+        }
+
+        // Scoped npm packages start with @
+        if (packageName.startsWith('@')) {
+            return 'npm';
+        }
+
+        // Most other single-name packages are likely npm
+        // This is a heuristic that may need refinement
+        return 'npm';
     }
 }

@@ -71,7 +71,7 @@ describe('VulnerabilitiesUtilsService', () => {
                     analysis: {
                         id: 'analysis-id'
                     },
-                    plugin: 'js-vuln-finder'
+                    plugin: 'vuln-finder'
                 },
                 order: {
                     analysis: {

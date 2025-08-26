@@ -45,7 +45,10 @@ export class VulnerabilitiesFilterService {
             'severity_none',
             'availability_impact',
             'confidentiality_impact',
-            'integrity_impact'
+            'integrity_impact',
+            'hide_correct_matching',
+            'hide_incorrect_matching',
+            'hide_possibly_incorrect_matching'
         ];
 
         if (searchKey == null) {
@@ -239,17 +242,27 @@ export class VulnerabilitiesFilterService {
                         continue;
                 }
                 if (filters.includes('hide_correct_matching')) {
-                    if (vulnerability.Conflict.ConflictFlag == ConflictFlag.MATCH_CORRECT) continue;
+                    if (
+                        vulnerability.Conflict.ConflictFlag == ConflictFlag.MATCH_CORRECT ||
+                        (vulnerability.Conflict.ConflictFlag as any) === 'MATCH_CORRECT'
+                    )
+                        continue;
                 }
                 if (filters.includes('hide_incorrect_matching')) {
-                    if (vulnerability.Conflict.ConflictFlag == ConflictFlag.MATCH_INCORRECT)
+                    if (
+                        vulnerability.Conflict.ConflictFlag == ConflictFlag.MATCH_INCORRECT ||
+                        (vulnerability.Conflict.ConflictFlag as any) === 'MATCH_INCORRECT'
+                    )
                         continue;
                 }
                 if (filters.includes('hide_possibly_incorrect_matching')) {
                     if (
-                        vulnerability.Conflict.ConflictFlag == ConflictFlag.MATCH_POSSIBLE_INCORRECT
-                    )
+                        vulnerability.Conflict.ConflictFlag ==
+                            ConflictFlag.MATCH_POSSIBLE_INCORRECT ||
+                        (vulnerability.Conflict.ConflictFlag as any) === 'MATCH_POSSIBLE_INCORRECT'
+                    ) {
                         continue;
+                    }
                 }
 
                 toReturn.push(vulnerability);

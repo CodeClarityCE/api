@@ -11,6 +11,7 @@ import { SBOMRepository } from 'src/codeclarity_modules/results/sbom/sbom.reposi
 import { VulnerabilitiesRepository } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.repository';
 import { LicensesRepository } from 'src/codeclarity_modules/results/licenses/licenses.repository';
 import { AnalysesRepository } from './analyses.repository';
+import { LanguageDetectionService } from './language-detection.service';
 import { AnalysisStatus } from './analysis.entity';
 import { AnalysisCreateBody } from './analysis.types';
 import { AuthenticatedUser, ROLE } from '../auth/auth.types';
@@ -43,6 +44,7 @@ describe('AnalysesService', () => {
     const mockAnalyzer = {
         id: 'analyzer-123',
         name: 'Test Analyzer',
+        supported_languages: ['javascript', 'typescript'],
         steps: [
             [
                 {
@@ -196,6 +198,12 @@ describe('AnalysesService', () => {
                         deleteAnalysis: jest.fn(),
                         getScheduledAnalysesByProjectId: jest.fn(),
                         getAllByAnalysisId: jest.fn()
+                    }
+                },
+                {
+                    provide: LanguageDetectionService,
+                    useValue: {
+                        detectLanguagesFromRepository: jest.fn()
                     }
                 }
             ]

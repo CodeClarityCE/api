@@ -21,7 +21,8 @@ export class LicensesController {
         @Query('sort_by') sort_by?: string,
         @Query('sort_direction') sort_direction?: string,
         @Query('active_filters') active_filters?: string,
-        @Query('search_key') search_key?: string
+        @Query('search_key') search_key?: string,
+        @Query('ecosystem_filter') ecosystem_filter?: string
     ): Promise<PaginatedResponse> {
         return await this.licensesService.getLicensesUsed(
             org_id,
@@ -34,7 +35,8 @@ export class LicensesController {
             sort_by,
             sort_direction,
             active_filters,
-            search_key
+            search_key,
+            ecosystem_filter
         );
     }
 

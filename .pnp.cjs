@@ -90,6 +90,7 @@ const RAW_RUNTIME_STATE =
           ["passport-jwt", "npm:4.0.1"],\
           ["pg", "virtual:7473a2b7820d54bc9e09e43d07c4d6a37311d3c27cf8d3479124c02c830f39ea1edcd0240ea9cd8892e68b95c71dc40f3562d9221ee2fee4332c0f6b026a8253#npm:8.16.3"],\
           ["prettier", "npm:3.6.2"],\
+          ["prom-client", "npm:15.1.3"],\
           ["reflect-metadata", "npm:0.2.2"],\
           ["rxjs", "npm:7.8.2"],\
           ["semver", "npm:7.7.2"],\
@@ -3428,6 +3429,15 @@ const RAW_RUNTIME_STATE =
         "linkType": "HARD"\
       }]\
     ]],\
+    ["@opentelemetry/api", [\
+      ["npm:1.9.0", {\
+        "packageLocation": "./.yarn/cache/@opentelemetry-api-npm-1.9.0-7d0560d0dd-a607f0eef9.zip/node_modules/@opentelemetry/api/",\
+        "packageDependencies": [\
+          ["@opentelemetry/api", "npm:1.9.0"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
     ["@paralleldrive/cuid2", [\
       ["npm:2.2.2", {\
         "packageLocation": "./.yarn/cache/@paralleldrive-cuid2-npm-2.2.2-e6061749b2-40ee269d6e.zip/node_modules/@paralleldrive/cuid2/",\
@@ -5157,6 +5167,7 @@ const RAW_RUNTIME_STATE =
           ["passport-jwt", "npm:4.0.1"],\
           ["pg", "virtual:7473a2b7820d54bc9e09e43d07c4d6a37311d3c27cf8d3479124c02c830f39ea1edcd0240ea9cd8892e68b95c71dc40f3562d9221ee2fee4332c0f6b026a8253#npm:8.16.3"],\
           ["prettier", "npm:3.6.2"],\
+          ["prom-client", "npm:15.1.3"],\
           ["reflect-metadata", "npm:0.2.2"],\
           ["rxjs", "npm:7.8.2"],\
           ["semver", "npm:7.7.2"],\
@@ -5513,6 +5524,15 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "./.yarn/cache/binary-extensions-npm-2.3.0-bd3f20d865-bcad01494e.zip/node_modules/binary-extensions/",\
         "packageDependencies": [\
           ["binary-extensions", "npm:2.3.0"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
+    ["bintrees", [\
+      ["npm:1.0.2", {\
+        "packageLocation": "./.yarn/cache/bintrees-npm-1.0.2-b28feeda03-071896cea5.zip/node_modules/bintrees/",\
+        "packageDependencies": [\
+          ["bintrees", "npm:1.0.2"]\
         ],\
         "linkType": "HARD"\
       }]\
@@ -11553,6 +11573,17 @@ const RAW_RUNTIME_STATE =
         "linkType": "HARD"\
       }]\
     ]],\
+    ["prom-client", [\
+      ["npm:15.1.3", {\
+        "packageLocation": "./.yarn/cache/prom-client-npm-15.1.3-2fca26d488-eba75e15ab.zip/node_modules/prom-client/",\
+        "packageDependencies": [\
+          ["@opentelemetry/api", "npm:1.9.0"],\
+          ["prom-client", "npm:15.1.3"],\
+          ["tdigest", "npm:0.1.2"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
     ["promise", [\
       ["npm:7.3.1", {\
         "packageLocation": "./.yarn/cache/promise-npm-7.3.1-5d81d474c0-37dbe58ca7.zip/node_modules/promise/",\
@@ -12814,6 +12845,16 @@ const RAW_RUNTIME_STATE =
           ["mkdirp", "npm:3.0.1"],\
           ["tar", "npm:7.4.3"],\
           ["yallist", "npm:5.0.0"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
+    ["tdigest", [\
+      ["npm:0.1.2", {\
+        "packageLocation": "./.yarn/cache/tdigest-npm-0.1.2-b73cfcf726-45be99fa52.zip/node_modules/tdigest/",\
+        "packageDependencies": [\
+          ["bintrees", "npm:1.0.2"],\
+          ["tdigest", "npm:0.1.2"]\
         ],\
         "linkType": "HARD"\
       }]\

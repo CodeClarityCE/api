@@ -11,6 +11,7 @@ import {
     ParseIntPipe
 } from '@nestjs/common';
 import { AnalyzersService } from './analyzers.service';
+import { AnalyzerTemplatesService, AnalyzerTemplate } from './analyzer-templates.service';
 import {
     CreatedResponse,
     NoDataResponse,
@@ -26,7 +27,10 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 @ApiBearerAuth()
 @Controller('/org/:org_id/analyzers')
 export class AnalyzersController {
-    constructor(private readonly analyzersService: AnalyzersService) {}
+    constructor(
+        private readonly analyzersService: AnalyzersService,
+        private readonly analyzerTemplatesService: AnalyzerTemplatesService
+    ) {}
 
     @Post('')
     async create(
@@ -88,5 +92,44 @@ export class AnalyzersController {
     ): Promise<NoDataResponse> {
         await this.analyzersService.delete(org_id, analyzer_id, user);
         return {};
+    }
+}
+
+// Templates controller (not organization-specific)
+@ApiBearerAuth()
+@Controller('/analyzer-templates')
+export class AnalyzerTemplatesController {
+    constructor(private readonly analyzerTemplatesService: AnalyzerTemplatesService) {}
+
+    @Get('')
+    async getAllTemplates(): Promise<TypedResponse<AnalyzerTemplate[]>> {
+        return { data: this.analyzerTemplatesService.getTemplates() };
+    }
+
+    @Get(':language')
+    async getTemplateByLanguage(
+        @Param('language') language: string
+    ): Promise<TypedResponse<AnalyzerTemplate>> {
+        return { data: this.analyzerTemplatesService.getTemplateByLanguage(language) };
+    }
+}
+
+// Languages controller (not organization-specific)
+@ApiBearerAuth()
+@Controller('/languages')
+export class LanguagesController {
+    constructor(private readonly analyzerTemplatesService: AnalyzerTemplatesService) {}
+
+    @Get('')
+    async getSupportedLanguages(): Promise<TypedResponse<string[]>> {
+        // Extract unique languages from all templates
+        const templates = this.analyzerTemplatesService.getTemplates();
+        const languages = new Set<string>();
+
+        templates.forEach((template) => {
+            template.supported_languages.forEach((lang) => languages.add(lang));
+        });
+
+        return { data: Array.from(languages).sort() };
     }
 }

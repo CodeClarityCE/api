@@ -68,4 +68,43 @@ export class AnalysisResultsRepository {
             }
         });
     }
+
+    async getAvailableSbomPlugins(analysisId: string): Promise<string[]> {
+        const results = await this.resultRepository.find({
+            where: [
+                { analysis: { id: analysisId }, plugin: 'js-sbom' },
+                { analysis: { id: analysisId }, plugin: 'php-sbom' }
+            ],
+            select: ['plugin']
+        });
+        return results.map((result) => result.plugin);
+    }
+
+    async getPreferredSbomResult(
+        analysisId: string,
+        requestedType?: string
+    ): Promise<Result | null> {
+        // If a specific type is requested and exists, return it
+        if (requestedType) {
+            const specificResult = await this.getByAnalysisIdAndPluginType(
+                analysisId,
+                requestedType
+            );
+            if (specificResult) {
+                return specificResult;
+            }
+        }
+
+        // Fallback logic: prefer js-sbom, then php-sbom
+        const preferenceOrder = ['js-sbom', 'php-sbom'];
+
+        for (const pluginType of preferenceOrder) {
+            const result = await this.getByAnalysisIdAndPluginType(analysisId, pluginType);
+            if (result) {
+                return result;
+            }
+        }
+
+        return null;
+    }
 }

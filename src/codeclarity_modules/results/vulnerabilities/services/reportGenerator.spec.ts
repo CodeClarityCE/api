@@ -706,11 +706,17 @@ describe('ReportGenerator Services', () => {
         });
 
         describe('getDependencyData', () => {
-            it('should throw error when dependency data is missing', async () => {
+            it('should return empty dependency data when dependency data is missing', async () => {
                 osvReportGenerator.dependencyData = undefined;
-                await expect(osvReportGenerator.getDependencyData()).rejects.toThrow(
-                    'Dependency data missing'
-                );
+                const result = await osvReportGenerator.getDependencyData();
+                expect(result).toEqual({
+                    description: '',
+                    keywords: [],
+                    name: '',
+                    package_manager_links: [],
+                    published: '',
+                    version: ''
+                });
             });
 
             it('should return dependency info structure', async () => {

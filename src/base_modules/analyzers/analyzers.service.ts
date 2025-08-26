@@ -44,6 +44,9 @@ export class AnalyzersService {
         analyzer.name = analyzerData.name;
         analyzer.description = analyzerData.description;
         analyzer.steps = analyzerData.steps;
+        analyzer.supported_languages = analyzerData.supported_languages || ['javascript'];
+        analyzer.language_config = analyzerData.language_config;
+        analyzer.logo = analyzerData.logo || 'js';
         analyzer.global = false;
         analyzer.organization = organization;
 
@@ -83,6 +86,15 @@ export class AnalyzersService {
         analyzer.name = analyzerData.name;
         analyzer.description = analyzerData.description;
         analyzer.steps = analyzerData.steps;
+        if (analyzerData.supported_languages) {
+            analyzer.supported_languages = analyzerData.supported_languages;
+        }
+        if (analyzerData.language_config) {
+            analyzer.language_config = analyzerData.language_config;
+        }
+        if (analyzerData.logo) {
+            analyzer.logo = analyzerData.logo;
+        }
 
         // Save the updated analyzer to the database
         await this.analyzersRepository.saveAnalyzer(analyzer);

@@ -15,6 +15,16 @@ export class AnalyzerCreateBody {
     @IsNotEmpty()
     @Length(10, 250)
     description: string;
+
+    supported_languages?: string[];
+
+    language_config?: {
+        javascript?: { plugins: string[] };
+        php?: { plugins: string[] };
+        [key: string]: { plugins: string[] } | undefined;
+    };
+
+    logo?: string;
 }
 
 /********************************************/

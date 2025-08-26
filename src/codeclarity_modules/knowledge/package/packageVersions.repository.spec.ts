@@ -99,7 +99,7 @@ describe('VersionsRepository', () => {
 
             expect(result).toEqual(mockVersion);
             expect(packageRepository.findOne).toHaveBeenCalledWith({
-                where: { name: 'test-package' }
+                where: { name: 'test-package', language: 'javascript' }
             });
             expect(versionRepository.findOne).toHaveBeenCalledWith({
                 where: {
@@ -118,7 +118,7 @@ describe('VersionsRepository', () => {
             // Note: The current implementation has a bug - it should be dependencyName = dependencyName.replace('/', ':')
             // But we test the current behavior
             expect(packageRepository.findOne).toHaveBeenCalledWith({
-                where: { name: '@org/package' }
+                where: { name: '@org/package', language: 'javascript' }
             });
         });
 
@@ -130,7 +130,7 @@ describe('VersionsRepository', () => {
             );
 
             expect(packageRepository.findOne).toHaveBeenCalledWith({
-                where: { name: 'non-existent-package' }
+                where: { name: 'non-existent-package', language: 'javascript' }
             });
             expect(versionRepository.findOne).not.toHaveBeenCalled();
         });
@@ -144,7 +144,7 @@ describe('VersionsRepository', () => {
             );
 
             expect(packageRepository.findOne).toHaveBeenCalledWith({
-                where: { name: 'test-package' }
+                where: { name: 'test-package', language: 'javascript' }
             });
             expect(versionRepository.findOne).toHaveBeenCalledWith({
                 where: {
@@ -181,7 +181,7 @@ describe('VersionsRepository', () => {
             expect(result[2].version).toBe('2.0.0');
 
             expect(packageRepository.findOne).toHaveBeenCalledWith({
-                where: { name: 'test-package' },
+                where: { name: 'test-package', language: 'javascript' },
                 relations: { versions: true }
             });
         });
@@ -197,7 +197,7 @@ describe('VersionsRepository', () => {
 
             expect(result).toEqual([]);
             expect(packageRepository.findOne).toHaveBeenCalledWith({
-                where: { name: 'test-package' },
+                where: { name: 'test-package', language: 'javascript' },
                 relations: { versions: true }
             });
         });
@@ -214,7 +214,7 @@ describe('VersionsRepository', () => {
             // Note: The current implementation has a bug - it should be dependency = dependency.replace('/', ':')
             // But we test the current behavior
             expect(packageRepository.findOne).toHaveBeenCalledWith({
-                where: { name: '@org/package' },
+                where: { name: '@org/package', language: 'javascript' },
                 relations: { versions: true }
             });
         });
@@ -227,7 +227,7 @@ describe('VersionsRepository', () => {
             );
 
             expect(packageRepository.findOne).toHaveBeenCalledWith({
-                where: { name: 'non-existent-package' },
+                where: { name: 'non-existent-package', language: 'javascript' },
                 relations: { versions: true }
             });
         });
