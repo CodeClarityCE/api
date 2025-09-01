@@ -33,6 +33,8 @@ import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.reposit
 import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
 import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
 import { EPSSRepository } from 'src/codeclarity_modules/knowledge/epss/epss.repository';
+import { VulnerabilityPolicyService } from 'src/codeclarity_modules/policies/vulnerability/vulnerability.service';
+import { AnalysesRepository } from 'src/base_modules/analyses/analyses.repository';
 
 @Injectable()
 export class VulnerabilitiesService {
@@ -45,7 +47,9 @@ export class VulnerabilitiesService {
         private readonly osvRepository: OSVRepository,
         private readonly nvdRepository: NVDRepository,
         private readonly cweRepository: CWERepository,
-        private readonly epssRepository: EPSSRepository
+        private readonly epssRepository: EPSSRepository,
+        private readonly vulnerabilityPolicyService: VulnerabilityPolicyService,
+        private readonly analysesRepository: AnalysesRepository
     ) {}
 
     async getStats(
@@ -412,7 +416,8 @@ export class VulnerabilitiesService {
         sort_direction: string | undefined,
         active_filters_string: string | undefined,
         search_key: string | undefined,
-        ecosystem_filter?: string
+        ecosystem_filter?: string,
+        show_blacklisted?: boolean
     ): Promise<PaginatedResponse> {
         // Check if the user is allowed to view this analysis result
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
@@ -507,10 +512,31 @@ export class VulnerabilitiesService {
             }
         }
 
-        // Filter, sort and paginate the dependnecies list
-        const allFindings = Array.from(findingsMerged.values());
+        // Get blacklisted vulnerabilities from policies
+        const { vulnerabilities: blacklistedVulns, policies: policyNames } =
+            await this.getBlacklistedVulnerabilities(analysisId, orgId);
+
+        // Mark blacklisted vulnerabilities and apply filtering
+        const allFindings = Array.from(findingsMerged.values()).map((finding) => {
+            const isBlacklisted = blacklistedVulns.has(finding.Vulnerability);
+            const policyName = policyNames.get(finding.Vulnerability);
+            const blacklistedByPolicies = isBlacklisted && policyName ? [policyName] : [];
+
+            return {
+                ...finding,
+                is_blacklisted: isBlacklisted,
+                blacklisted_by_policies: blacklistedByPolicies
+            } as VulnerabilityMerged;
+        });
+
+        // Filter out blacklisted vulnerabilities if show_blacklisted is false
+        const findingsToProcess =
+            show_blacklisted === false
+                ? allFindings.filter((finding) => !finding.is_blacklisted)
+                : allFindings;
+
         const [filtered, filterCount] = this.findingsFilterService.filter(
-            allFindings,
+            findingsToProcess,
             search_key,
             active_filters
         );
@@ -729,5 +755,69 @@ export class VulnerabilitiesService {
         }
 
         return selectedSections.join('\n');
+    }
+
+    /**
+     * Get blacklisted vulnerabilities from analysis configuration
+     */
+    private async getBlacklistedVulnerabilities(
+        analysisId: string,
+        orgId: string
+    ): Promise<{ vulnerabilities: Set<string>; policies: Map<string, string> }> {
+        try {
+            // Get the analysis to access its configuration
+            const analysis = await this.analysesRepository.getAnalysisById(analysisId);
+
+            if (!analysis.config || typeof analysis.config !== 'object') {
+                return { vulnerabilities: new Set(), policies: new Map() };
+            }
+
+            // Extract vulnerability policies from vuln-finder configuration
+            const vulnFinderConfig = (analysis.config as any)['vuln-finder'];
+            if (
+                !vulnFinderConfig ||
+                !vulnFinderConfig.vulnerabilityPolicy ||
+                !Array.isArray(vulnFinderConfig.vulnerabilityPolicy)
+            ) {
+                return { vulnerabilities: new Set(), policies: new Map() };
+            }
+
+            const policyIds = vulnFinderConfig.vulnerabilityPolicy.filter(
+                (id: any) => typeof id === 'string' && id.trim()
+            );
+            if (policyIds.length === 0) {
+                return { vulnerabilities: new Set(), policies: new Map() };
+            }
+
+            // Fetch all vulnerability policies using the unified policy table
+            const blacklistedVulns = new Set<string>();
+            const policyNames = new Map<string, string>();
+
+            for (const policyId of policyIds) {
+                try {
+                    // Get policy directly from the unified policy table
+                    const policy = await this.vulnerabilityPolicyService.get(orgId, policyId, {
+                        userId: 'system'
+                    } as any);
+                    if (policy && policy.content && Array.isArray(policy.content)) {
+                        for (const vuln of policy.content) {
+                            blacklistedVulns.add(vuln);
+                            policyNames.set(vuln, policy.name);
+                        }
+                    }
+                } catch (err) {
+                    // Skip invalid policy IDs
+                    console.warn(`Could not fetch vulnerability policy ${policyId}:`, err.message);
+                }
+            }
+
+            return { vulnerabilities: blacklistedVulns, policies: policyNames };
+        } catch (err) {
+            console.warn(
+                `Could not get blacklisted vulnerabilities for analysis ${analysisId}:`,
+                err.message
+            );
+            return { vulnerabilities: new Set(), policies: new Map() };
+        }
     }
 }

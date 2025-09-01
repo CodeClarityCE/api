@@ -71,10 +71,8 @@ function filter(
         return toReturn;
     }
 
-    function filterByOptions(dependencies: SbomDependency[], filters: string[]): SbomDependency[] {
+    function filterByOptions(dependencies: SbomDependency[], _filters: string[]): SbomDependency[] {
         const toReturn = [];
-
-        console.log(filters);
 
         for (const dependency of dependencies) {
             // if (filters.includes('user_installed')) {

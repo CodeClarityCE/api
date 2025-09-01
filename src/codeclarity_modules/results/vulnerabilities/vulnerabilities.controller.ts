@@ -25,7 +25,8 @@ export class FindingsController {
         @Query('sort_direction') sort_direction?: string,
         @Query('active_filters') active_filters?: string,
         @Query('search_key') search_key?: string,
-        @Query('ecosystem_filter') ecosystem_filter?: string
+        @Query('ecosystem_filter') ecosystem_filter?: string,
+        @Query('show_blacklisted', new DefaultValuePipe('false')) show_blacklisted?: string
     ): Promise<PaginatedResponse> {
         return await this.vulnerabilitiesService.getVulnerabilities(
             org_id,
@@ -39,7 +40,8 @@ export class FindingsController {
             sort_direction,
             active_filters,
             search_key,
-            ecosystem_filter
+            ecosystem_filter,
+            show_blacklisted === 'true'
         );
     }
 

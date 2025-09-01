@@ -3,6 +3,7 @@ import { AnalysesService } from './analyses.service';
 import { AnalysesController } from './analyses.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Analysis } from 'src/base_modules/analyses/analysis.entity';
+import { Policy } from 'src/codeclarity_modules/policies/policy.entity';
 import { UsersModule } from '../users/users.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { ProjectsModule } from '../projects/projects.module';
@@ -24,7 +25,7 @@ import { LanguageDetectionService } from './language-detection.service';
         forwardRef(() => SbomModule),
         forwardRef(() => LicenseModule),
         forwardRef(() => VulnerabilitiesModule),
-        TypeOrmModule.forFeature([Analysis], 'codeclarity')
+        TypeOrmModule.forFeature([Analysis, Policy], 'codeclarity')
     ],
     exports: [AnalysesService, AnalysesRepository],
     providers: [AnalysesService, AnalysesRepository, LanguageDetectionService],

@@ -77,8 +77,11 @@ export class LicensePolicyService {
 
         const policy = await this.policyRepository.findOne({
             where: {
-                id: licensePolicyId
-            }
+                id: licensePolicyId,
+                policy_type: PolicyType.LICENSE_POLICY,
+                organizations: { id: orgId } as any
+            },
+            relations: ['created_by']
         });
 
         if (!policy) {
@@ -129,7 +132,10 @@ export class LicensePolicyService {
         const queryBuilder = this.policyRepository
             .createQueryBuilder('policy')
             .leftJoin('policy.organizations', 'organization')
-            .where('organization.id = :orgId', { orgId });
+            .where('organization.id = :orgId', { orgId })
+            .andWhere('policy.policy_type = :policyType', {
+                policyType: PolicyType.LICENSE_POLICY
+            });
 
         const fullCount = await queryBuilder.getCount();
 

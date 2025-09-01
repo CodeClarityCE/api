@@ -23,7 +23,6 @@ export class SBOMController {
         @Query('search_key') search_key?: string,
         @Query('ecosystem_filter') ecosystem_filter?: string
     ): Promise<PaginatedResponse> {
-        console.log('🎯 SBOM API called with ecosystem_filter:', ecosystem_filter);
         const sbom = await this.sbomService.getSbom(
             org_id,
             project_id,
@@ -51,7 +50,6 @@ export class SBOMController {
         @Query('ecosystem_filter') ecosystem_filter?: string,
         @Query('run_index') _run_index?: string
     ): Promise<Response> {
-        console.log('🎯 SBOM Stats API called with ecosystem_filter:', ecosystem_filter);
         return {
             data: await this.sbomService.getStats(
                 org_id,

@@ -24,6 +24,9 @@ import { LicensesRepository } from 'src/codeclarity_modules/results/licenses/lic
 import { AnalysesRepository } from './analyses.repository';
 import { AnaylzerMissingConfigAttribute } from '../analyzers/analyzers.errors';
 import { LanguageDetectionService } from './language-detection.service';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Policy } from 'src/codeclarity_modules/policies/policy.entity';
 
 @Injectable()
 export class AnalysesService {
@@ -39,7 +42,9 @@ export class AnalysesService {
         private readonly vulnerabilitiesRepository: VulnerabilitiesRepository,
         private readonly licensesRepository: LicensesRepository,
         private readonly analysesRepository: AnalysesRepository,
-        private readonly languageDetectionService: LanguageDetectionService
+        private readonly languageDetectionService: LanguageDetectionService,
+        @InjectRepository(Policy, 'codeclarity')
+        private policyRepository: Repository<Policy>
     ) {}
 
     /**
@@ -84,15 +89,8 @@ export class AnalysesService {
         // For now, we'll use the analyzer's supported languages and let the dispatcher filter based on detected languages
         const languagesToAnalyze = analyzer.supported_languages;
 
-        console.log(
-            `Using analyzer ${analyzer.name} with supported languages: ${languagesToAnalyze.join(', ')}`
-        );
-
         // If specific languages were provided in the analysis request, use those instead
         if (analysisData.languages && analysisData.languages.length > 0) {
-            console.log(
-                `Analysis requested specific languages: ${analysisData.languages.join(', ')}`
-            );
             // Filter to only supported languages
             const supportedRequestedLanguages = analysisData.languages.filter((lang) =>
                 analyzer.supported_languages.includes(lang)
@@ -203,6 +201,9 @@ export class AnalysesService {
 
         // Save the newly created analysis to the database
         const created_analysis = await this.analysesRepository.saveAnalysis(analysis);
+
+        // Link vulnerability policies to the analysis if any were provided
+        await this.linkPoliciesToAnalysis(created_analysis.id, analysisData.config, orgId);
 
         // Only send message immediately for 'once' type analyses
         // Scheduled analyses (daily/weekly) will be triggered by the scheduler at the appropriate time
@@ -734,5 +735,55 @@ export class AnalysesService {
                 plugin_count: [...new Set((dayResults as any[]).map((r) => r.plugin))].length
             }))
             .sort((a, b) => new Date(b.run_date).getTime() - new Date(a.run_date).getTime()); // Newest first
+    }
+
+    /**
+     * Link vulnerability policies to an analysis
+     */
+    private async linkPoliciesToAnalysis(
+        analysisId: string,
+        config: any,
+        orgId: string
+    ): Promise<void> {
+        try {
+            const vulnFinderConfig = config?.['vuln-finder'];
+            if (!vulnFinderConfig?.vulnerabilityPolicy) {
+                return; // No vulnerability policy configuration
+            }
+
+            const policyIds = Array.isArray(vulnFinderConfig.vulnerabilityPolicy)
+                ? vulnFinderConfig.vulnerabilityPolicy
+                : [];
+
+            for (const policyId of policyIds) {
+                if (typeof policyId === 'string' && policyId.trim()) {
+                    try {
+                        // Verify the policy exists and belongs to the organization
+                        const policy = await this.policyRepository.findOne({
+                            where: { id: policyId },
+                            relations: ['organizations']
+                        });
+
+                        if (policy && policy.organizations.some((org) => org.id === orgId)) {
+                            // Create the policy-analysis relationship directly
+                            await this.policyRepository.manager.query(
+                                'INSERT INTO policy_analyses_analysis ("policyId", "analysisId") VALUES ($1, $2)',
+                                [policyId, analysisId]
+                            );
+                        }
+                    } catch (err) {
+                        console.warn(
+                            `Failed to link policy ${policyId} to analysis ${analysisId}:`,
+                            err.message
+                        );
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn(
+                `Failed to process policy linking for analysis ${analysisId}:`,
+                err.message
+            );
+        }
     }
 }

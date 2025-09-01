@@ -16,6 +16,7 @@ import { SbomModule } from '../sbom/sbom.module';
 import { VulnerabilitiesSortService } from './utils/sort.service';
 import { VulnerabilitiesFilterService } from './utils/filter.service';
 import { AnalysisResultsRepository } from '../results.repository';
+import { VulnerabilityPolicyModule } from 'src/codeclarity_modules/policies/vulnerability/vulnerability.module';
 
 @Module({
     imports: [
@@ -25,6 +26,7 @@ import { AnalysisResultsRepository } from '../results.repository';
         KnowledgeModule,
         PatchingModule,
         SbomModule,
+        forwardRef(() => VulnerabilityPolicyModule),
         TypeOrmModule.forFeature([Result], 'codeclarity')
     ],
     exports: [VulnerabilitiesRepository, VulnerabilitiesUtilsService],

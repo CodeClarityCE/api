@@ -24,6 +24,8 @@ import { EPSSRepository } from './epss/epss.repository';
 import { FriendsOfPhp } from './friendsofphp/friendsofphp.entity';
 import { FriendsOfPhpRepository } from './friendsofphp/friendsofphp.repository';
 import { DatabaseService } from '../../services/database.service';
+import { VulnerabilityController } from './vulnerability/vulnerability.controller';
+import { VulnerabilitySearchService } from './vulnerability/vulnerability.service';
 
 @Module({
     imports: [
@@ -44,7 +46,8 @@ import { DatabaseService } from '../../services/database.service';
         NVDReportGenerator,
         OSVReportGenerator,
         EPSSRepository,
-        FriendsOfPhpRepository
+        FriendsOfPhpRepository,
+        VulnerabilitySearchService
     ],
     providers: [
         LicenseService,
@@ -60,8 +63,9 @@ import { DatabaseService } from '../../services/database.service';
         OSVReportGenerator,
         EPSSRepository,
         FriendsOfPhpRepository,
-        DatabaseService
+        DatabaseService,
+        VulnerabilitySearchService
     ],
-    controllers: [LicenseController]
+    controllers: [LicenseController, VulnerabilityController]
 })
 export class KnowledgeModule {}

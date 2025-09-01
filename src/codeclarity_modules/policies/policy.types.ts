@@ -3,7 +3,8 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export enum PolicyType {
     LICENSE_POLICY = 'LICENSE_POLICY',
-    DEP_UPGRADE_POLICY = 'DEP_UPGRADE_POLICY'
+    DEP_UPGRADE_POLICY = 'DEP_UPGRADE_POLICY',
+    VULNERABILITY_POLICY = 'VULNERABILITY_POLICY'
 }
 
 export class DefaultablePolicy {
