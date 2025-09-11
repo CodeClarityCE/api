@@ -85,7 +85,7 @@ export class FileService {
             });
 
             if (file.buffer) {
-                await crypto.subtle.digest('SHA-256', file.buffer).then((hash) => {
+                await crypto.subtle.digest('SHA-256', Buffer.from(file.buffer).buffer).then((hash) => {
                     const hashArray = Array.from(new Uint8Array(hash));
                     const stringHash = hashArray
                         .map((b) => b.toString(16).padStart(2, '0'))
