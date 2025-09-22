@@ -154,7 +154,7 @@
       }
     }
   },
-  "packageManager": "yarn@4.9.4",
+  "packageManager": "yarn@4.10.2",
   "resolutions": {
     "fastify": "5.6.0"
   }
