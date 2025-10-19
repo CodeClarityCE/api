@@ -38,7 +38,7 @@ export class LoggingMiddleware implements NestMiddleware {
             userAgent: req.headers['user-agent'] as string,
             ip: this.getClientIP(req),
             ...(userId && { userId }),
-            ...(organizationId && { organizationId }),
+            ...(organizationId && { organizationId })
         };
 
         // Don't log sensitive headers
@@ -52,7 +52,7 @@ export class LoggingMiddleware implements NestMiddleware {
         // Hook into response completion for Fastify
         res.raw.on('finish', () => {
             const duration = Date.now() - (req.startTime || Date.now());
-            
+
             const responseContext: LogContext = {
                 requestId,
                 method: req.method,
@@ -60,12 +60,16 @@ export class LoggingMiddleware implements NestMiddleware {
                 statusCode: res.statusCode,
                 duration,
                 ...(userId && { userId }),
-                ...(organizationId && { organizationId }),
+                ...(organizationId && { organizationId })
             };
 
             // Determine log level based on status code
             if (res.statusCode >= 500) {
-                req.logger?.error('HTTP request completed with server error', undefined, responseContext);
+                req.logger?.error(
+                    'HTTP request completed with server error',
+                    undefined,
+                    responseContext
+                );
             } else if (res.statusCode >= 400) {
                 req.logger?.warn('HTTP request completed with client error', responseContext);
             } else {
@@ -107,10 +111,19 @@ export class LoggingMiddleware implements NestMiddleware {
 
         Object.entries(headers).forEach(([key, value]) => {
             const lowerKey = key.toLowerCase();
-            
-            if (!sensitiveHeaders.some(sensitive => lowerKey.includes(sensitive))) {
+
+            if (!sensitiveHeaders.some((sensitive) => lowerKey.includes(sensitive))) {
                 // Only include common, useful headers
-                if (['content-type', 'content-length', 'accept', 'user-agent', 'host', 'origin'].includes(lowerKey)) {
+                if (
+                    [
+                        'content-type',
+                        'content-length',
+                        'accept',
+                        'user-agent',
+                        'host',
+                        'origin'
+                    ].includes(lowerKey)
+                ) {
                     sanitized[key] = value;
                 }
             }
@@ -128,14 +141,16 @@ export function RequestLogger() {
         const method = descriptor.value;
 
         descriptor.value = function (...args: any[]) {
-            const req = args.find(arg => arg && typeof arg === 'object' && arg.requestId) as RequestWithLogging;
-            
+            const req = args.find(
+                (arg) => arg && typeof arg === 'object' && arg.requestId
+            ) as RequestWithLogging;
+
             if (req && req.logger) {
                 // Add method-specific context
                 const context: LogContext = {
                     requestId: req.requestId,
                     controller: target.constructor.name,
-                    method: propertyName,
+                    method: propertyName
                 };
 
                 req.logger.debug('Controller method called', context);

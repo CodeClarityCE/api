@@ -29,10 +29,13 @@ export class CodeClarityLogger implements NestLoggerService {
      * Log an error message
      */
     error(message: string, error?: Error | string, context?: LogContext) {
-        const errorDetails = error instanceof Error 
-            ? { error: error.message, stack: error.stack }
-            : error ? { error } : {};
-            
+        const errorDetails =
+            error instanceof Error
+                ? { error: error.message, stack: error.stack }
+                : error
+                  ? { error }
+                  : {};
+
         this.writeLog('error', message, this.getFullContext({ ...context, ...errorDetails }));
     }
 
@@ -67,9 +70,10 @@ export class CodeClarityLogger implements NestLoggerService {
             service: context?.service || 'api',
             time: new Date().toISOString(),
             msg: message,
-            ...(context && Object.keys(context).length > 0 && {
-                fields: this.sanitizeContext(context)
-            })
+            ...(context &&
+                Object.keys(context).length > 0 && {
+                    fields: this.sanitizeContext(context)
+                })
         };
 
         // Output JSON to stdout for Alloy to collect
@@ -81,12 +85,12 @@ export class CodeClarityLogger implements NestLoggerService {
      */
     private sanitizeContext(context: LogContext): Record<string, any> {
         const sanitized: Record<string, any> = {};
-        
+
         for (const [key, value] of Object.entries(context)) {
             if (value !== undefined && value !== null) {
                 // Skip service as it's already at top level
                 if (key === 'service') continue;
-                
+
                 // Sanitize sensitive fields
                 if (this.isSensitiveField(key)) {
                     sanitized[key] = '[REDACTED]';
@@ -104,12 +108,19 @@ export class CodeClarityLogger implements NestLoggerService {
      */
     private isSensitiveField(fieldName: string): boolean {
         const sensitivePatterns = [
-            'password', 'token', 'key', 'secret', 'auth',
-            'credential', 'session', 'cookie', 'bearer'
+            'password',
+            'token',
+            'key',
+            'secret',
+            'auth',
+            'credential',
+            'session',
+            'cookie',
+            'bearer'
         ];
-        
+
         const lowerFieldName = fieldName.toLowerCase();
-        return sensitivePatterns.some(pattern => lowerFieldName.includes(pattern));
+        return sensitivePatterns.some((pattern) => lowerFieldName.includes(pattern));
     }
 
     /**

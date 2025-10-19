@@ -304,17 +304,4 @@ describe('filter', () => {
             expect(filteredDeps).toHaveLength(1);
         });
     });
-
-    describe('console.log behavior', () => {
-        it('should call console.log with filters in filterByOptions', () => {
-            const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-            const dependencies = [createMockDependency()];
-            const activeFilters = ['user_installed'];
-
-            filter(dependencies, undefined, activeFilters);
-
-            expect(consoleSpy).toHaveBeenCalledWith(activeFilters);
-            consoleSpy.mockRestore();
-        });
-    });
 });

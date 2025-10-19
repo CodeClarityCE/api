@@ -11,6 +11,8 @@ import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.reposit
 import { EPSSRepository } from 'src/codeclarity_modules/knowledge/epss/epss.repository';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { UnknownWorkspace } from 'src/types/error.types';
+import { VulnerabilityPolicyService } from 'src/codeclarity_modules/policies/vulnerability/vulnerability.service';
+import { AnalysesRepository } from 'src/base_modules/analyses/analyses.repository';
 
 describe('VulnerabilitiesService', () => {
     let service: VulnerabilitiesService;
@@ -162,6 +164,16 @@ describe('VulnerabilitiesService', () => {
         getByCVE: jest.fn().mockResolvedValue({ percentile: 0.1, score: 0.05 })
     };
 
+    const mockVulnerabilityPolicyService = {
+        getVulnerabilityPoliciesMap: jest.fn().mockResolvedValue(new Map())
+    };
+
+    const mockAnalysesRepository = {
+        getAnalysisById: jest.fn(),
+        saveAnalysis: jest.fn(),
+        doesAnalysesBelongToProject: jest.fn()
+    };
+
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
             providers: [
@@ -201,6 +213,14 @@ describe('VulnerabilitiesService', () => {
                 {
                     provide: EPSSRepository,
                     useValue: mockEPSSRepository
+                },
+                {
+                    provide: VulnerabilityPolicyService,
+                    useValue: mockVulnerabilityPolicyService
+                },
+                {
+                    provide: AnalysesRepository,
+                    useValue: mockAnalysesRepository
                 }
             ]
         }).compile();

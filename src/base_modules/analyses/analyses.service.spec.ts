@@ -19,6 +19,8 @@ import { MemberRole } from '../organizations/memberships/orgMembership.types';
 import { AnaylzerMissingConfigAttribute } from '../analyzers/analyzers.errors';
 import { RabbitMQError } from 'src/types/error.types';
 import * as amqp from 'amqplib';
+import { Policy } from 'src/codeclarity_modules/policies/policy.entity';
+import { getRepositoryToken } from '@nestjs/typeorm';
 
 // Mock amqplib
 jest.mock('amqplib', () => ({
@@ -204,6 +206,15 @@ describe('AnalysesService', () => {
                     provide: LanguageDetectionService,
                     useValue: {
                         detectLanguagesFromRepository: jest.fn()
+                    }
+                },
+                {
+                    provide: getRepositoryToken(Policy, 'codeclarity'),
+                    useValue: {
+                        find: jest.fn(),
+                        findOne: jest.fn(),
+                        save: jest.fn(),
+                        delete: jest.fn()
                     }
                 }
             ]

@@ -254,10 +254,11 @@ describe('PolicyType Enum', () => {
         expect(PolicyType.DEP_UPGRADE_POLICY).toBe('DEP_UPGRADE_POLICY');
     });
 
-    it('should have exactly two policy types', () => {
+    it('should have exactly three policy types', () => {
         const policyTypes = Object.values(PolicyType);
-        expect(policyTypes).toHaveLength(2);
+        expect(policyTypes).toHaveLength(3);
         expect(policyTypes).toContain('LICENSE_POLICY');
         expect(policyTypes).toContain('DEP_UPGRADE_POLICY');
+        expect(policyTypes).toContain('VULNERABILITY_POLICY');
     });
 });

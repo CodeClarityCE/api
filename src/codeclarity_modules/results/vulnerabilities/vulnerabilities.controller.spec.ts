@@ -278,7 +278,8 @@ describe('FindingsController', () => {
                 undefined, // sort_direction
                 undefined, // active_filters
                 undefined, // search_key
-                undefined // ecosystem_filter
+                undefined, // ecosystem_filter
+                false // show_blacklisted (default: 'false' -> false)
             );
             expect(result).toEqual(mockPaginatedResponse);
         });
@@ -323,7 +324,8 @@ describe('FindingsController', () => {
                 'desc', // sort_direction
                 'severity:HIGH', // active_filters
                 'test search', // search_key
-                undefined // ecosystem_filter
+                undefined, // ecosystem_filter
+                false // show_blacklisted (default: 'false' -> false)
             );
             expect(result).toEqual(mockPaginatedResponse);
         });
@@ -356,7 +358,8 @@ describe('FindingsController', () => {
                 undefined, // sort_direction
                 undefined, // active_filters
                 undefined, // search_key
-                undefined // ecosystem_filter
+                undefined, // ecosystem_filter
+                false // show_blacklisted (default: 'false' -> false)
             );
             expect(result).toEqual(mockPaginatedResponse);
         });
@@ -393,7 +396,8 @@ describe('FindingsController', () => {
                 '', // sort_direction
                 '', // active_filters
                 '', // search_key
-                undefined // ecosystem_filter
+                undefined, // ecosystem_filter
+                false // show_blacklisted (default: 'false' -> false)
             );
             expect(result).toEqual(mockPaginatedResponse);
         });
@@ -810,7 +814,8 @@ describe('FindingsController', () => {
                 undefined, // sort_direction
                 undefined, // active_filters
                 undefined, // search_key
-                undefined // ecosystem_filter
+                undefined, // ecosystem_filter
+                false // show_blacklisted (default: 'false' -> false)
             );
             expect(result).toEqual(mockPaginatedResponse);
         });
@@ -848,7 +853,8 @@ describe('FindingsController', () => {
                 'desc',
                 longFilter,
                 'search', // search_key
-                undefined // ecosystem_filter
+                undefined, // ecosystem_filter
+                false // show_blacklisted (default: 'false' -> false)
             );
             expect(result).toEqual(mockPaginatedResponse);
         });
@@ -886,7 +892,8 @@ describe('FindingsController', () => {
                 specialChars, // sort_direction
                 specialChars, // active_filters
                 specialChars, // search_key
-                undefined // ecosystem_filter
+                undefined, // ecosystem_filter
+                false // show_blacklisted (default: 'false' -> false)
             );
             expect(result).toEqual(mockPaginatedResponse);
         });

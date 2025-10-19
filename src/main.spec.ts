@@ -310,9 +310,8 @@ describe('Main.ts Bootstrap Configuration and Testing', () => {
         it('should create NestJS application instance', () => {
             const mainContent = readFileSync(join(__dirname, 'main.ts'), 'utf8');
 
-            expect(mainContent).toContain(
-                'await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter())'
-            );
+            expect(mainContent).toContain('await NestFactory.create<NestFastifyApplication>');
+            expect(mainContent).toContain('new FastifyAdapter');
         });
     });
 
@@ -478,9 +477,9 @@ describe('Main.ts Bootstrap Configuration and Testing', () => {
 
         it('should create NestJS application with correct parameters', () => {
             const mainContent = readFileSync(join(__dirname, 'main.ts'), 'utf8');
-            expect(mainContent).toContain(
-                'await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter())'
-            );
+            expect(mainContent).toContain('await NestFactory.create<NestFastifyApplication>');
+            expect(mainContent).toContain('AppModule');
+            expect(mainContent).toContain('new FastifyAdapter');
         });
 
         it('should await app.listen with correct parameters', () => {

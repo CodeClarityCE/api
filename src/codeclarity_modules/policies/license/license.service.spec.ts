@@ -60,6 +60,7 @@ describe('LicensePolicyService', () => {
     const mockQueryBuilder = {
         leftJoin: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
         getCount: jest.fn(),
         skip: jest.fn().mockReturnThis(),
         take: jest.fn().mockReturnThis(),
@@ -245,8 +246,11 @@ describe('LicensePolicyService', () => {
             );
             expect(mockPolicyRepository.findOne).toHaveBeenCalledWith({
                 where: {
-                    id: 'policy-123'
-                }
+                    id: 'policy-123',
+                    policy_type: PolicyType.LICENSE_POLICY,
+                    organizations: { id: 'org-123' }
+                },
+                relations: ['created_by']
             });
         });
 
