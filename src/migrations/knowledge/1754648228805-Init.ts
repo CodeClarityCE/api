@@ -8,13 +8,27 @@ export class Init1754648228805 implements MigrationInterface {
         // The knowledge database should only contain knowledge-specific tables
         // All tables here have been removed as they belong in the codeclarity database
 
-        // Re-create the OSV and NVD indexes if they don't already exist
-        await queryRunner.query(
-            `CREATE INDEX IF NOT EXISTS "osv_affected_gin_pathops_idx" ON "osv" ("affected") `
-        );
-        await queryRunner.query(
-            `CREATE INDEX IF NOT EXISTS "nvd_affectedflattened_gin_pathops_idx" ON "nvd" ("affectedFlattened") `
-        );
+        // Check if indexes already exist (from database restore) before creating
+        // This prevents errors when the database is restored from dumps
+        const osvIndexExists = await queryRunner.query(`
+            SELECT 1 FROM pg_indexes WHERE indexname = 'osv_affected_gin_pathops_idx'
+        `);
+
+        if (!osvIndexExists || osvIndexExists.length === 0) {
+            await queryRunner.query(
+                `CREATE INDEX "osv_affected_gin_pathops_idx" ON "osv" USING gin ("affected" jsonb_path_ops)`
+            );
+        }
+
+        const nvdIndexExists = await queryRunner.query(`
+            SELECT 1 FROM pg_indexes WHERE indexname = 'nvd_affectedflattened_gin_pathops_idx'
+        `);
+
+        if (!nvdIndexExists || nvdIndexExists.length === 0) {
+            await queryRunner.query(
+                `CREATE INDEX "nvd_affectedflattened_gin_pathops_idx" ON "nvd" USING gin ("affectedFlattened" jsonb_path_ops)`
+            );
+        }
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {

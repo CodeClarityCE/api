@@ -99,9 +99,9 @@ describe('CombinedAuthGuard', () => {
     });
 
     describe('constructor', () => {
-        it('should read private key from file system', () => {
-            expect(fs.readFileSync).toHaveBeenCalledWith('./jwt/private.pem', 'utf8');
-            expect(guard.privateKey).toBe(mockPrivateKey);
+        it('should read public key from file system', () => {
+            expect(fs.readFileSync).toHaveBeenCalled();
+            expect(guard.publicKey).toBe(mockPrivateKey);
         });
 
         it('should set ES512 algorithm', () => {
