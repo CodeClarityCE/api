@@ -20,7 +20,7 @@ import {
     CONST_REFRESH_JWT_TOKEN_EXPIRES_IN
 } from './constants';
 import * as bcrypt from 'bcrypt';
-import * as ms from 'ms';
+import ms from 'ms';
 import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/gitlab/gitlabToken.service';
 import { User } from 'src/base_modules/users/users.entity';
 import { UsersRepository } from '../users/users.repository';
