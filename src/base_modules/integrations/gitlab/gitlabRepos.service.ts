@@ -11,7 +11,7 @@ import { IntegrationsRepository } from '../integrations.repository';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MemberRole } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
 import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
-import ms from 'ms';
+import * as ms from 'ms';
 import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from '../github/constants';
 
 @Injectable()

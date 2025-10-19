@@ -1,8 +1,8 @@
 // Import necessary modules and classes from NestJS and Fastify libraries
-import compression from '@fastify/compress';
+import * as compression from '@fastify/compress';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
-import multipart from '@fastify/multipart';
+import * as multipart from '@fastify/multipart';
 
 // Import the main application module
 import { AppModule } from './app.module';

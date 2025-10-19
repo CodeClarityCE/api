@@ -6,6 +6,7 @@ ARG USERNAME=codeclarity
 FROM node:25.0.0-alpine AS api-dev
 RUN npm i -g @nestjs/cli
 WORKDIR /app
+RUN npm install -g corepack --force
 RUN corepack enable
 ENTRYPOINT ["/bin/sh", "-c" , "yarn set version stable && yarn install && yarn run start:debug"]
 # CMD  /bin/sh -c "while sleep 1000; do :; done"

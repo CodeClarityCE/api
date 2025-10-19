@@ -17,7 +17,7 @@ import { NotAuthenticated, AccountNotActivated } from 'src/types/error.types';
 import { JWTPayload } from './jwt.types';
 import { Request } from 'express';
 import { Socket } from 'socket.io';
-import fs from 'fs';
+import * as fs from 'fs';
 
 describe('CombinedAuthGuard', () => {
     let guard: CombinedAuthGuard;

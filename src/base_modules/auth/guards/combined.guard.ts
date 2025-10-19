@@ -9,14 +9,15 @@ import { JWTPayload } from 'src/base_modules/auth/guards/jwt.types';
 import { Request } from 'express';
 import { Socket } from 'socket.io';
 // import { ApiKeysService } from 'src/codeclarity_modules/apiKeys/apiKeys.service';
-import fs from 'fs';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 /**
  * This is a guard that combines JWT and API authentication.
  */
 @Injectable()
 export class CombinedAuthGuard implements CanActivate {
-    privateKey: string;
+    publicKey: string;
     algorithms: Algorithm[];
 
     constructor(
@@ -24,7 +25,7 @@ export class CombinedAuthGuard implements CanActivate {
         private reflector: Reflector
         // private apiKeyService: ApiKeysService
     ) {
-        this.privateKey = fs.readFileSync('./jwt/private.pem', 'utf8');
+        this.publicKey = readFileSync(join(process.cwd(), 'jwt', 'public.pem'), 'utf8');
         this.algorithms = ['ES512'];
     }
 
@@ -131,7 +132,7 @@ export class CombinedAuthGuard implements CanActivate {
     private async verifyJWTToken(token: string): Promise<[boolean, AuthenticatedUser | undefined]> {
         try {
             const payload: JWTPayload = await this.jwtService.verifyAsync(token, {
-                secret: this.privateKey,
+                secret: this.publicKey,
                 algorithms: this.algorithms
             });
             // TODO: get roles from payload

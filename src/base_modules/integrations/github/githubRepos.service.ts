@@ -11,7 +11,7 @@ import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginati
 import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from './constants';
 import { GithubRepositorySchema } from 'src/base_modules/integrations/github/github.types';
 import { SortDirection } from 'src/types/sort.types';
-import ms from 'ms';
+import * as ms from 'ms';
 import { GithubIntegrationService } from './github.service';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { RepositoryCache, RepositoryType } from 'src/base_modules/projects/repositoryCache.entity';

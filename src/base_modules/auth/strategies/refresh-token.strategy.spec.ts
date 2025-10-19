@@ -8,7 +8,7 @@ jest.mock('fs', () => ({
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { RefreshJWTStrategy } from './refresh-token.strategy';
-import fs from 'fs';
+import * as fs from 'fs';
 
 describe('RefreshJWTStrategy', () => {
     let strategy: RefreshJWTStrategy;

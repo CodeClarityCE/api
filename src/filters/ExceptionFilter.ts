@@ -39,14 +39,15 @@ export class ErrorFilter implements ExceptionFilter {
             status = error.getHttpStatusCode();
             errorCode = error.getErrorCode();
             message = error.getMessage();
-            // TODO: log this exception for debugging purposes
+            console.error('[PrivateAPIError]', error);
         } else if (exception instanceof HttpException) {
             // Check if the exception is an instance of HttpException
             const error: HttpException = exception;
             status = error.getStatus();
             message = error.message;
-            // TODO: log this exception for debugging purposes
+            console.error('[HttpException]', error);
         } else {
+            console.error('[UnhandledException]', exception);
             // Catch any other unexpected exceptions and return a generic InternalError response
             if ('name' in exception && exception['name'] == 'FastifyError') {
                 const fastifyException: any = exception;
