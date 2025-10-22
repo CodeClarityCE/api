@@ -48,6 +48,9 @@ export class SbomDependency {
     // Multi-language support
     ecosystem?: string; // e.g., 'npm', 'packagist', 'pypi', 'cargo', etc.
     source_plugin?: string; // e.g., 'js-sbom', 'php-sbom', 'python-sbom', etc.
+    // Deprecation information
+    deprecated?: boolean;
+    deprecated_message?: string;
 }
 
 export interface DependencyDetails {

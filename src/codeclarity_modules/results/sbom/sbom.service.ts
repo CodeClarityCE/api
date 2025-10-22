@@ -113,6 +113,24 @@ export class SBOMService {
                         wStats.number_of_outdated_dependencies += 1;
                     }
 
+                    // Check if dependency is deprecated
+                    if (pack) {
+                        try {
+                            const versionInfo = await this.packageRepository.getVersionInfo(
+                                dep_key,
+                                version_key,
+                                language
+                            );
+                            // After filtering in getVersionInfo, versions[0] is the specific version
+                            const specificVersion = versionInfo.versions?.[0];
+                            if (specificVersion?.extra?.['Deprecated']) {
+                                wStats.number_of_deprecated_dependencies += 1;
+                            }
+                        } catch {
+                            // Continue if we can't get version info
+                        }
+                    }
+
                     wStats.number_of_dependencies += 1;
                 }
             }
@@ -153,6 +171,24 @@ export class SBOMService {
                     );
                     if (pack && pack.latest_version && pack.latest_version !== version_key) {
                         wPrevStats.number_of_outdated_dependencies += 1;
+                    }
+
+                    // Check if dependency is deprecated
+                    if (pack) {
+                        try {
+                            const versionInfo = await this.packageRepository.getVersionInfo(
+                                dep_key,
+                                version_key,
+                                language
+                            );
+                            // After filtering in getVersionInfo, versions[0] is the specific version
+                            const specificVersion = versionInfo.versions?.[0];
+                            if (specificVersion?.extra?.['Deprecated']) {
+                                wPrevStats.number_of_deprecated_dependencies += 1;
+                            }
+                        } catch {
+                            // Continue if we can't get version info
+                        }
                     }
 
                     wPrevStats.number_of_dependencies += 1;
@@ -270,7 +306,37 @@ export class SBOMService {
                     dep_key,
                     language
                 );
-                if (pack) sbomDependency.newest_release = pack.latest_version;
+                if (pack) {
+                    sbomDependency.newest_release = pack.latest_version;
+
+                    // Check for deprecation by loading version-specific info
+                    try {
+                        const versionInfo = await this.packageRepository.getVersionInfo(
+                            dep_key,
+                            version_key,
+                            language
+                        );
+
+                        // After filtering in getVersionInfo, versions[0] is the specific version we want
+                        const specificVersion = versionInfo.versions?.[0];
+                        const deprecatedValue = specificVersion?.extra?.['Deprecated'];
+
+                        if (deprecatedValue) {
+                            sbomDependency.deprecated = true;
+                            sbomDependency.deprecated_message =
+                                typeof deprecatedValue === 'string'
+                                    ? deprecatedValue
+                                    : 'This package is deprecated';
+                        } else {
+                            sbomDependency.deprecated = false;
+                        }
+                    } catch {
+                        // Version info not available in knowledge database
+                        sbomDependency.deprecated = false;
+                    }
+                } else {
+                    sbomDependency.deprecated = false;
+                }
 
                 // If the dependency is not tagged as prod or dev,
                 // then it is not used in the workspace.

@@ -45,18 +45,16 @@ export class PackageRepository {
         dependency_version: string,
         language: string = 'javascript'
     ): Promise<Package> {
-        const package_version = await this.packageRepository.findOne({
-            where: {
-                name: dependency_name,
-                language: language,
-                versions: {
-                    version: dependency_version
-                }
-            },
-            relations: {
-                versions: true
-            }
-        });
+        // Use query builder to avoid TypeORM relation issues with column names
+        const package_version = await this.packageRepository
+            .createQueryBuilder('package')
+            .leftJoinAndSelect('package.versions', 'version', 'version.version = :version', {
+                version: dependency_version
+            })
+            .where('package.name = :name', { name: dependency_name })
+            .andWhere('package.language = :language', { language })
+            .getOne();
+
         if (!package_version) {
             throw new EntityNotFound();
         }

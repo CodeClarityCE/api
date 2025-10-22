@@ -5,7 +5,8 @@ import {
     ManyToOne,
     Relation,
     OneToMany,
-    Index
+    Index,
+    JoinColumn
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
@@ -133,11 +134,8 @@ export class Version {
     @Expose()
     extra: { [key: string]: any };
 
-    @Column({ name: 'package_id', nullable: true })
-    @Index()
-    package_id?: string;
-
     @ManyToOne(() => Package, (pack) => pack.versions)
+    @JoinColumn({ name: 'package_id' })
     package: Relation<Package>;
 }
 
