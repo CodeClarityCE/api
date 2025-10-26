@@ -104,7 +104,6 @@ export class Package {
 }
 
 @Entity('version')
-@Index(['package_id', 'version'], { unique: true })
 export class Version {
     @PrimaryGeneratedColumn('uuid')
     @ApiProperty()

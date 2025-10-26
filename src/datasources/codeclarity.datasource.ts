@@ -4,15 +4,13 @@ import { buildBaseOptions } from './base-options';
 
 const isTs = __filename.endsWith('.ts');
 const entities = [
-    // Base modules entities (not knowledge entities)
-    isTs ? 'src/base_modules/**/*.entity.ts' : 'dist/src/base_modules/**/*.entity.js',
-    // CodeClarity modules entities (excluding knowledge)
+    // Base modules (excluding plugins entity which belongs to 'plugins' DB)
+    isTs ? 'src/base_modules/!(plugins)/**/*.entity.ts' : 'dist/src/base_modules/!(plugins)/**/*.entity.js',
+    // CodeClarity modules: results, policies, dashboard (excluding knowledge)
+    // Knowledge entities belong in 'knowledge' DB only
     isTs
-        ? 'src/codeclarity_modules/results/*.entity.ts'
-        : 'dist/src/codeclarity_modules/results/*.entity.js',
-    isTs
-        ? 'src/codeclarity_modules/policies/*.entity.ts'
-        : 'dist/src/codeclarity_modules/policies/*.entity.js'
+        ? 'src/codeclarity_modules/!(knowledge)/**/*.entity.ts'
+        : 'dist/src/codeclarity_modules/!(knowledge)/**/*.entity.js'
 ];
 const migrations = [
     isTs ? 'src/migrations/codeclarity/*.ts' : 'dist/src/migrations/codeclarity/*.js'
