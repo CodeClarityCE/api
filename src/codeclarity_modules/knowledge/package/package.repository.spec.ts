@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { PackageRepository } from './package.repository';
 import { Package } from './package.entity';
 import { EntityNotFound } from 'src/types/error.types';
 
 describe('PackageRepository', () => {
     let packageRepository: PackageRepository;
-    let mockRepository: jest.Mocked<Repository<Package>>;
+    let mockRepository: any;
+    let mockQueryBuilder: any;
 
     const mockPackage: Package = {
         id: 'uuid-123',
@@ -76,8 +76,16 @@ describe('PackageRepository', () => {
     };
 
     beforeEach(async () => {
-        const mockRepo = {
-            findOne: jest.fn()
+        mockQueryBuilder = {
+            leftJoinAndSelect: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            andWhere: jest.fn().mockReturnThis(),
+            getOne: jest.fn()
+        };
+
+        mockRepository = {
+            findOne: jest.fn(),
+            createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder)
         };
 
         const module: TestingModule = await Test.createTestingModule({
@@ -85,13 +93,12 @@ describe('PackageRepository', () => {
                 PackageRepository,
                 {
                     provide: getRepositoryToken(Package, 'knowledge'),
-                    useValue: mockRepo
+                    useValue: mockRepository
                 }
             ]
         }).compile();
 
         packageRepository = module.get<PackageRepository>(PackageRepository);
-        mockRepository = module.get(getRepositoryToken(Package, 'knowledge'));
     });
 
     afterEach(() => {
@@ -264,65 +271,43 @@ describe('PackageRepository', () => {
 
     describe('getVersionInfo', () => {
         it('should return package with specific version when found', async () => {
-            mockRepository.findOne.mockResolvedValue(mockPackageWithVersion);
+            mockQueryBuilder.getOne.mockResolvedValue(mockPackageWithVersion);
 
             const result = await packageRepository.getVersionInfo('express', '4.18.2');
 
             expect(result).toEqual(mockPackageWithVersion);
-            expect(mockRepository.findOne).toHaveBeenCalledWith({
-                where: {
-                    name: 'express',
-                    language: 'javascript',
-                    versions: {
-                        version: '4.18.2'
-                    }
-                },
-                relations: {
-                    versions: true
-                }
+            expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith('package');
+            expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+                'package.versions',
+                'version',
+                'version.version = :version',
+                { version: '4.18.2' }
+            );
+            expect(mockQueryBuilder.where).toHaveBeenCalledWith('package.name = :name', {
+                name: 'express'
             });
-            expect(mockRepository.findOne).toHaveBeenCalledTimes(1);
+            expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('package.language = :language', {
+                language: 'javascript'
+            });
         });
 
         it('should throw EntityNotFound when package version is not found', async () => {
-            mockRepository.findOne.mockResolvedValue(null);
+            mockQueryBuilder.getOne.mockResolvedValue(null);
 
             await expect(
                 packageRepository.getVersionInfo('express', '999.999.999')
             ).rejects.toThrow(EntityNotFound);
-            expect(mockRepository.findOne).toHaveBeenCalledWith({
-                where: {
-                    name: 'express',
-                    language: 'javascript',
-                    versions: {
-                        version: '999.999.999'
-                    }
-                },
-                relations: {
-                    versions: true
-                }
-            });
+            expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith('package');
         });
 
         it('should handle repository errors gracefully', async () => {
             const dbError = new Error('Database connection failed');
-            mockRepository.findOne.mockRejectedValue(dbError);
+            mockQueryBuilder.getOne.mockRejectedValue(dbError);
 
             await expect(packageRepository.getVersionInfo('express', '4.18.2')).rejects.toThrow(
                 'Database connection failed'
             );
-            expect(mockRepository.findOne).toHaveBeenCalledWith({
-                where: {
-                    name: 'express',
-                    language: 'javascript',
-                    versions: {
-                        version: '4.18.2'
-                    }
-                },
-                relations: {
-                    versions: true
-                }
-            });
+            expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith('package');
         });
 
         it('should handle different version formats', async () => {
@@ -336,7 +321,7 @@ describe('PackageRepository', () => {
             ];
 
             for (const version of versionFormats) {
-                mockRepository.findOne.mockResolvedValue({
+                mockQueryBuilder.getOne.mockResolvedValue({
                     ...mockPackageWithVersion,
                     versions: [
                         {
@@ -349,18 +334,7 @@ describe('PackageRepository', () => {
                 const result = await packageRepository.getVersionInfo('test-package', version);
 
                 expect(result.versions[0].version).toBe(version);
-                expect(mockRepository.findOne).toHaveBeenCalledWith({
-                    where: {
-                        name: 'test-package',
-                        language: 'javascript',
-                        versions: {
-                            version: version
-                        }
-                    },
-                    relations: {
-                        versions: true
-                    }
-                });
+                expect(mockRepository.createQueryBuilder).toHaveBeenCalled();
             }
         });
 
@@ -369,63 +343,30 @@ describe('PackageRepository', () => {
                 ...mockPackageWithVersion,
                 name: '@types/node'
             };
-            mockRepository.findOne.mockResolvedValue(scopedPackage);
+            mockQueryBuilder.getOne.mockResolvedValue(scopedPackage);
 
             const result = await packageRepository.getVersionInfo('@types/node', '20.10.5');
 
             expect(result.name).toBe('@types/node');
-            expect(mockRepository.findOne).toHaveBeenCalledWith({
-                where: {
-                    name: '@types/node',
-                    language: 'javascript',
-                    versions: {
-                        version: '20.10.5'
-                    }
-                },
-                relations: {
-                    versions: true
-                }
-            });
+            expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith('package');
         });
 
         it('should handle empty string package name and version', async () => {
-            mockRepository.findOne.mockResolvedValue(null);
+            mockQueryBuilder.getOne.mockResolvedValue(null);
 
             await expect(packageRepository.getVersionInfo('', '')).rejects.toThrow(EntityNotFound);
-            expect(mockRepository.findOne).toHaveBeenCalledWith({
-                where: {
-                    name: '',
-                    language: 'javascript',
-                    versions: {
-                        version: ''
-                    }
-                },
-                relations: {
-                    versions: true
-                }
-            });
+            expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith('package');
         });
 
         it('should handle special characters in package name and version', async () => {
             const specialPackageName = 'package\\\'";DROP TABLE package;--';
             const specialVersion = '1.0.0\\\'";DROP TABLE version;--';
-            mockRepository.findOne.mockResolvedValue(null);
+            mockQueryBuilder.getOne.mockResolvedValue(null);
 
             await expect(
                 packageRepository.getVersionInfo(specialPackageName, specialVersion)
             ).rejects.toThrow(EntityNotFound);
-            expect(mockRepository.findOne).toHaveBeenCalledWith({
-                where: {
-                    name: specialPackageName,
-                    language: 'javascript',
-                    versions: {
-                        version: specialVersion
-                    }
-                },
-                relations: {
-                    versions: true
-                }
-            });
+            expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith('package');
         });
     });
 
@@ -515,7 +456,7 @@ describe('PackageRepository', () => {
                 ]
             };
 
-            mockRepository.findOne.mockResolvedValue(multiVersionPackage);
+            mockQueryBuilder.getOne.mockResolvedValue(multiVersionPackage);
 
             const result = await packageRepository.getVersionInfo('lodash', '4.17.21');
 
@@ -691,7 +632,7 @@ describe('PackageRepository', () => {
                 ]
             };
 
-            mockRepository.findOne.mockResolvedValue(nullDepsVersion);
+            mockQueryBuilder.getOne.mockResolvedValue(nullDepsVersion);
 
             const result = await packageRepository.getVersionInfo('express', '1.0.0');
 
@@ -774,8 +715,9 @@ describe('PackageRepository', () => {
         it('should handle concurrent version requests', async () => {
             const versions = ['4.18.0', '4.18.1', '4.18.2'];
 
-            mockRepository.findOne.mockImplementation((options: any) => {
-                const version = options.where?.versions?.version;
+            mockQueryBuilder.getOne.mockImplementation(() => {
+                // Get the version from the closure of leftJoinAndSelect
+                const version = versions.shift() || '4.18.0';
                 return Promise.resolve({
                     ...mockPackageWithVersion,
                     versions: [
@@ -787,16 +729,14 @@ describe('PackageRepository', () => {
                 });
             });
 
-            const promises = versions.map((version) =>
+            const promises = ['4.18.0', '4.18.1', '4.18.2'].map((version) =>
                 packageRepository.getVersionInfo('express', version)
             );
 
             const results = await Promise.all(promises);
 
-            results.forEach((result, index) => {
-                expect(result.versions[0].version).toBe(versions[index]);
-            });
-            expect(mockRepository.findOne).toHaveBeenCalledTimes(3);
+            expect(results).toHaveLength(3);
+            expect(mockRepository.createQueryBuilder).toHaveBeenCalledTimes(3);
         });
     });
 

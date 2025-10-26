@@ -5,7 +5,9 @@ import { buildBaseOptions } from './base-options';
 const isTs = __filename.endsWith('.ts');
 const entities = [
     // Base modules (excluding plugins entity which belongs to 'plugins' DB)
-    isTs ? 'src/base_modules/!(plugins)/**/*.entity.ts' : 'dist/src/base_modules/!(plugins)/**/*.entity.js',
+    isTs
+        ? 'src/base_modules/!(plugins)/**/*.entity.ts'
+        : 'dist/src/base_modules/!(plugins)/**/*.entity.js',
     // CodeClarity modules: results, policies, dashboard (excluding knowledge)
     // Knowledge entities belong in 'knowledge' DB only
     isTs

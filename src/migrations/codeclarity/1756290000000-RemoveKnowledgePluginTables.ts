@@ -22,7 +22,7 @@ export class RemoveKnowledgePluginTables1756290000000 implements MigrationInterf
         await queryRunner.query(`DROP TABLE IF EXISTS "plugin" CASCADE`);
     }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
+    public async down(_queryRunner: QueryRunner): Promise<void> {
         // No down migration - these tables should never have existed in codeclarity DB
         // They exist in their proper databases (knowledge and plugins)
         // If a rollback is needed, the tables will be recreated by TypeORM synchronization
