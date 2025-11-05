@@ -58,9 +58,7 @@ function sort(
     let sorted: SbomDependency[] = [];
 
     if (sortBySafe === 'licenses') {
-        sorted = dependencies.sort((a: SbomDependency, b: SbomDependency) => {
-            console.log(a, b);
-
+        sorted = dependencies.sort((_a: SbomDependency, _b: SbomDependency) => {
             // if ((a.licenses[0] ?? '') > (b.licenses[0] ?? ''))
             //     return sortDirectionSafe === 'DESC' ? 1 : -1;
             // if ((a.licenses[0] ?? '') < (b.licenses[0] ?? ''))
@@ -166,7 +164,7 @@ function sort(
                 }
                 return 0;
             } catch (e) {
-                console.log('error comparing versions:', e);
+                console.error('error comparing versions:', e);
                 return 0;
             }
         });

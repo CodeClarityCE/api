@@ -230,7 +230,7 @@ describe('sort', () => {
         });
 
         it('should handle invalid semantic versions gracefully', () => {
-            const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
             const dependencies = [
                 createMockDependency({ name: 'package-a', version: 'invalid-version' }),
                 createMockDependency({ name: 'package-b', version: '1.0.0' })

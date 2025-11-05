@@ -142,7 +142,7 @@ export class AnalysesService {
                 // If the step requires configuration, add it to the config_structure object
                 if (step.config) {
                     for (const [key, value] of Object.entries(step.config)) {
-                        if (!config_structure[step.name]) config_structure[step.name] = {};
+                        config_structure[step.name] ??= {};
                         config_structure[step.name][key] = value;
                     }
                 }
@@ -155,7 +155,7 @@ export class AnalysesService {
         // Merge user-provided configuration with default or existing configuration
         for (const [pluginName, pluginConfig] of Object.entries(analysisData.config)) {
             for (const [key, value] of Object.entries(pluginConfig)) {
-                if (!config[pluginName]) config[pluginName] = {};
+                config[pluginName] ??= {};
                 config[pluginName][key] = value;
             }
         }
@@ -775,7 +775,7 @@ export class AnalysesService {
                             relations: ['organizations']
                         });
 
-                        if (policy && policy.organizations.some((org) => org.id === orgId)) {
+                        if (policy?.organizations.some((org) => org.id === orgId)) {
                             // Create the policy-analysis relationship directly
                             await this.policyRepository.manager.query(
                                 'INSERT INTO policy_analyses_analysis ("policyId", "analysisId") VALUES ($1, $2)',

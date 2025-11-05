@@ -13,14 +13,14 @@ const ENV = process.env['ENV'];
 const password = process.env['PG_DB_PASSWORD'];
 const host = process.env['PG_DB_HOST'];
 const user = process.env['PG_DB_USER'];
-const port = parseInt(process.env['PG_DB_PORT'] || '6432', 10);
+const port = parseInt(process.env['PG_DB_PORT'] ?? '6432', 10);
 
 export const defaultOptions: PostgresConnectionOptions = {
     type: 'postgres',
-    host: host || 'localhost',
+    host: host ?? 'localhost',
     port: port,
-    username: user || 'postgres',
-    password: password || '',
+    username: user ?? 'postgres',
+    password: password ?? '',
     // synchronize is now disabled by default; can be force-enabled in local/dev ONLY.
     // Use proper TypeORM migrations instead (see src/migrations/* and datasource files).
     synchronize: process.env['DB_FORCE_SYNC'] === 'true',

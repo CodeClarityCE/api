@@ -36,7 +36,7 @@ describe('AppModule', () => {
         it('should use default port fallback', () => {
             const moduleContent = readFileSync(join(__dirname, 'app.module.ts'), 'utf8');
 
-            expect(moduleContent).toContain("parseInt(process.env['PG_DB_PORT'] || '6432', 10)");
+            expect(moduleContent).toContain("parseInt(process.env['PG_DB_PORT'] ?? '6432', 10)");
         });
 
         it('should disable logging by default', () => {

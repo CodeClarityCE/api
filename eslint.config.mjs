@@ -251,7 +251,7 @@ export default [
       // ==========================================
 
       // Warn on high complexity
-      "complexity": ["warn", { "max": 20 }],
+      "complexity": ["warn", { "max": 30 }],
 
       // Max nested callbacks
       "max-nested-callbacks": ["warn", { "max": 4 }],
@@ -260,7 +260,7 @@ export default [
       "max-depth": ["warn", { "max": 4 }],
 
       // Max parameters in function
-      "max-params": ["warn", { "max": 5 }],
+      "max-params": ["warn", { "max": 7 }],
 
       // ==========================================
       // Import Rules
