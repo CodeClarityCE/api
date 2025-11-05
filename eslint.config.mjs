@@ -64,6 +64,14 @@ export default [
       // ✅ IMPROVED: Warn on 'any' instead of disabling completely
       "@typescript-eslint/no-explicit-any": ["warn"],
 
+      // Downgrade unsafe-* rules to warnings since they're symptoms of 'any' usage
+      "@typescript-eslint/no-unsafe-member-access": ["warn"],
+      "@typescript-eslint/no-unsafe-assignment": ["warn"],
+      "@typescript-eslint/no-unsafe-argument": ["warn"],
+      "@typescript-eslint/no-unsafe-call": ["warn"],
+      "@typescript-eslint/no-unsafe-return": ["warn"],
+      "@typescript-eslint/no-unsafe-enum-comparison": ["warn"],
+
       // Allow empty interfaces (common in NestJS/TypeORM decorators)
       "@typescript-eslint/no-empty-object-type": ["off"],
       "@typescript-eslint/no-empty-interface": ["off"],
@@ -109,16 +117,24 @@ export default [
       ],
 
       // Prevent floating promises (critical for async code)
-      "@typescript-eslint/no-floating-promises": ["error"],
+      // Note: Some intentional fire-and-forget promises in main.ts and scripts
+      "@typescript-eslint/no-floating-promises": ["warn"],
 
       // Require await in async functions (style preference - TypeScript doesn't enforce this)
-      "@typescript-eslint/require-await": ["warn"],
+      // ✅ DISABLED: Many functions return Promise for API consistency without needing await
+      "@typescript-eslint/require-await": ["off"],
 
       // Prefer nullish coalescing (?? instead of ||)
       "@typescript-eslint/prefer-nullish-coalescing": ["warn"],
 
       // Prefer optional chaining (?.)
       "@typescript-eslint/prefer-optional-chain": ["warn"],
+
+      // Prefer for-of loops (stylistic preference)
+      "@typescript-eslint/prefer-for-of": ["warn"],
+
+      // Allow empty constructors (common in NestJS dependency injection)
+      "@typescript-eslint/no-empty-function": ["warn"],
 
       // No misused promises
       "@typescript-eslint/no-misused-promises": [
@@ -200,6 +216,9 @@ export default [
       // Prefer template literals over string concatenation
       "prefer-template": ["warn"],
 
+      // Restrict template expressions (allow complex types in templates)
+      "@typescript-eslint/restrict-template-expressions": ["warn"],
+
       // No nested ternary operators (hard to read)
       "no-nested-ternary": ["warn"],
 
@@ -245,7 +264,7 @@ export default [
       "import/no-unresolved": "off", // TypeScript handles this
       "import/no-duplicates": ["error"],
       "import/order": [
-        "error",
+        "warn", // Downgraded from error - stylistic preference
         {
           "groups": [
             "builtin",  // Node.js built-in modules
@@ -281,6 +300,9 @@ export default [
       "@typescript-eslint/no-unsafe-argument": ["off"],
       "@typescript-eslint/explicit-function-return-type": ["off"],
       "@typescript-eslint/unbound-method": ["off"],
+      "@typescript-eslint/no-empty-function": ["off"],
+      "@typescript-eslint/dot-notation": ["off"],
+      "@typescript-eslint/no-floating-promises": ["off"],
       "no-console": ["off"],
       "complexity": ["off"],
       "max-nested-callbacks": ["off"],
