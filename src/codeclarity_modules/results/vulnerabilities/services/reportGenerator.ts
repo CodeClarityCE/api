@@ -389,7 +389,7 @@ abstract class BaseReportGenerator {
         const common_consequences: Record<string, CommonConsequencesInfo[]> = {};
         const weakenessses: WeaknessInfo[] = [];
 
-        if (this.vulnsData.Weaknesses === null) return [weakenessses, common_consequences];
+        if (this.vulnsData.Weaknesses === null || this.vulnsData.Weaknesses === undefined) return [weakenessses, common_consequences];
 
         for (const _weakeness of this.vulnsData.Weaknesses) {
             try {
@@ -483,7 +483,7 @@ abstract class BaseReportGenerator {
     }
 
     getOwaspTop10Info(): OwaspTop10Info | null {
-        if (this.vulnsData.Weaknesses === null) return null;
+        if (this.vulnsData.Weaknesses === null || this.vulnsData.Weaknesses === undefined) return null;
 
         for (const weakeness of this.vulnsData.Weaknesses) {
             if (weakeness.OWASPTop10Id !== '') {

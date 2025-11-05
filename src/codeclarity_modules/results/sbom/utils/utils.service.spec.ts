@@ -639,9 +639,9 @@ describe('SbomUtilsService', () => {
         });
 
         it('should have correct dependencies injected', () => {
-            expect(service.resultRepository).toBe(resultRepository);
-            expect(service.vulnerabilitiesUtilsService).toBe(vulnerabilitiesUtilsService);
-            expect(service.packageRepository).toBe(packageRepository);
+            expect(service['resultRepository']).toBe(resultRepository);
+            expect(service['vulnerabilitiesUtilsService']).toBe(vulnerabilitiesUtilsService);
+            expect(service['packageRepository']).toBe(packageRepository);
         });
     });
 });

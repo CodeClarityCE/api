@@ -49,12 +49,12 @@ export class CombinedAuthGuard implements CanActivate {
         if (context.getType() === 'ws') {
             // console.log(context.switchToWs().getClient());
             socket = context.switchToWs().getClient();
-            authHeader = socket.handshake.headers.authorization;
+            authHeader = socket?.handshake.headers.authorization;
         } else {
             // If the endpoint requires authentication, check jwt and api tokens
             request = context.switchToHttp().getRequest();
-            authHeader = request.headers.authorization;
-            apiHeader = request.headers['x-api-key'] ?? request.headers['X-API-KEY'];
+            authHeader = request?.headers.authorization;
+            apiHeader = request?.headers['x-api-key'] ?? request?.headers['X-API-KEY'];
         }
 
         const jwtToken = this.extractJWTTokenFromHeader(authHeader);

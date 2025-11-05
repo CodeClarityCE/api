@@ -92,7 +92,7 @@ export class GitlabAuthController {
         // (3) Retrieve user info
         const user: GitlabUserResponse = await this.getUser(token.access_token);
 
-        if (user.email === null) {
+        if (user.email === null || user.email === undefined) {
             throw new FailedToAuthenticateSocialAccount();
         }
 

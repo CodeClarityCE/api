@@ -49,7 +49,7 @@ export class LicensesService {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
         let active_filters: string[] = [];
-        if (active_filters_string !== null)
+        if (active_filters_string !== null && active_filters_string !== undefined)
             active_filters = active_filters_string.replace('[', '').replace(']', '').split(',');
 
         let licensesOutput: LicensesOutput =

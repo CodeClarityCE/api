@@ -10,13 +10,13 @@ export function filter(
     let activeFiltersSafe: string[];
     const possibleFilters: string[] = ['full_patch', 'partial_patch', 'none_patch'];
 
-    if (searchKey === null) {
+    if (searchKey === null || searchKey === undefined) {
         searchkeySafe = '';
     } else {
         searchkeySafe = searchKey;
     }
 
-    if (activeFilters === null) {
+    if (activeFilters === null || activeFilters === undefined) {
         activeFiltersSafe = [];
     } else {
         activeFiltersSafe = activeFilters;
@@ -33,6 +33,7 @@ export function filter(
         for (const patch of patches) {
             if (
                 patch.affected_dep_name !== null &&
+                patch.affected_dep_name !== undefined &&
                 patch.affected_dep_name.toLowerCase().includes(searchKeyLower)
             ) {
                 toReturn.push(patch);
@@ -40,6 +41,7 @@ export function filter(
             }
             if (
                 patch.vulnerability_id !== null &&
+                patch.vulnerability_id !== undefined &&
                 patch.vulnerability_id.toLowerCase().includes(searchKeyLower)
             ) {
                 toReturn.push(patch);

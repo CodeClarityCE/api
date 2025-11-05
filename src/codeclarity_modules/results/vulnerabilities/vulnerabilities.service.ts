@@ -228,7 +228,7 @@ export class VulnerabilitiesService {
                     else if (isMediumSeverity(severity)) wStats.number_of_medium += 1;
                     else if (isHighSeverity(severity)) wStats.number_of_high += 1;
                     else if (isCriticalSeverity(severity)) wStats.number_of_critical += 1;
-                } else if (finding.Severity === null) wStats.number_of_none += 1;
+                } else if (finding.Severity === null || finding.Severity === undefined) wStats.number_of_none += 1;
             }
 
             encounteredVulns.add(finding.VulnerabilityId);
@@ -342,7 +342,7 @@ export class VulnerabilitiesService {
                 else if (isMediumSeverity(severity)) wBeforeStats.number_of_medium += 1;
                 else if (isHighSeverity(severity)) wBeforeStats.number_of_high += 1;
                 else if (isCriticalSeverity(severity)) wBeforeStats.number_of_critical += 1;
-            } else if (finding.Severity === null) wBeforeStats.number_of_none += 1;
+            } else if (finding.Severity === null || finding.Severity === undefined) wBeforeStats.number_of_none += 1;
 
             beforeEncounteredVulns.add(finding.VulnerabilityId);
         }
@@ -427,7 +427,7 @@ export class VulnerabilitiesService {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
         let active_filters: string[] = [];
-        if (active_filters_string !== null)
+        if (active_filters_string !== null && active_filters_string !== undefined)
             active_filters = active_filters_string.replace('[', '').replace(']', '').split(',');
 
         // GET SBOM DATA

@@ -35,13 +35,13 @@ function sort(
     let sortBySafe: string;
     let sortDirectionSafe: string;
 
-    if (sortBy === null || !ALLOWED_SORT_BY.includes(sortBy)) {
+    if (sortBy === null || sortBy === undefined || !ALLOWED_SORT_BY.includes(sortBy)) {
         sortBySafe = DEFAULT_SORT;
     } else {
         sortBySafe = sortBy;
     }
 
-    if (sortDirection === null || (sortDirection !== 'DESC' && sortDirection !== 'ASC')) {
+    if (sortDirection === null || sortDirection === undefined || (sortDirection !== 'DESC' && sortDirection !== 'ASC')) {
         sortDirectionSafe = DEFAULT_SORT_DIRECTION;
     } else {
         sortDirectionSafe = sortDirection;

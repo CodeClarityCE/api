@@ -52,13 +52,13 @@ export class VulnerabilitiesFilterService {
             'hide_possibly_incorrect_matching'
         ];
 
-        if (searchKey === null) {
+        if (searchKey === null || searchKey === undefined) {
             searchkeySafe = '';
         } else {
             searchkeySafe = searchKey;
         }
 
-        if (activeFilters === null) {
+        if (activeFilters === null || activeFilters === undefined) {
             activeFiltersSafe = [];
         } else {
             activeFiltersSafe = activeFilters;
@@ -101,7 +101,7 @@ export class VulnerabilitiesFilterService {
             const toReturn = [];
 
             for (const vulnerability of vulnerabilities) {
-                if (vulnerability.Weaknesses !== null) {
+                if (vulnerability.Weaknesses !== null && vulnerability.Weaknesses !== undefined) {
                     if (filters.includes('owasp_top_10_2021_a1')) {
                         let found = false;
                         for (const weakness of vulnerability.Weaknesses) {

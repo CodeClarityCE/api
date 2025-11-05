@@ -23,13 +23,13 @@ function filter(
         'severity_none'
     ];
 
-    if (searchKey === null) {
+    if (searchKey === null || searchKey === undefined) {
         searchkeySafe = '';
     } else {
         searchkeySafe = searchKey;
     }
 
-    if (activeFilters === null) {
+    if (activeFilters === null || activeFilters === undefined) {
         activeFiltersSafe = [];
     } else {
         activeFiltersSafe = activeFilters;
@@ -46,6 +46,7 @@ function filter(
         for (const dependency of dependencies) {
             if (
                 dependency.name !== null &&
+                dependency.name !== undefined &&
                 dependency.name.toLocaleLowerCase().includes(searchKey)
             ) {
                 toReturn.push(dependency);
@@ -53,6 +54,7 @@ function filter(
             }
             if (
                 dependency.version !== null &&
+                dependency.version !== undefined &&
                 dependency.version.toLocaleLowerCase().includes(searchKey)
             ) {
                 toReturn.push(dependency);

@@ -34,13 +34,13 @@ export class VulnerabilitiesSortService {
         let sortBySafe: string;
         let sortDirectionSafe: string;
 
-        if (sortBy === null || sortBy === undefined || !ALLOWED_SORT_BY.includes(sortBy)) {
+        if (sortBy === null || !ALLOWED_SORT_BY.includes(sortBy)) {
             sortBySafe = DEFAULT_SORT;
         } else {
             sortBySafe = sortBy;
         }
 
-        if (sortDirection === null || sortDirection === undefined || (sortDirection !== 'DESC' && sortDirection !== 'ASC')) {
+        if (sortDirection === null || (sortDirection !== 'DESC' && sortDirection !== 'ASC')) {
             sortDirectionSafe = DEFAULT_SORT_DIRECTION;
         } else {
             sortDirectionSafe = sortDirection;
@@ -89,9 +89,9 @@ export class VulnerabilitiesSortService {
             });
         } else if (sortBySafe === 'exploitability') {
             sorted = vulnerabilities.sort((a: VulnerabilityMerged, b: VulnerabilityMerged) => {
-                if ((a.Severity?.Exploitability ?? 0.0) > (b.Severity?.Exploitability ?? 0.0))
+                if ((a.Severity.Exploitability ?? 0.0) > (b.Severity.Exploitability ?? 0.0))
                     return sortDirectionSafe === 'DESC' ? -1 : 1;
-                if ((a.Severity?.Exploitability ?? 0.0) < (b.Severity?.Exploitability ?? 0.0))
+                if ((a.Severity.Exploitability ?? 0.0) < (b.Severity.Exploitability ?? 0.0))
                     return sortDirectionSafe === 'DESC' ? 1 : -1;
                 return 0;
             });
@@ -99,25 +99,21 @@ export class VulnerabilitiesSortService {
             sorted = vulnerabilities.sort((a: VulnerabilityMerged, b: VulnerabilityMerged) => {
                 if (
                     (a.Weaknesses === null ||
-                        a.Weaknesses === undefined ||
                         a.Weaknesses.length === 0 ||
                         a.Weaknesses[0]!.OWASPTop10Id === '') &&
                     (b.Weaknesses === null ||
-                        b.Weaknesses === undefined ||
                         b.Weaknesses.length === 0 ||
                         b.Weaknesses[0]!.OWASPTop10Id === '')
                 )
                     return 0;
                 if (
                     a.Weaknesses === null ||
-                    a.Weaknesses === undefined ||
                     a.Weaknesses.length === 0 ||
                     a.Weaknesses[0]!.OWASPTop10Id === ''
                 )
                     return sortDirectionSafe === 'DESC' ? 1 : -1;
                 if (
                     b.Weaknesses === null ||
-                    b.Weaknesses === undefined ||
                     b.Weaknesses.length === 0 ||
                     b.Weaknesses[0]!.OWASPTop10Id === ''
                 )
@@ -132,25 +128,21 @@ export class VulnerabilitiesSortService {
             sorted = vulnerabilities.sort((a: VulnerabilityMerged, b: VulnerabilityMerged) => {
                 if (
                     (a.Weaknesses === null ||
-                        a.Weaknesses === undefined ||
                         a.Weaknesses.length === 0 ||
                         a.Weaknesses[0]!.WeaknessId === '') &&
                     (b.Weaknesses === null ||
-                        b.Weaknesses === undefined ||
                         b.Weaknesses.length === 0 ||
                         b.Weaknesses[0]!.WeaknessId === '')
                 )
                     return 0;
                 if (
                     a.Weaknesses === null ||
-                    a.Weaknesses === undefined ||
                     a.Weaknesses.length === 0 ||
                     a.Weaknesses[0]!.WeaknessId === ''
                 )
                     return sortDirectionSafe === 'DESC' ? -1 : 1;
                 if (
                     b.Weaknesses === null ||
-                    b.Weaknesses === undefined ||
                     b.Weaknesses.length === 0 ||
                     b.Weaknesses[0]!.WeaknessId === ''
                 )

@@ -15,13 +15,13 @@ function filter(
         'copy_left'
     ];
 
-    if (searchKey === null) {
+    if (searchKey === null || searchKey === undefined) {
         searchkeySafe = '';
     } else {
         searchkeySafe = searchKey;
     }
 
-    if (activeFilters === null) {
+    if (activeFilters === null || activeFilters === undefined) {
         activeFiltersSafe = [];
     } else {
         activeFiltersSafe = activeFilters;
@@ -36,12 +36,13 @@ function filter(
         }
 
         for (const licenseInfo of licenseInfos) {
-            if (licenseInfo.id !== null && licenseInfo.id.toLocaleLowerCase().includes(searchKey)) {
+            if (licenseInfo.id !== null && licenseInfo.id !== undefined && licenseInfo.id.toLocaleLowerCase().includes(searchKey)) {
                 toReturn.push(licenseInfo);
                 continue;
             }
             if (
                 licenseInfo.name !== null &&
+                licenseInfo.name !== undefined &&
                 licenseInfo.name.toLocaleLowerCase().includes(searchKey)
             ) {
                 toReturn.push(licenseInfo);

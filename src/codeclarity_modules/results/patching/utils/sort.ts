@@ -16,7 +16,7 @@ export function sort(
     let sortBySafe: string;
     // let _sortDirectionSafe: string;
 
-    if (sortBy === null || !ALLOWED_SORT_BY.includes(sortBy)) {
+    if (sortBy === null || sortBy === undefined || !ALLOWED_SORT_BY.includes(sortBy)) {
         sortBySafe = DEFAULT_SORT;
     } else {
         sortBySafe = sortBy;

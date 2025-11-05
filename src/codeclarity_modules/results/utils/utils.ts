@@ -92,6 +92,7 @@ export function paginate<Type>(
 
     if (
         paginationUserSuppliedConf.currentPage === null ||
+        paginationUserSuppliedConf.currentPage === undefined ||
         paginationUserSuppliedConf.currentPage < 0
     ) {
         currentPageSafe = DEFAULT_PAGE;
@@ -101,6 +102,7 @@ export function paginate<Type>(
 
     if (
         paginationUserSuppliedConf.entriesPerPage === null ||
+        paginationUserSuppliedConf.entriesPerPage === undefined ||
         paginationUserSuppliedConf.entriesPerPage < 0 ||
         paginationUserSuppliedConf.entriesPerPage > MAX_ENTRIES_PER_PAGE
     ) {
