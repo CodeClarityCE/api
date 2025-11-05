@@ -58,7 +58,7 @@ export class ProjectsRepository {
      * @param orgId The id of the organization
      * @returns whether or not the integration belongs to the org
      */
-    async doesProjectBelongToOrg(projectId: string, orgId: string) {
+    async doesProjectBelongToOrg(projectId: string, orgId: string): Promise<void> {
         const belongs = await this.projectRepository.exists({
             relations: {
                 organizations: true
@@ -75,11 +75,11 @@ export class ProjectsRepository {
         }
     }
 
-    async deleteProject(projectId: string) {
+    async deleteProject(projectId: string): Promise<void> {
         await this.projectRepository.delete(projectId);
     }
 
-    async deleteUserProjects(userId: string) {
+    async deleteUserProjects(userId: string): Promise<void> {
         const projects = await this.projectRepository.find({ where: { added_by: { id: userId } } });
         await this.projectRepository.remove(projects);
     }

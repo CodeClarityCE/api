@@ -6,7 +6,7 @@ import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
 
 export const APIDocTypedPaginatedResponseDecorator = <DataDto extends Type<unknown>>(
     dataDto: DataDto
-) =>
+): ReturnType<typeof applyDecorators> =>
     applyDecorators(
         ApiExtraModels(TypedPaginatedResponse, dataDto),
         ApiOkResponse({

@@ -76,23 +76,23 @@ export class OrganizationMembershipCreate {
     user_id!: string;
 }
 
-export function isMemberRoleGreaterThan(memberRole1: MemberRole, memberRole2: MemberRole) {
+export function isMemberRoleGreaterThan(memberRole1: MemberRole, memberRole2: MemberRole): boolean {
     return memberRole1 < memberRole2;
 }
 
-export function isMemberRoleGreaterOrEqualTo(memberRole1: MemberRole, memberRole2: MemberRole) {
+export function isMemberRoleGreaterOrEqualTo(memberRole1: MemberRole, memberRole2: MemberRole): boolean {
     return memberRole1 <= memberRole2;
 }
 
-export function isMemberRoleEqualThan(memberRole1: MemberRole, memberRole2: MemberRole) {
+export function isMemberRoleEqualThan(memberRole1: MemberRole, memberRole2: MemberRole): boolean {
     return memberRole1 === memberRole2;
 }
 
-export function isMemberRoleLessThan(memberRole1: MemberRole, memberRole2: MemberRole) {
+export function isMemberRoleLessThan(memberRole1: MemberRole, memberRole2: MemberRole): boolean {
     return memberRole1 > memberRole2;
 }
 
-export function isMemberRoleLessOrEqualTo(memberRole1: MemberRole, memberRole2: MemberRole) {
+export function isMemberRoleLessOrEqualTo(memberRole1: MemberRole, memberRole2: MemberRole): boolean {
     return memberRole1 >= memberRole2;
 }
 

@@ -15,7 +15,7 @@ export class DatabaseService implements OnApplicationBootstrap {
         private readonly knowledgeDataSource: DataSource
     ) {}
 
-    async onApplicationBootstrap() {
+    async onApplicationBootstrap(): Promise<void> {
         this.logger.log('Initializing database indexes...');
         await this.createKnowledgeIndexes();
         this.logger.log('Database indexes initialized successfully');

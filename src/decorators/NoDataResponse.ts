@@ -3,7 +3,7 @@ import { applyDecorators } from '@nestjs/common';
 import { ApiExtraModels, ApiResponse, getSchemaPath } from '@nestjs/swagger';
 import { NoDataResponse, Status } from 'src/types/apiResponses.types';
 
-export const APIDocNoDataResponseDecorator = (statusCode = 200) =>
+export const APIDocNoDataResponseDecorator = (statusCode = 200): ReturnType<typeof applyDecorators> =>
     applyDecorators(
         ApiExtraModels(NoDataResponse),
         ApiResponse({

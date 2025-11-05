@@ -12,15 +12,15 @@ export class AnalysisResultsRepository {
         private resultRepository: Repository<Result>
     ) {}
 
-    async delete(resultId: string) {
+    async delete(resultId: string): Promise<void> {
         await this.resultRepository.delete(resultId);
     }
 
-    async remove(result: Result) {
+    async remove(result: Result): Promise<void> {
         await this.resultRepository.remove(result);
     }
 
-    async removeResults(result: Result[]) {
+    async removeResults(result: Result[]): Promise<void> {
         await this.resultRepository.remove(result);
     }
 
@@ -39,7 +39,7 @@ export class AnalysisResultsRepository {
         return analysis;
     }
 
-    async getByAnalysisIdAndPluginType(analysisId: string, plugin: string, relations?: object) {
+    async getByAnalysisIdAndPluginType(analysisId: string, plugin: string, relations?: object): Promise<Result | null> {
         const analysis = await this.resultRepository.findOne({
             where: {
                 analysis: { id: analysisId },

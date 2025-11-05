@@ -316,7 +316,7 @@ export class AuthService {
      * @param password The password to hash
      * @returns the hashed password
      */
-    async hashPassword(password: string) {
+    async hashPassword(password: string): Promise<string> {
         const saltRounds = CONST_PASSWORD_SALT_ROUNDS;
         const hashedPassword = await bcrypt.hash(password, saltRounds);
         return hashedPassword;

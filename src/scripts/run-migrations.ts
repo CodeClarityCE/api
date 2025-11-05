@@ -3,7 +3,7 @@ import { CodeClarityDataSource } from '../datasources/codeclarity.datasource';
 import { KnowledgeDataSource } from '../datasources/knowledge.datasource';
 import { PluginsDataSource } from '../datasources/plugins.datasource';
 
-async function runAll() {
+async function runAll(): Promise<void> {
     const sources = [CodeClarityDataSource, KnowledgeDataSource, PluginsDataSource];
     for (const ds of sources) {
         try {

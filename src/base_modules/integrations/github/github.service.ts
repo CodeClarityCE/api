@@ -5,11 +5,8 @@ import {
     LinkGithubCreateBody,
     LinkGithubPatchBody
 } from 'src/base_modules/integrations/github/githubIntegration.types';
-import {
-    IntegrationProvider,
-    IntegrationType
-} from 'src/base_modules/integrations/integration.types';
-import { Integration } from 'src/base_modules/integrations/integrations.entity';
+import { IntegrationType } from 'src/base_modules/integrations/integration.types';
+import { Integration, IntegrationProvider } from 'src/base_modules/integrations/integrations.entity';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 import { UsersRepository } from 'src/base_modules/users/users.repository';
@@ -165,7 +162,7 @@ export class GithubIntegrationService {
 
         const integration = await this.integrationsRepository.getIntegrationById(integrationId);
         integration.access_token = linkGithubPatch.token;
-        integration.token_type = GithubTokenType.CLASSIC_TOKEN;
+        integration.token_type = GithubTokenType.CLASSIC_TOKEN as string;
         integration.invalid = false;
 
         if (expires && expiresAt) {

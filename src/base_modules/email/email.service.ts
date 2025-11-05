@@ -46,7 +46,7 @@ export class EmailService {
         email: string;
         token: string;
         userIdDigest: string;
-    }) {
+    }): Promise<void> {
         const url = `${this.webHost}/email_action/confirm_registration?token=${token}&userid=${userIdDigest}`;
         await this.sendEmail({
             to: email,
@@ -78,7 +78,7 @@ export class EmailService {
         email: string;
         token: string;
         userIdDigest: string;
-    }) {
+    }): Promise<void> {
         const url = `${this.webHost}/email_action/reset_password?token=${token}&userid=${userIdDigest}`;
         await this.sendEmail({
             to: email,
@@ -123,7 +123,7 @@ export class EmailService {
         organizationName: string;
         inviter: User;
         orgId: string;
-    }) {
+    }): Promise<void> {
         const url = `${this.webHost}/email_action/join_org?token=${inviteToken}&useremail=${userEmailDigest}&orgId=${orgId}`;
         const orgInvitesBlockUrl = `${this.webHost}/email_action/unsubscribe/block_org_invites?token=${blockOrgInvitesToken}&useremail=${userEmailDigest}&orgId=${orgId}`;
         const allOrgInvitesBlockUrl = `${this.webHost}/email_action/unsubscribe/block_all_org_invites?token=${blockAllOrgInvitesToken}&useremail=${userEmailDigest}`;
@@ -173,7 +173,7 @@ export class EmailService {
         organizationName: string;
         inviter: User;
         orgId: string;
-    }) {
+    }): Promise<void> {
         const url = `${this.webHost}/email_action/join_org?token=${inviteToken}&useremail=${userEmailDigest}&orgId=${orgId}`;
         const unsubscribeUrl = `${this.webHost}/email_action/unsubscribe/block_all_emails?token=${blockEmailsToken}&useremail=${userEmailDigest}`;
         await this.sendEmail({
@@ -211,7 +211,7 @@ export class EmailService {
         subject: string;
         template: string;
         templateData: any;
-    }) {
+    }): Promise<void> {
         if (this.env === 'dev') {
             to = this.testEmail!;
         }

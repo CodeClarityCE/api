@@ -13,7 +13,7 @@ export class RefreshJwtAuthGuard extends AuthGuard('jwt-refresh') {
         return super.canActivate(context);
     }
 
-    handleRequest(err: any, user: any) {
+    handleRequest(err: any, user: any): any {
         // You can throw an exception based on either "info" or "err" arguments
         if (err || !user) {
             throw err || new NotAuthenticated();

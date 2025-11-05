@@ -62,7 +62,7 @@ export class UsersRepository {
         return this.userRepository.save(user);
     }
 
-    async deleteUser(userId: string) {
+    async deleteUser(userId: string): Promise<void> {
         await this.organizationsRepository.removeUserMemberships(userId);
         await this.projectsRepository.deleteUserProjects(userId);
         await this.userRepository.delete(userId);

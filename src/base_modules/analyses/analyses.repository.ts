@@ -32,7 +32,7 @@ export class AnalysesRepository {
      * Deletes an analysis from the database by its ID.
      * @param analysisId The ID of the analysis to be deleted.
      */
-    async deleteAnalysis(analysisId: string) {
+    async deleteAnalysis(analysisId: string): Promise<void> {
         await this.analysisRepository.delete(analysisId);
     }
 
@@ -40,7 +40,7 @@ export class AnalysesRepository {
      * Deletes an analysis from the database by its ID.
      * @param analysisId The ID of the analysis to be deleted.
      */
-    async removeAnalyses(analyses: Analysis[]) {
+    async removeAnalyses(analyses: Analysis[]): Promise<void> {
         await this.analysisRepository.remove(analyses);
     }
 
@@ -115,7 +115,7 @@ export class AnalysesRepository {
      * @param projectId The ID of the project to check against.
      * @throws NotAuthorized if the analysis does not belong to the project.
      */
-    async doesAnalysesBelongToProject(analysisId: string, projectId: string) {
+    async doesAnalysesBelongToProject(analysisId: string, projectId: string): Promise<void> {
         const belongs = await this.analysisRepository.findOne({
             relations: ['project'],
             where: {

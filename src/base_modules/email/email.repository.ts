@@ -66,7 +66,7 @@ export class EmailRepository {
      * @param mail - The Email entity to remove.
      * @returns A Promise that resolves once the removal is complete.
      */
-    async removeMail(mail: Email) {
+    async removeMail(mail: Email): Promise<void> {
         await this.emailRepository.remove(mail);
     }
 
@@ -76,7 +76,7 @@ export class EmailRepository {
      * @param mail - The Email entity to delete.
      * @returns A Promise that resolves once the deletion is complete.
      */
-    async deleteMail(mail: Email) {
+    async deleteMail(mail: Email): Promise<void> {
         await this.emailRepository.delete(mail);
     }
 
@@ -86,7 +86,7 @@ export class EmailRepository {
      * @param mail - The Email entity to save.
      * @returns A Promise that resolves once the saving is complete.
      */
-    async saveMail(mail: Email) {
+    async saveMail(mail: Email): Promise<void> {
         await this.emailRepository.save(mail);
     }
 }

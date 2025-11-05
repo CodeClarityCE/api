@@ -51,7 +51,7 @@ export class AnalyzersRepository {
      *
      * @param analyzerId - The ID of the Analyzer to delete.
      */
-    async deleteAnalyzer(analyzerId: string) {
+    async deleteAnalyzer(analyzerId: string): Promise<void> {
         await this.analyzerRepository.delete(analyzerId);
     }
 
@@ -62,7 +62,7 @@ export class AnalyzersRepository {
      * @param analyzerId - The ID of the Analyzer.
      * @param orgId - The ID of the Organization.
      */
-    async doesAnalyzerBelongToOrg(analyzerId: string, orgId: string) {
+    async doesAnalyzerBelongToOrg(analyzerId: string, orgId: string): Promise<void> {
         // Check if analyzer is global
         let analyzer = await this.analyzerRepository.findOne({
             where: {

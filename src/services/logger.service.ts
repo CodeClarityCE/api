@@ -20,14 +20,14 @@ export class CodeClarityLogger implements NestLoggerService {
     /**
      * Log an informational message
      */
-    log(message: string, context?: LogContext) {
+    log(message: string, context?: LogContext): void {
         this.writeLog('info', message, this.getFullContext(context));
     }
 
     /**
      * Log an error message
      */
-    error(message: string, error?: Error | string, context?: LogContext) {
+    error(message: string, error?: Error | string, context?: LogContext): void {
         const errorDetails =
             error instanceof Error
                 ? { error: error.message, stack: error.stack }
@@ -41,21 +41,21 @@ export class CodeClarityLogger implements NestLoggerService {
     /**
      * Log a warning message
      */
-    warn(message: string, context?: LogContext) {
+    warn(message: string, context?: LogContext): void {
         this.writeLog('warn', message, this.getFullContext(context));
     }
 
     /**
      * Log a debug message
      */
-    debug(message: string, context?: LogContext) {
+    debug(message: string, context?: LogContext): void {
         this.writeLog('debug', message, this.getFullContext(context));
     }
 
     /**
      * Log a verbose message
      */
-    verbose(message: string, context?: LogContext) {
+    verbose(message: string, context?: LogContext): void {
         this.writeLog('debug', message, this.getFullContext(context));
     }
 
@@ -63,7 +63,7 @@ export class CodeClarityLogger implements NestLoggerService {
      * Write structured log entry in JSON format
      * Format matches Go services: {"level":"info","service":"api","time":"2024-01-01T10:00:00Z","msg":"message","fields":{...}}
      */
-    private writeLog(level: string, message: string, context?: LogContext) {
+    private writeLog(level: string, message: string, context?: LogContext): void {
         const logEntry = {
             level,
             service: context?.service || 'api',

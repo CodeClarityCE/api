@@ -13,7 +13,7 @@ export function ApiErrorDecorator({
     statusCode: number;
     errors: Type<APIError>[];
     options?: ApiResponseOptions;
-}) {
+}): ReturnType<typeof applyDecorators> {
     const descriptions = [];
     let description = '';
     let example: any = {};
