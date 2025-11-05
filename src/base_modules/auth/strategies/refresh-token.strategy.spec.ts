@@ -8,8 +8,7 @@ jest.mock('fs', () => ({
 
 import * as fs from 'fs';
 
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 
 import { RefreshJWTStrategy } from './refresh-token.strategy';
 

@@ -1,5 +1,4 @@
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 
 import type { Plugin } from './plugin.entity';
 import { PluginsRepository } from './plugin.repository';

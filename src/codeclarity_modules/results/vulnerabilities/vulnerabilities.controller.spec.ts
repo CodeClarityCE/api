@@ -5,13 +5,11 @@ import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
 
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 
 import { FindingsController } from './vulnerabilities.controller';
 import { VulnerabilitiesService } from './vulnerabilities.service';
-import type { AnalysisStats, VulnerabilityDetails} from './vulnerabilities2.types';
-import { newAnalysisStats } from './vulnerabilities2.types';
+import { newAnalysisStats, type AnalysisStats, type VulnerabilityDetails } from './vulnerabilities2.types';
 import { VulnerabilityService } from './vulnerability.service';
 
 

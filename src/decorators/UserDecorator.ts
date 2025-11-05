@@ -1,5 +1,4 @@
-import type { ExecutionContext } from '@nestjs/common';
-import { createParamDecorator } from '@nestjs/common';
+import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
 
 export const AuthUser = createParamDecorator((_data: unknown, ctx: ExecutionContext): any => {
     if (ctx.getType() === 'ws') {

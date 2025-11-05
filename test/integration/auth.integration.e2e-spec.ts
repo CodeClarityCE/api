@@ -1,5 +1,4 @@
-import type { TestUser } from '../utils/integration-test-helper';
-import { testHelper } from '../utils/integration-test-helper';
+import { testHelper, type TestUser } from '../utils/integration-test-helper';
 // Note: These tests use direct object structures since the current API
 // doesn't have signup endpoints that match the test scenarios
 

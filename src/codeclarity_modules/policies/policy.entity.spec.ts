@@ -3,8 +3,7 @@ import { Analysis } from '../../base_modules/analyses/analysis.entity';
 import { Organization } from '../../base_modules/organizations/organization.entity';
 import { User } from '../../base_modules/users/users.entity';
 
-import { Policy, PolicyType } from './policy.entity';
-import type { PolicyFrontend } from './policy.entity';
+import { Policy, PolicyType, type PolicyFrontend } from './policy.entity';
 
 describe('Policy Entity', () => {
     let policy: Policy;

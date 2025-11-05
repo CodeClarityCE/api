@@ -7,8 +7,7 @@ import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.reposit
 import { VulnerabilityPolicyService } from 'src/codeclarity_modules/policies/vulnerability/vulnerability.service';
 import { UnknownWorkspace } from 'src/types/error.types';
 
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 
 import { AnalysisResultsService } from '../results.service';
 import { SbomUtilsService } from '../sbom/utils/utils';

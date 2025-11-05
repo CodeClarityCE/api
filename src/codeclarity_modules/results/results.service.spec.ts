@@ -4,8 +4,7 @@ import { MemberRole } from 'src/base_modules/organizations/memberships/orgMember
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 import { EntityNotFound } from 'src/types/error.types';
 
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 
 import { ProjectMemberService } from '../../base_modules/projects/projectMember.service';
 

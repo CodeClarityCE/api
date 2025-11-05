@@ -1,5 +1,4 @@
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
 
@@ -10,8 +9,7 @@ import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
 import { MemberRole } from '../../organizations/memberships/organization.memberships.entity';
 import { OrganizationsRepository } from '../../organizations/organizations.repository';
 import { RepositoryCache, RepositoryType } from '../../projects/repositoryCache.entity';
-import type { Integration} from '../integrations.entity';
-import { IntegrationProvider, IntegrationType } from '../integrations.entity';
+import { IntegrationProvider, IntegrationType, type Integration } from '../integrations.entity';
 import { IntegrationsRepository } from '../integrations.repository';
 import type { GitlabIntegrationToken } from '../Token';
 

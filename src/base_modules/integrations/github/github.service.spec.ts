@@ -1,5 +1,4 @@
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 
 import {
     DuplicateIntegration,
@@ -24,11 +23,9 @@ import type { Integration } from '../integrations.entity';
 import { IntegrationsRepository } from '../integrations.repository';
 
 import { GithubIntegrationService } from './github.service';
-import type {
-    LinkGithubCreateBody,
-    LinkGithubPatchBody
-} from './githubIntegration.types';
 import {
+    type LinkGithubCreateBody,
+    type LinkGithubPatchBody,
     GithubTokenType
 } from './githubIntegration.types';
 import { GithubIntegrationTokenService } from './githubToken.service';

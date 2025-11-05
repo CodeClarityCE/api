@@ -1,18 +1,16 @@
-import type {
-    SeverityDist,
-    Dependency,
-    DependencyDetails,
-    WorkSpaceData,
-    Output,
-    AnalysisInfo,
-    LicenseDist,
-    Stats,
-    StatusError,
-    ParsedGitUrl,
-    GraphOutput,
-    WorkspacesOutput
-} from './sbom.types';
 import {
+    type SeverityDist,
+    type Dependency,
+    type DependencyDetails,
+    type WorkSpaceData,
+    type Output,
+    type AnalysisInfo,
+    type LicenseDist,
+    type Stats,
+    type StatusError,
+    type ParsedGitUrl,
+    type GraphOutput,
+    type WorkspacesOutput,
     LinkType,
     Status,
     SbomDependency

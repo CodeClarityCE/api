@@ -1,5 +1,4 @@
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 
 import { AnalysisResultsRepository } from '../../codeclarity_modules/results/results.repository';
 import { EntityNotFound, IntegrationNotSupported, NotAuthorized } from '../../types/error.types';

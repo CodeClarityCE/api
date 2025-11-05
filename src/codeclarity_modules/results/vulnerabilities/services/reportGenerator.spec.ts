@@ -10,16 +10,14 @@ import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/pac
 import { VersionsRepository } from 'src/codeclarity_modules/knowledge/package/packageVersions.repository';
 import type { Dependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import {
+    type Vulnerability,
+    type WeaknessInfo,
     Source,
     ConflictFlag,
     SeverityType
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
-import type {
-    Vulnerability,
-    WeaknessInfo} from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 
-import { Test } from '@nestjs/testing';
-import type { TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 
 import { OSVReportGenerator, NVDReportGenerator } from './reportGenerator';
 

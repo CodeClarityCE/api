@@ -6,8 +6,7 @@ import {
     ValidationFailed
 } from 'src/types/error.types';
 
-import type { ArgumentsHost} from '@nestjs/common';
-import { HttpException } from '@nestjs/common';
+import { HttpException, type ArgumentsHost } from '@nestjs/common';
 import type { ValidationError } from 'class-validator';
 
 import { ErrorFilter } from './ExceptionFilter';

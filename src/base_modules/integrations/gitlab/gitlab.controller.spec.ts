@@ -1,5 +1,4 @@
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 
 import {
     EntityNotFound,
@@ -20,12 +19,10 @@ import type { RepositoryCache } from '../../projects/repositoryCache.entity';
 
 import { GitlabIntegrationController } from './gitlab.controller';
 import { GitlabIntegrationService } from './gitlab.service';
-import type {
-    GitlabIntegration,
-    LinkGitlabCreateBody,
-    LinkGitlabPatchBody
-} from './gitlabIntegration.types';
 import {
+    type GitlabIntegration,
+    type LinkGitlabCreateBody,
+    type LinkGitlabPatchBody,
     GitlabTokenType
 } from './gitlabIntegration.types';
 import { GitlabRepositoriesService } from './gitlabRepos.service';

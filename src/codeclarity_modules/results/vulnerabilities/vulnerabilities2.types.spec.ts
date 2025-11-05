@@ -1,16 +1,16 @@
-import { newAnalysisStats } from './vulnerabilities2.types';
-import type {
-    VulnSourceInfo,
-    VersionInfo,
-    VulnerableVersionInfo,
-    DependencyInfo,
-    PackageManagerLink,
-    SeverityInfo,
-    WeaknessInfo,
-    CommonConsequencesInfo,
-    ReferenceInfo,
-    OtherInfo,
-    VulnerabilityDetails
+import {
+    newAnalysisStats,
+    type VulnSourceInfo,
+    type VersionInfo,
+    type VulnerableVersionInfo,
+    type DependencyInfo,
+    type PackageManagerLink,
+    type SeverityInfo,
+    type WeaknessInfo,
+    type CommonConsequencesInfo,
+    type ReferenceInfo,
+    type OtherInfo,
+    type VulnerabilityDetails
 } from './vulnerabilities2.types';
 
 describe('vulnerabilities2.types', () => {

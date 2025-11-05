@@ -1,5 +1,4 @@
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 
 import {
     DuplicateIntegration,
@@ -19,18 +18,15 @@ import type { Organization } from '../../organizations/organization.entity';
 import { OrganizationsRepository } from '../../organizations/organizations.repository';
 import type { User } from '../../users/users.entity';
 import { UsersRepository } from '../../users/users.repository';
-import { IntegrationProvider, IntegrationType } from '../integrations.entity';
-import type { Integration} from '../integrations.entity';
+import { IntegrationProvider, IntegrationType, type Integration } from '../integrations.entity';
 import { IntegrationsRepository } from '../integrations.repository';
 
 import { GitlabIntegrationService } from './gitlab.service';
 import {
+    type LinkGitlabCreateBody,
+    type LinkGitlabPatchBody,
     GitlabIntegration,
     GitlabTokenType
-} from './gitlabIntegration.types';
-import type {
-    LinkGitlabCreateBody,
-    LinkGitlabPatchBody
 } from './gitlabIntegration.types';
 import { GitlabIntegrationTokenService } from './gitlabToken.service';
 

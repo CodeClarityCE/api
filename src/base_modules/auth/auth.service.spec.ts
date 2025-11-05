@@ -1,8 +1,7 @@
 import { FailedToAuthenticateSocialAccount, EntityNotFound } from 'src/types/error.types';
 
 import { JwtService } from '@nestjs/jwt';
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 
 import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
@@ -14,8 +13,7 @@ import { UsersService } from '../users/users.service';
 
 import { WrongCredentials, RegistrationNotVerified } from './auth.errors';
 import { AuthService } from './auth.service';
-import type { GithubAuthenticatedUser, GitlabAuthenticatedUser} from './auth.types';
-import { ROLE , AuthenticatedUser } from './auth.types';
+import { ROLE, AuthenticatedUser, type GithubAuthenticatedUser, type GitlabAuthenticatedUser } from './auth.types';
 
 
 

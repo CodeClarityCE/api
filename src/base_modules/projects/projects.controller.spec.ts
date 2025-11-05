@@ -1,5 +1,4 @@
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 
 import { EntityNotFound, NotAuthorized, AlreadyExists } from '../../types/error.types';
 import { SortDirection } from '../../types/sort.types';

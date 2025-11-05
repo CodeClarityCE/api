@@ -3,15 +3,13 @@ import { MemberRole } from 'src/base_modules/organizations/memberships/orgMember
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 import { UsersRepository } from 'src/base_modules/users/users.repository';
 
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
 import { Policy, PolicyType } from '../policy.entity';
 
 import { LicensePolicyService } from './license.service';
-import type { LicensePolicyCreateBody} from './licensePolicy.types';
-import { LicensePolicyType } from './licensePolicy.types';
+import { LicensePolicyType, type LicensePolicyCreateBody } from './licensePolicy.types';
 
 
 describe('LicensePolicyService', () => {

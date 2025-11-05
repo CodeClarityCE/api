@@ -16,8 +16,7 @@ import { NotAuthenticated, AccountNotActivated } from 'src/types/error.types';
 import type { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import type { Socket } from 'socket.io';
 
 import { CombinedAuthGuard } from './combined.guard';

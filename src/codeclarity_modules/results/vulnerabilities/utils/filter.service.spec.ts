@@ -1,5 +1,4 @@
-import type { VulnerabilityMerged} from '../vulnerabilities.types';
-import { ConflictFlag } from '../vulnerabilities.types';
+import { ConflictFlag, type VulnerabilityMerged } from '../vulnerabilities.types';
 
 import { VulnerabilitiesFilterService } from './filter.service';
 

@@ -3,8 +3,7 @@ import compression from '@fastify/compress';
 import multipart from '@fastify/multipart';
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
-import type { NestFastifyApplication } from '@nestjs/platform-fastify';
-import { FastifyAdapter } from '@nestjs/platform-fastify';
+import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 
 // Import the main application module
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';

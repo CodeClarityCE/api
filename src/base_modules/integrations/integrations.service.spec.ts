@@ -1,14 +1,12 @@
 import { NotAuthorized, NotAMember } from 'src/types/error.types';
 
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 
 import { AuthenticatedUser, ROLE } from '../auth/auth.types';
 import { MemberRole } from '../organizations/memberships/orgMembership.types';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 
-import type { Integration} from './integrations.entity';
-import { IntegrationType, IntegrationProvider } from './integrations.entity';
+import { IntegrationType, IntegrationProvider, type Integration } from './integrations.entity';
 import { IntegrationsRepository } from './integrations.repository';
 import { IntegrationsService } from './integrations.service';
 

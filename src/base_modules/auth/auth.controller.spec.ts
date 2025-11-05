@@ -1,7 +1,6 @@
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 
 import { EmailAlreadyExists } from '../../types/error.types';
 import type { UserCreateBody, RegistrationConfirmationBody } from '../users/user.types';
@@ -17,8 +16,7 @@ import {
     PasswordResetTokenInvalidOrExpired
 } from './auth.errors';
 import { AuthService } from './auth.service';
-import type { TokenResponse, TokenRefreshResponse } from './auth.types';
-import { AuthenticatedUser, ROLE } from './auth.types';
+import { AuthenticatedUser, ROLE, type TokenResponse, type TokenRefreshResponse } from './auth.types';
 import { CombinedAuthGuard } from './guards/combined.guard';
 import { RefreshJwtAuthGuard } from './guards/refresh-token.guard';
 

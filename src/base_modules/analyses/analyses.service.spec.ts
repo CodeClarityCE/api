@@ -6,8 +6,7 @@ import { VulnerabilitiesRepository } from 'src/codeclarity_modules/results/vulne
 import { RabbitMQError } from 'src/types/error.types';
 
 import { ConfigService } from '@nestjs/config';
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import * as amqp from 'amqplib';
 

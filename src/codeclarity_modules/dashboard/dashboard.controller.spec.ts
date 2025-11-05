@@ -1,26 +1,24 @@
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import type { LicenseDist } from 'src/codeclarity_modules/results/sbom/sbom.types';
 
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
-import type {
-    AttackVectorDist,
-    CIAImpact,
-    GetOverallAttackVectorDistQueryOptions,
-    GetOverallCIADistQueryOptions,
-    GetOverallLicenseDistQueryOptions,
-    GetProjectsQuickStatsQueryOptions,
-    GetQuickStatsQueryOptions,
-    GetRecentVulnsQueryOptions,
-    GetWeeklySeverityInfoQueryOptions,
-    LatestVulns,
-    ProjectQuickStats,
-    QuickStats,
-    SeverityInfoByWeek} from './dashboard.types';
 import {
+    type AttackVectorDist,
+    type CIAImpact,
+    type GetOverallAttackVectorDistQueryOptions,
+    type GetOverallCIADistQueryOptions,
+    type GetOverallLicenseDistQueryOptions,
+    type GetProjectsQuickStatsQueryOptions,
+    type GetQuickStatsQueryOptions,
+    type GetRecentVulnsQueryOptions,
+    type GetWeeklySeverityInfoQueryOptions,
+    type LatestVulns,
+    type ProjectQuickStats,
+    type QuickStats,
+    type SeverityInfoByWeek,
     ProjectGradeClass,
     Trend
 } from './dashboard.types';

@@ -1,8 +1,7 @@
 import { NotAuthorized } from 'src/types/error.types';
 import * as crypto from 'src/utils/crypto';
 
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 
 
 
@@ -15,15 +14,13 @@ import {
 } from '../auth/auth.errors';
 import { AuthService } from '../auth/auth.service';
 import { AuthenticatedUser, ROLE } from '../auth/auth.types';
-import { EmailType } from '../email/email.entity';
-import type { Email} from '../email/email.entity';
+import { EmailType, type Email } from '../email/email.entity';
 import { EmailRepository } from '../email/email.repository';
 import { EmailService } from '../email/email.service';
 import {
+    type OrganizationMemberships,
     MemberRole
 } from '../organizations/memberships/organization.memberships.entity';
-import type {
-    OrganizationMemberships} from '../organizations/memberships/organization.memberships.entity';
 import type { Organization } from '../organizations/organization.entity';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 

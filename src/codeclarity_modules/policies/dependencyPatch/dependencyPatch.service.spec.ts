@@ -1,14 +1,12 @@
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { SortDirection } from 'src/types/sort.types';
 
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 
 import { DependencyPatchPolicyService } from './dependencyPatch.service';
-import type {
-    DependencyPatchPolicyCreateBody,
-    DependencyPatchPolicyPatchBody} from './dependencyPatchPolicy.types';
 import {
+    type DependencyPatchPolicyCreateBody,
+    type DependencyPatchPolicyPatchBody,
     FullFixVersionSelection,
     PartialFixVersionSelection
 } from './dependencyPatchPolicy.types';

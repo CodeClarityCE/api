@@ -1,7 +1,6 @@
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 
-import type { TestingModule } from '@nestjs/testing';
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 
 import { AnalyzerTemplatesService } from './analyzer-templates.service';
 import type { Analyzer } from './analyzer.entity';

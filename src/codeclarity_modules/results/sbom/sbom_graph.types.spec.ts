@@ -1,5 +1,4 @@
-import type { GraphDependency, NodeTraversalResult} from './sbom_graph.types';
-import { GraphTraversalUtils } from './sbom_graph.types';
+import { GraphTraversalUtils, type GraphDependency, type NodeTraversalResult } from './sbom_graph.types';
 
 describe('SBOM Graph Types', () => {
     describe('GraphDependency interface', () => {
