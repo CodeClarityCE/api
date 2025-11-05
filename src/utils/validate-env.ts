@@ -30,165 +30,165 @@ class EnvironmentVariables {
      * The current environment (e.g. dev, prod).
      */
     @IsEnum(Environment)
-    ENV: Environment;
+    ENV!: Environment;
 
     /**
      * The port number to listen on.
      */
     @IsNumber()
     @Transform(({ value }) => parseInt(value, 10))
-    PORT: number;
+    PORT!: number;
 
     /**
      * The hostname or IP address to bind to.
      */
     @IsNotEmpty()
-    HOST: string;
+    HOST!: string;
 
     // Github oauth
     /**
      * The client ID for GitHub OAuth.
      */
     @IsNotEmpty()
-    GITHUB_AUTH_CLIENT_ID: string;
+    GITHUB_AUTH_CLIENT_ID!: string;
 
     /**
      * The client secret for GitHub OAuth.
      */
     @IsNotEmpty()
-    GITHUB_AUTH_CLIENT_SECRET: string;
+    GITHUB_AUTH_CLIENT_SECRET!: string;
 
     // Gitlab oauth
     /**
      * The client ID for GitLab OAuth.
      */
     @IsNotEmpty()
-    GITLAB_AUTH_CLIENT_ID: string;
+    GITLAB_AUTH_CLIENT_ID!: string;
 
     /**
      * The client secret for GitLab OAuth.
      */
     @IsNotEmpty()
-    GITLAB_AUTH_CLIENT_SECRET: string;
+    GITLAB_AUTH_CLIENT_SECRET!: string;
 
     /**
      * The hostname or IP address of the GitLab instance.
      */
     @IsNotEmpty()
-    GITLAB_AUTH_HOST: string;
+    GITLAB_AUTH_HOST!: string;
 
     // Authentication
     /**
      * The callback URL for GitHub authentication.
      */
     @IsNotEmpty()
-    GITHUB_AUTH_CALLBACK: string;
+    GITHUB_AUTH_CALLBACK!: string;
 
     /**
      * The callback URL for GitLab authentication.
      */
     @IsNotEmpty()
-    GITLAB_AUTH_CALLBACK: string;
+    GITLAB_AUTH_CALLBACK!: string;
 
     // AMQP
     /**
      * The name of the queue to connect to.
      */
     @IsNotEmpty()
-    AMQP_ANALYSES_QUEUE: string;
+    AMQP_ANALYSES_QUEUE!: string;
 
     /**
      * The protocol to use (e.g. amqp, rabbitmq).
      */
     @IsNotEmpty()
-    AMQP_PROTOCOL: string;
+    AMQP_PROTOCOL!: string;
 
     /**
      * The hostname or IP address of the AMQP broker.
      */
     @IsNotEmpty()
-    AMQP_HOST: string;
+    AMQP_HOST!: string;
 
     /**
      * The port number to connect on.
      */
     @IsNotEmpty()
-    AMQP_PORT: string;
+    AMQP_PORT!: string;
 
     /**
      * The username to use for authentication.
      */
     @IsNotEmpty()
-    AMQP_USER: string;
+    AMQP_USER!: string;
 
     /**
      * The password to use for authentication.
      */
     @IsNotEmpty()
-    AMQP_PASSWORD: string;
+    AMQP_PASSWORD!: string;
 
     // Email
     /**
      * The hostname or IP address of the mail server.
      */
     @IsNotEmpty()
-    MAIL_HOST: string;
+    MAIL_HOST!: string;
 
     /**
      * The port number to connect on.
      */
     @IsNumber()
     @Transform(({ value }) => parseInt(value, 10))
-    MAIL_PORT: number;
+    MAIL_PORT!: number;
 
     /**
      * The username for authentication with the mail server.
      */
     @IsNotEmpty()
-    MAIL_AUTH_USER: string;
+    MAIL_AUTH_USER!: string;
 
     /**
      * The password for authentication with the mail server.
      */
     @IsNotEmpty()
-    MAIL_AUTH_PASSWORD: string;
+    MAIL_AUTH_PASSWORD!: string;
 
     /**
      * The default "from" email address.
      */
     @IsNotEmpty()
-    MAIL_DEFAULT_FROM: string;
+    MAIL_DEFAULT_FROM!: string;
 
     // Database
     /**
      * A secret key used for cookie signing and other purposes.
      */
     @IsNotEmpty()
-    COOKIE_SECRET: string;
+    COOKIE_SECRET!: string;
 
     /**
      * The callback URL for GitHub authentication (again).
      */
     @IsNotEmpty()
-    GITHUB_CALLBACK: string;
+    GITHUB_CALLBACK!: string;
 
     /**
      * The callback URL for GitLab authentication (again).
      */
     @IsNotEmpty()
-    GITLAB_CALLBACK: string;
+    GITLAB_CALLBACK!: string;
 
     /**
      * The hostname or IP address of the web server.
      */
     @IsNotEmpty()
-    WEB_HOST: string;
+    WEB_HOST!: string;
 
     /**
      * The name of the platform (e.g. GitHub, GitLab).
      */
     @IsNotEmpty()
-    PLATFORM_NAME: string;
+    PLATFORM_NAME!: string;
 }
 
 /**
@@ -200,7 +200,7 @@ class DevEnvironmentVariables extends EnvironmentVariables {
      */
     @IsNotEmpty()
     @IsEmail()
-    TEST_EMAIL: string;
+    TEST_EMAIL!: string;
 
     /**
      * A boolean indicating whether account verification is required.
@@ -212,14 +212,14 @@ class DevEnvironmentVariables extends EnvironmentVariables {
         },
         { toClassOnly: true }
     )
-    REQUIRE_ACCOUNT_VERIFICATION: boolean;
+    REQUIRE_ACCOUNT_VERIFICATION!: boolean;
 }
 
 /**
  * Function that validates the environment variables and throws an error if they are invalid.
  */
 function validateBootstrap() {
-    const env = process.env.ENV;
+    const env = process.env['ENV'];
 
     // Check if the 'ENV' environment variable is set
     let errors: ValidationError[] = [];
@@ -269,7 +269,7 @@ function validateBootstrap() {
  * Function that validates a given configuration object and returns the validated instance.
  */
 export function validate(config: Record<string, unknown>) {
-    const env = process.env.ENV;
+    const env = process.env['ENV'];
 
     // Check if the 'ENV' environment variable is set
     if (env == undefined || env == '') {

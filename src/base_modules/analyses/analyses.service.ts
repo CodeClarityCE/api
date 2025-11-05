@@ -23,7 +23,6 @@ import { VulnerabilitiesRepository } from 'src/codeclarity_modules/results/vulne
 import { LicensesRepository } from 'src/codeclarity_modules/results/licenses/licenses.repository';
 import { AnalysesRepository } from './analyses.repository';
 import { AnaylzerMissingConfigAttribute } from '../analyzers/analyzers.errors';
-import { LanguageDetectionService } from './language-detection.service';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Policy } from 'src/codeclarity_modules/policies/policy.entity';
@@ -42,7 +41,6 @@ export class AnalysesService {
         private readonly vulnerabilitiesRepository: VulnerabilitiesRepository,
         private readonly licensesRepository: LicensesRepository,
         private readonly analysesRepository: AnalysesRepository,
-        private readonly languageDetectionService: LanguageDetectionService,
         @InjectRepository(Policy, 'codeclarity')
         private policyRepository: Repository<Policy>
     ) {}
@@ -173,9 +171,13 @@ export class AnalysesService {
         analysis.stage = 0;
         analysis.config = analysisData.config;
         analysis.steps = stages;
-        analysis.tag = analysisData.tag;
+        if (analysisData.tag !== undefined) {
+            analysis.tag = analysisData.tag;
+        }
         analysis.branch = analysisData.branch;
-        analysis.commit_hash = analysisData.commit_hash;
+        if (analysisData.commit_hash !== undefined) {
+            analysis.commit_hash = analysisData.commit_hash;
+        }
         analysis.created_on = new Date();
         analysis.created_by = creator;
         analysis.analyzer = analyzer;
@@ -212,7 +214,7 @@ export class AnalysesService {
             const amqpHost = `${this.configService.getOrThrow<string>(
                 'AMQP_PROTOCOL'
             )}://${this.configService.getOrThrow<string>('AMQP_USER')}:${
-                process.env.AMQP_PASSWORD
+                process.env['AMQP_PASSWORD']
             }@${this.configService.getOrThrow<string>(
                 'AMQP_HOST'
             )}:${this.configService.getOrThrow<string>('AMQP_PORT')}`;
@@ -338,14 +340,14 @@ export class AnalysesService {
                 x: 'Latest',
                 y: 'Vulnerabilities',
                 v: vulnOutput.workspaces[vulnOutput.analysis_info.default_workspace_name]
-                    .Vulnerabilities.length
+                    ?.Vulnerabilities?.length || 0
             },
             {
                 x: 'Latest',
                 y: 'Dependencies',
                 v: Object.keys(
                     sbomOutput.workspaces[vulnOutput.analysis_info.default_workspace_name]
-                        .dependencies
+                        ?.dependencies || {}
                 ).length
             },
             {
@@ -591,9 +593,13 @@ export class AnalysesService {
         newAnalysis.stage = 0;
         newAnalysis.config = originalAnalysis.config;
         newAnalysis.steps = originalAnalysis.steps;
-        newAnalysis.tag = originalAnalysis.tag;
+        if (originalAnalysis.tag !== undefined) {
+            newAnalysis.tag = originalAnalysis.tag;
+        }
         newAnalysis.branch = originalAnalysis.branch;
-        newAnalysis.commit_hash = originalAnalysis.commit_hash;
+        if (originalAnalysis.commit_hash !== undefined) {
+            newAnalysis.commit_hash = originalAnalysis.commit_hash;
+        }
         newAnalysis.created_on = new Date();
 
         // Copy relationships
@@ -679,7 +685,7 @@ export class AnalysesService {
 
         // If no applicable plugins found, fallback to JavaScript plugins
         if (applicablePlugins.size === 0) {
-            const jsConfig = languageConfig.javascript;
+            const jsConfig = languageConfig['javascript'];
             if (jsConfig) {
                 jsConfig.plugins.forEach((plugin) => applicablePlugins.add(plugin));
             }
@@ -774,7 +780,7 @@ export class AnalysesService {
                     } catch (err) {
                         console.warn(
                             `Failed to link policy ${policyId} to analysis ${analysisId}:`,
-                            err.message
+                            (err as Error).message
                         );
                     }
                 }
@@ -782,7 +788,7 @@ export class AnalysesService {
         } catch (err) {
             console.warn(
                 `Failed to process policy linking for analysis ${analysisId}:`,
-                err.message
+                (err as Error).message
             );
         }
     }

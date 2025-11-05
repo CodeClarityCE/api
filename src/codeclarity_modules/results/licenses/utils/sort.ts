@@ -13,7 +13,7 @@ function sort(
     const mapping: { [key: string]: string } = {};
 
     // Validation of input
-    let sortBySafe: string;
+    let sortBySafe: string | undefined;
     let sortDirectionSafe: string;
 
     if (sortBy == null || !ALLOWED_SORT_BY.includes(sortBy)) {

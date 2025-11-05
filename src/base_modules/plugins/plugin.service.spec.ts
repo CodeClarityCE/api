@@ -107,7 +107,7 @@ describe('PluginService', () => {
                 description: undefined,
                 depends_on: undefined,
                 config: undefined
-            } as Plugin;
+            } as unknown as Plugin;
             pluginsRepository.getById.mockResolvedValue(undefinedPlugin);
 
             const result = await pluginService.get('test-id');
@@ -132,7 +132,7 @@ describe('PluginService', () => {
                 description: undefined,
                 depends_on: undefined,
                 config: undefined
-            } as Plugin;
+            } as unknown as Plugin;
             pluginsRepository.getById.mockImplementation(async (id) => {
                 await new Promise((resolve) => setTimeout(resolve, 10));
                 return id === 'test-uuid-123' ? mockPlugin : emptyPlugin;
@@ -206,19 +206,14 @@ describe('PluginService', () => {
             const result = await pluginService.getAll();
 
             expect(result).toEqual(reversedPlugins);
-            expect(result[0].id).toBe('test-uuid-789');
-            expect(result[2].id).toBe('test-uuid-123');
+            expect(result[0]!.id).toBe('test-uuid-789');
+            expect(result[2]!.id).toBe('test-uuid-123');
         });
 
         it('should handle plugins with undefined values', async () => {
             const pluginsWithUndefined: Plugin[] = [
                 {
-                    id: 'test-uuid',
-                    name: undefined,
-                    version: undefined,
-                    description: undefined,
-                    depends_on: undefined,
-                    config: undefined
+                    id: 'test-uuid'
                 }
             ];
             pluginsRepository.getAll.mockResolvedValue(pluginsWithUndefined);
@@ -226,7 +221,7 @@ describe('PluginService', () => {
             const result = await pluginService.getAll();
 
             expect(result).toEqual(pluginsWithUndefined);
-            expect(result[0].name).toBeUndefined();
+            expect(result[0]!.name).toBeUndefined();
         });
     });
 

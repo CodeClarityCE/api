@@ -7,96 +7,96 @@ export class OSV {
     @PrimaryGeneratedColumn('uuid')
     @ApiProperty()
     @Expose()
-    id: string;
+    id!: string;
 
     @Column()
     @Index({ unique: true })
     @ApiProperty()
     @Expose()
-    osv_id: string;
+    osv_id!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    schema_version: string;
+    schema_version!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    vlai_score: string;
+    vlai_score!: string;
 
     @Column('float', { nullable: true })
     @ApiProperty()
     @Expose()
-    vlai_confidence: number;
+    vlai_confidence!: number;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    modified: string;
+    modified!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    published: string;
+    published!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    withdrawn: string;
+    withdrawn!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    summary: string;
+    summary!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    details: string;
+    details!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    cve: string;
+    cve!: string;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    aliases: any;
+    aliases!: any;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    related: any;
+    related!: any;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    severity: any;
+    severity!: any;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    affected: any;
+    affected!: any;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    references: any;
+    references!: any;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    credits: any;
+    credits!: any;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    database_specific: any;
+    database_specific!: any;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    cwes: any;
+    cwes!: any;
 }

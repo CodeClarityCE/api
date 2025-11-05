@@ -65,10 +65,10 @@ export interface PaginationUserSuppliedConf {
     /**
      * The current page number (optional).
      */
-    currentPage?: number;
+    currentPage?: number | undefined;
 
     /**
      * The number of entries per page (optional).
      */
-    entriesPerPage?: number;
+    entriesPerPage?: number | undefined;
 }

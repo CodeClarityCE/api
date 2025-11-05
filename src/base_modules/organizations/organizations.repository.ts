@@ -38,7 +38,7 @@ export class OrganizationsRepository {
     async getOrganizationById(orgId: string, relations?: object): Promise<Organization> {
         const organization = await this.organizationRepository.findOne({
             where: { id: orgId },
-            relations: relations
+            ...(relations ? { relations: relations } : {})
         });
 
         if (!organization) {
@@ -66,7 +66,7 @@ export class OrganizationsRepository {
                     id: organizationId
                 }
             },
-            relations: relations
+            ...(relations ? { relations: relations } : {})
         });
 
         if (!memberships) {
@@ -230,7 +230,7 @@ export class OrganizationsRepository {
                     id: userId
                 }
             },
-            relations: relations
+            ...(relations ? { relations: relations } : {})
         });
 
         if (!membership) {

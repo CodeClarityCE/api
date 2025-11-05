@@ -1,4 +1,4 @@
-import { Injectable, Logger, LoggerService as NestLoggerService } from '@nestjs/common';
+import { Injectable, LoggerService as NestLoggerService } from '@nestjs/common';
 
 export interface LogContext {
     service?: string;
@@ -16,7 +16,6 @@ export interface LogContext {
  */
 @Injectable()
 export class CodeClarityLogger implements NestLoggerService {
-    private readonly nestLogger = new Logger();
 
     /**
      * Log an informational message

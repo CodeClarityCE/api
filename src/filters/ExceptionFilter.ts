@@ -83,7 +83,7 @@ function snakeCase(fields: any) {
         }
 
         const snakeKey = key
-            .replace(/\.?([A-Z]+)/g, function (x, y) {
+            .replace(/\.?([A-Z]+)/g, function (_x, y) {
                 return '_' + y.toLowerCase();
             })
             .replace(/^_/, '');

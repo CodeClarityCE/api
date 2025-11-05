@@ -202,8 +202,8 @@ describe('LicensesRepository', () => {
 
             expect(result).toEqual(complexLicensesOutput);
             expect(Object.keys(result.workspaces)).toEqual(['frontend', 'backend']);
-            expect(result.workspaces.frontend.LicensesDepMap['MIT']).toContain('react@18.0.0');
-            expect(result.workspaces.backend.LicenseComplianceViolations).toHaveLength(0);
+            expect(result.workspaces['frontend']!.LicensesDepMap['MIT']).toContain('react@18.0.0');
+            expect(result.workspaces['backend']!.LicenseComplianceViolations).toHaveLength(0);
         });
 
         it('should handle database errors', async () => {

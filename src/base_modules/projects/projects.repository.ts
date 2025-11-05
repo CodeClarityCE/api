@@ -16,8 +16,8 @@ export class ProjectsRepository {
 
     async getProjectById(projectId: string, relations?: object): Promise<Project> {
         const project = await this.projectRepository.findOne({
-            relations: relations,
-            where: { id: projectId }
+            where: { id: projectId },
+            ...(relations ? { relations: relations } : {})
         });
 
         if (!project) {
@@ -39,7 +39,7 @@ export class ProjectsRepository {
                     id: organizationId
                 }
             },
-            relations: relations
+            ...(relations ? { relations: relations } : {})
         });
 
         if (!project) {

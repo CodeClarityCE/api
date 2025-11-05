@@ -13,7 +13,6 @@ import { Repository, In } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { VulnerabilitiesUtilsService } from '../../vulnerabilities/utils/utils.service';
-import { LicensesUtilsService } from '../../licenses/utils/utils';
 import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
 import { EcosystemMapper } from './ecosystem-mapper';
 
@@ -21,7 +20,6 @@ import { EcosystemMapper } from './ecosystem-mapper';
 export class SbomUtilsService {
     constructor(
         private readonly vulnerabilitiesUtilsService: VulnerabilitiesUtilsService,
-        private readonly licensesUtilsService: LicensesUtilsService,
         private readonly packageRepository: PackageRepository,
         @InjectRepository(Result, 'codeclarity')
         private resultRepository: Repository<Result>
@@ -153,7 +151,7 @@ export class SbomUtilsService {
         }
 
         // Use the first result as the base structure
-        const baseSbom = JSON.parse(JSON.stringify(pluginResults[0].sbom)) as SBOMOutput;
+        const baseSbom = JSON.parse(JSON.stringify(pluginResults[0]!.sbom)) as SBOMOutput;
 
         // Collect all unique workspaces across plugins
         const allWorkspaces = new Set<string>();
@@ -219,14 +217,17 @@ export class SbomUtilsService {
             }
         }
 
+        const startObj: { dependencies?: WorkSpaceDependency[]; dev_dependencies?: WorkSpaceDependency[] } = {};
+        if (mergedStartDependencies.length > 0) {
+            startObj.dependencies = mergedStartDependencies;
+        }
+        if (mergedStartDevDependencies.length > 0) {
+            startObj.dev_dependencies = mergedStartDevDependencies;
+        }
+
         return {
             dependencies: mergedDependencies,
-            start: {
-                dependencies:
-                    mergedStartDependencies.length > 0 ? mergedStartDependencies : undefined,
-                dev_dependencies:
-                    mergedStartDevDependencies.length > 0 ? mergedStartDevDependencies : undefined
-            }
+            start: startObj
         };
     }
 
@@ -275,7 +276,7 @@ export class SbomUtilsService {
         sbom: SBOMOutput
     ): Promise<DependencyDetails> {
         const dependency =
-            sbom.workspaces[workspace].dependencies[dependency_name][dependency_version];
+            sbom.workspaces[workspace]!.dependencies[dependency_name]![dependency_version]!;
 
         // Determine the language based on the ecosystem
         const ecosystem = (dependency as any).ecosystem;
@@ -300,7 +301,7 @@ export class SbomUtilsService {
             // If package info is not available in knowledge database, create minimal info
             console.warn(
                 `Package info not found for ${dependency_name}@${dependency_version} (${language}):`,
-                error.message
+                (error as Error).message
             );
             package_version = null;
             version = null;
@@ -313,11 +314,10 @@ export class SbomUtilsService {
             dependencies: version?.dependencies || {},
             dev_dependencies: version?.dev_dependencies || {},
             transitive: dependency.Transitive || (dependency as any).transitive || false,
-            source: package_version?.source,
             package_manager: sbom.analysis_info.package_manager,
             license: package_version?.license || '',
-            engines: version?.extra?.Engines || {},
-            release_date: version?.extra?.Time ? new Date(version.extra.Time) : new Date(),
+            engines: version?.extra?.['Engines'] || {},
+            release_date: version?.extra?.['Time'] ? new Date(version.extra?.['Time']) : new Date(),
             lastest_release_date: package_version?.time
                 ? new Date(package_version.time)
                 : new Date(),
@@ -330,6 +330,9 @@ export class SbomUtilsService {
                 none: 0
             }
         };
+        if (package_version?.source) {
+            dependency_details.source = package_version.source;
+        }
 
         // Attach vulnerability info if the service has finished
         const vulns: VulnsOutput =
@@ -337,7 +340,7 @@ export class SbomUtilsService {
 
         dependency_details.vulnerabilities = [];
 
-        for (const vuln of vulns.workspaces['.'].Vulnerabilities) {
+        for (const vuln of vulns.workspaces['.']!.Vulnerabilities) {
             if (
                 vuln.AffectedDependency == dependency_name &&
                 vuln.AffectedVersion == dependency_version

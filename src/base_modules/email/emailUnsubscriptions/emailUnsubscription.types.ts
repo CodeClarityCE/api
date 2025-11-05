@@ -8,15 +8,15 @@ export enum UnsubscriptionType {
 }
 
 export class AllEmailsUnsubscriptionForNonUserCreate {
-    user_email: string;
-    unsubscription_type: UnsubscriptionType;
+    user_email!: string;
+    unsubscription_type!: UnsubscriptionType;
 }
 
 export class OrgInvitesUnsubscriptionCreate {
-    user_email: string;
-    user_id: string;
-    org_id: string;
-    unsubscription_type: UnsubscriptionType;
+    user_email!: string;
+    user_id!: string;
+    org_id!: string;
+    unsubscription_type!: UnsubscriptionType;
 }
 
 export interface EmailUnsubBase {
@@ -27,29 +27,29 @@ export interface EmailUnsubBase {
 export class AllEmailsUnsubscriptionForNonUser {
     @ApiProperty()
     @Expose()
-    user_email: string;
+    user_email!: string;
 
     @ApiProperty()
     @Expose()
-    unsubscription_type: UnsubscriptionType;
+    unsubscription_type!: UnsubscriptionType;
 }
 
 export class OrgInvitesUnsubscription {
     @ApiProperty()
     @Expose()
-    user_email: string;
+    user_email!: string;
 
     @ApiProperty()
     @Expose()
-    user_id: string;
+    user_id!: string;
 
     @ApiProperty()
     @Expose()
-    org_id: string;
+    org_id!: string;
 
     @ApiProperty()
     @Expose()
-    unsubscription_type: UnsubscriptionType;
+    unsubscription_type!: UnsubscriptionType;
 }
 
 export const ORG_ALL_WILDCARD = '*';
@@ -57,8 +57,8 @@ export interface UserEmailUnsubscriptionEdgeCreate {}
 
 export class EmailUnsubscribePostBody {
     @IsNotEmpty()
-    token: string;
+    token!: string;
 
     @IsNotEmpty()
-    email_digest: string;
+    email_digest!: string;
 }

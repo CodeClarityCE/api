@@ -66,7 +66,7 @@ export class OrganizationLoggerService {
      */
     async getAuditLogs(
         organizationId: string,
-        paginationUserSuppliedConf: PaginationUserSuppliedConf,
+        _paginationUserSuppliedConf: PaginationUserSuppliedConf,
         user: AuthenticatedUser,
         _searchKey?: string,
         _sortBy?: string,

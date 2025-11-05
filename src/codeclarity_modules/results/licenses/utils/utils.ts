@@ -1,5 +1,8 @@
 import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
-import { Output as LicensesOutput } from 'src/codeclarity_modules/results/licenses/licenses.types';
+import {
+    Output as LicensesOutput,
+    WorkSpaceLicenseInfo
+} from 'src/codeclarity_modules/results/licenses/licenses.types';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { Status } from 'src/types/apiResponses.types';
 import { Repository } from 'typeorm';
@@ -70,19 +73,21 @@ export class LicensesUtilsService {
         ecosystem: string,
         workspace: string
     ): LicensesOutput {
+        const workspaceData = licensesOutput.workspaces[workspace]!;
+        const filteredWorkspace: WorkSpaceLicenseInfo = {
+            LicensesDepMap: {},
+            NonSpdxLicensesDepMap: {},
+            LicenseComplianceViolations: workspaceData.LicenseComplianceViolations,
+            DependencyInfo: workspaceData.DependencyInfo
+        };
+
         const filtered: LicensesOutput = {
             ...licensesOutput,
             workspaces: {
                 ...licensesOutput.workspaces,
-                [workspace]: {
-                    ...licensesOutput.workspaces[workspace],
-                    LicensesDepMap: {},
-                    NonSpdxLicensesDepMap: {}
-                }
+                [workspace]: filteredWorkspace
             }
         };
-
-        const workspaceData = licensesOutput.workspaces[workspace];
 
         // Filter LicensesDepMap
         for (const [licenseId, dependencies] of Object.entries(workspaceData.LicensesDepMap)) {
@@ -90,7 +95,7 @@ export class LicensesUtilsService {
                 (dep) => this.detectPackageEcosystem(dep) === ecosystem
             );
             if (filteredDeps.length > 0) {
-                filtered.workspaces[workspace].LicensesDepMap[licenseId] = filteredDeps;
+                filtered.workspaces[workspace]!.LicensesDepMap[licenseId] = filteredDeps;
             }
         }
 
@@ -102,7 +107,7 @@ export class LicensesUtilsService {
                 (dep) => this.detectPackageEcosystem(dep) === ecosystem
             );
             if (filteredDeps.length > 0) {
-                filtered.workspaces[workspace].NonSpdxLicensesDepMap[licenseId] = filteredDeps;
+                filtered.workspaces[workspace]!.NonSpdxLicensesDepMap[licenseId] = filteredDeps;
             }
         }
 

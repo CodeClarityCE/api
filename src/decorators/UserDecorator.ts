@@ -1,6 +1,6 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
-export const AuthUser = createParamDecorator((data: unknown, ctx: ExecutionContext): any => {
+export const AuthUser = createParamDecorator((_data: unknown, ctx: ExecutionContext): any => {
     if (ctx.getType() == 'ws') {
         const request = ctx.switchToWs().getClient();
         return request.data['user'];

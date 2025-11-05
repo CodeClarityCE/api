@@ -17,7 +17,7 @@ export const errorMessages: { [key: string]: string } = {
 export class AccountRegistrationVerificationTokenInvalidOrExpired extends PublicAPIError {
     static errorCode = 'AccountRegistrationVerificationTokenInvalidOrExpired';
     static errorMessage =
-        errorMessages[AccountRegistrationVerificationTokenInvalidOrExpired.errorCode];
+        errorMessages[AccountRegistrationVerificationTokenInvalidOrExpired.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -31,7 +31,7 @@ export class AccountRegistrationVerificationTokenInvalidOrExpired extends Public
 
 export class HandleAlreadyExists extends PublicAPIError {
     static errorCode = 'HandleAlreadyExists';
-    static errorMessage = errorMessages[HandleAlreadyExists.errorCode];
+    static errorMessage = errorMessages[HandleAlreadyExists.errorCode]!;
     static statusCode = 409;
     constructor(cause?: unknown) {
         super(
@@ -45,7 +45,7 @@ export class HandleAlreadyExists extends PublicAPIError {
 
 export class RegistrationNotVerified extends PublicAPIError {
     static errorCode = 'RegistrationNotVerified';
-    static errorMessage = errorMessages[RegistrationNotVerified.errorCode];
+    static errorMessage = errorMessages[RegistrationNotVerified.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -59,7 +59,7 @@ export class RegistrationNotVerified extends PublicAPIError {
 
 export class WrongCredentials extends PublicAPIError {
     static errorCode = 'WrongCredentials';
-    static errorMessage = errorMessages[WrongCredentials.errorCode];
+    static errorMessage = errorMessages[WrongCredentials.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -73,7 +73,7 @@ export class WrongCredentials extends PublicAPIError {
 
 export class PasswordResetTokenInvalidOrExpired extends PublicAPIError {
     static errorCode = 'PasswordResetTokenInvalidOrExpired';
-    static errorMessage = errorMessages[PasswordResetTokenInvalidOrExpired.errorCode];
+    static errorMessage = errorMessages[PasswordResetTokenInvalidOrExpired.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -87,7 +87,7 @@ export class PasswordResetTokenInvalidOrExpired extends PublicAPIError {
 
 export class PasswordsDoNotMatch extends PublicAPIError {
     static errorCode = 'PasswordsDoNotMatch';
-    static errorMessage = errorMessages[PasswordsDoNotMatch.errorCode];
+    static errorMessage = errorMessages[PasswordsDoNotMatch.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(

@@ -132,7 +132,7 @@ export class UsersService {
         user.setup_done = true;
         user.activated = false;
         user.registration_verified = false;
-        user.avatar_url = undefined;
+        // avatar_url is already undefined by default
         user.created_on = new Date();
         user.default_org = organization;
 

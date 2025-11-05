@@ -2,16 +2,18 @@ import { IsEmail, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class AuthenticatedUser {
-    userId: string;
-    roles: ROLE[];
-    activated: boolean;
+    userId!: string;
+    roles!: ROLE[];
+    activated!: boolean;
     apiKey?: string;
 
     constructor(userId: string, roles: ROLE[], activated: boolean, apiKey?: string) {
         this.userId = userId;
         this.roles = roles;
         this.activated = activated;
-        this.apiKey = apiKey;
+        if (apiKey !== undefined) {
+            this.apiKey = apiKey;
+        }
     }
 
     hasRole(role: ROLE): boolean {
@@ -42,24 +44,24 @@ export enum ROLE {
 
 export class TokenResponse {
     @ApiProperty()
-    token: string;
+    token!: string;
 
     @ApiProperty()
-    refresh_token: string;
+    refresh_token!: string;
 
     @ApiProperty()
-    token_expiry: Date;
+    token_expiry!: Date;
 
     @ApiProperty()
-    refresh_token_expiry: Date;
+    refresh_token_expiry!: Date;
 }
 
 export class TokenRefreshResponse {
     @ApiProperty()
-    token: string;
+    token!: string;
 
     @ApiProperty()
-    token_expiry: Date;
+    token_expiry!: Date;
 }
 
 /********************************************/
@@ -69,55 +71,55 @@ export class TokenRefreshResponse {
 export class UserPasswordResetRequestBody {
     @ApiProperty({ description: 'Email' })
     @IsNotEmpty()
-    email: string;
+    email!: string;
 }
 
 export class UserPasswordResetBody {
     @ApiProperty({ description: 'The new password.' })
     @IsNotEmpty()
-    new_password: string;
+    new_password!: string;
 
     @ApiProperty({ description: 'Password confirmation' })
     @IsNotEmpty()
-    new_password_confirmation: string;
+    new_password_confirmation!: string;
 
     @ApiProperty({ description: 'The token sent via email' })
     @IsNotEmpty()
-    token: string;
+    token!: string;
 
     @ApiProperty({ description: 'The user id hash sent via email' })
     @IsNotEmpty()
-    user_id_hash: string;
+    user_id_hash!: string;
 }
 
 export class AuthenticateBody {
     @ApiProperty({ description: 'Email' })
     @IsNotEmpty()
     @IsEmail()
-    email: string;
+    email!: string;
 
     @ApiProperty({ description: 'Password' })
     @IsNotEmpty()
-    password: string;
+    password!: string;
 }
 
 export class Oauth2InitQuery {
     @ApiProperty({ description: 'State (used for csrf)' })
     @IsNotEmpty()
-    state: string;
+    state!: string;
 }
 
 export class Oauth2FinalizeBody {
     @ApiProperty({ description: 'The code provided by the oauth2 process.' })
     @IsNotEmpty()
-    code: string;
+    code!: string;
 }
 
 export class GithubAppUpdateQuery {
     @ApiProperty({ description: 'Installation ID' })
     @IsNotEmpty()
-    installation_id: string;
+    installation_id!: string;
 
     @IsNotEmpty()
-    setup_action: string;
+    setup_action!: string;
 }

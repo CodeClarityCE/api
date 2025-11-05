@@ -13,7 +13,7 @@ export const errorMessages: { [key: string]: string } = {
 
 export class SetupAlreadyDone extends PublicAPIError {
     static errorCode = 'SetupAlreadyDone';
-    static errorMessage = errorMessages[SetupAlreadyDone.errorCode];
+    static errorMessage = errorMessages[SetupAlreadyDone.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -27,7 +27,7 @@ export class SetupAlreadyDone extends PublicAPIError {
 
 export class FailedToSendAccountRegistrationVerificationEmail extends PublicAPIError {
     static errorCode = 'FailedToSendAccountRegistrationVerificationEmail';
-    static errorMessage = errorMessages[FailedToSendAccountRegistrationVerificationEmail.errorCode];
+    static errorMessage = errorMessages[FailedToSendAccountRegistrationVerificationEmail.errorCode]!;
     static statusCode = 500;
     constructor(cause?: unknown) {
         super(
@@ -41,7 +41,7 @@ export class FailedToSendAccountRegistrationVerificationEmail extends PublicAPIE
 
 export class CannotPerformActionOnSocialAccount extends PublicAPIError {
     static errorCode = 'CannotPerformActionOnSocialAccount';
-    static errorMessage = errorMessages[CannotPerformActionOnSocialAccount.errorCode];
+    static errorMessage = errorMessages[CannotPerformActionOnSocialAccount.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -55,7 +55,7 @@ export class CannotPerformActionOnSocialAccount extends PublicAPIError {
 
 export class CannotPerformActionOnNormalAccount extends PublicAPIError {
     static errorCode = 'CannotPerformActionOnNormalAccount';
-    static errorMessage = errorMessages[CannotPerformActionOnNormalAccount.errorCode];
+    static errorMessage = errorMessages[CannotPerformActionOnNormalAccount.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(

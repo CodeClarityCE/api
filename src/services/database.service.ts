@@ -84,10 +84,10 @@ export class DatabaseService implements OnApplicationBootstrap {
             this.logger.log(`Created index: ${name}`);
         } catch (error) {
             // If index creation fails due to it already existing, that's fine
-            if (error.code === '42P07') {
+            if (((error) as any).code === '42P07') {
                 this.logger.debug(`Index ${name} already exists (caught during creation)`);
             } else {
-                this.logger.error(`Failed to create index ${name}:`, error.message);
+                this.logger.error(`Failed to create index ${name}:`, (error as Error).message);
                 throw error;
             }
         }

@@ -192,7 +192,7 @@ describe('PatchingUtilsService', () => {
 
             await service.getPatchingResult(analysisId);
 
-            const callArgs = resultRepository.findOne.mock.calls[0][0];
+            const callArgs = resultRepository.findOne.mock.calls[0]![0];
             expect((callArgs.where as any).plugin).toBe('js-patching');
         });
 
@@ -204,7 +204,7 @@ describe('PatchingUtilsService', () => {
 
             await service.getPatchingResult(analysisId);
 
-            const callArgs = resultRepository.findOne.mock.calls[0][0];
+            const callArgs = resultRepository.findOne.mock.calls[0]![0];
             expect((callArgs.order as any).analysis.created_on).toBe('DESC');
         });
 
@@ -216,7 +216,7 @@ describe('PatchingUtilsService', () => {
 
             await service.getPatchingResult(analysisId);
 
-            const callArgs = resultRepository.findOne.mock.calls[0][0];
+            const callArgs = resultRepository.findOne.mock.calls[0]![0];
             expect(callArgs.cache).toBe(true);
         });
 
@@ -228,7 +228,7 @@ describe('PatchingUtilsService', () => {
 
             await service.getPatchingResult(analysisId);
 
-            const callArgs = resultRepository.findOne.mock.calls[0][0];
+            const callArgs = resultRepository.findOne.mock.calls[0]![0];
             expect((callArgs.relations as any).analysis).toBe(true);
         });
 

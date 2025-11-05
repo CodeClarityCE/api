@@ -1,5 +1,4 @@
 import { ExecutionContext, Injectable } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { NotAuthenticated } from 'src/types/error.types';
 
@@ -8,10 +7,6 @@ import { NotAuthenticated } from 'src/types/error.types';
  */
 @Injectable()
 export class RefreshJwtAuthGuard extends AuthGuard('jwt-refresh') {
-    constructor(private reflector: Reflector) {
-        super();
-    }
-
     canActivate(context: ExecutionContext) {
         // Othwerwise check the jwt with the defined jwt strategy
         return super.canActivate(context);

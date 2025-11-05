@@ -28,60 +28,60 @@ class MockAuthGuard implements CanActivate {
 // DTOs for comprehensive testing
 class SignupDto {
     @IsEmail()
-    email: string;
+    email!: string;
 
     @IsString()
     @MinLength(8)
-    password: string;
+    password!: string;
 
     @IsString()
-    first_name: string;
+    first_name!: string;
 
     @IsString()
-    last_name: string;
+    last_name!: string;
 
     @IsString()
-    organization_name: string;
+    organization_name!: string;
 
     @IsString()
-    organization_description: string;
+    organization_description!: string;
 }
 
 class LoginDto {
     @IsEmail()
-    email: string;
+    email!: string;
 
     @IsString()
-    password: string;
+    password!: string;
 }
 
 class CreateProjectDto {
     @IsString()
-    name: string;
+    name!: string;
 
     @IsString()
     @IsOptional()
     description?: string;
 
     @IsString()
-    url: string;
+    url!: string;
 
     @IsString()
-    branch: string;
+    branch!: string;
 }
 
 class CreateAnalysisDto {
     @IsUUID()
-    analyzer_id: string;
+    analyzer_id!: string;
 
     @IsString()
-    tag: string;
+    tag!: string;
 
     @IsString()
-    branch: string;
+    branch!: string;
 
     @IsString()
-    commit_hash: string;
+    commit_hash!: string;
 
     @IsOptional()
     config?: Record<string, any>;
@@ -179,7 +179,7 @@ class TestAuthController {
 class TestProjectsController {
     @Post()
     @UseGuards(MockAuthGuard)
-    createProject(@Param('orgId') orgId: string, @Body() createProjectDto: CreateProjectDto) {
+    createProject(@Param('_orgId') _orgId: string, @Body() createProjectDto: CreateProjectDto) {
         return {
             message: 'Project created successfully',
             data: {
@@ -201,7 +201,7 @@ class TestProjectsController {
 
     @Get()
     @UseGuards(MockAuthGuard)
-    getProjects(@Param('orgId') orgId: string, @Query() paginationDto: PaginationDto) {
+    getProjects(@Param('_orgId') _orgId: string, @Query() paginationDto: PaginationDto) {
         const mockProjects = [
             {
                 id: 'project-1',
@@ -248,15 +248,15 @@ class TestProjectsController {
 
     @Get(':projectId')
     @UseGuards(MockAuthGuard)
-    getProject(@Param('orgId') orgId: string, @Param('projectId') projectId: string) {
-        if (projectId === 'non-existent') {
+    getProject(@Param('_orgId') _orgId: string, @Param('projectId') _projectId: string) {
+        if (_projectId === 'non-existent') {
             throw new Error('Project not found');
         }
 
         return {
             message: 'Project retrieved successfully',
             data: {
-                id: projectId,
+                id: _projectId,
                 name: 'Test Project',
                 description: 'Test project description',
                 url: 'https://github.com/test/repo.git',
@@ -274,8 +274,8 @@ class TestProjectsController {
 
     @Delete(':projectId')
     @UseGuards(MockAuthGuard)
-    deleteProject(@Param('orgId') orgId: string, @Param('projectId') projectId: string) {
-        if (projectId === 'non-existent') {
+    deleteProject(@Param('_orgId') _orgId: string, @Param('projectId') _projectId: string) {
+        if (_projectId === 'non-existent') {
             throw new Error('Project not found');
         }
 
@@ -305,8 +305,8 @@ class TestAnalysesController {
     @Get()
     @UseGuards(MockAuthGuard)
     getAnalyses(
-        @Param('orgId') orgId: string,
-        @Param('projectId') projectId: string,
+        @Param('_orgId') _orgId: string,
+        @Param('_projectId') _projectId: string,
         @Query() paginationDto: PaginationDto
     ) {
         const mockAnalyses = [
@@ -342,8 +342,8 @@ class TestAnalysesController {
     @Get(':analysisId')
     @UseGuards(MockAuthGuard)
     getAnalysis(
-        @Param('orgId') orgId: string,
-        @Param('projectId') projectId: string,
+        @Param('_orgId') _orgId: string,
+        @Param('_projectId') _projectId: string,
         @Param('analysisId') analysisId: string
     ) {
         if (analysisId === 'non-existent') {
@@ -379,8 +379,8 @@ class TestAnalysesController {
     @Delete(':analysisId')
     @UseGuards(MockAuthGuard)
     deleteAnalysis(
-        @Param('orgId') orgId: string,
-        @Param('projectId') projectId: string,
+        @Param('_orgId') _orgId: string,
+        @Param('_projectId') _projectId: string,
         @Param('analysisId') analysisId: string
     ) {
         if (analysisId === 'non-existent') {

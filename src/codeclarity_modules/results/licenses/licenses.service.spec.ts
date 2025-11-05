@@ -12,7 +12,6 @@ import { UnknownWorkspace } from 'src/types/error.types';
 describe('LicensesService', () => {
     let service: LicensesService;
     let analysisResultsService: AnalysisResultsService;
-    let _licenseRepository: LicenseRepository;
     let licensesUtilsService: LicensesUtilsService;
     let sbomUtilsService: SbomUtilsService;
 
@@ -105,7 +104,6 @@ describe('LicensesService', () => {
 
         service = module.get<LicensesService>(LicensesService);
         analysisResultsService = module.get<AnalysisResultsService>(AnalysisResultsService);
-        _licenseRepository = module.get<LicenseRepository>(LicenseRepository);
         licensesUtilsService = module.get<LicensesUtilsService>(LicensesUtilsService);
         sbomUtilsService = module.get<SbomUtilsService>(SbomUtilsService);
 

@@ -10,15 +10,11 @@ import { Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.
 import { UnknownWorkspace } from 'src/types/error.types';
 import { PatchingUtilsService } from './utils/utils';
 import { SbomUtilsService } from '../sbom/utils/utils';
-import { VulnerabilitiesUtilsService } from '../vulnerabilities/utils/utils.service';
 import {
     AnalysisStats,
     newAnalysisStats
 } from 'src/codeclarity_modules/results/patching/patching2.types';
 import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Result } from 'src/codeclarity_modules/results/result.entity';
 
 @Injectable()
 export class PatchingService {
@@ -26,9 +22,6 @@ export class PatchingService {
         private readonly analysisResultsService: AnalysisResultsService,
         private readonly patchingUtilsService: PatchingUtilsService,
         private readonly sbomUtilsService: SbomUtilsService,
-        private readonly vulnerabilitiesUtilsService: VulnerabilitiesUtilsService,
-        @InjectRepository(Result, 'codeclarity')
-        private resultRepository: Repository<Result>
     ) {}
 
     async getPatches(
@@ -60,7 +53,7 @@ export class PatchingService {
             throw new UnknownWorkspace();
         }
 
-        return patchesOutput.workspaces[workspace];
+        return patchesOutput.workspaces[workspace]!;
     }
 
     async getPatchedManifest(

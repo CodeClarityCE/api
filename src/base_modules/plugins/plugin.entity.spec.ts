@@ -23,11 +23,7 @@ describe('Plugin Entity', () => {
         it('should handle undefined values for nullable fields', () => {
             const plugin = new Plugin();
             plugin.id = 'test-uuid';
-            plugin.name = undefined;
-            plugin.version = undefined;
-            plugin.description = undefined;
-            plugin.depends_on = undefined;
-            plugin.config = undefined;
+            // Properties are already undefined by default
 
             expect(plugin.id).toBe('test-uuid');
             expect(plugin.name).toBeUndefined();
@@ -67,8 +63,8 @@ describe('Plugin Entity', () => {
             plugin.config = complexConfig;
 
             expect(plugin.config).toEqual(complexConfig);
-            expect(plugin.config.settings.timeout).toBe(30000);
-            expect(plugin.config.features.logging.level).toBe('debug');
+            expect(plugin.config['settings'].timeout).toBe(30000);
+            expect(plugin.config['features'].logging.level).toBe('debug');
         });
 
         it('should handle empty config objects', () => {
@@ -175,7 +171,7 @@ describe('Plugin Entity', () => {
             };
             plugin.config = deepConfig;
 
-            expect(plugin.config.level1.level2.level3.level4.level5.value).toBe('deep value');
+            expect(plugin.config['level1'].level2.level3.level4.level5.value).toBe('deep value');
         });
 
         it('should handle config with various data types', () => {
@@ -191,14 +187,14 @@ describe('Plugin Entity', () => {
                 date: '2023-01-01T00:00:00Z'
             };
 
-            expect(plugin.config.string).toBe('text');
-            expect(plugin.config.number).toBe(42);
-            expect(plugin.config.float).toBe(3.14);
-            expect(plugin.config.boolean).toBe(true);
-            expect(plugin.config.null).toBeNull();
-            expect(plugin.config.array).toEqual([1, 2, 3]);
-            expect(plugin.config.object).toEqual({ nested: true });
-            expect(plugin.config.date).toBe('2023-01-01T00:00:00Z');
+            expect(plugin.config['string']).toBe('text');
+            expect(plugin.config['number']).toBe(42);
+            expect(plugin.config['float']).toBe(3.14);
+            expect(plugin.config['boolean']).toBe(true);
+            expect(plugin.config['null']).toBeNull();
+            expect(plugin.config['array']).toEqual([1, 2, 3]);
+            expect(plugin.config['object']).toEqual({ nested: true });
+            expect(plugin.config['date']).toBe('2023-01-01T00:00:00Z');
         });
 
         it('should handle depends_on with duplicate values', () => {

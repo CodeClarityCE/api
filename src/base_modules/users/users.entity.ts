@@ -33,29 +33,21 @@ export class User {
     @ApiProperty()
     @Expose()
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @ApiProperty()
     @Expose()
     @Column({
         length: 100
     })
-    first_name: string;
+    first_name!: string;
 
     @ApiProperty()
     @Expose()
     @Column({
         length: 100
     })
-    last_name: string;
-
-    @ApiProperty()
-    @Expose()
-    @Index({ unique: true })
-    @Column({
-        length: 100
-    })
-    handle: string;
+    last_name!: string;
 
     @ApiProperty()
     @Expose()
@@ -63,12 +55,20 @@ export class User {
     @Column({
         length: 100
     })
-    email: string;
+    handle!: string;
+
+    @ApiProperty()
+    @Expose()
+    @Index({ unique: true })
+    @Column({
+        length: 100
+    })
+    email!: string;
 
     @ApiProperty()
     @Expose()
     @Column()
-    social: boolean;
+    social!: boolean;
 
     @ApiProperty()
     @Expose()
@@ -78,12 +78,12 @@ export class User {
     @ApiProperty()
     @Expose()
     @Column()
-    setup_done: boolean;
+    setup_done!: boolean;
 
     @ApiProperty()
     @Expose()
     @Column()
-    activated: boolean;
+    activated!: boolean;
 
     @ApiProperty()
     @Expose()
@@ -96,19 +96,19 @@ export class User {
     @ApiProperty()
     @Expose()
     @Column('timestamptz')
-    created_on: Date;
+    created_on!: Date;
 
     @ApiProperty()
     @Expose()
     @Column()
-    registration_verified: boolean;
+    registration_verified!: boolean;
 
     @ApiProperty()
     @Expose()
     @Column({
         length: 100
     })
-    password: string;
+    password!: string;
 
     @ApiProperty()
     @Expose()
@@ -117,22 +117,22 @@ export class User {
 
     // Foreign keys
     @OneToMany('Organization', 'created_by')
-    organizations_created: Relation<Organization[]>;
+    organizations_created!: Relation<Organization[]>;
 
     @OneToMany('Policy', 'created_by')
-    policies: Relation<Policy[]>;
+    policies!: Relation<Policy[]>;
 
     @OneToMany('Analyzer', 'created_by')
-    analyzers_created: Relation<Analyzer[]>;
+    analyzers_created!: Relation<Analyzer[]>;
 
     @OneToMany('Invitation', 'user')
-    invitations: Relation<Invitation[]>;
+    invitations!: Relation<Invitation[]>;
 
     @OneToMany('OrganizationMemberships', 'organization')
-    organizationMemberships: Relation<OrganizationMemberships[]>;
+    organizationMemberships!: Relation<OrganizationMemberships[]>;
 
     @ManyToMany('Organization', 'owners')
-    ownerships: Relation<Organization[]>;
+    ownerships!: Relation<Organization[]>;
 
     @ManyToMany('Integration', 'users')
     @JoinTable()
@@ -148,20 +148,20 @@ export class User {
     @Expose({ name: 'default_org' })
     @ManyToOne('Organization', 'default')
     @JoinColumn({ name: 'default_org' })
-    default_org: Relation<Organization>;
+    default_org!: Relation<Organization>;
 
     @OneToMany('Project', 'added_by')
-    projects_imported: Relation<Project[]>;
+    projects_imported!: Relation<Project[]>;
 
     @OneToMany('Integration', 'owner')
-    integrations_owned: Relation<Integration[]>;
+    integrations_owned!: Relation<Integration[]>;
 
     @OneToMany('Analysis', 'created_by')
-    analyses: Relation<Analysis[]>;
+    analyses!: Relation<Analysis[]>;
 
     @OneToMany('File', 'added_by')
-    files_imported: Relation<File[]>;
+    files_imported!: Relation<File[]>;
 
     @OneToMany('Email', 'user')
-    mails: Relation<Email[]>;
+    mails!: Relation<Email[]>;
 }

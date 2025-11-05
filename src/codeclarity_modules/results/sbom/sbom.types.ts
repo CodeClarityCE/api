@@ -38,13 +38,13 @@ export interface Dependency {
 }
 
 export class SbomDependency {
-    name: string;
-    version: string;
-    newest_release: string;
-    dev: boolean;
-    prod: boolean;
-    is_direct_count: number;
-    is_transitive_count: number;
+    name!: string;
+    version!: string;
+    newest_release!: string;
+    dev!: boolean;
+    prod!: boolean;
+    is_direct_count!: number;
+    is_transitive_count!: number;
     // Multi-language support
     ecosystem?: string; // e.g., 'npm', 'packagist', 'pypi', 'cargo', etc.
     source_plugin?: string; // e.g., 'js-sbom', 'php-sbom', 'python-sbom', etc.

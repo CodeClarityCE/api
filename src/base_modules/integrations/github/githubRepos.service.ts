@@ -387,8 +387,8 @@ export class GithubRepositoriesService {
             const repos: GithubRepositorySchema[] = data;
             return [repos, lastPage];
         } catch (err) {
-            if (err.status) {
-                if (err.status == 401) {
+            if ((err as any).status) {
+                if ((err as any).status == 401) {
                     throw new IntegrationInvalidToken();
                 } else {
                     throw new FailedToRetrieveReposFromProvider();

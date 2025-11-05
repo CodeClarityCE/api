@@ -7,93 +7,93 @@ export class CWE {
     @PrimaryGeneratedColumn('uuid')
     @ApiProperty()
     @Expose()
-    id: string;
+    id!: string;
 
     @Column()
     @Index({ unique: true })
     @ApiProperty()
     @Expose()
-    cwe_id: string;
+    cwe_id!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    name: string;
+    name!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    abstraction: string;
+    abstraction!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    structure: string;
+    structure!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    status: string;
+    status!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    description: string;
+    description!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    extended_description: string;
+    extended_description!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    likelihood_of_exploit: string;
+    likelihood_of_exploit!: string;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    related_weaknesses: any;
+    related_weaknesses!: any;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    modes_of_introduction: any;
+    modes_of_introduction!: any;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    common_consequences: any;
+    common_consequences!: any;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    detection_methods: any;
+    detection_methods!: any;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    potential_mitigations: any;
+    potential_mitigations!: any;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    taxonomy_mappings: any;
+    taxonomy_mappings!: any;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    observed_examples: any;
+    observed_examples!: any;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    alternate_terms: any;
+    alternate_terms!: any;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    affected_resources: any;
+    affected_resources!: any;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
@@ -103,10 +103,10 @@ export class CWE {
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    categories: any;
+    categories!: any;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    applicable_platforms: any;
+    applicable_platforms!: any;
 }

@@ -65,7 +65,7 @@ describe('GithubIntegrationService', () => {
         service_domain: 'github.com',
         expiry_date: undefined,
         refresh_token: undefined
-    } as Integration;
+    } as unknown as Integration;
 
     beforeEach(async () => {
         const mockGithubTokenService = {

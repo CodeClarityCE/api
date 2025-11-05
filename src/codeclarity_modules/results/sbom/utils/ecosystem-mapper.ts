@@ -124,8 +124,8 @@ export class EcosystemMapper {
 
         try {
             const purlParts = purl.split('/');
-            const typeWithPrefix = purlParts[0]; // "pkg:type"
-            const type = typeWithPrefix.split(':')[1]; // "type"
+            const typeWithPrefix = purlParts[0]!; // "pkg:type"
+            const type = typeWithPrefix.split(':')[1]!; // "type"
 
             // Map PURL types to our ecosystem names
             const purlToEcosystem: Record<string, string> = {

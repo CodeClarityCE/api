@@ -7,21 +7,21 @@ export class EPSS {
     @PrimaryGeneratedColumn('uuid')
     @ApiProperty()
     @Expose()
-    id: string;
+    id!: string;
 
     @Column()
     @ApiProperty()
     @Expose()
     @Index({ unique: true })
-    cve: string;
+    cve!: string;
 
     @Column('float', { nullable: true })
     @ApiProperty()
     @Expose()
-    score: number;
+    score!: number;
 
     @Column('float', { nullable: true })
     @ApiProperty()
     @Expose()
-    percentile: number;
+    percentile!: number;
 }

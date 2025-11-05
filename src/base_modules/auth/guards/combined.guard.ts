@@ -77,6 +77,7 @@ export class CombinedAuthGuard implements CanActivate {
         }
 
         throw new Error('Not implemented');
+        // TODO: Implement API token verification
         // if (apiToken) {
         //     // 2. Verify api token (costly, requires db lookup)
         //     const [apiTokenValid, userAPI] = await this.verifyAPIToken(apiToken);
@@ -91,8 +92,7 @@ export class CombinedAuthGuard implements CanActivate {
         //         return true;
         //     }
         // }
-
-        throw new NotAuthenticated();
+        // throw new NotAuthenticated();
     }
 
     /**
@@ -147,23 +147,5 @@ export class CombinedAuthGuard implements CanActivate {
         } catch {
             return [false, undefined];
         }
-    }
-
-    /**
-     * Verifies that a given API token is valid.
-     * @param token the API token
-     * @returns {Promise<[boolean, AuthenticatedUser|undefined]>} (1) a boolean indicating if it is valid, and (2) the user to which the API token belongs if valid otherwise undefined
-     */
-    private async verifyAPIToken(
-        _token: string
-    ): Promise<[boolean, AuthenticatedUser | undefined]> {
-        throw new Error('Not implemented');
-        // try {
-        //     const user: User = await this.apiKeyService.getUserOfApiKey(token);
-        //     // TODO: get roles from db
-        //     return [true, new AuthenticatedUser(user.id, [ROLE.USER], user.activated, token)];
-        // } catch (error) {
-        //     return [false, undefined];
-        // }
     }
 }

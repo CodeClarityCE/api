@@ -45,7 +45,9 @@ export class AnalyzersService {
         analyzer.description = analyzerData.description;
         analyzer.steps = analyzerData.steps;
         analyzer.supported_languages = analyzerData.supported_languages || ['javascript'];
-        analyzer.language_config = analyzerData.language_config;
+        if (analyzerData.language_config !== undefined) {
+            analyzer.language_config = analyzerData.language_config;
+        }
         analyzer.logo = analyzerData.logo || 'js';
         analyzer.global = false;
         analyzer.organization = organization;

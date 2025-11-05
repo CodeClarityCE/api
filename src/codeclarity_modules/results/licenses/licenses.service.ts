@@ -17,9 +17,6 @@ import { UnknownWorkspace } from 'src/types/error.types';
 import { SbomUtilsService } from '../sbom/utils/utils';
 import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
 import { Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Result } from 'src/codeclarity_modules/results/result.entity';
 
 @Injectable()
 export class LicensesService {
@@ -28,8 +25,6 @@ export class LicensesService {
         private readonly licenseRepository: LicenseRepository,
         private readonly licensesUtilsService: LicensesUtilsService,
         private readonly sbomUtilsService: SbomUtilsService,
-        @InjectRepository(Result, 'codeclarity')
-        private resultRepository: Repository<Result>
     ) {}
 
     async getLicensesUsed(
@@ -70,7 +65,7 @@ export class LicensesService {
             );
         }
 
-        const licensesWorkspaceInfo = licensesOutput.workspaces[workspace];
+        const licensesWorkspaceInfo = licensesOutput.workspaces[workspace]!;
         const licenseMap: { [key: string]: LicenseInfo } = {};
 
         // Ensure LicensesDepMap exists and is an object
@@ -176,12 +171,12 @@ export class LicensesService {
             throw new UnknownWorkspace();
         }
 
-        const licensesWorkspaceInfo = licensesOutput.workspaces[workspace];
+        const licensesWorkspaceInfo = licensesOutput.workspaces[workspace]!;
 
         const allDeps: Set<string> = new Set();
 
         if (license in licensesWorkspaceInfo.LicensesDepMap) {
-            for (const dep of licensesWorkspaceInfo.LicensesDepMap[license]) {
+            for (const dep of licensesWorkspaceInfo.LicensesDepMap[license]!) {
                 allDeps.add(dep);
             }
         }

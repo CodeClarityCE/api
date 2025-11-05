@@ -10,42 +10,42 @@ export class Invitation {
     @ApiProperty()
     @Expose()
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @ApiProperty()
     @Expose()
     @Column('timestamptz', { nullable: true })
     @Type(() => Date)
-    created_on: Date;
+    created_on!: Date;
 
     @ApiProperty()
     @Expose()
     @Column()
-    role: MemberRole;
+    role!: MemberRole;
 
     @Column({
         length: 250
     })
-    token_digest: string;
+    token_digest!: string;
 
     @Column({
         length: 250
     })
-    user_email_digest: string;
+    user_email_digest!: string;
 
     @ApiProperty()
     @Column('timestamptz', { nullable: true })
     @Type(() => Date)
     @Expose()
-    ttl: Date;
+    ttl!: Date;
 
     @ApiProperty()
     @Expose()
     @ManyToOne('Organization', 'invitations')
-    organization: Relation<Organization>;
+    organization!: Relation<Organization>;
 
     @ApiProperty()
     @Expose()
     @ManyToOne('User', 'invitations')
-    user: Relation<User>;
+    user!: Relation<User>;
 }

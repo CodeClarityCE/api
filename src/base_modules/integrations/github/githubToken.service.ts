@@ -92,8 +92,8 @@ export class GithubIntegrationTokenService {
                 throw err;
             }
 
-            if (err.status) {
-                if (err.status == 401) {
+            if ((err as any).status) {
+                if ((err as any).status == 401) {
                     throw new IntegrationInvalidToken();
                 }
             }
@@ -147,14 +147,14 @@ export class GithubIntegrationTokenService {
                 throw err;
             }
 
-            if (err.message) {
-                if (err.message.toLowerCase().includes('bad credentials')) {
+            if ((err as any).message) {
+                if ((err as any).message.toLowerCase().includes('bad credentials')) {
                     throw new IntegrationInvalidToken();
                 }
             }
 
-            if (err.status) {
-                if (err.status == 401) {
+            if ((err as any).status) {
+                if ((err as any).status == 401) {
                     throw new IntegrationInvalidToken();
                 }
             }

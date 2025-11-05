@@ -6,42 +6,42 @@ import { MemberRole } from '../organizations/memberships/orgMembership.types';
 export class TeamMember {
     @Expose()
     @ApiProperty()
-    id: string;
+    id!: string;
 
     @Expose()
     @ApiProperty()
-    first_name: string;
+    first_name!: string;
 
     @Expose()
     @ApiProperty()
-    last_name: string;
+    last_name!: string;
 
     @Expose()
     @ApiProperty()
-    handle: string;
+    handle!: string;
 
     @Expose()
     @ApiProperty()
-    email: string;
+    email!: string;
 
     @Expose()
     @ApiProperty()
-    role: MemberRole;
+    role!: MemberRole;
 
     @Expose()
     @ApiProperty()
     @Type(() => Date)
-    added_on: Date;
+    added_on!: Date;
 
     @Expose()
     @ApiProperty()
     // @OptionalTransform((v) => new TeamMember(v))
-    added_by: string;
+    added_by!: string;
 
     @Expose()
     @ApiProperty()
     @Type(() => Date)
-    joined_on: Date;
+    joined_on!: Date;
 
     @Expose()
     @ApiProperty()
@@ -50,5 +50,5 @@ export class TeamMember {
 
     @Expose()
     @ApiProperty()
-    organization_id: string;
+    organization_id!: string;
 }

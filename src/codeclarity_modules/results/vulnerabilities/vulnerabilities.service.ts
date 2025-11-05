@@ -452,9 +452,11 @@ export class VulnerabilitiesService {
                 OSVMatch: finding.OSVMatch,
                 NVDMatch: finding.NVDMatch,
                 Severity: finding.Severity,
-                Weaknesses: finding.Weaknesses,
                 Conflict: finding.Conflict
             };
+            if (finding.Weaknesses) {
+                affected.Weaknesses = finding.Weaknesses;
+            }
             // if vuln already in map
             const vuln = findingsMerged.get(finding.VulnerabilityId);
             if (vuln) {
@@ -467,7 +469,6 @@ export class VulnerabilitiesService {
                     Sources: finding.Sources,
                     Vulnerability: finding.VulnerabilityId,
                     Severity: finding.Severity,
-                    Weaknesses: finding.Weaknesses,
                     Affected: [affected],
                     Description: '',
                     Conflict: finding.Conflict,
@@ -477,6 +478,9 @@ export class VulnerabilitiesService {
                         Percentile: epss.percentile
                     }
                 };
+                if (finding.Weaknesses) {
+                    mergedFinding.Weaknesses = finding.Weaknesses;
+                }
                 if (finding.NVDMatch) {
                     mergedFinding.VLAI.push({
                         Source: Source.Nvd,
@@ -741,14 +745,14 @@ export class VulnerabilitiesService {
 
         if (selectedSections.length > 0) {
             let newSection = '';
-            const section = selectedSections[selectedSections.length - 1];
+            const section = selectedSections[selectedSections.length - 1]!;
             let trimEndNewLines = true;
             for (let i = section.length - 1; i >= 0; i--) {
                 if (section[i] != '\n') {
                     trimEndNewLines = false;
                 }
                 if (!trimEndNewLines) {
-                    newSection += section[i];
+                    newSection += section[i]!;
                 }
             }
             selectedSections[selectedSections.length - 1] = newSection.split('').reverse().join('');
@@ -807,7 +811,7 @@ export class VulnerabilitiesService {
                     }
                 } catch (err) {
                     // Skip invalid policy IDs
-                    console.warn(`Could not fetch vulnerability policy ${policyId}:`, err.message);
+                    console.warn(`Could not fetch vulnerability policy ${policyId}:`, (err as Error).message);
                 }
             }
 
@@ -815,7 +819,7 @@ export class VulnerabilitiesService {
         } catch (err) {
             console.warn(
                 `Could not get blacklisted vulnerabilities for analysis ${analysisId}:`,
-                err.message
+                (err as Error).message
             );
             return { vulnerabilities: new Set(), policies: new Map() };
         }

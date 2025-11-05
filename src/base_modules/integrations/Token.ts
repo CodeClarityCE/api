@@ -18,8 +18,12 @@ export abstract class IntegrationToken {
 
     constructor(integrationId: string, token: string, refreshToken?: string, expiresOn?: Date) {
         this.token = token;
-        this.refreshToken = refreshToken;
-        this.expiresOn = expiresOn;
+        if (refreshToken !== undefined) {
+            this.refreshToken = refreshToken;
+        }
+        if (expiresOn !== undefined) {
+            this.expiresOn = expiresOn;
+        }
         this.integrationId = integrationId;
     }
 
@@ -143,8 +147,12 @@ export class GitlabIntegrationToken extends IntegrationToken {
                 );
 
                 this.token = newIntegration.access_token;
-                this.refreshToken = newIntegration.refresh_token;
-                this.expiresOn = newIntegration.expiry_date;
+                if (newIntegration.refresh_token !== undefined) {
+                    this.refreshToken = newIntegration.refresh_token;
+                }
+                if (newIntegration.expiry_date !== undefined) {
+                    this.expiresOn = newIntegration.expiry_date;
+                }
             } else {
                 throw new IntegrationTokenRefreshFailed();
             }

@@ -184,7 +184,7 @@ describe('AnalysesController', () => {
             expect(analysesService.getMany).toHaveBeenCalledWith(
                 'test-org-id',
                 'test-project-id',
-                { currentPage: undefined, entriesPerPage: undefined },
+                { currentPage: 0, entriesPerPage: 0 },
                 mockAuthenticatedUser
             );
             expect(result).toEqual(paginatedResponse);

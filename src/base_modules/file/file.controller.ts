@@ -94,7 +94,7 @@ export class FileController {
     @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
     @Get(':project_id')
     async getFileByName(
-        @AuthUser() user: AuthenticatedUser,
+        @AuthUser() _user: AuthenticatedUser,
         @Param('project_id') project_id: string,
         @Param('org_id') org_id: string,
         @Param('file_name') file_name: string
@@ -104,7 +104,7 @@ export class FileController {
         const cleanedProjectId = escapeString(project_id);
         const cleanedOrgId = escapeString(org_id);
 
-        const downloadPath = process.env.DOWNLOAD_PATH || '/private';
+        const downloadPath = process.env['DOWNLOAD_PATH'] || '/private';
         const filePath = join(downloadPath, cleanedOrgId, cleanedProjectId, cleanedFileName);
         return new Promise((resolve, reject) => {
             return readFile(filePath, 'utf8', (err, data) => {

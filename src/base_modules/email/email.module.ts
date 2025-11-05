@@ -21,7 +21,7 @@ import { Email } from 'src/base_modules/email/email.entity';
                     requireTLS: true,
                     auth: {
                         user: config.getOrThrow<string>('MAIL_AUTH_USER'),
-                        pass: process.env.MAIL_AUTH_PASSWORD
+                        pass: process.env['MAIL_AUTH_PASSWORD']
                     }
                 },
                 preview: false,

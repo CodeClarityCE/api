@@ -76,9 +76,13 @@ export class GitlabIntegrationService {
         gitlabIntegration.integration_type = integration.integration_type;
         gitlabIntegration.integration_provider = integration.integration_provider;
         gitlabIntegration.invalid = integration.invalid;
-        gitlabIntegration.expiry_date = integration.expiry_date;
-        gitlabIntegration.organization_id = integration.organizations[0].id;
-        gitlabIntegration.refresh_token = integration.refresh_token;
+        if (integration.expiry_date !== undefined) {
+            gitlabIntegration.expiry_date = integration.expiry_date;
+        }
+        gitlabIntegration.organization_id = integration.organizations[0]!.id;
+        if (integration.refresh_token !== undefined) {
+            gitlabIntegration.refresh_token = integration.refresh_token;
+        }
         gitlabIntegration.service_base_url = integration.service_domain;
         gitlabIntegration.token_type = GitlabTokenType.PERSONAL_ACCESS_TOKEN;
 
@@ -275,20 +279,5 @@ export class GitlabIntegrationService {
             return GitlabTokenType.PERSONAL_ACCESS_TOKEN;
         }
         throw new IntegrationWrongTokenType();
-    }
-
-    // TODO: potential race condition between checking and adding the integration
-    /**
-     * Checks if the gitlab integration, on the same host (ex: https://gitlab.uni.lu), already exists
-     * @param orgId The organization id
-     * @param serviceBaseUrl The gitlab server domain
-     * @param transaction Transaction
-     * @returns a boolean indicating if the gitlab integration, on the same host (ex: https://gitlab.uni.lu), already exists
-     */
-    private async checkIfIntegrationAlreadyExists(
-        _orgId: string,
-        _serviceBaseUrl: string
-    ): Promise<boolean> {
-        throw new Error('Method not implemented.');
     }
 }

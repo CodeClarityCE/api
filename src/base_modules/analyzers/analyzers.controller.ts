@@ -29,7 +29,6 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 export class AnalyzersController {
     constructor(
         private readonly analyzersService: AnalyzersService,
-        private readonly analyzerTemplatesService: AnalyzerTemplatesService
     ) {}
 
     @Post('')
@@ -99,18 +98,18 @@ export class AnalyzersController {
 @ApiBearerAuth()
 @Controller('/analyzer-templates')
 export class AnalyzerTemplatesController {
-    constructor(private readonly analyzerTemplatesService: AnalyzerTemplatesService) {}
+    constructor(private readonly __analyzerTemplatesService: AnalyzerTemplatesService) {}
 
     @Get('')
     async getAllTemplates(): Promise<TypedResponse<AnalyzerTemplate[]>> {
-        return { data: this.analyzerTemplatesService.getTemplates() };
+        return { data: this.__analyzerTemplatesService.getTemplates() };
     }
 
     @Get(':language')
     async getTemplateByLanguage(
         @Param('language') language: string
     ): Promise<TypedResponse<AnalyzerTemplate>> {
-        return { data: this.analyzerTemplatesService.getTemplateByLanguage(language) };
+        return { data: this.__analyzerTemplatesService.getTemplateByLanguage(language) };
     }
 }
 
@@ -118,16 +117,16 @@ export class AnalyzerTemplatesController {
 @ApiBearerAuth()
 @Controller('/languages')
 export class LanguagesController {
-    constructor(private readonly analyzerTemplatesService: AnalyzerTemplatesService) {}
+    constructor(private readonly __analyzerTemplatesService: AnalyzerTemplatesService) {}
 
     @Get('')
     async getSupportedLanguages(): Promise<TypedResponse<string[]>> {
         // Extract unique languages from all templates
-        const templates = this.analyzerTemplatesService.getTemplates();
+        const templates = this.__analyzerTemplatesService.getTemplates();
         const languages = new Set<string>();
 
-        templates.forEach((template) => {
-            template.supported_languages.forEach((lang) => languages.add(lang));
+        templates.forEach((template: any) => {
+            template.supported_languages.forEach((lang: any) => languages.add(lang));
         });
 
         return { data: Array.from(languages).sort() };

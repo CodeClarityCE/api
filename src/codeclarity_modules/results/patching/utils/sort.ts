@@ -28,7 +28,12 @@ export function sort(
     //     _sortDirectionSafe = sortDirection;
     // }
 
-    if (sortBySafe in mapping) sortBySafe = mapping[sortBySafe];
+    if (sortBySafe in mapping) {
+        const mapped = mapping[sortBySafe];
+        if (mapped !== undefined) {
+            sortBySafe = mapped;
+        }
+    }
 
     // Sorting
     let sorted: PatchInfo[] = [];

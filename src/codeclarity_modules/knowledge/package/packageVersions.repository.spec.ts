@@ -176,9 +176,9 @@ describe('VersionsRepository', () => {
 
             expect(result).toHaveLength(3);
             // Should be sorted by semver: 1.0.0, 1.5.0, 2.0.0
-            expect(result[0].version).toBe('1.0.0');
-            expect(result[1].version).toBe('1.5.0');
-            expect(result[2].version).toBe('2.0.0');
+            expect(result[0]!.version).toBe('1.0.0');
+            expect(result[1]!.version).toBe('1.5.0');
+            expect(result[2]!.version).toBe('2.0.0');
 
             expect(packageRepository.findOne).toHaveBeenCalledWith({
                 where: { name: 'test-package', language: 'javascript' },
@@ -285,11 +285,11 @@ describe('VersionsRepository', () => {
             const result = await repository.getDependencyVersions('test-package');
 
             expect(result).toHaveLength(5);
-            expect(result[0].version).toBe('1.0.0');
-            expect(result[1].version).toBe('1.2.0');
-            expect(result[2].version).toBe('1.10.0');
-            expect(result[3].version).toBe('2.0.0-alpha');
-            expect(result[4].version).toBe('2.0.0');
+            expect(result[0]!.version).toBe('1.0.0');
+            expect(result[1]!.version).toBe('1.2.0');
+            expect(result[2]!.version).toBe('1.10.0');
+            expect(result[3]!.version).toBe('2.0.0-alpha');
+            expect(result[4]!.version).toBe('2.0.0');
         });
 
         it('should handle database errors', async () => {

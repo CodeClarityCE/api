@@ -12,24 +12,24 @@ export enum EmailType {
 @Entity()
 export class Email {
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @Column({
         length: 250
     })
-    token_digest: string;
+    token_digest!: string;
 
     @Column()
-    email_type: EmailType;
+    email_type!: EmailType;
 
     @Column({
         length: 250
     })
-    user_id_digest: string;
+    user_id_digest!: string;
 
     @Column('timestamptz', { nullable: true })
-    ttl: Date;
+    ttl!: Date;
 
     @ManyToOne('User', 'mails')
-    user: Relation<User>;
+    user!: Relation<User>;
 }

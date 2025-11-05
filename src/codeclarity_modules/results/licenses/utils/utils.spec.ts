@@ -211,7 +211,7 @@ describe('LicensesUtilsService', () => {
 
             await service.getLicensesResult(analysisId);
 
-            const callArgs = resultRepository.findOne.mock.calls[0][0];
+            const callArgs = resultRepository.findOne.mock.calls[0]![0];
             expect((callArgs.where as any).plugin).toBe('license-finder');
         });
 
@@ -223,7 +223,7 @@ describe('LicensesUtilsService', () => {
 
             await service.getLicensesResult(analysisId);
 
-            const callArgs = resultRepository.findOne.mock.calls[0][0];
+            const callArgs = resultRepository.findOne.mock.calls[0]![0];
             expect((callArgs.order as any).analysis.created_on).toBe('DESC');
         });
 
@@ -235,7 +235,7 @@ describe('LicensesUtilsService', () => {
 
             await service.getLicensesResult(analysisId);
 
-            const callArgs = resultRepository.findOne.mock.calls[0][0];
+            const callArgs = resultRepository.findOne.mock.calls[0]![0];
             expect(callArgs.cache).toBe(true);
         });
 
@@ -247,7 +247,7 @@ describe('LicensesUtilsService', () => {
 
             await service.getLicensesResult(analysisId);
 
-            const callArgs = resultRepository.findOne.mock.calls[0][0];
+            const callArgs = resultRepository.findOne.mock.calls[0]![0];
             expect((callArgs.relations as any).analysis).toBe(true);
         });
 

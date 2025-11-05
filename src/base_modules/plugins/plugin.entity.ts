@@ -7,7 +7,7 @@ export class Plugin {
     @PrimaryGeneratedColumn('uuid')
     @ApiProperty()
     @Expose()
-    id: string;
+    id!: string;
 
     @Column({ nullable: true })
     @ApiProperty()

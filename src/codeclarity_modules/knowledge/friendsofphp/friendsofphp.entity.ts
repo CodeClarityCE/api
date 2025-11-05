@@ -7,56 +7,56 @@ export class FriendsOfPhp {
     @PrimaryGeneratedColumn('uuid')
     @ApiProperty()
     @Expose()
-    id: string;
+    id!: string;
 
     @Column()
     @Index({ unique: true })
     @ApiProperty()
     @Expose()
-    advisory_id: string;
+    advisory_id!: string;
 
     @Column()
     @ApiProperty()
     @Expose()
-    title: string;
+    title!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    cve: string;
+    cve!: string;
 
     @Column()
     @ApiProperty()
     @Expose()
-    link: string;
+    link!: string;
 
     @Column()
     @ApiProperty()
     @Expose()
-    reference: string;
+    reference!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    composer: string;
+    composer!: string;
 
     @Column('text', { nullable: true })
     @ApiProperty()
     @Expose()
-    description: string;
+    description!: string;
 
     @Column('jsonb', { default: {} })
     @ApiProperty()
     @Expose()
-    branches: any;
+    branches!: any;
 
     @Column()
     @ApiProperty()
     @Expose()
-    published: string;
+    published!: string;
 
     @Column()
     @ApiProperty()
     @Expose()
-    modified: string;
+    modified!: string;
 }

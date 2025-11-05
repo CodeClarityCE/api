@@ -39,7 +39,7 @@ export class GitlabIntegrationTokenService {
                 throw new Error(`Failed to fetch user information: ${response.status}`);
             }
 
-            const tokenInfo = await response.json();
+            const tokenInfo = (await response.json()) as { scopes?: string[] };
 
             // Check if the token has the required scopes
             if (!tokenInfo) {
@@ -52,10 +52,10 @@ export class GitlabIntegrationTokenService {
                 throw new Error('Token does not have the required permissions.');
             }
         } catch (error) {
-            if (error instanceof Error && error.message.includes('401')) {
+            if (error instanceof Error && ((error) as Error).message.includes('401')) {
                 throw new Error('Invalid or revoked token');
             }
-            throw new Error(`Failed to validate token: ${error.message}`);
+            throw new Error(`Failed to validate token: ${(error as Error).message}`);
         }
     }
 
@@ -89,7 +89,7 @@ export class GitlabIntegrationTokenService {
                 throw new Error(`Failed to fetch access token info. Status: ${response.status}`);
             }
 
-            const data = await response.json();
+            const data = (await response.json()) as { expires_at?: string };
 
             if (data && data.expires_at) {
                 const expiryDate = new Date(data.expires_at);
@@ -99,7 +99,7 @@ export class GitlabIntegrationTokenService {
             return [false, undefined]; // Token does not have an expiry date
         } catch (error) {
             console.error('Error fetching access token expiry:', error);
-            if (error instanceof Error && error.message.includes('Invalid or revoked token')) {
+            if (error instanceof Error && ((error) as Error).message.includes('Invalid or revoked token')) {
                 throw error;
             }
             if (

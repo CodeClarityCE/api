@@ -10,38 +10,38 @@ export enum PolicyType {
 export class DefaultablePolicy {
     @ApiProperty()
     @Expose()
-    policy_type: PolicyType;
+    policy_type!: PolicyType;
 
     @ApiProperty()
     @Expose()
-    default: boolean;
+    default!: boolean;
 
     @ApiProperty()
     @Expose()
-    organization_id: string;
+    organization_id!: string;
 
     @ApiProperty()
     @Expose()
-    created_by: string;
+    created_by!: string;
 
     @ApiProperty()
     @Expose()
     @Type(() => Date)
-    created_on: Date;
+    created_on!: Date;
 }
 
 export class Policy {
     @Expose()
-    policy_type: PolicyType;
+    policy_type!: PolicyType;
 
     @ApiProperty()
     @Expose()
-    created_by: string;
+    created_by!: string;
 
     @ApiProperty()
     @Expose()
     @Type(() => Date)
-    created_on: Date;
+    created_on!: Date;
 }
 
 /********************************************/

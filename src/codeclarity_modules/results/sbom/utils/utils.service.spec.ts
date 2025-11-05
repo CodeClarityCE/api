@@ -15,7 +15,6 @@ describe('SbomUtilsService', () => {
     let service: SbomUtilsService;
     let resultRepository: jest.Mocked<Repository<Result>>;
     let vulnerabilitiesUtilsService: jest.Mocked<VulnerabilitiesUtilsService>;
-    let licensesUtilsService: jest.Mocked<LicensesUtilsService>;
     let packageRepository: jest.Mocked<PackageRepository>;
 
     const mockAnalysisId = 'test-analysis-id';
@@ -147,7 +146,6 @@ describe('SbomUtilsService', () => {
         service = module.get<SbomUtilsService>(SbomUtilsService);
         resultRepository = module.get(getRepositoryToken(Result, 'codeclarity'));
         vulnerabilitiesUtilsService = module.get(VulnerabilitiesUtilsService);
-        licensesUtilsService = module.get(LicensesUtilsService);
         packageRepository = module.get(PackageRepository);
     });
 
@@ -491,9 +489,9 @@ describe('SbomUtilsService', () => {
 
         it('should handle transitive dependencies correctly', async () => {
             const mockSBOM = createMockSBOMOutput();
-            mockSBOM.workspaces[mockWorkspace].dependencies[dependencyName][
+            mockSBOM.workspaces[mockWorkspace]!.dependencies[dependencyName]![
                 dependencyVersion
-            ].Transitive = true;
+            ]!.Transitive = true;
 
             const mockVulns = createMockVulnsOutput();
             const mockPackageInfo = createMockPackageVersionInfo();
@@ -634,7 +632,6 @@ describe('SbomUtilsService', () => {
         it('should have correct dependencies injected', () => {
             expect(service['resultRepository']).toBe(resultRepository);
             expect(service['vulnerabilitiesUtilsService']).toBe(vulnerabilitiesUtilsService);
-            expect(service['licensesUtilsService']).toBe(licensesUtilsService);
             expect(service['packageRepository']).toBe(packageRepository);
         });
     });

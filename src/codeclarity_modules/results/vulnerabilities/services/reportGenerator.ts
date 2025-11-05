@@ -32,11 +32,11 @@ import { FriendsOfPhp } from 'src/codeclarity_modules/knowledge/friendsofphp/fri
 import { Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
 
 abstract class BaseReportGenerator {
-    patchesData: PatchInfo;
-    vulnsData: Vulnerability;
+    patchesData!: PatchInfo;
+    vulnsData!: Vulnerability;
     dependencyData?: Dependency;
-    versions: Version[];
-    packageManager: string;
+    versions!: Version[];
+    packageManager!: string;
     osvItem?: OSV;
     nvdItem?: NVD;
 
@@ -176,7 +176,7 @@ abstract class BaseReportGenerator {
                 this.vulnsData.NVDMatch.AffectedInfo &&
                 this.vulnsData.NVDMatch.AffectedInfo.length > 0
             ) {
-                affectedData = this.vulnsData.NVDMatch.AffectedInfo[0];
+                affectedData = this.vulnsData.NVDMatch.AffectedInfo[0]!;
             }
         } else {
             if (
@@ -184,7 +184,7 @@ abstract class BaseReportGenerator {
                 this.vulnsData.OSVMatch.AffectedInfo &&
                 this.vulnsData.OSVMatch.AffectedInfo.length > 0
             ) {
-                affectedData = this.vulnsData.OSVMatch.AffectedInfo[0];
+                affectedData = this.vulnsData.OSVMatch.AffectedInfo[0]!;
             }
         }
 
@@ -844,9 +844,15 @@ export class OSVReportGenerator extends BaseReportGenerator {
         // this.patchesData = patchesData;
         this.vulnsData = vulnsData;
         this.packageManager = packageManager;
-        this.dependencyData = dependencyData;
-        this.osvItem = osvItem;
-        this.nvdItem = nvdItem;
+        if (dependencyData !== undefined) {
+            this.dependencyData = dependencyData;
+        }
+        if (osvItem !== undefined) {
+            this.osvItem = osvItem;
+        }
+        if (nvdItem !== undefined) {
+            this.nvdItem = nvdItem;
+        }
 
         if (!this.osvItem) {
             throw new Error('Failed to generate report from undefined nvd entry');
@@ -970,7 +976,6 @@ export class OSVReportGenerator extends BaseReportGenerator {
         /** Vulnerability Details */
         const vulnDetails: VulnerabilityDetails = {
             vulnerability_info: vulnInfo,
-            dependency_info: dependencyInfo,
             weaknesses: weakenessses,
             severities: severityInfo,
             common_consequences: common_consequences,
@@ -980,6 +985,9 @@ export class OSVReportGenerator extends BaseReportGenerator {
             location: [],
             other: this.getOtherInfo()
         };
+        if (dependencyInfo) {
+            vulnDetails.dependency_info = dependencyInfo;
+        }
 
         return vulnDetails;
     }
@@ -1023,14 +1031,14 @@ export class OSVReportGenerator extends BaseReportGenerator {
 
         if (selectedSections.length > 0) {
             let newSection = '';
-            const section = selectedSections[selectedSections.length - 1];
+            const section = selectedSections[selectedSections.length - 1]!;
             let trimEndNewLines = true;
             for (let i = section.length - 1; i >= 0; i--) {
                 if (section[i] != '\n') {
                     trimEndNewLines = false;
                 }
                 if (!trimEndNewLines) {
-                    newSection += section[i];
+                    newSection += section[i]!;
                 }
             }
             selectedSections[selectedSections.length - 1] = newSection.split('').reverse().join('');
@@ -1072,9 +1080,15 @@ export class NVDReportGenerator extends BaseReportGenerator {
         // this.patchesData = patchesData;
         this.vulnsData = vulnsData;
         this.packageManager = packageManager;
-        this.dependencyData = dependencyData;
-        this.osvItem = osvItem;
-        this.nvdItem = nvdItem;
+        if (dependencyData !== undefined) {
+            this.dependencyData = dependencyData;
+        }
+        if (osvItem !== undefined) {
+            this.osvItem = osvItem;
+        }
+        if (nvdItem !== undefined) {
+            this.nvdItem = nvdItem;
+        }
 
         if (!this.nvdItem) {
             throw new Error('Failed to generate report from undefined nvd entry');
@@ -1217,7 +1231,6 @@ export class NVDReportGenerator extends BaseReportGenerator {
         /** Vulnerability Details */
         const vulnDetails: VulnerabilityDetails = {
             vulnerability_info: vulnInfo,
-            dependency_info: dependencyInfo,
             weaknesses: weakenessses,
             severities: severityInfo,
             common_consequences: common_consequences,
@@ -1227,6 +1240,9 @@ export class NVDReportGenerator extends BaseReportGenerator {
             location: [],
             other: this.getOtherInfo()
         };
+        if (dependencyInfo) {
+            vulnDetails.dependency_info = dependencyInfo;
+        }
 
         return vulnDetails;
     }

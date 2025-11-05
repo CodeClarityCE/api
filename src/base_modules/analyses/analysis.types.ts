@@ -9,18 +9,18 @@ import { StageBase } from '../analyzers/analyzer.types';
 export class AnalysisCreateBody {
     @ApiProperty({ description: 'The anaylzer id', example: '72305504' })
     @IsNotEmpty()
-    analyzer_id: string;
+    analyzer_id!: string;
 
     @ApiProperty({
         description: 'The anaylzer configuration',
         example: { license_policy_id: '72305504' }
     })
     @IsNotEmpty()
-    config: { [key: string]: { [key: string]: any } };
+    config!: { [key: string]: { [key: string]: any } };
 
     @ApiProperty({ description: 'Which branch of the repository to analyze', example: 'main' })
     @IsNotEmpty()
-    branch: string;
+    branch!: string;
 
     @ApiProperty({ description: 'Which tag of the repository to analyze', example: 'v1.0.0' })
     @IsOptional()
@@ -175,7 +175,7 @@ export class ScheduleUpdateBody {
     @IsEnum(['once', 'daily', 'weekly'], {
         message: 'schedule_type must be one of: once, daily, weekly'
     })
-    schedule_type: 'once' | 'daily' | 'weekly';
+    schedule_type!: 'once' | 'daily' | 'weekly';
 
     @ApiProperty({
         description: 'When the analysis should next be executed (ISO 8601 format)',
@@ -188,7 +188,7 @@ export class ScheduleUpdateBody {
             message: 'next_scheduled_run must be a valid ISO 8601 date string'
         }
     )
-    next_scheduled_run: string;
+    next_scheduled_run!: string;
 
     @ApiProperty({
         description: 'Whether the analysis schedule is active (enabled/disabled)',
@@ -198,5 +198,5 @@ export class ScheduleUpdateBody {
     @IsBoolean({
         message: 'is_active must be a boolean value'
     })
-    is_active: boolean;
+    is_active!: boolean;
 }

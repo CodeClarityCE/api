@@ -10,12 +10,12 @@ import { MemberRole } from '../memberships/orgMembership.types';
 export class Invitation {
     @ApiProperty()
     @Expose()
-    id: string;
+    id!: string;
 
     @ApiProperty()
     @Expose()
     @Type(() => Date)
-    created_on: Date;
+    created_on!: Date;
 
     // @ApiProperty()
     // @Expose()
@@ -24,26 +24,26 @@ export class Invitation {
 
     @ApiProperty()
     @Expose()
-    role: MemberRole;
+    role!: MemberRole;
 
     @ApiProperty()
     @Expose()
-    organization_id: string;
+    organization_id!: string;
 
     @ApiProperty()
     @Expose()
-    user_email: string;
+    user_email!: string;
 
     @ApiProperty()
     @Type(() => Date)
     @Expose()
-    ttl: Date;
+    ttl!: Date;
 
     @Exclude({ toPlainOnly: true })
-    user_email_digest: string;
+    user_email_digest!: string;
 
     @Exclude({ toPlainOnly: true })
-    invite_token_digest: string;
+    invite_token_digest!: string;
 }
 
 /********************************************/
@@ -54,12 +54,12 @@ export class InviteCreateBody {
     @ApiProperty()
     @IsNotEmpty()
     @IsEmail()
-    user_email: string;
+    user_email!: string;
 
     @ApiProperty()
     @IsNotEmpty()
     @IsEnum(MemberRole)
-    role: MemberRole;
+    role!: MemberRole;
 }
 
 /********************************************/

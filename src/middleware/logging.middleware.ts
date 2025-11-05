@@ -35,16 +35,16 @@ export class LoggingMiddleware implements NestMiddleware {
             requestId,
             method: req.method,
             url: req.url,
-            userAgent: req.headers['user-agent'] as string,
+            userAgent: req['headers']['user-agent'] as string,
             ip: this.getClientIP(req),
             ...(userId && { userId }),
             ...(organizationId && { organizationId })
         };
 
         // Don't log sensitive headers
-        const sanitizedHeaders = this.sanitizeHeaders(req.headers);
+        const sanitizedHeaders = this.sanitizeHeaders(req['headers']);
         if (Object.keys(sanitizedHeaders).length > 0) {
-            requestContext.headers = sanitizedHeaders;
+            requestContext['headers'] = sanitizedHeaders;
         }
 
         req.logger.log('HTTP request started', requestContext);
@@ -85,8 +85,8 @@ export class LoggingMiddleware implements NestMiddleware {
      */
     private getClientIP(req: FastifyRequest): string {
         return (
-            (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
-            (req.headers['x-real-ip'] as string) ||
+            (req['headers']['x-forwarded-for'] as string)?.split(',')[0] ||
+            (req['headers']['x-real-ip'] as string) ||
             req.socket?.remoteAddress ||
             'unknown'
         );
@@ -148,10 +148,12 @@ export function RequestLogger() {
             if (req && req.logger) {
                 // Add method-specific context
                 const context: LogContext = {
-                    requestId: req.requestId,
                     controller: target.constructor.name,
                     method: propertyName
                 };
+                if (req.requestId) {
+                    context.requestId = req.requestId;
+                }
 
                 req.logger.debug('Controller method called', context);
             }

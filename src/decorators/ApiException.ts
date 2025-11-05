@@ -33,13 +33,13 @@ export function ApiErrorDecorator({
         description += descriptions.join(' or ');
         description += '.';
     } else {
-        const err = errors[0];
+        const err = errors[0]!;
         description = `Throws error: ${err.name}`;
         example = {
             status_code: statusCode,
             status_message: Status.Failure,
             error_code: err.name,
-            error_message: errorMessages[err.name]
+            error_message: errorMessages[err.name]!
         };
     }
 

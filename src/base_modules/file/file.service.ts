@@ -57,7 +57,7 @@ export class FileService {
         const added_by = await this.usersRepository.getUserById(user.userId);
 
         // Define the folder path where the file will be saved
-        const downloadPath = process.env.DOWNLOAD_PATH || '/private';
+        const downloadPath = process.env['DOWNLOAD_PATH'] || '/private';
         const folderPath = join(downloadPath, project.added_by.id, escapeProjectId);
 
         // Create the folder path if it doesn't exist
@@ -141,7 +141,7 @@ export class FileService {
             for (const file of validFiles) {
                 const match = file.match(/(\d+)$/);
                 if (match) {
-                    const currentIdx = parseInt(match[1], 10);
+                    const currentIdx = parseInt(match[1]!, 10);
                     if (currentIdx !== index) {
                         console.log(`Missing chunk at index ${index} in file: ${file}`);
                     }
@@ -162,7 +162,7 @@ export class FileService {
                 });
 
                 try {
-                    const fileContent = fs.readFileSync(join(folderPath, validFiles[i]));
+                    const fileContent = fs.readFileSync(join(folderPath, validFiles[i]!));
                     finalFileStream.write(fileContent);
                 } catch {
                     console.error(`Error reading file ${validFiles[i]}`);
@@ -171,7 +171,7 @@ export class FileService {
                 // Remove the temp file after its content has been written to the final file
                 if (validFiles[i] !== escapedFileName) {
                     try {
-                        fs.unlinkSync(join(folderPath, validFiles[i]));
+                        fs.unlinkSync(join(folderPath, validFiles[i]!));
                     } catch {
                         console.error(`Error deleting temp file ${validFiles[i]}`);
                     }
@@ -236,7 +236,7 @@ export class FileService {
         const file = await this.fileRepository.getById(file_id, added_by);
 
         // Define the file path
-        const downloadPath = process.env.DOWNLOAD_PATH || '/private';
+        const downloadPath = process.env['DOWNLOAD_PATH'] || '/private';
         const filePath = join(downloadPath, project.added_by.id, escapeProjectId, file.name);
 
         // Delete the file from the file system if it exists

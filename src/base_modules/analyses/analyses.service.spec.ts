@@ -236,7 +236,7 @@ describe('AnalysesService', () => {
         // Reset mocks
         jest.clearAllMocks();
         (amqp.connect as jest.Mock).mockResolvedValue(mockConnection);
-        process.env.AMQP_PASSWORD = 'password';
+        process.env['AMQP_PASSWORD'] = 'password';
     });
 
     describe('create', () => {

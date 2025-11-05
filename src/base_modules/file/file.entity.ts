@@ -9,30 +9,30 @@ export class File {
     @PrimaryGeneratedColumn('uuid')
     @ApiProperty()
     @Expose()
-    id: string;
+    id!: string;
 
     @Column('timestamptz')
     @ApiProperty()
     @Expose()
-    added_on: Date;
+    added_on!: Date;
 
     @Column()
     @ApiProperty()
     @Expose()
-    type: string;
+    type!: string;
 
     @Column()
     @ApiProperty()
     @Expose()
-    name: string;
+    name!: string;
 
     @ManyToOne('Project', 'files')
     @ApiProperty()
     @Expose()
-    project: Relation<Project>;
+    project!: Relation<Project>;
 
     @ManyToOne('User', 'files_imported')
     @ApiProperty()
     @Expose()
-    added_by: Relation<User>;
+    added_by!: Relation<User>;
 }

@@ -77,7 +77,7 @@ export class VulnerabilitiesUtilsService {
             throw new UnknownWorkspace();
         }
 
-        let vulnerabilities = findings.workspaces[workspace].Vulnerabilities ?? [];
+        let vulnerabilities = findings.workspaces[workspace]!.Vulnerabilities ?? [];
 
         // Apply ecosystem filter if specified
         if (ecosystem_filter) {

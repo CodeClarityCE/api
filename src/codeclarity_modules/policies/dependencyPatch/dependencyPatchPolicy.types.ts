@@ -30,27 +30,27 @@ export enum PartialFixVersionSelection {
 export class DependencyPatchPolicy {
     @ApiProperty()
     @Expose()
-    name: string;
+    name!: string;
 
     @ApiProperty()
     @Expose()
-    description: string;
+    description!: string;
 
     @ApiProperty()
     @Expose()
-    allow_downgrade: boolean;
+    allow_downgrade!: boolean;
 
     @ApiProperty()
     @Expose()
-    full_fix_version_selection_preference: string;
+    full_fix_version_selection_preference!: string;
 
     @ApiProperty()
     @Expose()
-    partial_fix_version_selection_preference: string;
+    partial_fix_version_selection_preference!: string;
 
     @ApiProperty()
     @Expose()
-    default: boolean;
+    default!: boolean;
 
     // @ApiProperty()
     // @Expose()
@@ -60,15 +60,15 @@ export class DependencyPatchPolicy {
     @ApiProperty()
     @Expose()
     @Type(() => Date)
-    created_on: Date;
+    created_on!: Date;
 
     @ApiProperty()
     @Expose()
-    organization_id: string;
+    organization_id!: string;
 
     @ApiProperty()
     @Expose()
-    policy_type: PolicyType;
+    policy_type!: PolicyType;
 }
 
 /********************************************/
@@ -78,25 +78,25 @@ export class DependencyPatchPolicy {
 export class DependencyPatchPolicyCreateBody {
     @IsNotEmpty()
     @Length(5, 50)
-    name: string;
+    name!: string;
 
     @IsString()
     @Length(10, 250)
-    description: string;
+    description!: string;
 
     @IsBoolean()
-    allow_downgrade: boolean;
+    allow_downgrade!: boolean;
 
     @IsNotEmpty()
     @IsEnum(FullFixVersionSelection)
-    full_fix_version_selection_preference: FullFixVersionSelection;
+    full_fix_version_selection_preference!: FullFixVersionSelection;
 
     @IsNotEmpty()
     @IsEnum(PartialFixVersionSelection)
-    partial_fix_version_selection_preference: PartialFixVersionSelection;
+    partial_fix_version_selection_preference!: PartialFixVersionSelection;
 
     @IsBoolean()
-    default: boolean;
+    default!: boolean;
 }
 
 /********************************************/

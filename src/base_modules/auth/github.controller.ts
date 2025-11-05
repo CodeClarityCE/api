@@ -182,7 +182,7 @@ export class GithubAuthController {
             }
 
             if (emails.length > 0) {
-                return emails[0].email;
+                return emails[0]!.email;
             }
 
             throw new Error('No email');

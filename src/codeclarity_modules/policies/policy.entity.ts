@@ -20,32 +20,32 @@ export enum PolicyType {
 @Entity()
 export class Policy {
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @Column()
-    name: string;
+    name!: string;
 
     @Column()
-    description: string;
+    description!: string;
 
     @Column('jsonb')
-    content: string[];
+    content!: string[];
 
     @Column()
-    policy_type: PolicyType;
+    policy_type!: PolicyType;
 
     @Column()
-    default: boolean;
+    default!: boolean;
 
     @Column('timestamptz')
-    created_on: Date;
+    created_on!: Date;
 
     // Foreign keys
     @ManyToMany(() => Organization, (organization) => organization.policies)
-    organizations: Relation<Organization[]>;
+    organizations!: Relation<Organization[]>;
 
     @ManyToOne(() => User, (user) => user.policies)
-    created_by: Relation<User>;
+    created_by!: Relation<User>;
 
     @ManyToMany(() => Analysis, (analysis) => analysis.policies)
     @JoinTable()

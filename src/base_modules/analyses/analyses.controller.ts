@@ -65,8 +65,8 @@ export class AnalysesController {
         @AuthUser() user: AuthenticatedUser,
         @Param('org_id') org_id: string,
         @Param('project_id') project_id: string,
-        @Query('page', new DefaultValuePipe(0), ParseIntPipe) page?: number,
-        @Query('entries_per_page', new DefaultValuePipe(0), ParseIntPipe) entries_per_page?: number
+        @Query('page', new DefaultValuePipe(0), ParseIntPipe) page: number = 0,
+        @Query('entries_per_page', new DefaultValuePipe(0), ParseIntPipe) entries_per_page: number = 0
     ): Promise<TypedPaginatedResponse<Analysis>> {
         return await this.analysesService.getMany(
             org_id,

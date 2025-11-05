@@ -97,7 +97,7 @@ async function bootstrap() {
     });
 
     // Start listening on the specified port and host
-    await app.listen(process.env.PORT!, '0.0.0.0');
+    await app.listen(process.env['PORT']!, '0.0.0.0');
 }
 
 // Call the bootstrap function to start the application

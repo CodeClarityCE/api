@@ -55,7 +55,7 @@ export class AnalysesRepository {
             where: {
                 id: analysisId
             },
-            relations: relation
+            ...(relation ? { relations: relation } : {})
         });
         if (!analysis) {
             throw new EntityNotFound();
@@ -105,7 +105,7 @@ export class AnalysesRepository {
             where: {
                 project: { id: projectId }
             },
-            relations: relations
+            ...(relations ? { relations: relations } : {})
         });
     }
 

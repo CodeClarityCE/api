@@ -10,35 +10,35 @@ import { User } from 'src/base_modules/users/users.entity';
 
 export class OrganizationMetaData {
     @ApiProperty()
-    id: string;
+    id!: string;
     @ApiProperty()
-    created_on: Date;
+    created_on!: Date;
     @ApiProperty()
-    vcs_integrations_added: boolean;
+    vcs_integrations_added!: boolean;
     @ApiProperty()
-    integrations_added: boolean;
+    integrations_added!: boolean;
     @ApiProperty()
-    projects_added: boolean;
+    projects_added!: boolean;
     @ApiProperty()
-    analyses_started: boolean;
+    analyses_started!: boolean;
 }
 
 export class OrganizationInfoForInvitee {
     @ApiProperty()
     @Expose()
-    id: string;
+    id!: string;
     @ApiProperty()
     @Expose()
-    name: string;
+    name!: string;
     @ApiProperty()
     @Expose()
-    description: string;
+    description!: string;
     @ApiProperty()
     @Expose()
-    color_scheme: string;
+    color_scheme!: string;
     @ApiProperty()
     @Expose()
-    created_on: Date;
+    created_on!: Date;
     @ApiProperty({ required: false })
     @Expose()
     created_by?: Partial<User>;
@@ -47,13 +47,13 @@ export class OrganizationInfoForInvitee {
     invite_created_by?: Partial<User>;
     @ApiProperty()
     @Expose()
-    invite_created_on: Date;
+    invite_created_on!: Date;
     @ApiProperty()
     @Expose()
-    role: MemberRole;
+    role!: MemberRole;
     @ApiProperty()
     @Expose()
-    number_of_members: number;
+    number_of_members!: number;
 }
 
 /********************************************/
@@ -64,26 +64,26 @@ export class OrganizationCreateBody {
     @ApiProperty()
     @IsNotEmpty()
     @Length(1, 50)
-    name: string;
+    name!: string;
 
     @ApiProperty()
     @IsNotEmpty()
     @Length(1, 250)
-    description: string;
+    description!: string;
 
     @ApiProperty()
     @IsDefined()
-    color_scheme: string;
+    color_scheme!: string;
 }
 
 export class JoinOrgCreateBody {
     @ApiProperty()
     @IsNotEmpty()
-    token: string;
+    token!: string;
 
     @ApiProperty()
     @IsNotEmpty()
-    email_digest: string;
+    email_digest!: string;
 }
 
 /********************************************/

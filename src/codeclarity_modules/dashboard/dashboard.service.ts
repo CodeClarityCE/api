@@ -119,7 +119,7 @@ export class DashboardService {
                     // We only retrieve one result per project per week
                     if (!weekInfo.projects.find((p) => p === project.id.toString())) {
                         for (const workspace_name of Object.keys(res.workspaces)) {
-                            const workspace = res.workspaces[workspace_name];
+                            const workspace = res.workspaces[workspace_name]!;
                             workspace.Vulnerabilities.forEach((vuln) => {
                                 const severity = vuln.Severity.Severity;
 
@@ -186,7 +186,7 @@ export class DashboardService {
                     const res = result.result as unknown as VulnsOutput;
 
                     for (const workspace_name of Object.keys(res.workspaces)) {
-                        const workspace = res.workspaces[workspace_name];
+                        const workspace = res.workspaces[workspace_name]!;
                         workspace.Vulnerabilities.forEach((vuln) => {
                             const attack_vector = vuln.Severity.Vector;
 
@@ -257,7 +257,7 @@ export class DashboardService {
                     const res = result.result as unknown as VulnsOutput;
 
                     for (const workspace_name of Object.keys(res.workspaces)) {
-                        const workspace = res.workspaces[workspace_name];
+                        const workspace = res.workspaces[workspace_name]!;
                         workspace.Vulnerabilities.forEach((vuln) => {
                             ciaImpacts.push({
                                 cia: 'Confidentiality',
@@ -326,11 +326,11 @@ export class DashboardService {
                 analysis.results.forEach((result) => {
                     const res = result.result as unknown as SbomOutput;
 
-                    for (const key of Object.keys(res.analysis_info.stats.license_dist)) {
+                    for (const key of Object.keys(res.analysis_info.stats['license_dist'])) {
                         if (licenses[key]) {
-                            licenses[key] += res.analysis_info.stats.license_dist[key];
+                            licenses[key] += res.analysis_info.stats['license_dist'][key];
                         } else {
-                            licenses[key] = res.analysis_info.stats.license_dist[key];
+                            licenses[key] = res.analysis_info.stats['license_dist'][key];
                         }
                     }
                 });
@@ -392,7 +392,7 @@ export class DashboardService {
                     const res = result.result as unknown as VulnsOutput;
 
                     for (const workspace_name of Object.keys(res.workspaces)) {
-                        const workspace = res.workspaces[workspace_name];
+                        const workspace = res.workspaces[workspace_name]!;
                         workspace.Vulnerabilities.forEach((vuln) => {
                             vulns.vulns[vuln.VulnerabilityId] = {
                                 severity: vuln.Severity.Severity,
@@ -409,13 +409,13 @@ export class DashboardService {
         for (const vuln of Object.values(vulns.vulns)) {
             if (vuln.severity >= 7) {
                 vuln.severity_class = 'CRITICAL';
-                vulns.severity_count[0].count++;
+                vulns.severity_count[0]!.count++;
             } else if (vuln.severity >= 4) {
                 vuln.severity_class = 'HIGH';
-                vulns.severity_count[1].count++;
+                vulns.severity_count[1]!.count++;
             } else if (vuln.severity >= 2) {
                 vuln.severity_class = 'MEDIUM';
-                vulns.severity_count[2].count++;
+                vulns.severity_count[2]!.count++;
             }
         }
 
@@ -481,16 +481,17 @@ export class DashboardService {
                     const res = result.result as unknown as VulnsOutput;
 
                     for (const workspace_name of Object.keys(res.workspaces)) {
-                        const workspace = res.workspaces[workspace_name];
-                        workspace.Vulnerabilities.forEach((vuln) => {
+                        const workspace = res.workspaces[workspace_name]!;
+                        workspace.Vulnerabilities.forEach((_vuln) => {
                             // const _severity = vuln.Severity.Severity;
                             // const _cia = vuln.Severity.ConfidentialityImpact;
                             // const _impact = vuln.Severity.Impact;
-                            const _cwe = vuln.VulnerabilityId;
+                            // const _cwe = vuln.VulnerabilityId;
 
                             throw new Error('Not implemented');
 
-                            if (_cwe == 'DEPRECATED') quickStats.nmb_deprecated++;
+                            // TODO: implement this feature
+                            // if (_cwe == 'DEPRECATED') quickStats.nmb_deprecated++;
                         });
                     }
                 });
@@ -608,31 +609,5 @@ export class DashboardService {
             matching_count: 2,
             filter_count: {}
         };
-    }
-
-    /**
-     * Returns the class of a project's grade
-     * @param score The project's numerical grade score
-     * @returns The discrete score class (A+,A,B+,B,C+,C,D+,D)
-     */
-    private getProjectScoreClassFromScore(_score: number): ProjectGradeClass {
-        if (_score <= 1.0 && _score >= 0.85) {
-            return ProjectGradeClass.D;
-        } else if (_score < 0.85 && _score >= 0.7) {
-            return ProjectGradeClass.D_PLUS;
-        } else if (_score < 0.7 && _score >= 0.55) {
-            return ProjectGradeClass.C;
-        } else if (_score < 0.55 && _score >= 0.4) {
-            return ProjectGradeClass.C_PLUS;
-        } else if (_score < 0.4 && _score >= 0.25) {
-            return ProjectGradeClass.B;
-        } else if (_score < 0.25 && _score >= 0.1) {
-            return ProjectGradeClass.B_PLUS;
-        } else if (_score < 0.1 && _score > 0) {
-            return ProjectGradeClass.A;
-        } else if (_score == 0) {
-            return ProjectGradeClass.A_PLUS;
-        }
-        return ProjectGradeClass.D;
     }
 }

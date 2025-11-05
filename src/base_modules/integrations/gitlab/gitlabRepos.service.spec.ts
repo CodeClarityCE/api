@@ -47,8 +47,6 @@ describe('GitlabRepositoriesService', () => {
         integration_type: IntegrationType.VCS,
         integration_provider: IntegrationProvider.GITLAB,
         access_token: 'glpat-test-token',
-        refresh_token: undefined,
-        expiry_date: undefined,
         invalid: false,
         added_on: new Date(),
         service_domain: 'https://gitlab.com',

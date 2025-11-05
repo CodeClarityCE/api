@@ -10,16 +10,16 @@ export class APIError extends Error {
     static statusCode: number;
 
     @ApiProperty()
-    status_code: number;
+    status_code!: number;
 
     @ApiProperty()
-    status: Status;
+    status!: Status;
 
     @ApiProperty()
-    error_code: string;
+    error_code!: string;
 
     @ApiProperty()
-    error_message: string;
+    error_message!: string;
 
     errorCause?: unknown;
 
@@ -104,8 +104,8 @@ export const errorMessages: { [key: string]: string } = {
 export class PublicAPIError extends APIError {}
 
 export class PrivateAPIError extends APIError {
-    loggingErrorCode: string;
-    loggingErrorMessage: string;
+    loggingErrorCode!: string;
+    loggingErrorMessage!: string;
 
     constructor(
         errorCode: string,
@@ -122,7 +122,7 @@ export class PrivateAPIError extends APIError {
 }
 
 export class ValidationFailed extends PublicAPIError {
-    validationErrors: any[];
+    validationErrors!: any[];
     constructor(errors: ValidationError[], cause?: unknown) {
         super('ValidationFailed', 'Malformed request', 400, cause);
         this.validationErrors = [];
@@ -139,7 +139,7 @@ export class ValidationFailed extends PublicAPIError {
 
 export class NotAuthenticated extends PublicAPIError {
     static errorCode = 'NotAuthenticated';
-    static errorMessage = errorMessages[NotAuthenticated.errorCode];
+    static errorMessage = errorMessages[NotAuthenticated.errorCode]!;
     static statusCode = 401;
     constructor(cause?: unknown) {
         super(
@@ -153,7 +153,7 @@ export class NotAuthenticated extends PublicAPIError {
 
 export class NotAuthorized extends PublicAPIError {
     static errorCode = 'NotAuthorized';
-    static errorMessage = errorMessages[NotAuthorized.errorCode];
+    static errorMessage = errorMessages[NotAuthorized.errorCode]!;
     static statusCode = 403;
     constructor(cause?: unknown) {
         super(NotAuthorized.errorCode, NotAuthorized.errorMessage, NotAuthorized.statusCode, cause);
@@ -162,7 +162,7 @@ export class NotAuthorized extends PublicAPIError {
 
 export class Unsupported extends PublicAPIError {
     static errorCode = 'Unsupported';
-    static errorMessage = errorMessages[Unsupported.errorCode];
+    static errorMessage = errorMessages[Unsupported.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(Unsupported.errorCode, Unsupported.errorMessage, Unsupported.statusCode, cause);
@@ -171,7 +171,7 @@ export class Unsupported extends PublicAPIError {
 
 export class UnknownWorkspace extends PublicAPIError {
     static errorCode = 'UnknownWorkspace';
-    static errorMessage = errorMessages[UnknownWorkspace.errorCode];
+    static errorMessage = errorMessages[UnknownWorkspace.errorCode]!;
     static statusCode = 404;
     constructor(cause?: unknown) {
         super(
@@ -185,7 +185,7 @@ export class UnknownWorkspace extends PublicAPIError {
 
 export class PluginFailed extends PublicAPIError {
     static errorCode = 'PluginResultFailed';
-    static errorMessage = errorMessages[PluginFailed.errorCode];
+    static errorMessage = errorMessages[PluginFailed.errorCode]!;
     static statusCode = 500;
     constructor(cause?: unknown) {
         super(PluginFailed.errorCode, PluginFailed.errorMessage, PluginFailed.statusCode, cause);
@@ -194,7 +194,7 @@ export class PluginFailed extends PublicAPIError {
 
 export class PluginResultNotAvailable extends PublicAPIError {
     static errorCode = 'PluginResultNotAvailable';
-    static errorMessage = errorMessages[PluginResultNotAvailable.errorCode];
+    static errorMessage = errorMessages[PluginResultNotAvailable.errorCode]!;
     static statusCode = 500;
     constructor(cause?: unknown) {
         super(
@@ -208,7 +208,7 @@ export class PluginResultNotAvailable extends PublicAPIError {
 
 export class CannotRemoveDefaultPolicy extends PublicAPIError {
     static errorCode = 'CannotRemoveDefaultPolicy';
-    static errorMessage = errorMessages[CannotRemoveDefaultPolicy.errorCode];
+    static errorMessage = errorMessages[CannotRemoveDefaultPolicy.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -222,7 +222,7 @@ export class CannotRemoveDefaultPolicy extends PublicAPIError {
 
 export class CannotUnDefaultDefaultPolicy extends PublicAPIError {
     static errorCode = 'CannotUnDefaultDefaultPolicy';
-    static errorMessage = errorMessages[CannotUnDefaultDefaultPolicy.errorCode];
+    static errorMessage = errorMessages[CannotUnDefaultDefaultPolicy.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -236,7 +236,7 @@ export class CannotUnDefaultDefaultPolicy extends PublicAPIError {
 
 export class RepositoryCannotBeFound extends PublicAPIError {
     static errorCode = 'RepositoryCannotBeFound';
-    static errorMessage = errorMessages[RepositoryCannotBeFound.errorCode];
+    static errorMessage = errorMessages[RepositoryCannotBeFound.errorCode]!;
     static statusCode = 404;
     constructor(cause?: unknown) {
         super(
@@ -250,7 +250,7 @@ export class RepositoryCannotBeFound extends PublicAPIError {
 
 export class IntegrationNotSupported extends PublicAPIError {
     static errorCode = 'IntegrationNotSupported';
-    static errorMessage = errorMessages[IntegrationNotSupported.errorCode];
+    static errorMessage = errorMessages[IntegrationNotSupported.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -264,7 +264,7 @@ export class IntegrationNotSupported extends PublicAPIError {
 
 export class IntegrationDoesNotExist extends PublicAPIError {
     static errorCode = 'IntegrationDoesNotExist';
-    static errorMessage = errorMessages[IntegrationDoesNotExist.errorCode];
+    static errorMessage = errorMessages[IntegrationDoesNotExist.errorCode]!;
     static statusCode = 404;
     constructor(cause?: unknown) {
         super(
@@ -278,7 +278,7 @@ export class IntegrationDoesNotExist extends PublicAPIError {
 
 export class IntegrationTokenExpired extends PublicAPIError {
     static errorCode = 'IntegrationTokenExpired';
-    static errorMessage = errorMessages[IntegrationTokenExpired.errorCode];
+    static errorMessage = errorMessages[IntegrationTokenExpired.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -292,7 +292,7 @@ export class IntegrationTokenExpired extends PublicAPIError {
 
 export class IntegrationTokenRefreshFailed extends PublicAPIError {
     static errorCode = 'IntegrationTokenRefreshFailed';
-    static errorMessage = errorMessages[IntegrationTokenRefreshFailed.errorCode];
+    static errorMessage = errorMessages[IntegrationTokenRefreshFailed.errorCode]!;
     static statusCode = 500;
     constructor(cause?: unknown) {
         super(
@@ -306,7 +306,7 @@ export class IntegrationTokenRefreshFailed extends PublicAPIError {
 
 export class DuplicateIntegration extends PublicAPIError {
     static errorCode = 'DuplicateIntegration';
-    static errorMessage = errorMessages[DuplicateIntegration.errorCode];
+    static errorMessage = errorMessages[DuplicateIntegration.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -320,7 +320,7 @@ export class DuplicateIntegration extends PublicAPIError {
 
 export class ProjectDoesNotExist extends PublicAPIError {
     static errorCode = 'ProjectDoesNotExist';
-    static errorMessage = errorMessages[ProjectDoesNotExist.errorCode];
+    static errorMessage = errorMessages[ProjectDoesNotExist.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -334,7 +334,7 @@ export class ProjectDoesNotExist extends PublicAPIError {
 
 export class IntegrationWrongTokenType extends PublicAPIError {
     static errorCode = 'IntegrationWrongTokenType';
-    static errorMessage = errorMessages[IntegrationWrongTokenType.errorCode];
+    static errorMessage = errorMessages[IntegrationWrongTokenType.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -348,7 +348,7 @@ export class IntegrationWrongTokenType extends PublicAPIError {
 
 export class FailedToRetrieveReposFromProvider extends PublicAPIError {
     static errorCode = 'FailedToRetrieveReposFromProvider';
-    static errorMessage = errorMessages[FailedToRetrieveReposFromProvider.errorCode];
+    static errorMessage = errorMessages[FailedToRetrieveReposFromProvider.errorCode]!;
     static statusCode = 500;
     constructor(cause?: unknown) {
         super(
@@ -362,7 +362,7 @@ export class FailedToRetrieveReposFromProvider extends PublicAPIError {
 
 export class IntegrationTokenRetrievalFailed extends PublicAPIError {
     static errorCode = 'IntegrationTokenRetrievalFailed';
-    static errorMessage = errorMessages[IntegrationTokenRetrievalFailed.errorCode];
+    static errorMessage = errorMessages[IntegrationTokenRetrievalFailed.errorCode]!;
     static statusCode = 500;
     constructor(cause?: unknown) {
         super(
@@ -376,7 +376,7 @@ export class IntegrationTokenRetrievalFailed extends PublicAPIError {
 
 export class IntegrationInvalidToken extends PublicAPIError {
     static errorCode = 'IntegrationInvalidToken';
-    static errorMessage = errorMessages[IntegrationInvalidToken.errorCode];
+    static errorMessage = errorMessages[IntegrationInvalidToken.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -390,7 +390,7 @@ export class IntegrationInvalidToken extends PublicAPIError {
 
 export class AccountNotActivated extends PublicAPIError {
     static errorCode = 'AccountNotActivated';
-    static errorMessage = errorMessages[AccountNotActivated.errorCode];
+    static errorMessage = errorMessages[AccountNotActivated.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -404,7 +404,7 @@ export class AccountNotActivated extends PublicAPIError {
 
 export class SocialConnectionTypeNotSupported extends PublicAPIError {
     static errorCode = 'SocialConnectionTypeNotSupported';
-    static errorMessage = errorMessages[SocialConnectionTypeNotSupported.errorCode];
+    static errorMessage = errorMessages[SocialConnectionTypeNotSupported.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -418,7 +418,7 @@ export class SocialConnectionTypeNotSupported extends PublicAPIError {
 
 export class PersonalOrgCannotBeModified extends PublicAPIError {
     static errorCode = 'PersonalOrgCannotBeModified';
-    static errorMessage = errorMessages[PersonalOrgCannotBeModified.errorCode];
+    static errorMessage = errorMessages[PersonalOrgCannotBeModified.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -432,7 +432,7 @@ export class PersonalOrgCannotBeModified extends PublicAPIError {
 
 export class FailedToCreateApiKey extends PublicAPIError {
     static errorCode = 'FailedToCreateApiKey';
-    static errorMessage = errorMessages[FailedToCreateApiKey.errorCode];
+    static errorMessage = errorMessages[FailedToCreateApiKey.errorCode]!;
     static statusCode = 500;
     constructor(cause?: unknown) {
         super(
@@ -446,7 +446,7 @@ export class FailedToCreateApiKey extends PublicAPIError {
 
 export class FailedToAuthenticateSocialAccount extends PublicAPIError {
     static errorCode = 'FailedToCreateSocialAccount';
-    static errorMessage = errorMessages[FailedToAuthenticateSocialAccount.errorCode];
+    static errorMessage = errorMessages[FailedToAuthenticateSocialAccount.errorCode]!;
     static statusCode = 500;
     constructor(cause?: unknown) {
         super(
@@ -460,7 +460,7 @@ export class FailedToAuthenticateSocialAccount extends PublicAPIError {
 
 export class InvitationExpired extends PublicAPIError {
     static errorCode = 'InvitationExpired';
-    static errorMessage = errorMessages[InvitationExpired.errorCode];
+    static errorMessage = errorMessages[InvitationExpired.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -474,7 +474,7 @@ export class InvitationExpired extends PublicAPIError {
 
 export class EmailAlreadyExists extends PublicAPIError {
     static errorCode = 'EmailAlreadyExists';
-    static errorMessage = errorMessages[EmailAlreadyExists.errorCode];
+    static errorMessage = errorMessages[EmailAlreadyExists.errorCode]!;
     static statusCode = 409;
     constructor(cause?: unknown) {
         super(
@@ -488,7 +488,7 @@ export class EmailAlreadyExists extends PublicAPIError {
 
 export class AlreadyExists extends PublicAPIError {
     static errorCode = 'AlreadyExists';
-    static errorMessage = errorMessages[AlreadyExists.errorCode];
+    static errorMessage = errorMessages[AlreadyExists.errorCode]!;
     static statusCode = 409;
     constructor(cause?: unknown) {
         super(AlreadyExists.errorCode, AlreadyExists.errorMessage, AlreadyExists.statusCode, cause);
@@ -497,7 +497,7 @@ export class AlreadyExists extends PublicAPIError {
 
 export class UserDoesNotExist extends PublicAPIError {
     static errorCode = 'UserDoesNotExist';
-    static errorMessage = errorMessages[UserDoesNotExist.errorCode];
+    static errorMessage = errorMessages[UserDoesNotExist.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -511,7 +511,7 @@ export class UserDoesNotExist extends PublicAPIError {
 
 export class UnsubscriptionTokenInvalidOrExpired extends PublicAPIError {
     static errorCode = 'UnsubscriptionTokenInvalidOrExpired';
-    static errorMessage = errorMessages[UnsubscriptionTokenInvalidOrExpired.errorCode];
+    static errorMessage = errorMessages[UnsubscriptionTokenInvalidOrExpired.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -525,7 +525,7 @@ export class UnsubscriptionTokenInvalidOrExpired extends PublicAPIError {
 
 export class NotAMember extends PublicAPIError {
     static errorCode = 'NotAMember';
-    static errorMessage = errorMessages[NotAMember.errorCode];
+    static errorMessage = errorMessages[NotAMember.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(NotAMember.errorCode, NotAMember.errorMessage, NotAMember.statusCode, cause);
@@ -534,7 +534,7 @@ export class NotAMember extends PublicAPIError {
 
 export class CannotLeaveAsOwner extends PublicAPIError {
     static errorCode = 'CannotLeaveAsLastOwner';
-    static errorMessage = errorMessages[CannotLeaveAsOwner.errorCode];
+    static errorMessage = errorMessages[CannotLeaveAsOwner.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -548,7 +548,7 @@ export class CannotLeaveAsOwner extends PublicAPIError {
 
 export class CannotRevokeOwnMembership extends PublicAPIError {
     static errorCode = 'CannotRevokeOwnMembership';
-    static errorMessage = errorMessages[CannotRevokeOwnMembership.errorCode];
+    static errorMessage = errorMessages[CannotRevokeOwnMembership.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -562,7 +562,7 @@ export class CannotRevokeOwnMembership extends PublicAPIError {
 
 export class InvitationInvalidOrExpired extends PublicAPIError {
     static errorCode = 'InvitationInvalidOrExpired';
-    static errorMessage = errorMessages[InvitationInvalidOrExpired.errorCode];
+    static errorMessage = errorMessages[InvitationInvalidOrExpired.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -576,7 +576,7 @@ export class InvitationInvalidOrExpired extends PublicAPIError {
 
 export class EntityNotFound extends PublicAPIError {
     static errorCode = 'EntityNotFound';
-    static errorMessage = errorMessages[EntityNotFound.errorCode];
+    static errorMessage = errorMessages[EntityNotFound.errorCode]!;
     static statusCode = 404;
     constructor(cause?: unknown) {
         super(
@@ -590,7 +590,7 @@ export class EntityNotFound extends PublicAPIError {
 
 export class IntegrationTokenMissingPermissions extends PublicAPIError {
     static errorCode = 'IntegrationIntegrationTokenMissingPermissions';
-    static errorMessage = errorMessages[IntegrationTokenMissingPermissions.errorCode];
+    static errorMessage = errorMessages[IntegrationTokenMissingPermissions.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -604,7 +604,7 @@ export class IntegrationTokenMissingPermissions extends PublicAPIError {
 
 export class FailedToSendPasswordResetEmail extends PublicAPIError {
     static errorCode = 'FailedToSendPasswordResetEmail';
-    static errorMessage = errorMessages[FailedToSendPasswordResetEmail.errorCode];
+    static errorMessage = errorMessages[FailedToSendPasswordResetEmail.errorCode]!;
     static statusCode = 500;
     constructor(cause?: unknown) {
         super(
@@ -618,7 +618,7 @@ export class FailedToSendPasswordResetEmail extends PublicAPIError {
 
 export class FailedToSendOrganizationInviteEmail extends PublicAPIError {
     static errorCode = 'FailedToSendOrganizationInviteEmail';
-    static errorMessage = errorMessages[FailedToSendOrganizationInviteEmail.errorCode];
+    static errorMessage = errorMessages[FailedToSendOrganizationInviteEmail.errorCode]!;
     static statusCode = 500;
     constructor(cause?: unknown) {
         super(

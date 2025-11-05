@@ -65,21 +65,21 @@ describe('filter', () => {
             const [filteredDeps] = filter(dependencies, 'LODASH', undefined);
 
             expect(filteredDeps).toHaveLength(1);
-            expect(filteredDeps[0].name).toBe('lodash');
+            expect(filteredDeps[0]!.name).toBe('lodash');
         });
 
         it('should filter by partial package name match', () => {
             const [filteredDeps] = filter(dependencies, 'exp', undefined);
 
             expect(filteredDeps).toHaveLength(1);
-            expect(filteredDeps[0].name).toBe('express');
+            expect(filteredDeps[0]!.name).toBe('express');
         });
 
         it('should filter by version (case insensitive)', () => {
             const [filteredDeps] = filter(dependencies, '4.17', undefined);
 
             expect(filteredDeps).toHaveLength(1);
-            expect(filteredDeps[0].name).toBe('lodash');
+            expect(filteredDeps[0]!.name).toBe('lodash');
         });
 
         it('should filter by partial version match', () => {
@@ -116,7 +116,7 @@ describe('filter', () => {
             const [filteredDeps] = filter(depsWithNull, 'valid', undefined);
 
             expect(filteredDeps).toHaveLength(1);
-            expect(filteredDeps[0].name).toBe('valid-package');
+            expect(filteredDeps[0]!.name).toBe('valid-package');
         });
 
         it('should handle null dependency version', () => {
@@ -128,7 +128,7 @@ describe('filter', () => {
             const [filteredDeps] = filter(depsWithNull, '1.0', undefined);
 
             expect(filteredDeps).toHaveLength(1);
-            expect(filteredDeps[0].version).toBe('1.0.0');
+            expect(filteredDeps[0]!.version).toBe('1.0.0');
         });
 
         it('should handle special characters in search key', () => {
@@ -140,7 +140,7 @@ describe('filter', () => {
             const [filteredDeps] = filter(depsWithSpecialChars, '@scope', undefined);
 
             expect(filteredDeps).toHaveLength(1);
-            expect(filteredDeps[0].name).toBe('@scope/package-name');
+            expect(filteredDeps[0]!.name).toBe('@scope/package-name');
         });
     });
 
@@ -256,7 +256,7 @@ describe('filter', () => {
             const [filteredDeps] = filter(dependencies, 'lodash', ['user_installed']);
 
             expect(filteredDeps).toHaveLength(1);
-            expect(filteredDeps[0].name).toBe('lodash');
+            expect(filteredDeps[0]!.name).toBe('lodash');
         });
     });
 

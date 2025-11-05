@@ -7,7 +7,7 @@ export const errorMessages: { [key: string]: string } = {
 };
 export class AnalyzerDoesNotExist extends PublicAPIError {
     static errorCode = 'AnalyzerDoesNotExist';
-    static errorMessage = errorMessages[AnalyzerDoesNotExist.errorCode];
+    static errorMessage = errorMessages[AnalyzerDoesNotExist.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(
@@ -21,7 +21,7 @@ export class AnalyzerDoesNotExist extends PublicAPIError {
 
 export class AnaylzerMissingConfigAttribute extends PublicAPIError {
     static errorCode = 'AnaylzerMissingConfigAttribute';
-    static errorMessage = errorMessages[AnaylzerMissingConfigAttribute.errorCode];
+    static errorMessage = errorMessages[AnaylzerMissingConfigAttribute.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(

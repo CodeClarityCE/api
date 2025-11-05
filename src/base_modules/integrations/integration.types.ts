@@ -23,14 +23,14 @@ export enum IntegrationProvider {
 export abstract class AccessTokenBasedIntegration<_Type> {
     @ApiProperty()
     @Expose()
-    integration_type: IntegrationType;
+    integration_type!: IntegrationType;
 
     @ApiProperty()
     @Expose()
-    integration_provider: IntegrationProvider;
+    integration_provider!: IntegrationProvider;
 
     @Exclude({ toPlainOnly: true })
-    access_token: string;
+    access_token!: string;
 
     @Exclude({ toPlainOnly: true })
     refresh_token?: string;
@@ -42,47 +42,47 @@ export abstract class AccessTokenBasedIntegration<_Type> {
 
     @ApiProperty()
     @Expose()
-    invalid: boolean;
+    invalid!: boolean;
 
     @ApiProperty()
     @Expose()
-    service_domain: string;
+    service_domain!: string;
 
     @ApiProperty()
     @Type(() => Date)
     @Expose()
-    added_on: Date;
+    added_on!: Date;
 
     @ApiProperty()
     @Expose()
-    added_by: string;
+    added_by!: string;
 }
 
 export class Integration {
     @ApiProperty()
     @Type(() => Date)
     @Expose()
-    added_on: Date;
+    added_on!: Date;
 
     @ApiProperty()
     @Expose()
-    added_by: string;
+    added_by!: string;
 
     @ApiProperty()
     @Expose()
-    service_domain: string;
+    service_domain!: string;
 
     @ApiProperty()
     @Expose()
-    integration_type: IntegrationType;
+    integration_type!: IntegrationType;
 
     @ApiProperty()
     @Expose()
-    integration_provider: IntegrationProvider;
+    integration_provider!: IntegrationProvider;
 
     @ApiProperty()
     @Expose()
-    invalid: boolean;
+    invalid!: boolean;
 
     @ApiProperty()
     @Expose()
@@ -90,7 +90,7 @@ export class Integration {
 
     @ApiProperty()
     @Expose()
-    organization_id: string;
+    organization_id!: string;
 }
 
 export class VCSIntegrationMetaData {
@@ -101,46 +101,46 @@ export class VCSIntegrationMetaData {
 
 export class VCSIntegration {
     @Exclude({ toPlainOnly: true })
-    meta_data: VCSIntegrationMetaData;
+    meta_data!: VCSIntegrationMetaData;
 }
 
 export class Repository {
     @ApiProperty()
     @Expose()
-    id: string;
+    id!: string;
 
     @ApiProperty()
     @Expose()
-    url: string;
+    url!: string;
 
     @ApiProperty()
     @Expose()
-    default_branch: string;
+    default_branch!: string;
 
     @ApiProperty()
     @Expose()
-    visibility: string;
+    visibility!: string;
 
     @ApiProperty()
     @Expose()
-    fully_qualified_name: string;
+    fully_qualified_name!: string;
 
     @ApiProperty()
     @Expose()
-    description: string;
+    description!: string;
 
     @ApiProperty()
     @Type(() => Date)
     @Expose()
-    created_at: Date;
+    created_at!: Date;
 
     @ApiProperty()
     @Expose()
-    imported_already: boolean;
+    imported_already!: boolean;
 
     @ApiProperty()
     @Expose()
-    integration_id: string;
+    integration_id!: string;
 }
 
 /********************************************/

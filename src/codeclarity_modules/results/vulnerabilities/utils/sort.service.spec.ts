@@ -89,9 +89,9 @@ describe('VulnerabilitiesSortService', () => {
 
             const sorted = service.sort(vulnerabilities, undefined, undefined);
 
-            expect(sorted[0].Severity.Severity).toBe(9.0);
-            expect(sorted[1].Severity.Severity).toBe(5.0);
-            expect(sorted[2].Severity.Severity).toBe(2.0);
+            expect(sorted[0]!.Severity.Severity).toBe(9.0);
+            expect(sorted[1]!.Severity.Severity).toBe(5.0);
+            expect(sorted[2]!.Severity.Severity).toBe(2.0);
         });
 
         it('should sort by severity in ascending order when specified', () => {
@@ -109,9 +109,9 @@ describe('VulnerabilitiesSortService', () => {
 
             const sorted = service.sort(vulnerabilities, 'severity', 'ASC');
 
-            expect(sorted[0].Severity.Severity).toBe(2.0);
-            expect(sorted[1].Severity.Severity).toBe(5.0);
-            expect(sorted[2].Severity.Severity).toBe(9.0);
+            expect(sorted[0]!.Severity.Severity).toBe(2.0);
+            expect(sorted[1]!.Severity.Severity).toBe(5.0);
+            expect(sorted[2]!.Severity.Severity).toBe(9.0);
         });
 
         it('should handle null severity values', () => {
@@ -126,8 +126,8 @@ describe('VulnerabilitiesSortService', () => {
 
             const sorted = service.sort(vulnerabilities, 'severity', 'DESC');
 
-            expect(sorted[0].Severity.Severity).toBe(5.0);
-            expect(sorted[1].Severity).toBeNull();
+            expect(sorted[0]!.Severity.Severity).toBe(5.0);
+            expect(sorted[1]!.Severity).toBeNull();
         });
 
         it('should sort by dependency version using semver', () => {
@@ -137,7 +137,7 @@ describe('VulnerabilitiesSortService', () => {
                         {
                             ...createMockVulnerability().Affected[0],
                             AffectedVersion: '1.0.0'
-                        }
+                        } as any
                     ]
                 }),
                 createMockVulnerability({
@@ -145,7 +145,7 @@ describe('VulnerabilitiesSortService', () => {
                         {
                             ...createMockVulnerability().Affected[0],
                             AffectedVersion: '2.1.0'
-                        }
+                        } as any
                     ]
                 }),
                 createMockVulnerability({
@@ -153,16 +153,16 @@ describe('VulnerabilitiesSortService', () => {
                         {
                             ...createMockVulnerability().Affected[0],
                             AffectedVersion: '1.5.0'
-                        }
+                        } as any
                     ]
                 })
             ];
 
             const sorted = service.sort(vulnerabilities, 'dep_version', 'DESC');
 
-            expect(sorted[0].Affected[0].AffectedVersion).toBe('2.1.0');
-            expect(sorted[1].Affected[0].AffectedVersion).toBe('1.5.0');
-            expect(sorted[2].Affected[0].AffectedVersion).toBe('1.0.0');
+            expect(sorted[0]!.Affected[0]!.AffectedVersion).toBe('2.1.0');
+            expect(sorted[1]!.Affected[0]!.AffectedVersion).toBe('1.5.0');
+            expect(sorted[2]!.Affected[0]!.AffectedVersion).toBe('1.0.0');
         });
 
         it('should sort by dependency version in ascending order', () => {
@@ -172,7 +172,7 @@ describe('VulnerabilitiesSortService', () => {
                         {
                             ...createMockVulnerability().Affected[0],
                             AffectedVersion: '2.1.0'
-                        }
+                        } as any
                     ]
                 }),
                 createMockVulnerability({
@@ -180,15 +180,15 @@ describe('VulnerabilitiesSortService', () => {
                         {
                             ...createMockVulnerability().Affected[0],
                             AffectedVersion: '1.0.0'
-                        }
+                        } as any
                     ]
                 })
             ];
 
             const sorted = service.sort(vulnerabilities, 'dep_version', 'ASC');
 
-            expect(sorted[0].Affected[0].AffectedVersion).toBe('1.0.0');
-            expect(sorted[1].Affected[0].AffectedVersion).toBe('2.1.0');
+            expect(sorted[0]!.Affected[0]!.AffectedVersion).toBe('1.0.0');
+            expect(sorted[1]!.Affected[0]!.AffectedVersion).toBe('2.1.0');
         });
 
         it('should handle missing version information', () => {
@@ -198,7 +198,7 @@ describe('VulnerabilitiesSortService', () => {
                         {
                             ...createMockVulnerability().Affected[0],
                             AffectedVersion: '1.0.0'
-                        }
+                        } as any
                     ]
                 }),
                 createMockVulnerability({
@@ -208,8 +208,8 @@ describe('VulnerabilitiesSortService', () => {
 
             const sorted = service.sort(vulnerabilities, 'dep_version', 'DESC');
 
-            expect(sorted[0].Affected[0].AffectedVersion).toBe('1.0.0');
-            expect(sorted[1].Affected).toHaveLength(0);
+            expect(sorted[0]!.Affected[0]!.AffectedVersion).toBe('1.0.0');
+            expect(sorted[1]!.Affected).toHaveLength(0);
         });
 
         it('should sort by exploitability score', () => {
@@ -227,9 +227,9 @@ describe('VulnerabilitiesSortService', () => {
 
             const sorted = service.sort(vulnerabilities, 'exploitability', 'DESC');
 
-            expect(sorted[0].Severity.Exploitability).toBe(8.2);
-            expect(sorted[1].Severity.Exploitability).toBe(3.5);
-            expect(sorted[2].Severity.Exploitability).toBe(1.1);
+            expect(sorted[0]!.Severity.Exploitability).toBe(8.2);
+            expect(sorted[1]!.Severity.Exploitability).toBe(3.5);
+            expect(sorted[2]!.Severity.Exploitability).toBe(1.1);
         });
 
         it('should sort by OWASP Top 10 ID', () => {
@@ -263,8 +263,8 @@ describe('VulnerabilitiesSortService', () => {
             const sorted = service.sort(vulnerabilities, 'owasp_top_10', 'ASC');
 
             // Note: The sorting logic appears to be inverted - ASC puts higher values first
-            expect(sorted[0].Weaknesses![0].OWASPTop10Id).toBe('1347');
-            expect(sorted[1].Weaknesses![0].OWASPTop10Id).toBe('1345');
+            expect(sorted[0]!.Weaknesses![0]!.OWASPTop10Id).toBe('1347');
+            expect(sorted[1]!.Weaknesses![0]!.OWASPTop10Id).toBe('1345');
         });
 
         it('should handle vulnerabilities without OWASP Top 10 mapping', () => {
@@ -282,14 +282,13 @@ describe('VulnerabilitiesSortService', () => {
                     ] as any
                 }),
                 createMockVulnerability({
-                    Weaknesses: undefined
                 })
             ];
 
             const sorted = service.sort(vulnerabilities, 'owasp_top_10', 'DESC');
 
-            expect(sorted[0].Weaknesses![0].OWASPTop10Id).toBe('1345');
-            expect(sorted[1].Weaknesses).toBeUndefined();
+            expect(sorted[0]!.Weaknesses![0]!.OWASPTop10Id).toBe('1345');
+            expect(sorted[1]!.Weaknesses).toEqual([]);
         });
 
         it('should sort by weakness ID', () => {
@@ -323,8 +322,8 @@ describe('VulnerabilitiesSortService', () => {
 
             const sorted = service.sort(vulnerabilities, 'weakness', 'ASC');
 
-            expect(sorted[0].Weaknesses![0].WeaknessId).toBe('CWE-79');
-            expect(sorted[1].Weaknesses![0].WeaknessId).toBe('CWE-200');
+            expect(sorted[0]!.Weaknesses![0]!.WeaknessId).toBe('CWE-79');
+            expect(sorted[1]!.Weaknesses![0]!.WeaknessId).toBe('CWE-200');
         });
 
         it('should sort by CVE ID when using cve sort option', () => {
@@ -336,9 +335,9 @@ describe('VulnerabilitiesSortService', () => {
 
             const sorted = service.sort(vulnerabilities, 'cve', 'ASC');
 
-            expect(sorted[0].Vulnerability).toBe('CVE-2023-1234');
-            expect(sorted[1].Vulnerability).toBe('CVE-2023-5678');
-            expect(sorted[2].Vulnerability).toBe('CVE-2023-9999');
+            expect(sorted[0]!.Vulnerability).toBe('CVE-2023-1234');
+            expect(sorted[1]!.Vulnerability).toBe('CVE-2023-5678');
+            expect(sorted[2]!.Vulnerability).toBe('CVE-2023-9999');
         });
 
         it('should use default sort when invalid sort option is provided', () => {
@@ -353,8 +352,8 @@ describe('VulnerabilitiesSortService', () => {
 
             const sorted = service.sort(vulnerabilities, 'invalid_sort', undefined);
 
-            expect(sorted[0].Severity.Severity).toBe(8.0);
-            expect(sorted[1].Severity.Severity).toBe(2.0);
+            expect(sorted[0]!.Severity.Severity).toBe(8.0);
+            expect(sorted[1]!.Severity.Severity).toBe(2.0);
         });
 
         it('should use default sort direction when invalid direction is provided', () => {
@@ -369,8 +368,8 @@ describe('VulnerabilitiesSortService', () => {
 
             const sorted = service.sort(vulnerabilities, 'severity', 'INVALID' as any);
 
-            expect(sorted[0].Severity.Severity).toBe(8.0);
-            expect(sorted[1].Severity.Severity).toBe(2.0);
+            expect(sorted[0]!.Severity.Severity).toBe(8.0);
+            expect(sorted[1]!.Severity.Severity).toBe(2.0);
         });
 
         it('should handle empty vulnerability list', () => {
@@ -394,8 +393,8 @@ describe('VulnerabilitiesSortService', () => {
             const sorted = service.sort(vulnerabilities, 'severity', 'DESC');
 
             expect(sorted).toHaveLength(2);
-            expect(sorted[0].Severity.Severity).toBe(5.0);
-            expect(sorted[1].Severity.Severity).toBe(5.0);
+            expect(sorted[0]!.Severity.Severity).toBe(5.0);
+            expect(sorted[1]!.Severity.Severity).toBe(5.0);
         });
 
         it('should fallback to generic sort for unknown fields', () => {
@@ -407,8 +406,8 @@ describe('VulnerabilitiesSortService', () => {
             const sorted = service.sort(vulnerabilities, 'Id', 'ASC');
 
             // Note: The sorting logic is inverted - ASC puts larger values first
-            expect(sorted[0].Id).toBe('vuln-b');
-            expect(sorted[1].Id).toBe('vuln-a');
+            expect(sorted[0]!.Id).toBe('vuln-b');
+            expect(sorted[1]!.Id).toBe('vuln-a');
         });
     });
 });

@@ -25,42 +25,42 @@ export class Organization {
     @ApiProperty()
     @Expose()
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @ApiProperty()
     @Expose()
     @Column({
         length: 100
     })
-    name: string;
+    name!: string;
 
     @ApiProperty()
     @Expose()
     @Column('text')
-    description: string;
+    description!: string;
 
     @ApiProperty()
     @Expose()
     @Column({
         length: 5
     })
-    color_scheme: string;
+    color_scheme!: string;
 
     @ApiProperty()
     @Expose()
     @Column('timestamptz')
-    created_on: Date;
+    created_on!: Date;
 
     @ApiProperty()
     @Expose()
     @Column()
-    personal: boolean;
+    personal!: boolean;
 
     // Foreign keys
     @ApiProperty()
     @Expose()
     @ManyToOne('User', 'organizations_created')
-    created_by: Relation<User>;
+    created_by!: Relation<User>;
 
     @OneToMany('Invitation', 'organization')
     invitations?: Relation<Invitation[]>;
@@ -68,14 +68,14 @@ export class Organization {
     @ApiProperty()
     @Expose()
     @OneToMany(() => OrganizationMemberships, (membership) => membership.organization)
-    organizationMemberships: Relation<OrganizationMemberships[]>;
+    organizationMemberships!: Relation<OrganizationMemberships[]>;
 
     @ManyToMany('User', 'ownerships')
     @JoinTable()
     owners?: Relation<User[]>;
 
     @OneToMany('User', 'default_org')
-    default: Relation<User[]>;
+    default!: Relation<User[]>;
 
     @ApiProperty()
     @Expose()
@@ -91,14 +91,14 @@ export class Organization {
     @Expose()
     @ManyToMany('Project', 'organizations')
     @JoinTable()
-    projects: Relation<Project[]>;
+    projects!: Relation<Project[]>;
 
     @OneToMany('Analyzer', 'organization')
-    analyzers: Relation<Analyzer[]>;
+    analyzers!: Relation<Analyzer[]>;
 
     @OneToMany('Analysis', 'organization')
-    analyses: Relation<Analysis[]>;
+    analyses!: Relation<Analysis[]>;
 
     @OneToMany('Log', 'organization')
-    logs: Relation<Log[]>;
+    logs!: Relation<Log[]>;
 }

@@ -177,12 +177,7 @@ describe('PluginsRepository', () => {
         it('should handle plugins with undefined fields', async () => {
             const pluginsWithUndefined: Plugin[] = [
                 {
-                    id: 'test-uuid',
-                    name: undefined,
-                    version: undefined,
-                    description: undefined,
-                    depends_on: undefined,
-                    config: undefined
+                    id: 'test-uuid'
                 }
             ];
             mockRepository.find.mockResolvedValue(pluginsWithUndefined);
@@ -190,8 +185,8 @@ describe('PluginsRepository', () => {
             const result = await pluginsRepository.getAll();
 
             expect(result).toEqual(pluginsWithUndefined);
-            expect(result[0].name).toBeUndefined();
-            expect(result[0].config).toBeUndefined();
+            expect(result[0]!.name).toBeUndefined();
+            expect(result[0]!.config).toBeUndefined();
         });
 
         it('should preserve plugin order from database', async () => {
@@ -201,8 +196,8 @@ describe('PluginsRepository', () => {
             const result = await pluginsRepository.getAll();
 
             expect(result).toEqual(orderedPlugins);
-            expect(result[0].id).toBe('test-uuid-789');
-            expect(result[2].id).toBe('test-uuid-123');
+            expect(result[0]!.id).toBe('test-uuid-789');
+            expect(result[2]!.id).toBe('test-uuid-123');
         });
     });
 

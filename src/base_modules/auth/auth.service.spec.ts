@@ -28,7 +28,6 @@ describe('AuthService', () => {
     let jwtService: JwtService;
     let usersService: UsersService;
     let usersRepository: UsersRepository;
-    let _gitlabTokenService: GitlabIntegrationTokenService;
 
     // Test data fixtures
     const mockUser = {
@@ -121,9 +120,6 @@ describe('AuthService', () => {
         jwtService = module.get<JwtService>(JwtService);
         usersService = module.get<UsersService>(UsersService);
         usersRepository = module.get<UsersRepository>(UsersRepository);
-        _gitlabTokenService = module.get<GitlabIntegrationTokenService>(
-            GitlabIntegrationTokenService
-        );
     });
 
     afterEach(() => {

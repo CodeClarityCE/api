@@ -79,7 +79,7 @@ const owaspData: { [key: string]: OwaspTop10Info } = {
 export class OWASPRepository {
     getOwaspTop10CategoryInfo(owasp_top_10_cwe_list_id: string): OwaspTop10Info | null {
         if (owasp_top_10_cwe_list_id in owaspData) {
-            return owaspData[owasp_top_10_cwe_list_id];
+            return owaspData[owasp_top_10_cwe_list_id]!;
         }
         throw new EntityNotFound();
     }

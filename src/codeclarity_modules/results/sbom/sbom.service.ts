@@ -55,7 +55,7 @@ export class SBOMService {
             ? this.sbomUtilsService.filterSbomByEcosystem(mergedSbom, ecosystem_filter)
             : mergedSbom;
 
-        const workspacesOutput = sbom.workspaces[workspace];
+        const workspacesOutput = sbom.workspaces[workspace]!;
         const dependencies = workspacesOutput.dependencies;
 
         // For previous stats comparison, we currently just use the same filtered data
@@ -254,13 +254,13 @@ export class SBOMService {
 
         const dependenciesArray: SbomDependency[] = [];
 
-        for (const [dep_key, dep] of Object.entries(sbom.workspaces[workspace].dependencies)) {
+        for (const [dep_key, dep] of Object.entries(sbom.workspaces[workspace]!.dependencies)) {
             for (const [version_key, version] of Object.entries(dep)) {
                 let is_direct = 0;
 
-                if (sbom.workspaces[workspace].start.dependencies) {
+                if (sbom.workspaces[workspace]!.start.dependencies) {
                     for (const [, dependency] of Object.entries(
-                        sbom.workspaces[workspace].start.dependencies
+                        sbom.workspaces[workspace]!.start.dependencies
                     )) {
                         if (dependency.name == dep_key && dependency.version == version_key) {
                             is_direct = 1;
@@ -268,9 +268,9 @@ export class SBOMService {
                         }
                     }
                 }
-                if (sbom.workspaces[workspace].start.dev_dependencies && is_direct == 0) {
+                if (sbom.workspaces[workspace]!.start.dev_dependencies && is_direct == 0) {
                     for (const [, dependency] of Object.entries(
-                        sbom.workspaces[workspace].start.dev_dependencies
+                        sbom.workspaces[workspace]!.start.dev_dependencies
                     )) {
                         if (dependency.name == dep_key && dependency.version == version_key) {
                             is_direct = 1;
@@ -427,15 +427,15 @@ export class SBOMService {
 
         const [dependencyName, dependencyVersion] = dependency.split('@');
 
-        if (dependencyName in mergedSbom.workspaces[workspace].dependencies) {
+        if (dependencyName && dependencyName in mergedSbom.workspaces[workspace]!.dependencies) {
             if (
-                dependencyVersion in mergedSbom.workspaces[workspace].dependencies[dependencyName]
+                dependencyVersion && dependencyVersion in mergedSbom.workspaces[workspace]!.dependencies[dependencyName]!
             ) {
                 return await this.sbomUtilsService.getDependencyData(
                     analysisId,
                     workspace,
-                    dependencyName,
-                    dependencyVersion,
+                    dependencyName!,
+                    dependencyVersion!,
                     mergedSbom
                 );
             }
@@ -468,7 +468,7 @@ export class SBOMService {
         }
 
         const dependenciesMap: { [depName: string]: { [version: string]: Dependency } } =
-            mergedSbom.workspaces[workspace].dependencies;
+            mergedSbom.workspaces[workspace]!.dependencies;
 
         // Check if dependencies exist in this workspace
         if (!dependenciesMap || Object.keys(dependenciesMap).length === 0) {

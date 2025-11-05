@@ -6,26 +6,26 @@ import { Expose } from 'class-transformer';
 @Entity()
 export class Result {
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @ApiProperty()
     @Expose()
     @Column('jsonb')
-    result: ResultObject;
+    result!: ResultObject;
 
     // Foreign keys
     @ManyToOne('Analysis', 'results')
-    analysis: Relation<Analysis>;
+    analysis!: Relation<Analysis>;
 
     @ApiProperty()
     @Expose()
     @Column()
-    plugin: string;
+    plugin!: string;
 
     @ApiProperty()
     @Expose()
     @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-    created_on: Date;
+    created_on!: Date;
 }
 
 export interface ResultByAnalysisId {

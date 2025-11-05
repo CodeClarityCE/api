@@ -52,7 +52,7 @@ const RAW_RUNTIME_STATE =
           ["@rushstack/eslint-patch", "npm:1.14.0"],\
           ["@types/amqplib", "npm:0.10.7"],\
           ["@types/bcrypt", "npm:6.0.0"],\
-          ["@types/cvss-parser", "file:cvss-parser-js/#cvss-parser-js/::hash=f8d264&locator=api%40workspace%3A."],\
+          ["@types/cvss-parser", "file:cvss-parser-js/#cvss-parser-js/::hash=3c9940&locator=api%40workspace%3A."],\
           ["@types/express", "npm:5.0.3"],\
           ["@types/jest", "npm:30.0.0"],\
           ["@types/jsonwebtoken", "npm:9.0.10"],\
@@ -71,7 +71,7 @@ const RAW_RUNTIME_STATE =
           ["bcrypt", "npm:6.0.0"],\
           ["class-transformer", "npm:0.5.1"],\
           ["class-validator", "npm:0.14.2"],\
-          ["cvss-parser", "file:cvss-parser-js/#cvss-parser-js/::hash=b9994f&locator=api%40workspace%3A."],\
+          ["cvss-parser", "file:cvss-parser-js/#cvss-parser-js/::hash=d7888d&locator=api%40workspace%3A."],\
           ["dotenv", "npm:17.2.3"],\
           ["eslint", "virtual:7473a2b7820d54bc9e09e43d07c4d6a37311d3c27cf8d3479124c02c830f39ea1edcd0240ea9cd8892e68b95c71dc40f3562d9221ee2fee4332c0f6b026a8253#npm:9.38.0"],\
           ["eslint-config-prettier", "virtual:7473a2b7820d54bc9e09e43d07c4d6a37311d3c27cf8d3479124c02c830f39ea1edcd0240ea9cd8892e68b95c71dc40f3562d9221ee2fee4332c0f6b026a8253#npm:10.1.8"],\
@@ -5093,10 +5093,10 @@ const RAW_RUNTIME_STATE =
       }]\
     ]],\
     ["@types/cvss-parser", [\
-      ["file:cvss-parser-js/#cvss-parser-js/::hash=f8d264&locator=api%40workspace%3A.", {\
-        "packageLocation": "./.yarn/cache/@types-cvss-parser-file-e543a46ee0-d697d75a28.zip/node_modules/@types/cvss-parser/",\
+      ["file:cvss-parser-js/#cvss-parser-js/::hash=3c9940&locator=api%40workspace%3A.", {\
+        "packageLocation": "./.yarn/cache/@types-cvss-parser-file-61cdfc92e9-4b6ccebcfa.zip/node_modules/@types/cvss-parser/",\
         "packageDependencies": [\
-          ["@types/cvss-parser", "file:cvss-parser-js/#cvss-parser-js/::hash=f8d264&locator=api%40workspace%3A."]\
+          ["@types/cvss-parser", "file:cvss-parser-js/#cvss-parser-js/::hash=3c9940&locator=api%40workspace%3A."]\
         ],\
         "linkType": "HARD"\
       }]\
@@ -6506,7 +6506,7 @@ const RAW_RUNTIME_STATE =
           ["@rushstack/eslint-patch", "npm:1.14.0"],\
           ["@types/amqplib", "npm:0.10.7"],\
           ["@types/bcrypt", "npm:6.0.0"],\
-          ["@types/cvss-parser", "file:cvss-parser-js/#cvss-parser-js/::hash=f8d264&locator=api%40workspace%3A."],\
+          ["@types/cvss-parser", "file:cvss-parser-js/#cvss-parser-js/::hash=3c9940&locator=api%40workspace%3A."],\
           ["@types/express", "npm:5.0.3"],\
           ["@types/jest", "npm:30.0.0"],\
           ["@types/jsonwebtoken", "npm:9.0.10"],\
@@ -6525,7 +6525,7 @@ const RAW_RUNTIME_STATE =
           ["bcrypt", "npm:6.0.0"],\
           ["class-transformer", "npm:0.5.1"],\
           ["class-validator", "npm:0.14.2"],\
-          ["cvss-parser", "file:cvss-parser-js/#cvss-parser-js/::hash=b9994f&locator=api%40workspace%3A."],\
+          ["cvss-parser", "file:cvss-parser-js/#cvss-parser-js/::hash=d7888d&locator=api%40workspace%3A."],\
           ["dotenv", "npm:17.2.3"],\
           ["eslint", "virtual:7473a2b7820d54bc9e09e43d07c4d6a37311d3c27cf8d3479124c02c830f39ea1edcd0240ea9cd8892e68b95c71dc40f3562d9221ee2fee4332c0f6b026a8253#npm:9.38.0"],\
           ["eslint-config-prettier", "virtual:7473a2b7820d54bc9e09e43d07c4d6a37311d3c27cf8d3479124c02c830f39ea1edcd0240ea9cd8892e68b95c71dc40f3562d9221ee2fee4332c0f6b026a8253#npm:10.1.8"],\
@@ -7737,10 +7737,10 @@ const RAW_RUNTIME_STATE =
       }]\
     ]],\
     ["cvss-parser", [\
-      ["file:cvss-parser-js/#cvss-parser-js/::hash=b9994f&locator=api%40workspace%3A.", {\
-        "packageLocation": "./.yarn/cache/cvss-parser-file-5f294b3e3f-69509c0631.zip/node_modules/cvss-parser/",\
+      ["file:cvss-parser-js/#cvss-parser-js/::hash=d7888d&locator=api%40workspace%3A.", {\
+        "packageLocation": "./.yarn/cache/cvss-parser-file-64ea0b79dc-d42e0a2925.zip/node_modules/cvss-parser/",\
         "packageDependencies": [\
-          ["cvss-parser", "file:cvss-parser-js/#cvss-parser-js/::hash=b9994f&locator=api%40workspace%3A."]\
+          ["cvss-parser", "file:cvss-parser-js/#cvss-parser-js/::hash=d7888d&locator=api%40workspace%3A."]\
         ],\
         "linkType": "HARD"\
       }]\

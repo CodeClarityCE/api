@@ -31,23 +31,23 @@ export class GitlabIntegration
 {
     @ApiProperty()
     @Expose()
-    id: string;
+    id!: string;
 
     @ApiProperty()
     @Expose()
-    service_base_url: string;
+    service_base_url!: string;
 
     @ApiProperty()
     @Expose()
-    token_type: GitlabTokenType;
+    token_type!: GitlabTokenType;
 
     @ApiProperty()
     @Expose()
-    organization_id: string;
+    organization_id!: string;
 
     @Exclude({ toPlainOnly: true })
     @Type(() => VCSIntegrationMetaData)
-    meta_data: VCSIntegrationMetaData;
+    meta_data!: VCSIntegrationMetaData;
 }
 
 /********************************************/
@@ -57,16 +57,16 @@ export class GitlabIntegration
 export class LinkGitlabCreateBody {
     @ApiProperty()
     @IsNotEmpty()
-    token: string;
+    token!: string;
 
     @ApiProperty()
     @IsNotEmpty()
     @IsEnum(GitlabTokenType)
-    token_type: GitlabTokenType;
+    token_type!: GitlabTokenType;
 
     @ApiProperty()
     @IsUrl({ require_protocol: true })
-    gitlab_instance_url: string;
+    gitlab_instance_url!: string;
 }
 
 /********************************************/
@@ -75,14 +75,14 @@ export class LinkGitlabCreateBody {
 
 export class LinkGitlabPatchBody {
     @IsNotEmpty()
-    token: string;
+    token!: string;
 
     @IsNotEmpty()
     @IsEnum(GitlabTokenType)
-    token_type: GitlabTokenType;
+    token_type!: GitlabTokenType;
 
     @IsUrl()
-    gitlab_instance_url: string;
+    gitlab_instance_url!: string;
 }
 
 /********************************************/
@@ -98,19 +98,19 @@ export interface LinkGitlabCreate {
 export class GitLabIntegrationCreate
     implements AccessTokenBasedIntegrationCreate, IntegrationCreate
 {
-    integration_type: IntegrationType;
-    integration_provider: IntegrationProvider;
-    added_on: Date;
-    added_by: string;
-    service_domain: string;
-    access_token: string;
-    refresh_token?: string | undefined;
-    expiry_date?: Date | undefined;
-    invalid: boolean;
-    service_base_url: string;
-    token_type: GitlabTokenType;
-    organization_id: string;
-    meta_data: VCSIntegrationMetaData;
+    integration_type!: IntegrationType;
+    integration_provider!: IntegrationProvider;
+    added_on!: Date;
+    added_by!: string;
+    service_domain!: string;
+    access_token!: string;
+    refresh_token?: string;
+    expiry_date?: Date;
+    invalid!: boolean;
+    service_base_url!: string;
+    token_type!: GitlabTokenType;
+    organization_id!: string;
+    meta_data!: VCSIntegrationMetaData;
 }
 
 /********************************************/
@@ -118,12 +118,12 @@ export class GitLabIntegrationCreate
 /********************************************/
 
 export class GitLabIntegrationUpdate {
-    access_token: string;
+    access_token!: string;
     refresh_token?: string | undefined;
     expiry_date?: Date | undefined;
-    invalid: boolean;
-    token_type: GitlabTokenType;
-    service_base_url: string;
-    service_domain: string;
-    meta_data: VCSIntegrationMetaData;
+    invalid!: boolean;
+    token_type!: GitlabTokenType;
+    service_base_url!: string;
+    service_domain!: string;
+    meta_data!: VCSIntegrationMetaData;
 }

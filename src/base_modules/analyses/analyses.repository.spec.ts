@@ -225,8 +225,8 @@ describe('AnalysesRepository', () => {
 
             expect(result).toEqual(mockAnalysis);
             expect(mockAnalysisRepository.findOne).toHaveBeenCalledWith({
-                where: { id: 'analysis-123' },
-                relations: null
+                where: { id: 'analysis-123' }
+                // relations is omitted when null due to exactOptionalPropertyTypes
             });
         });
     });

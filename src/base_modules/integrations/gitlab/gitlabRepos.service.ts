@@ -65,7 +65,7 @@ export class GitlabRepositoriesService {
                 );
             }
 
-            const projects = await response.json();
+            const projects = await response.json() as any[];
 
             // Process the projects and save them to the repository cache
             for (const project of projects) {

@@ -33,8 +33,7 @@ describe('GitlabIntegration Types', () => {
             gitlabIntegration.added_by = 'test-user-id';
             gitlabIntegration.service_domain = 'https://gitlab.com';
             gitlabIntegration.invalid = false;
-            gitlabIntegration.expiry_date = undefined;
-            gitlabIntegration.refresh_token = undefined;
+            // expiry_date and refresh_token are already undefined by default
             gitlabIntegration.meta_data = new VCSIntegrationMetaData();
 
             expect(gitlabIntegration).toBeDefined();
@@ -90,8 +89,8 @@ describe('GitlabIntegration Types', () => {
 
             const errors = await validate(linkGitlabCreateBody);
             expect(errors).toHaveLength(1);
-            expect(errors[0].property).toBe('token');
-            expect(errors[0].constraints?.isNotEmpty).toBeDefined();
+            expect(errors[0]!.property).toBe('token');
+            expect(errors[0]!.constraints?.['isNotEmpty']).toBeDefined();
         });
 
         it('should fail validation when token_type is invalid', async () => {
@@ -102,8 +101,8 @@ describe('GitlabIntegration Types', () => {
 
             const errors = await validate(linkGitlabCreateBody);
             expect(errors).toHaveLength(1);
-            expect(errors[0].property).toBe('token_type');
-            expect(errors[0].constraints?.isEnum).toBeDefined();
+            expect(errors[0]!.property).toBe('token_type');
+            expect(errors[0]!.constraints?.['isEnum']).toBeDefined();
         });
 
         it('should fail validation when gitlab_instance_url is not a valid URL', async () => {
@@ -114,8 +113,8 @@ describe('GitlabIntegration Types', () => {
 
             const errors = await validate(linkGitlabCreateBody);
             expect(errors).toHaveLength(1);
-            expect(errors[0].property).toBe('gitlab_instance_url');
-            expect(errors[0].constraints?.isUrl).toBeDefined();
+            expect(errors[0]!.property).toBe('gitlab_instance_url');
+            expect(errors[0]!.constraints?.['isUrl']).toBeDefined();
         });
 
         it('should fail validation when gitlab_instance_url has no protocol', async () => {
@@ -126,8 +125,8 @@ describe('GitlabIntegration Types', () => {
 
             const errors = await validate(linkGitlabCreateBody);
             expect(errors).toHaveLength(1);
-            expect(errors[0].property).toBe('gitlab_instance_url');
-            expect(errors[0].constraints?.isUrl).toBeDefined();
+            expect(errors[0]!.property).toBe('gitlab_instance_url');
+            expect(errors[0]!.constraints?.['isUrl']).toBeDefined();
         });
 
         it('should validate successfully with https protocol', async () => {
@@ -170,8 +169,8 @@ describe('GitlabIntegration Types', () => {
 
             const errors = await validate(linkGitlabPatchBody);
             expect(errors).toHaveLength(1);
-            expect(errors[0].property).toBe('token');
-            expect(errors[0].constraints?.isNotEmpty).toBeDefined();
+            expect(errors[0]!.property).toBe('token');
+            expect(errors[0]!.constraints?.['isNotEmpty']).toBeDefined();
         });
 
         it('should fail validation when token_type is invalid', async () => {
@@ -182,8 +181,8 @@ describe('GitlabIntegration Types', () => {
 
             const errors = await validate(linkGitlabPatchBody);
             expect(errors).toHaveLength(1);
-            expect(errors[0].property).toBe('token_type');
-            expect(errors[0].constraints?.isEnum).toBeDefined();
+            expect(errors[0]!.property).toBe('token_type');
+            expect(errors[0]!.constraints?.['isEnum']).toBeDefined();
         });
 
         it('should fail validation when gitlab_instance_url is not a valid URL', async () => {
@@ -194,8 +193,8 @@ describe('GitlabIntegration Types', () => {
 
             const errors = await validate(linkGitlabPatchBody);
             expect(errors).toHaveLength(1);
-            expect(errors[0].property).toBe('gitlab_instance_url');
-            expect(errors[0].constraints?.isUrl).toBeDefined();
+            expect(errors[0]!.property).toBe('gitlab_instance_url');
+            expect(errors[0]!.constraints?.['isUrl']).toBeDefined();
         });
     });
 
@@ -208,8 +207,7 @@ describe('GitlabIntegration Types', () => {
             gitlabIntegrationCreate.added_by = 'test-user-id';
             gitlabIntegrationCreate.service_domain = 'https://gitlab.com';
             gitlabIntegrationCreate.access_token = 'glpat-test-token';
-            gitlabIntegrationCreate.refresh_token = undefined;
-            gitlabIntegrationCreate.expiry_date = undefined;
+            // refresh_token and expiry_date are optional, omit if not needed
             gitlabIntegrationCreate.invalid = false;
             gitlabIntegrationCreate.service_base_url = 'https://gitlab.com';
             gitlabIntegrationCreate.token_type = GitlabTokenType.PERSONAL_ACCESS_TOKEN;

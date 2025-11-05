@@ -7,7 +7,7 @@ export const errorMessages: { [key: string]: string } = {
 
 export class InvitationOrgAlreadyExists extends PublicAPIError {
     static errorCode = 'InvitationOrgAlreadyExists';
-    static errorMessage = errorMessages[InvitationOrgAlreadyExists.errorCode];
+    static errorMessage = errorMessages[InvitationOrgAlreadyExists.errorCode]!;
     static statusCode = 400;
     constructor(cause?: unknown) {
         super(

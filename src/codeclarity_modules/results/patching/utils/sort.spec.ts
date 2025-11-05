@@ -173,9 +173,9 @@ describe('sort', () => {
             const result = sort(patches, 'patch_type', 'DESC');
 
             expect(result).toHaveLength(3);
-            expect(result[0].affected_dep_name).toBe('first');
-            expect(result[1].affected_dep_name).toBe('second');
-            expect(result[2].affected_dep_name).toBe('third');
+            expect(result[0]!.affected_dep_name).toBe('first');
+            expect(result[1]!.affected_dep_name).toBe('second');
+            expect(result[2]!.affected_dep_name).toBe('third');
         });
 
         it('should handle mixed patch types', () => {

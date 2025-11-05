@@ -28,7 +28,7 @@ export class UsersRepository {
     async getUserById(userId: string, relations?: object): Promise<User> {
         const user = await this.userRepository.findOne({
             where: { id: userId },
-            relations: relations
+            ...(relations ? { relations: relations } : {})
         });
 
         if (!user) {

@@ -182,7 +182,7 @@ export class ProjectService {
 
         const added_project = await this.projectsRepository.saveProject(project);
 
-        const downloadPath = process.env.DOWNLOAD_PATH || '/private';
+        const downloadPath = process.env['DOWNLOAD_PATH'] || '/private';
         const folderPath = join(downloadPath, organization.id, 'projects', added_project.id);
         await mkdir(folderPath, { recursive: true });
 
@@ -327,7 +327,7 @@ export class ProjectService {
         }
 
         // Remove project folder
-        const downloadPath = process.env.DOWNLOAD_PATH || '/private';
+        const downloadPath = process.env['DOWNLOAD_PATH'] || '/private';
         const filePath = join(downloadPath, organization.id, 'projects', project.id);
         if (existsSync(filePath)) {
             await rm(filePath, { recursive: true, force: true });

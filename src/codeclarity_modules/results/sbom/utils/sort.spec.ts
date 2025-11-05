@@ -36,13 +36,13 @@ describe('sort', () => {
                 createMockDependency({ name: 'package-a' }) as any,
                 createMockDependency({ name: 'package-b' }) as any
             ];
-            dependencies[0].dev = 0;
-            dependencies[1].dev = 1;
+            dependencies[0]!.dev = 0;
+            dependencies[1]!.dev = 1;
 
             const result = sort(dependencies, null as any, undefined);
 
-            expect(result[0].name).toBe('package-b'); // Higher dev value first
-            expect(result[1].name).toBe('package-a');
+            expect(result[0]!.name).toBe('package-b'); // Higher dev value first
+            expect(result[1]!.name).toBe('package-a');
         });
 
         it('should use default sort (dev) when sortBy is invalid', () => {
@@ -50,12 +50,12 @@ describe('sort', () => {
                 createMockDependency({ name: 'package-a' }) as any,
                 createMockDependency({ name: 'package-b' }) as any
             ];
-            dependencies[0].dev = 0;
-            dependencies[1].dev = 1;
+            dependencies[0]!.dev = 0;
+            dependencies[1]!.dev = 1;
 
             const result = sort(dependencies, 'invalid_sort_option', undefined);
 
-            expect(result[0].name).toBe('package-b');
+            expect(result[0]!.name).toBe('package-b');
         });
 
         it('should use default sort direction (desc) when sortDirection is null', () => {
@@ -63,13 +63,13 @@ describe('sort', () => {
                 createMockDependency({ name: 'package-a' }) as any,
                 createMockDependency({ name: 'package-b' }) as any
             ];
-            dependencies[0].dev = 0;
-            dependencies[1].dev = 1;
+            dependencies[0]!.dev = 0;
+            dependencies[1]!.dev = 1;
 
             const result = sort(dependencies, 'dev', null as any);
 
-            expect(result[0].name).toBe('package-b'); // Higher dev value first, then DESC reverses
-            expect(result[1].name).toBe('package-a');
+            expect(result[0]!.name).toBe('package-b'); // Higher dev value first, then DESC reverses
+            expect(result[1]!.name).toBe('package-a');
         });
 
         it('should use default sort direction when sortDirection is invalid', () => {
@@ -77,12 +77,12 @@ describe('sort', () => {
                 createMockDependency({ name: 'package-a' }) as any,
                 createMockDependency({ name: 'package-b' }) as any
             ];
-            dependencies[0].dev = 0;
-            dependencies[1].dev = 1;
+            dependencies[0]!.dev = 0;
+            dependencies[1]!.dev = 1;
 
             const result = sort(dependencies, 'dev', 'INVALID');
 
-            expect(result[0].name).toBe('package-b'); // Higher dev value first, then DESC reverses
+            expect(result[0]!.name).toBe('package-b'); // Higher dev value first, then DESC reverses
         });
     });
 
@@ -92,13 +92,13 @@ describe('sort', () => {
                 createMockDependency({ name: 'package-a' }) as any,
                 createMockDependency({ name: 'package-b' }) as any
             ];
-            dependencies[0].is_direct = false;
-            dependencies[1].is_direct = true;
+            dependencies[0]!.is_direct = false;
+            dependencies[1]!.is_direct = true;
 
             const result = sort(dependencies, 'user_installed', 'ASC');
 
-            expect(result[0].name).toBe('package-a'); // false < true in ASC
-            expect(result[1].name).toBe('package-b');
+            expect(result[0]!.name).toBe('package-a'); // false < true in ASC
+            expect(result[1]!.name).toBe('package-b');
         });
     });
 
@@ -109,16 +109,16 @@ describe('sort', () => {
                 createMockDependency({ name: 'package-b' }) as any,
                 createMockDependency({ name: 'package-c' }) as any
             ];
-            dependencies[0].dev = 2;
-            dependencies[1].dev = 1;
-            dependencies[2].dev = 3;
+            dependencies[0]!.dev = 2;
+            dependencies[1]!.dev = 1;
+            dependencies[2]!.dev = 3;
 
             const result = sort(dependencies, 'dev', 'ASC');
 
             // Dev sort: b.dev - a.dev (descending), NOT reversed for ASC
-            expect(result[0].dev).toBe(3);
-            expect(result[1].dev).toBe(2);
-            expect(result[2].dev).toBe(1);
+            expect(result[0]!.dev).toBe(3);
+            expect(result[1]!.dev).toBe(2);
+            expect(result[2]!.dev).toBe(1);
         });
 
         it('should sort by dev field in descending order', () => {
@@ -127,15 +127,15 @@ describe('sort', () => {
                 createMockDependency({ name: 'package-b' }) as any,
                 createMockDependency({ name: 'package-c' }) as any
             ];
-            dependencies[0].dev = 1;
-            dependencies[1].dev = 3;
-            dependencies[2].dev = 2;
+            dependencies[0]!.dev = 1;
+            dependencies[1]!.dev = 3;
+            dependencies[2]!.dev = 2;
 
             const result = sort(dependencies, 'dev', 'DESC');
 
-            expect(result[0].dev).toBe(1);
-            expect(result[1].dev).toBe(2);
-            expect(result[2].dev).toBe(3);
+            expect(result[0]!.dev).toBe(1);
+            expect(result[1]!.dev).toBe(2);
+            expect(result[2]!.dev).toBe(3);
         });
 
         it('should handle equal dev values', () => {
@@ -143,14 +143,14 @@ describe('sort', () => {
                 createMockDependency({ name: 'package-a' }) as any,
                 createMockDependency({ name: 'package-b' }) as any
             ];
-            dependencies[0].dev = 1;
-            dependencies[1].dev = 1;
+            dependencies[0]!.dev = 1;
+            dependencies[1]!.dev = 1;
 
             const result = sort(dependencies, 'dev', 'ASC');
 
             expect(result).toHaveLength(2);
-            expect(result[0].dev).toBe(1);
-            expect(result[1].dev).toBe(1);
+            expect(result[0]!.dev).toBe(1);
+            expect(result[1]!.dev).toBe(1);
         });
     });
 
@@ -165,9 +165,9 @@ describe('sort', () => {
             const result = sort(dependencies, 'is_direct_count', 'ASC');
 
             // is_direct_count sort: b - a (descending), NOT reversed for ASC
-            expect(result[0].is_direct_count).toBe(3);
-            expect(result[1].is_direct_count).toBe(2);
-            expect(result[2].is_direct_count).toBe(1);
+            expect(result[0]!.is_direct_count).toBe(3);
+            expect(result[1]!.is_direct_count).toBe(2);
+            expect(result[2]!.is_direct_count).toBe(1);
         });
 
         it('should sort by is_direct_count in descending order', () => {
@@ -179,9 +179,9 @@ describe('sort', () => {
 
             const result = sort(dependencies, 'is_direct_count', 'DESC');
 
-            expect(result[0].is_direct_count).toBe(1);
-            expect(result[1].is_direct_count).toBe(2);
-            expect(result[2].is_direct_count).toBe(3);
+            expect(result[0]!.is_direct_count).toBe(1);
+            expect(result[1]!.is_direct_count).toBe(2);
+            expect(result[2]!.is_direct_count).toBe(3);
         });
     });
 
@@ -195,9 +195,9 @@ describe('sort', () => {
 
             const result = sort(dependencies, 'version', 'ASC');
 
-            expect(result[0].version).toBe('1.0.0');
-            expect(result[1].version).toBe('1.10.0');
-            expect(result[2].version).toBe('2.1.0');
+            expect(result[0]!.version).toBe('1.0.0');
+            expect(result[1]!.version).toBe('1.10.0');
+            expect(result[2]!.version).toBe('2.1.0');
         });
 
         it('should sort by semantic version in descending order', () => {
@@ -209,9 +209,9 @@ describe('sort', () => {
 
             const result = sort(dependencies, 'version', 'DESC');
 
-            expect(result[0].version).toBe('2.1.0');
-            expect(result[1].version).toBe('1.10.0');
-            expect(result[2].version).toBe('1.0.0');
+            expect(result[0]!.version).toBe('2.1.0');
+            expect(result[1]!.version).toBe('1.10.0');
+            expect(result[2]!.version).toBe('1.0.0');
         });
 
         it('should handle null/undefined versions with default 0.0.0', () => {
@@ -223,9 +223,9 @@ describe('sort', () => {
 
             const result = sort(dependencies, 'version', 'ASC');
 
-            expect(result[0].version).toBeNull();
-            expect(result[1].version).toBeUndefined();
-            expect(result[2].version).toBe('1.0.0');
+            expect(result[0]!.version).toBeNull();
+            expect(result[1]!.version).toBeUndefined();
+            expect(result[2]!.version).toBe('1.0.0');
         });
 
         it('should handle invalid semantic versions gracefully', () => {
@@ -249,9 +249,6 @@ describe('sort', () => {
         booleanFields.forEach((field) => {
             describe(`${field} sorting`, () => {
                 const shouldSkip = field === 'is_direct';
-                const _skipReason = shouldSkip
-                    ? '// SKIPPED: Implementation bug - is_direct boolean field is missing from SbomDependency\n            // The sort function expects is_direct: boolean but only is_direct_count: number exists\n            // Fix needed in sbom.service.ts to add: is_direct: is_direct_count > 0'
-                    : '';
 
                 const testFn = shouldSkip ? it.skip : it;
 
@@ -437,9 +434,9 @@ describe('sort', () => {
             const result = sort(dependencies, 'name', 'ASC');
 
             // String sort logic is inverted: ASC behaves like DESC
-            expect(result[0].name).toBe('zebra');
-            expect(result[1].name).toBe('banana');
-            expect(result[2].name).toBe('apple');
+            expect(result[0]!.name).toBe('zebra');
+            expect(result[1]!.name).toBe('banana');
+            expect(result[2]!.name).toBe('apple');
         });
 
         it('should sort by string fields in descending order', () => {
@@ -452,9 +449,9 @@ describe('sort', () => {
             const result = sort(dependencies, 'name', 'DESC');
 
             // String sort logic is inverted: DESC behaves like ASC
-            expect(result[0].name).toBe('apple');
-            expect(result[1].name).toBe('banana');
-            expect(result[2].name).toBe('zebra');
+            expect(result[0]!.name).toBe('apple');
+            expect(result[1]!.name).toBe('banana');
+            expect(result[2]!.name).toBe('zebra');
         });
 
         it('should handle null/undefined string values', () => {
@@ -467,9 +464,9 @@ describe('sort', () => {
             const result = sort(dependencies, 'name', 'ASC');
 
             // String comparison: null/undefined coerced to empty string, come after 'zebra' in inverted ASC
-            expect(result[0].name).toBe('zebra');
-            expect(result[1].name).toBeNull();
-            expect(result[2].name).toBeUndefined();
+            expect(result[0]!.name).toBe('zebra');
+            expect(result[1]!.name).toBeNull();
+            expect(result[2]!.name).toBeUndefined();
         });
 
         it('should handle package_manager field', () => {
@@ -478,9 +475,9 @@ describe('sort', () => {
                 createMockDependency({ name: 'package-b' }),
                 createMockDependency({ name: 'package-c' })
             ] as any;
-            dependencies[0].package_manager = 'yarn';
-            dependencies[1].package_manager = 'npm';
-            dependencies[2].package_manager = 'pnpm';
+            dependencies[0]!.package_manager = 'yarn';
+            dependencies[1]!.package_manager = 'npm';
+            dependencies[2]!.package_manager = 'pnpm';
 
             const result = sort(dependencies, 'package_manager', 'ASC');
 
@@ -502,8 +499,8 @@ describe('sort', () => {
             const resultAsc = sort(dependencies, 'name', 'asc' as any);
 
             // Should use default DESC behavior for invalid case
-            expect(resultDesc[0].name).toBe('zebra');
-            expect(resultAsc[0].name).toBe('zebra');
+            expect(resultDesc[0]!.name).toBe('zebra');
+            expect(resultAsc[0]!.name).toBe('zebra');
         });
 
         it('should handle empty string sort field', () => {
@@ -511,8 +508,8 @@ describe('sort', () => {
                 createMockDependency({ name: 'package-a' }),
                 createMockDependency({ name: 'package-b' })
             ] as any;
-            dependencies[0].dev = 1;
-            dependencies[1].dev = 2;
+            dependencies[0]!.dev = 1;
+            dependencies[1]!.dev = 2;
 
             const result = sort(dependencies, '', 'ASC');
 
@@ -530,9 +527,9 @@ describe('sort', () => {
 
             const result = sort(dependencies, 'version', 'ASC');
 
-            expect(result[0].name).toBe('package-a');
-            expect(result[1].name).toBe('package-b');
-            expect(result[2].name).toBe('package-c');
+            expect(result[0]!.name).toBe('package-a');
+            expect(result[1]!.name).toBe('package-b');
+            expect(result[2]!.name).toBe('package-c');
         });
     });
 
@@ -569,8 +566,8 @@ describe('sort', () => {
                 createMockDependency({ name: 'package-a' }),
                 createMockDependency({ name: 'package-b' })
             ] as any;
-            dependencies[0].dev = 1;
-            dependencies[1].dev = 2;
+            dependencies[0]!.dev = 1;
+            dependencies[1]!.dev = 2;
 
             const result = sort(dependencies, 'disallowed_field', 'ASC');
 

@@ -19,7 +19,7 @@ export class PluginController {
     @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
     @Get(':plugin_id')
     async get(
-        @AuthUser() user: AuthenticatedUser,
+        @AuthUser() _user: AuthenticatedUser,
         @Param('plugin_id') plugin_id: string
     ): Promise<TypedResponse<Plugin>> {
         return { data: await this.pluginService.get(plugin_id) };

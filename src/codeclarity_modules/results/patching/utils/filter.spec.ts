@@ -71,28 +71,28 @@ describe('filter', () => {
             const [filteredPatches] = filter(patches, 'LODASH', undefined);
 
             expect(filteredPatches).toHaveLength(1);
-            expect(filteredPatches[0].affected_dep_name).toBe('lodash');
+            expect(filteredPatches[0]!.affected_dep_name).toBe('lodash');
         });
 
         it('should filter by partial dependency name match', () => {
             const [filteredPatches] = filter(patches, 'exp', undefined);
 
             expect(filteredPatches).toHaveLength(1);
-            expect(filteredPatches[0].affected_dep_name).toBe('express');
+            expect(filteredPatches[0]!.affected_dep_name).toBe('express');
         });
 
         it('should filter by vulnerability ID (case insensitive)', () => {
             const [filteredPatches] = filter(patches, 'cve-2023-1001', undefined);
 
             expect(filteredPatches).toHaveLength(1);
-            expect(filteredPatches[0].vulnerability_id).toBe('CVE-2023-1001');
+            expect(filteredPatches[0]!.vulnerability_id).toBe('CVE-2023-1001');
         });
 
         it('should filter by partial vulnerability ID match', () => {
             const [filteredPatches] = filter(patches, '2023-20', undefined);
 
             expect(filteredPatches).toHaveLength(1);
-            expect(filteredPatches[0].vulnerability_id).toBe('CVE-2023-2002');
+            expect(filteredPatches[0]!.vulnerability_id).toBe('CVE-2023-2002');
         });
 
         it('should return multiple matches when search key matches multiple patches', () => {
@@ -125,7 +125,7 @@ describe('filter', () => {
             const [filteredPatches] = filter(patches, 'valid', undefined);
 
             expect(filteredPatches).toHaveLength(1);
-            expect(filteredPatches[0].affected_dep_name).toBe('valid-package');
+            expect(filteredPatches[0]!.affected_dep_name).toBe('valid-package');
         });
 
         it('should handle null vulnerability ID', () => {
@@ -137,7 +137,7 @@ describe('filter', () => {
             const [filteredPatches] = filter(patches, 'CVE', undefined);
 
             expect(filteredPatches).toHaveLength(1);
-            expect(filteredPatches[0].vulnerability_id).toBe('CVE-2023-1234');
+            expect(filteredPatches[0]!.vulnerability_id).toBe('CVE-2023-1234');
         });
 
         it('should handle null searchKey', () => {
@@ -254,7 +254,7 @@ describe('filter', () => {
             const [filteredPatches] = filter(patches, 'lodash', ['full_patch']);
 
             expect(filteredPatches).toHaveLength(1);
-            expect(filteredPatches[0].affected_dep_name).toBe('lodash');
+            expect(filteredPatches[0]!.affected_dep_name).toBe('lodash');
         });
     });
 
@@ -291,7 +291,7 @@ describe('filter', () => {
             const [filteredPatches] = filter(patches, '@scope', undefined);
 
             expect(filteredPatches).toHaveLength(1);
-            expect(filteredPatches[0].affected_dep_name).toBe('@scope/package-name');
+            expect(filteredPatches[0]!.affected_dep_name).toBe('@scope/package-name');
         });
 
         it('should handle very long search keys', () => {

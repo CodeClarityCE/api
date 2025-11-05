@@ -20,7 +20,6 @@ import { CombinedAuthGuard } from '../auth/guards/combined.guard';
 describe('OrganizationsController', () => {
     let controller: OrganizationsController;
     let organizationsService: jest.Mocked<OrganizationsService>;
-    let _organizationLoggerService: jest.Mocked<OrganizationLoggerService>;
 
     const mockOrganization = {
         id: 'test-org-id',
@@ -69,7 +68,6 @@ describe('OrganizationsController', () => {
 
         controller = module.get<OrganizationsController>(OrganizationsController);
         organizationsService = module.get(OrganizationsService);
-        _organizationLoggerService = module.get(OrganizationLoggerService);
     });
 
     describe('create', () => {

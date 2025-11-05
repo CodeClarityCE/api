@@ -15,15 +15,12 @@ import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './notification.entity';
-import { User } from '../users/users.entity';
 
 @Controller('/notifications')
 export class NotificationsController {
     constructor(
         @InjectRepository(Notification, 'codeclarity')
         private readonly notificationsRepo: Repository<Notification>,
-        @InjectRepository(User, 'codeclarity')
-        private readonly usersRepo: Repository<User>
     ) {}
 
     @Get('')

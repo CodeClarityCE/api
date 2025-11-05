@@ -57,7 +57,7 @@ export class IntegrationsController {
     @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
     @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
     async unlinkGithub(
-        @AuthUser() user: AuthenticatedUser,
+        @AuthUser() _user: AuthenticatedUser,
         @Param('org_id') org_id: string,
         @Param('integration_id') integration_id: string
     ): Promise<NoDataResponse> {

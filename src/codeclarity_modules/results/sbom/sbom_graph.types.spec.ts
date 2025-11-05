@@ -163,7 +163,7 @@ describe('SBOM Graph Types', () => {
                 expect(result.node).toBeDefined();
                 expect(result.node?.id).toBe('levelA@1.0.0');
                 expect(result.parents).toHaveLength(1);
-                expect(result.parents[0].id).toBe('root@1.0.0');
+                expect(result.parents[0]!.id).toBe('root@1.0.0');
                 expect(result.children).toHaveLength(2);
                 expect(result.children.map((c) => c.id)).toContain('levelA-child@1.0.0');
                 expect(result.children.map((c) => c.id)).toContain('shared-grandchild@1.0.0');
@@ -250,9 +250,9 @@ describe('SBOM Graph Types', () => {
 
                 expect(result.node?.id).toBe('levelA@1.0.0');
                 expect(result.parents).toHaveLength(1);
-                expect(result.parents[0].id).toBe('root@1.0.0');
+                expect(result.parents[0]!.id).toBe('root@1.0.0');
                 expect(result.children).toHaveLength(1);
-                expect(result.children[0].id).toBe('levelA-child@1.0.0');
+                expect(result.children[0]!.id).toBe('levelA-child@1.0.0');
             });
 
             it('should handle multiple direct parents', () => {
@@ -368,7 +368,7 @@ describe('SBOM Graph Types', () => {
                 );
 
                 expect(result).toHaveLength(1);
-                expect(result[0].id).toBe('root@1.0.0');
+                expect(result[0]!.id).toBe('root@1.0.0');
             });
 
             it('should log debug information', () => {
@@ -422,7 +422,7 @@ describe('SBOM Graph Types', () => {
                 expect(result.node?.id).toBe('nodeA@1.0.0');
                 expect(result.parents).toEqual([]);
                 expect(result.children).toHaveLength(1);
-                expect(result.children[0].id).toBe('nodeB@1.0.0');
+                expect(result.children[0]!.id).toBe('nodeB@1.0.0');
             });
 
             it('should handle nodes with undefined childrenIds', () => {

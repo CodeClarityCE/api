@@ -1,12 +1,12 @@
 import 'reflect-metadata';
 import * as dotenv from 'dotenv';
 
-const ENV = process.env.ENV || 'dev';
+const ENV = process.env['ENV'] || 'dev';
 try {
     dotenv.config({ path: `env/.env.${ENV}` });
 } catch (err) {
     // Intentionally ignore missing env file; defaults will be used.
-    if (process.env.DEBUG_MIGRATIONS) {
+    if (process.env['DEBUG_MIGRATIONS']) {
         console.warn('Env load failed:', err);
     }
 }
@@ -41,4 +41,8 @@ async function run(connection: string) {
 }
 
 const arg = process.argv[2];
+if (!arg) {
+    console.error('Missing argument');
+    process.exit(1);
+}
 run(arg);

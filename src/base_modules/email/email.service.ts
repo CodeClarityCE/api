@@ -24,8 +24,10 @@ export class EmailService {
     ) {
         this.webHost = this.configService.getOrThrow<string>('WEB_HOST');
         this.platformName = this.configService.getOrThrow<string>('PLATFORM_NAME');
-        this.env = process.env.ENV ?? 'dev';
-        this.testEmail = process.env.TEST_EMAIL;
+        this.env = process.env['ENV'] ?? 'dev';
+        if (process.env['TEST_EMAIL'] !== undefined) {
+            this.testEmail = process.env['TEST_EMAIL'];
+        }
     }
     /**
      * Sends a registration confirmation email to a newly signed-up user.

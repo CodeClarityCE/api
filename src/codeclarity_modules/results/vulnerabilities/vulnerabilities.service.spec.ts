@@ -18,9 +18,7 @@ describe('VulnerabilitiesService', () => {
     let service: VulnerabilitiesService;
     let analysisResultsService: AnalysisResultsService;
     let findingsUtilsService: VulnerabilitiesUtilsService;
-    let _findingsSortService: VulnerabilitiesSortService;
     let findingsFilterService: VulnerabilitiesFilterService;
-    let _sbomUtilsService: SbomUtilsService;
 
     const mockUser = new AuthenticatedUser('user-123', [ROLE.USER], true);
 
@@ -42,21 +40,6 @@ describe('VulnerabilitiesService', () => {
             private_errors: [],
             analysis_start_time: '2024-01-01T00:00:00Z',
             analysis_end_time: '2024-01-01T01:00:00Z'
-        }
-    };
-
-    const _mockSbomOutput = {
-        workspaces: {
-            default: {
-                dependencies: {
-                    package1: {
-                        '1.0.0': {
-                            name: 'package1',
-                            version: '1.0.0'
-                        }
-                    }
-                }
-            }
         }
     };
 
@@ -228,11 +211,9 @@ describe('VulnerabilitiesService', () => {
         service = module.get<VulnerabilitiesService>(VulnerabilitiesService);
         analysisResultsService = module.get<AnalysisResultsService>(AnalysisResultsService);
         findingsUtilsService = module.get<VulnerabilitiesUtilsService>(VulnerabilitiesUtilsService);
-        _findingsSortService = module.get<VulnerabilitiesSortService>(VulnerabilitiesSortService);
         findingsFilterService = module.get<VulnerabilitiesFilterService>(
             VulnerabilitiesFilterService
         );
-        _sbomUtilsService = module.get<SbomUtilsService>(SbomUtilsService);
 
         jest.clearAllMocks();
 

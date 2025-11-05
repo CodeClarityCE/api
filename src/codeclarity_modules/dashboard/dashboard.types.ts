@@ -61,88 +61,88 @@ export interface StatsTrend {
 
 export class WeekNumberGroup {
     @ApiProperty()
-    week: number;
+    week!: number;
     @ApiProperty()
-    year: number;
+    year!: number;
 }
 
 export class SeverityInfoByWeek {
     @ApiProperty()
-    week_number: WeekNumberGroup;
+    week_number!: WeekNumberGroup;
     @ApiProperty()
-    nmb_critical: number;
+    nmb_critical!: number;
     @ApiProperty()
-    nmb_high: number;
+    nmb_high!: number;
     @ApiProperty()
-    nmb_medium: number;
+    nmb_medium!: number;
     @ApiProperty()
-    nmb_low: number;
+    nmb_low!: number;
     @ApiProperty()
-    nmb_none: number;
+    nmb_none!: number;
     @ApiProperty()
-    summed_severity: number;
+    summed_severity!: number;
 
-    projects: Array<string>;
+    projects!: Array<string>;
 }
 
 export class SeverityInfoByWeekInternal {
-    project_id: string;
-    analysis_date: WeekNumberGroup;
-    week_number: WeekNumberGroup;
-    nmb_critical: number;
-    nmb_high: number;
-    nmb_medium: number;
-    nmb_low: number;
-    nmb_none: number;
-    summed_severity: number;
+    project_id!: string;
+    analysis_date!: WeekNumberGroup;
+    week_number!: WeekNumberGroup;
+    nmb_critical!: number;
+    nmb_high!: number;
+    nmb_medium!: number;
+    nmb_low!: number;
+    nmb_none!: number;
+    summed_severity!: number;
 }
 
 export class AttackVectorDist {
     @ApiProperty()
-    attack_vector: string;
+    attack_vector!: string;
     @ApiProperty()
-    count: number;
+    count!: number;
 }
 
 export class CIAImpact {
     @ApiProperty()
-    cia: string;
+    cia!: string;
     @ApiProperty()
-    impact: number;
+    impact!: number;
 }
 
 export class CIAImpactInternal {
-    c: number;
-    i: number;
-    a: number;
+    c!: number;
+    i!: number;
+    a!: number;
 }
 
 export class LatestVulnInfo {
     @ApiProperty()
     @OptionalTransform((v) => v)
-    severity: number;
+    severity!: number;
     @ApiProperty()
     @OptionalTransform((v) => v)
-    severity_class: string;
+    severity_class!: string;
     @ApiProperty()
     @OptionalTransform((v) => v)
-    cwe: string;
+    cwe!: string;
     @ApiProperty()
-    cwe_name: string;
+    cwe_name!: string;
 }
 
 export class SeverityClassCount {
     @ApiProperty()
-    severity_class: string | null;
+    severity_class!: string | null;
     @ApiProperty()
-    count: number;
+    count!: number;
 }
 
 export class LatestVulns {
     // @ApiProperty({ type: [LatestVuln] })
-    vulns: { [vuln_id: string]: LatestVulnInfo };
+    vulns!: { [vuln_id: string]: LatestVulnInfo };
     @ApiProperty({ type: [SeverityClassCount] })
-    severity_count: SeverityClassCount[];
+    severity_count!: SeverityClassCount[];
 }
 
 export interface QuickStatsInternal {
@@ -170,20 +170,20 @@ export enum ProjectGradeClass {
 
 export class ProjectGrade {
     @ApiProperty()
-    score: number;
+    score!: number;
     @ApiProperty()
-    class: ProjectGradeClass;
+    class!: ProjectGradeClass;
 }
 
 export class QuickStats {
     @ApiProperty()
-    max_grade: ProjectGrade;
+    max_grade!: ProjectGrade;
     @ApiProperty()
-    max_grade_trend: StatsTrend;
+    max_grade_trend!: StatsTrend;
     @ApiProperty()
-    nmb_deprecated: number;
+    nmb_deprecated!: number;
     @ApiProperty()
-    nmb_deprecated_trend: StatsTrend;
+    nmb_deprecated_trend!: StatsTrend;
     @ApiProperty()
     owasp_top_10?: string;
     @ApiProperty()
@@ -192,41 +192,41 @@ export class QuickStats {
 
 export class ProjectGroup {
     @ApiProperty()
-    id: string;
+    id!: string;
     @ApiProperty()
-    name: string;
+    name!: string;
     @ApiProperty()
-    provider: IntegrationProvider;
+    provider!: IntegrationProvider;
     @ApiProperty()
-    url: string;
+    url!: string;
 }
 
 export class ProjectQuickStatsInternal {
-    project: ProjectGroup;
-    nmb_license_compliance_violations: number;
-    nmb_vulnerabilities: number;
-    nmb_deprecated: number;
-    nmb_outdated: number;
-    sum_severity: number;
-    avg_severity: number;
-    grade: number;
+    project!: ProjectGroup;
+    nmb_license_compliance_violations!: number;
+    nmb_vulnerabilities!: number;
+    nmb_deprecated!: number;
+    nmb_outdated!: number;
+    sum_severity!: number;
+    avg_severity!: number;
+    grade!: number;
 }
 
 export class ProjectQuickStats {
     @ApiProperty()
-    project: ProjectGroup;
+    project!: ProjectGroup;
     @ApiProperty()
-    nmb_license_compliance_violations: number;
+    nmb_license_compliance_violations!: number;
     @ApiProperty()
-    nmb_vulnerabilities: number;
+    nmb_vulnerabilities!: number;
     @ApiProperty()
-    nmb_deprecated: number;
+    nmb_deprecated!: number;
     @ApiProperty()
-    nmb_outdated: number;
+    nmb_outdated!: number;
     @ApiProperty()
-    sum_severity: number;
+    sum_severity!: number;
     @ApiProperty()
-    avg_severity: number;
+    avg_severity!: number;
     @ApiProperty()
-    grade: ProjectGrade;
+    grade!: ProjectGrade;
 }

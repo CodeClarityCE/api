@@ -28,7 +28,7 @@ export class AnalysisResultsRepository {
             where: {
                 analysis: { id: analysisId }
             },
-            relations: relations
+            ...(relations ? { relations: relations } : {})
         });
 
         if (!analysis) {
@@ -44,7 +44,7 @@ export class AnalysisResultsRepository {
                 analysis: { id: analysisId },
                 plugin: plugin
             },
-            relations: relations
+            ...(relations ? { relations: relations } : {})
         });
 
         return analysis;

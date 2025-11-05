@@ -229,8 +229,8 @@ describe('LicenseRepository', () => {
             const result = await licenseRepository.getAllLicenseData();
 
             expect(result).toHaveLength(1000);
-            expect(result[0].licenseId).toBe('LICENSE-0');
-            expect(result[999].licenseId).toBe('LICENSE-999');
+            expect(result[0]!.licenseId).toBe('LICENSE-0');
+            expect(result[999]!.licenseId).toBe('LICENSE-999');
         });
     });
 

@@ -70,7 +70,7 @@ export class InvitationsRepository {
     async getInvitationBy(where: object, relations?: object): Promise<Invitation> {
         const invitation = await this.invitationRepository.findOne({
             where: where,
-            relations: relations
+            ...(relations ? { relations: relations } : {})
         });
 
         if (!invitation) {

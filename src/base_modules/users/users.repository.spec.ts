@@ -328,8 +328,8 @@ describe('UsersRepository', () => {
             // Assert
             expect(result).toEqual(mockUser);
             expect(mockUserRepository.findOne).toHaveBeenCalledWith({
-                where: { id: 'user-123' },
-                relations: null
+                where: { id: 'user-123' }
+                // relations is omitted when null due to exactOptionalPropertyTypes
             });
         });
 

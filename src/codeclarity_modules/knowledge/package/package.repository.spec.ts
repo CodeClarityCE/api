@@ -333,7 +333,7 @@ describe('PackageRepository', () => {
 
                 const result = await packageRepository.getVersionInfo('test-package', version);
 
-                expect(result.versions[0].version).toBe(version);
+                expect(result.versions[0]!.version).toBe(version);
                 expect(mockRepository.createQueryBuilder).toHaveBeenCalled();
             }
         });
@@ -487,8 +487,8 @@ describe('PackageRepository', () => {
 
             expect(result.license).toBe('SEE LICENSE IN LICENSE.txt');
             expect(result.licenses).toHaveLength(2);
-            expect(result.licenses[0].type).toBe('Apache-2.0');
-            expect(result.licenses[1].type).toBe('MIT');
+            expect(result.licenses[0]!.type).toBe('Apache-2.0');
+            expect(result.licenses[1]!.type).toBe('MIT');
         });
 
         it('should handle package with no homepage', async () => {
@@ -636,9 +636,9 @@ describe('PackageRepository', () => {
 
             const result = await packageRepository.getVersionInfo('express', '1.0.0');
 
-            expect(result.versions[0].dependencies).toBeNull();
-            expect(result.versions[0].dev_dependencies).toBeNull();
-            expect(result.versions[0].extra).toBeNull();
+            expect(result.versions[0]!.dependencies).toBeNull();
+            expect(result.versions[0]!.dev_dependencies).toBeNull();
+            expect(result.versions[0]!.extra).toBeNull();
         });
     });
 

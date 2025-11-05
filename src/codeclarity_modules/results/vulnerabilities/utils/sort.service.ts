@@ -45,7 +45,12 @@ export class VulnerabilitiesSortService {
             sortDirectionSafe = sortDirection;
         }
 
-        if (sortBySafe in mapping) sortBySafe = mapping[sortBySafe];
+        if (sortBySafe in mapping) {
+            const mapped = mapping[sortBySafe];
+            if (mapped !== undefined) {
+                sortBySafe = mapped;
+            }
+        }
 
         // Sorting
         let sorted: VulnerabilityMerged[] = [];
@@ -94,27 +99,27 @@ export class VulnerabilitiesSortService {
                 if (
                     (a.Weaknesses == null ||
                         a.Weaknesses.length == 0 ||
-                        a.Weaknesses[0].OWASPTop10Id == '') &&
+                        a.Weaknesses[0]!.OWASPTop10Id == '') &&
                     (b.Weaknesses == null ||
                         b.Weaknesses.length == 0 ||
-                        b.Weaknesses[0].OWASPTop10Id == '')
+                        b.Weaknesses[0]!.OWASPTop10Id == '')
                 )
                     return 0;
                 if (
                     a.Weaknesses == null ||
                     a.Weaknesses.length == 0 ||
-                    a.Weaknesses[0].OWASPTop10Id == ''
+                    a.Weaknesses[0]!.OWASPTop10Id == ''
                 )
                     return sortDirectionSafe == 'DESC' ? 1 : -1;
                 if (
                     b.Weaknesses == null ||
                     b.Weaknesses.length == 0 ||
-                    b.Weaknesses[0].OWASPTop10Id == ''
+                    b.Weaknesses[0]!.OWASPTop10Id == ''
                 )
                     return sortDirectionSafe == 'DESC' ? -1 : 1;
-                if (parseInt(a.Weaknesses[0].OWASPTop10Id) > parseInt(b.Weaknesses[0].OWASPTop10Id))
+                if (parseInt(a.Weaknesses[0]!.OWASPTop10Id) > parseInt(b.Weaknesses[0]!.OWASPTop10Id))
                     return sortDirectionSafe == 'DESC' ? 1 : -1;
-                if (parseInt(a.Weaknesses[0].OWASPTop10Id) < parseInt(b.Weaknesses[0].OWASPTop10Id))
+                if (parseInt(a.Weaknesses[0]!.OWASPTop10Id) < parseInt(b.Weaknesses[0]!.OWASPTop10Id))
                     return sortDirectionSafe == 'DESC' ? -1 : 1;
                 return 0;
             });
@@ -123,32 +128,32 @@ export class VulnerabilitiesSortService {
                 if (
                     (a.Weaknesses == null ||
                         a.Weaknesses.length == 0 ||
-                        a.Weaknesses[0].WeaknessId == '') &&
+                        a.Weaknesses[0]!.WeaknessId == '') &&
                     (b.Weaknesses == null ||
                         b.Weaknesses.length == 0 ||
-                        b.Weaknesses[0].WeaknessId == '')
+                        b.Weaknesses[0]!.WeaknessId == '')
                 )
                     return 0;
                 if (
                     a.Weaknesses == null ||
                     a.Weaknesses.length == 0 ||
-                    a.Weaknesses[0].WeaknessId == ''
+                    a.Weaknesses[0]!.WeaknessId == ''
                 )
                     return sortDirectionSafe == 'DESC' ? -1 : 1;
                 if (
                     b.Weaknesses == null ||
                     b.Weaknesses.length == 0 ||
-                    b.Weaknesses[0].WeaknessId == ''
+                    b.Weaknesses[0]!.WeaknessId == ''
                 )
                     return sortDirectionSafe == 'DESC' ? 1 : -1;
                 if (
-                    (parseInt(a.Weaknesses[0].WeaknessId.replace('CWE-', '')) ?? 0) >
-                    (parseInt(b.Weaknesses[0].WeaknessId.replace('CWE-', '')) ?? 0)
+                    (parseInt(a.Weaknesses[0]!.WeaknessId.replace('CWE-', '')) ?? 0) >
+                    (parseInt(b.Weaknesses[0]!.WeaknessId.replace('CWE-', '')) ?? 0)
                 )
                     return sortDirectionSafe == 'DESC' ? -1 : 1;
                 if (
-                    (parseInt(a.Weaknesses[0].WeaknessId.replace('CWE-', '')) ?? 0) <
-                    (parseInt(b.Weaknesses[0].WeaknessId.replace('CWE-', '')) ?? 0)
+                    (parseInt(a.Weaknesses[0]!.WeaknessId.replace('CWE-', '')) ?? 0) <
+                    (parseInt(b.Weaknesses[0]!.WeaknessId.replace('CWE-', '')) ?? 0)
                 )
                     return sortDirectionSafe == 'DESC' ? 1 : -1;
                 return 0;

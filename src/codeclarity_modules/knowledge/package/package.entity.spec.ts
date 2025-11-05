@@ -126,8 +126,8 @@ describe('Package Entity', () => {
 
             expect(complexLicensePackage.license).toBe('SEE LICENSE IN LICENSE.txt');
             expect(complexLicensePackage.licenses).toHaveLength(2);
-            expect(complexLicensePackage.licenses[0].type).toBe('Apache-2.0');
-            expect(complexLicensePackage.licenses[1].type).toBe('MIT');
+            expect(complexLicensePackage.licenses[0]!.type).toBe('Apache-2.0');
+            expect(complexLicensePackage.licenses[1]!.type).toBe('MIT');
         });
 
         it('should handle extensive keywords array', () => {
@@ -223,14 +223,14 @@ describe('Package Entity', () => {
                 versions: []
             };
 
-            expect(extraPackage.extra.maintainers).toHaveLength(2);
-            expect(extraPackage.extra.maintainers[0].name).toBe('John Doe');
-            expect(extraPackage.extra.repository.directory).toBe('packages/core');
-            expect(extraPackage.extra.bugs.email).toBe('bugs@example.com');
-            expect(extraPackage.extra.funding).toHaveLength(2);
-            expect(extraPackage.extra.engines.node).toBe('>=14.0.0');
-            expect(extraPackage.extra.os).toContain('linux');
-            expect(extraPackage.extra.cpu).toContain('x64');
+            expect(extraPackage.extra['maintainers']).toHaveLength(2);
+            expect(extraPackage.extra['maintainers'][0]!.name).toBe('John Doe');
+            expect(extraPackage.extra['repository'].directory).toBe('packages/core');
+            expect(extraPackage.extra['bugs'].email).toBe('bugs@example.com');
+            expect(extraPackage.extra['funding']).toHaveLength(2);
+            expect(extraPackage.extra['engines'].node).toBe('>=14.0.0');
+            expect(extraPackage.extra['os']).toContain('linux');
+            expect(extraPackage.extra['cpu']).toContain('x64');
         });
     });
 
@@ -361,9 +361,9 @@ describe('Package Entity', () => {
             expect(complexVersion.dependencies['lodash']).toBe('^4.17.21');
             expect(complexVersion.dependencies['express']).toBe('~4.18.0');
             expect(complexVersion.dependencies['react']).toBe('>=16.8.0 <19.0.0');
-            expect(complexVersion.extra.peerDependencies['react']).toBe('>=16.8.0');
-            expect(complexVersion.extra.bundleDependencies).toContain('internal-lib');
-            expect(complexVersion.extra.workspaces).toContain('packages/*');
+            expect(complexVersion.extra['peerDependencies']['react']).toBe('>=16.8.0');
+            expect(complexVersion.extra['bundleDependencies']).toContain('internal-lib');
+            expect(complexVersion.extra['workspaces']).toContain('packages/*');
         });
     });
 
@@ -461,8 +461,8 @@ describe('Package Entity', () => {
             };
 
             expect(packageWithVersions.versions).toHaveLength(2);
-            expect(packageWithVersions.versions[0].version).toBe('1.0.0');
-            expect(packageWithVersions.versions[1].version).toBe('2.0.0');
+            expect(packageWithVersions.versions[0]!.version).toBe('1.0.0');
+            expect(packageWithVersions.versions[1]!.version).toBe('2.0.0');
             expect(packageWithVersions.latest_version).toBe('2.0.0');
         });
     });
@@ -574,11 +574,11 @@ describe('Package Entity', () => {
             expect(typeof jsonbPackage.source).toBe('object');
             expect(Array.isArray(jsonbPackage.licenses)).toBe(true);
             expect(typeof jsonbPackage.extra).toBe('object');
-            expect(jsonbPackage.extra.nested.deeply.nested.value).toBe('deep');
-            expect(jsonbPackage.extra.array).toHaveLength(5);
-            expect(jsonbPackage.extra.boolean).toBe(true);
-            expect(jsonbPackage.extra.number).toBe(42);
-            expect(jsonbPackage.extra.null_value).toBeNull();
+            expect(jsonbPackage.extra['nested'].deeply['nested'].value).toBe('deep');
+            expect(jsonbPackage.extra['array']).toHaveLength(5);
+            expect(jsonbPackage.extra['boolean']).toBe(true);
+            expect(jsonbPackage.extra['number']).toBe(42);
+            expect(jsonbPackage.extra['null_value']).toBeNull();
         });
     });
 });

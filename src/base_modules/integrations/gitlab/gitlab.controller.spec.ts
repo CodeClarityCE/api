@@ -48,8 +48,6 @@ describe('GitlabIntegrationController', () => {
         added_by: 'test-user-id',
         service_domain: 'https://gitlab.com',
         invalid: false,
-        expiry_date: undefined,
-        refresh_token: undefined,
         meta_data: {} as any
     };
 

@@ -34,33 +34,33 @@ export function getTextualRepOfMemberRole(action: MemberRole): string {
 export class OrgMembership {
     @Expose()
     @ApiProperty()
-    id: string;
+    id!: string;
 
     @Expose()
     @ApiProperty()
-    role: MemberRole;
-
-    @Expose()
-    @ApiProperty()
-    @Type(() => Date)
-    added_on: Date;
-
-    @Expose()
-    @ApiProperty()
-    added_by: string;
+    role!: MemberRole;
 
     @Expose()
     @ApiProperty()
     @Type(() => Date)
-    joined_on: Date;
+    added_on!: Date;
 
     @Expose()
     @ApiProperty()
-    organization_id: string;
+    added_by!: string;
 
     @Expose()
     @ApiProperty()
-    user_id: string;
+    @Type(() => Date)
+    joined_on!: Date;
+
+    @Expose()
+    @ApiProperty()
+    organization_id!: string;
+
+    @Expose()
+    @ApiProperty()
+    user_id!: string;
 }
 
 /********************************************/
@@ -68,12 +68,12 @@ export class OrgMembership {
 /********************************************/
 
 export class OrganizationMembershipCreate {
-    role: MemberRole;
-    added_on: Date;
-    added_by: string;
-    joined_on: Date;
-    organization_id: string;
-    user_id: string;
+    role!: MemberRole;
+    added_on!: Date;
+    added_by!: string;
+    joined_on!: Date;
+    organization_id!: string;
+    user_id!: string;
 }
 
 export function isMemberRoleGreaterThan(memberRole1: MemberRole, memberRole2: MemberRole) {
