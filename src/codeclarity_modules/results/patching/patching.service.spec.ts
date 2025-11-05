@@ -1,13 +1,19 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { PatchingService } from './patching.service';
-import { AnalysisResultsService } from '../results.service';
-import { PatchingUtilsService } from './utils/utils';
-import { SbomUtilsService } from '../sbom/utils/utils';
-import { VulnerabilitiesUtilsService } from '../vulnerabilities/utils/utils.service';
-import { Result } from '../result.entity';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { UnknownWorkspace } from 'src/types/error.types';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+
+import { Result } from '../result.entity';
+import { AnalysisResultsService } from '../results.service';
+import { SbomUtilsService } from '../sbom/utils/utils';
+import { VulnerabilitiesUtilsService } from '../vulnerabilities/utils/utils.service';
+
+import { PatchingService } from './patching.service';
+import { PatchingUtilsService } from './utils/utils';
+
+
 
 describe('PatchingService', () => {
     let service: PatchingService;
@@ -113,7 +119,7 @@ describe('PatchingService', () => {
                 undefined
             );
 
-            expect(result).toEqual(mockPatchesOutput.workspaces['default']);
+            expect(result).toEqual(mockPatchesOutput.workspaces.default);
             expect(analysisResultsService.checkAccess).toHaveBeenCalledWith(
                 'org-123',
                 'project-123',

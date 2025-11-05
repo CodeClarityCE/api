@@ -1,16 +1,6 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { GithubIntegrationController } from './github.controller';
-import { GithubIntegrationService } from './github.service';
-import { GithubRepositoriesService } from './githubRepos.service';
-import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
-import { Integration } from '../integrations.entity';
-import { RepositoryCache } from '../../projects/repositoryCache.entity';
-import {
-    GithubTokenType,
-    LinkGithubCreateBody,
-    LinkGithubPatchBody
-} from './githubIntegration.types';
-import { SortDirection } from '../../../types/sort.types';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
 import {
     DuplicateIntegration,
     EntityNotFound,
@@ -24,6 +14,23 @@ import {
     NotAuthenticated,
     NotAuthorized
 } from '../../../types/error.types';
+import { SortDirection } from '../../../types/sort.types';
+import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
+import type { RepositoryCache } from '../../projects/repositoryCache.entity';
+import type { Integration } from '../integrations.entity';
+
+import { GithubIntegrationController } from './github.controller';
+import { GithubIntegrationService } from './github.service';
+import type {
+    LinkGithubCreateBody,
+    LinkGithubPatchBody
+} from './githubIntegration.types';
+import {
+    GithubTokenType
+} from './githubIntegration.types';
+import { GithubRepositoriesService } from './githubRepos.service';
+
+
 
 describe('GithubIntegrationController', () => {
     let controller: GithubIntegrationController;

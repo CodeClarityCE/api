@@ -1,5 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import {
     Controller,
     Get,
@@ -10,11 +8,12 @@ import {
     Query,
     ValidationPipe,
     UseGuards
-} from '@nestjs/common';
-import { IsEmail, IsString, MinLength, IsUUID, IsOptional, IsInt, Min, Max } from 'class-validator';
+, CanActivate, ExecutionContext } from '@nestjs/common';
 import { APP_PIPE } from '@nestjs/core';
-import { CanActivate, ExecutionContext } from '@nestjs/common';
+import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import { Test, TestingModule } from '@nestjs/testing';
 import { Transform } from 'class-transformer';
+import { IsEmail, IsString, MinLength, IsUUID, IsOptional, IsInt, Min, Max } from 'class-validator';
 
 // Mock Authorization Guard
 class MockAuthGuard implements CanActivate {

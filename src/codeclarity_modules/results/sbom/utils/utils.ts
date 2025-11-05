@@ -1,3 +1,5 @@
+import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
 import {
     Dependency,
     DependencyDetails,
@@ -8,12 +10,14 @@ import {
 } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { PluginFailed, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/error.types';
-import { Result } from 'src/codeclarity_modules/results/result.entity';
-import { Repository, In } from 'typeorm';
+
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, In } from 'typeorm';
+
 import { VulnerabilitiesUtilsService } from '../../vulnerabilities/utils/utils.service';
-import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
+
+
 import { EcosystemMapper } from './ecosystem-mapper';
 
 @Injectable()
@@ -63,7 +67,7 @@ export class SbomUtilsService {
         }
 
         const sbom: SBOMOutput = result.result as unknown as SBOMOutput;
-        if (sbom.analysis_info.status == Status.Failure) {
+        if (sbom.analysis_info.status === Status.Failure) {
             throw new PluginFailed();
         }
         return sbom;
@@ -75,7 +79,7 @@ export class SbomUtilsService {
      */
     async getMergedSbomResults(analysis_id: string): Promise<{
         mergedSbom: SBOMOutput;
-        pluginResults: Array<{ plugin: string; sbom: SBOMOutput; ecosystem: string }>;
+        pluginResults: { plugin: string; sbom: SBOMOutput; ecosystem: string }[];
     }> {
         // Get all supported SBOM plugins dynamically
         const supportedPlugins = EcosystemMapper.getSupportedSbomPlugins();
@@ -144,7 +148,7 @@ export class SbomUtilsService {
      * while preserving ecosystem information for each dependency
      */
     private mergeSbomResults(
-        pluginResults: Array<{ plugin: string; sbom: SBOMOutput; ecosystem: string }>
+        pluginResults: { plugin: string; sbom: SBOMOutput; ecosystem: string }[]
     ): SBOMOutput {
         if (pluginResults.length === 0) {
             throw new Error('No plugin results to merge');
@@ -180,9 +184,9 @@ export class SbomUtilsService {
      */
     private mergeWorkspaceData(
         workspace: string,
-        pluginResults: Array<{ plugin: string; sbom: SBOMOutput; ecosystem: string }>
+        pluginResults: { plugin: string; sbom: SBOMOutput; ecosystem: string }[]
     ): WorkSpaceData {
-        const mergedDependencies: { [key: string]: { [key: string]: Dependency } } = {};
+        const mergedDependencies: Record<string, Record<string, Dependency>> = {};
         const mergedStartDependencies: WorkSpaceDependency[] = [];
         const mergedStartDevDependencies: WorkSpaceDependency[] = [];
 
@@ -242,11 +246,11 @@ export class SbomUtilsService {
         const filteredSbom = JSON.parse(JSON.stringify(sbom)) as SBOMOutput;
 
         for (const [workspaceName, workspaceData] of Object.entries(filteredSbom.workspaces)) {
-            const filteredDependencies: { [key: string]: { [key: string]: Dependency } } = {};
+            const filteredDependencies: Record<string, Record<string, Dependency>> = {};
 
             // Filter dependencies by ecosystem
             for (const [depName, versions] of Object.entries(workspaceData.dependencies || {})) {
-                const filteredVersions: { [key: string]: Dependency } = {};
+                const filteredVersions: Record<string, Dependency> = {};
 
                 for (const [version, dependency] of Object.entries(versions)) {
                     if ((dependency as any).ecosystem === ecosystem) {
@@ -342,20 +346,20 @@ export class SbomUtilsService {
 
         for (const vuln of vulns.workspaces['.']!.Vulnerabilities) {
             if (
-                vuln.AffectedDependency == dependency_name &&
-                vuln.AffectedVersion == dependency_version
+                vuln.AffectedDependency === dependency_name &&
+                vuln.AffectedVersion === dependency_version
             ) {
                 dependency_details.vulnerabilities.push(vuln.VulnerabilityId);
                 dependency_details.severity_dist.critical +=
-                    vuln.Severity.SeverityClass == 'CRITICAL' ? 1 : 0;
+                    vuln.Severity.SeverityClass === 'CRITICAL' ? 1 : 0;
                 dependency_details.severity_dist.high +=
-                    vuln.Severity.SeverityClass == 'HIGH' ? 1 : 0;
+                    vuln.Severity.SeverityClass === 'HIGH' ? 1 : 0;
                 dependency_details.severity_dist.medium +=
-                    vuln.Severity.SeverityClass == 'MEDIUM' ? 1 : 0;
+                    vuln.Severity.SeverityClass === 'MEDIUM' ? 1 : 0;
                 dependency_details.severity_dist.low +=
-                    vuln.Severity.SeverityClass == 'LOW' ? 1 : 0;
+                    vuln.Severity.SeverityClass === 'LOW' ? 1 : 0;
                 dependency_details.severity_dist.none +=
-                    vuln.Severity.SeverityClass == 'NONE' ? 1 : 0;
+                    vuln.Severity.SeverityClass === 'NONE' ? 1 : 0;
             }
         }
 

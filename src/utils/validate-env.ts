@@ -9,7 +9,6 @@ import {
     ValidationError,
     validateSync
 } from 'class-validator';
-
 import * as dotenv from 'dotenv';
 
 /**
@@ -208,7 +207,7 @@ class DevEnvironmentVariables extends EnvironmentVariables {
     @IsNotEmpty()
     @Transform(
         (v) => {
-            return v.obj['REQUIRE_ACCOUNT_VERIFICATION'] == 'true' ? true : false;
+            return v.obj.REQUIRE_ACCOUNT_VERIFICATION === 'true' ? true : false;
         },
         { toClassOnly: true }
     )
@@ -225,29 +224,29 @@ function validateBootstrap() {
     let errors: ValidationError[] = [];
     let validatedConfig: EnvironmentVariables;
 
-    if (env == undefined || env == '') {
+    if (env === undefined || env === '') {
         throw Error("'ENV' environment variable missing");
     }
 
     // Load config from .env files based on the current environment
     let res;
-    if (env == 'dev') {
+    if (env === 'dev') {
         res = dotenv.config({ path: 'env/.env.dev', override: false });
-    } else if (env == 'prod') {
+    } else if (env === 'prod') {
         res = dotenv.config({ path: 'env/.env.prod', override: false });
-    } else if (env == 'staging') {
+    } else if (env === 'staging') {
         res = dotenv.config({ path: 'env/.env.staging', override: false });
-    } else if (env == 'test') {
+    } else if (env === 'test') {
         res = dotenv.config({ path: 'env/.env.test', override: false });
     }
 
     // Check if there were any errors loading the config
-    if (res && res.error) {
+    if (res?.error) {
         throw res.error;
     }
 
     // Determine which class to use for validation based on the environment
-    if (env == Environment.Development) {
+    if (env === Environment.Development) {
         validatedConfig = plainToInstance(DevEnvironmentVariables, process.env, {
             enableImplicitConversion: true
         });
@@ -261,7 +260,7 @@ function validateBootstrap() {
 
     // Check if there were any validation errors
     if (errors.length > 0) {
-        throw new Error('Environment variables failed to validate\n\n' + errors.toString());
+        throw new Error(`Environment variables failed to validate\n\n${  errors.toString()}`);
     }
 }
 
@@ -272,12 +271,12 @@ export function validate(config: Record<string, unknown>) {
     const env = process.env['ENV'];
 
     // Check if the 'ENV' environment variable is set
-    if (env == undefined || env == '') {
+    if (env === undefined || env === '') {
         throw Error("'ENV' environment variable missing");
     }
 
     // Determine which class to use for validation based on the environment
-    if (env == Environment.Development) {
+    if (env === Environment.Development) {
         const validatedConfig = plainToInstance(DevEnvironmentVariables, config, {
             enableImplicitConversion: true
         });

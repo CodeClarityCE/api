@@ -1,6 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ApiKeysService } from './apiKeys.service';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
+import { ApiKeysService } from './apiKeys.service';
+
 
 describe('ApiKeysService', () => {
     let service: ApiKeysService;

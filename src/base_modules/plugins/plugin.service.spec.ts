@@ -1,7 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { PluginService } from './plugin.service';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
+import type { Plugin } from './plugin.entity';
 import { PluginsRepository } from './plugin.repository';
-import { Plugin } from './plugin.entity';
+import { PluginService } from './plugin.service';
 
 describe('PluginService', () => {
     let pluginService: PluginService;
@@ -53,7 +55,7 @@ describe('PluginService', () => {
         }).compile();
 
         pluginService = module.get<PluginService>(PluginService);
-        pluginsRepository = module.get(PluginsRepository) as jest.Mocked<PluginsRepository>;
+        pluginsRepository = module.get(PluginsRepository);
     });
 
     afterEach(() => {

@@ -1,7 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { PaginatedResponse } from 'src/types/apiResponses.types';
-import { AnalysisResultsService } from '../results.service';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
 import {
     Dependency,
     DependencyDetails,
@@ -9,18 +7,25 @@ import {
     SbomDependency,
     WorkspacesOutput
 } from 'src/codeclarity_modules/results/sbom/sbom.types';
-import { paginate } from 'src/codeclarity_modules/results/utils/utils';
-import { SbomUtilsService } from 'src/codeclarity_modules/results/sbom/utils/utils';
-import { filter } from './utils/filter';
-import { sort } from './utils/sort';
-import { EntityNotFound, UnknownWorkspace } from 'src/types/error.types';
-import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
 import {
     AnalysisStats,
     newAnalysisStats
 } from 'src/codeclarity_modules/results/sbom/sbom_stats.types';
-import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
+import { SbomUtilsService } from 'src/codeclarity_modules/results/sbom/utils/utils';
+import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
+import { paginate } from 'src/codeclarity_modules/results/utils/utils';
+import { PaginatedResponse } from 'src/types/apiResponses.types';
+import { EntityNotFound, UnknownWorkspace } from 'src/types/error.types';
+
+import { Injectable } from '@nestjs/common';
+
+import { AnalysisResultsService } from '../results.service';
+
+
 import { GraphDependency, GraphTraversalUtils } from './sbom_graph.types';
+import { filter } from './utils/filter';
+import { sort } from './utils/sort';
+
 
 @Injectable()
 export class SBOMService {
@@ -43,7 +48,7 @@ export class SBOMService {
         analysisId: string,
         workspace: string,
         user: AuthenticatedUser,
-        ecosystem_filter?: string | undefined
+        ecosystem_filter?: string  
     ): Promise<AnalysisStats> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
@@ -236,12 +241,12 @@ export class SBOMService {
         sort_direction: string | undefined,
         active_filters_string: string | undefined,
         search_key: string | undefined,
-        ecosystem_filter?: string | undefined
+        ecosystem_filter?: string  
     ): Promise<PaginatedResponse> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
         let active_filters: string[] = [];
-        if (active_filters_string != null)
+        if (active_filters_string !== null)
             active_filters = active_filters_string.replace('[', '').replace(']', '').split(',');
 
         // Get merged SBOM results from all supported plugins
@@ -262,17 +267,17 @@ export class SBOMService {
                     for (const [, dependency] of Object.entries(
                         sbom.workspaces[workspace]!.start.dependencies
                     )) {
-                        if (dependency.name == dep_key && dependency.version == version_key) {
+                        if (dependency.name === dep_key && dependency.version === version_key) {
                             is_direct = 1;
                             break;
                         }
                     }
                 }
-                if (sbom.workspaces[workspace]!.start.dev_dependencies && is_direct == 0) {
+                if (sbom.workspaces[workspace]!.start.dev_dependencies && is_direct === 0) {
                     for (const [, dependency] of Object.entries(
                         sbom.workspaces[workspace]!.start.dev_dependencies
                     )) {
-                        if (dependency.name == dep_key && dependency.version == version_key) {
+                        if (dependency.name === dep_key && dependency.version === version_key) {
                             is_direct = 1;
                             break;
                         }
@@ -434,8 +439,8 @@ export class SBOMService {
                 return await this.sbomUtilsService.getDependencyData(
                     analysisId,
                     workspace,
-                    dependencyName!,
-                    dependencyVersion!,
+                    dependencyName,
+                    dependencyVersion,
                     mergedSbom
                 );
             }
@@ -451,7 +456,7 @@ export class SBOMService {
         workspace: string,
         dependency: string,
         user: AuthenticatedUser
-    ): Promise<Array<GraphDependency>> {
+    ): Promise<GraphDependency[]> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
         // Get merged SBOM results from all supported plugins
@@ -467,7 +472,7 @@ export class SBOMService {
             throw new EntityNotFound('Dependency parameter is required');
         }
 
-        const dependenciesMap: { [depName: string]: { [version: string]: Dependency } } =
+        const dependenciesMap: Record<string, Record<string, Dependency>> =
             mergedSbom.workspaces[workspace]!.dependencies;
 
         // Check if dependencies exist in this workspace
@@ -476,7 +481,7 @@ export class SBOMService {
         }
 
         // First, build the complete dependency graph
-        const completeGraph: Array<GraphDependency> = this.buildCompleteGraph(
+        const completeGraph: GraphDependency[] = this.buildCompleteGraph(
             dependenciesMap,
             mergedSbom.workspaces[workspace]
         );
@@ -493,7 +498,7 @@ export class SBOMService {
         // If the target node is a direct dependency and does not already have the virtual root as a parent, add it
         if (
             virtualRoot &&
-            (!targetNode.parentIds || !targetNode.parentIds.includes(SBOMService.VIRTUAL_ROOT_ID))
+            (!targetNode.parentIds?.includes(SBOMService.VIRTUAL_ROOT_ID))
         ) {
             // Add virtual root as parent
             targetNode.parentIds = Array.from(
@@ -522,7 +527,7 @@ export class SBOMService {
         if (virtualRoot && !pathNodes.some((node) => node.id === virtualRoot.id)) {
             // Check if any path node is a child of virtual root
             const hasVirtualRootChild = pathNodes.some(
-                (node) => node.parentIds && node.parentIds.includes(SBOMService.VIRTUAL_ROOT_ID)
+                (node) => node.parentIds?.includes(SBOMService.VIRTUAL_ROOT_ID)
             );
 
             if (hasVirtualRootChild) {
@@ -543,10 +548,10 @@ export class SBOMService {
      * @returns Complete graph of all dependencies with parent-child relationships rooted at virtual root
      */
     private buildCompleteGraph(
-        dependenciesMap: { [depName: string]: { [version: string]: Dependency } },
+        dependenciesMap: Record<string, Record<string, Dependency>>,
         workspace: any
-    ): Array<GraphDependency> {
-        const graph: Array<GraphDependency> = [];
+    ): GraphDependency[] {
+        const graph: GraphDependency[] = [];
         const processedNodes = new Set<string>();
 
         // Create a virtual root node that will be the parent of all orphaned nodes
@@ -650,9 +655,9 @@ export class SBOMService {
      */
     private findParentDependencies(
         targetDependency: string,
-        dependenciesMap: { [depName: string]: { [version: string]: Dependency } }
+        dependenciesMap: Record<string, Record<string, Dependency>>
     ): string[] {
-        if (!targetDependency || !targetDependency.includes('@')) {
+        if (!targetDependency?.includes('@')) {
             return [];
         }
 

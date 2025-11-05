@@ -1,6 +1,6 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
+import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('plugin')
 export class Plugin {
@@ -32,5 +32,5 @@ export class Plugin {
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    config?: { [key: string]: any };
+    config?: Record<string, any>;
 }

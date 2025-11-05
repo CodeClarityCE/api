@@ -1,26 +1,34 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
-import { AnalysesService } from './analyses.service';
-import { ProjectMemberService } from '../projects/projectMember.service';
-import { UsersRepository } from '../users/users.repository';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
-import { ProjectsRepository } from '../projects/projects.repository';
-import { AnalyzersRepository } from '../analyzers/analyzers.repository';
+import { Policy } from 'src/codeclarity_modules/policies/policy.entity';
+import { LicensesRepository } from 'src/codeclarity_modules/results/licenses/licenses.repository';
 import { AnalysisResultsRepository } from 'src/codeclarity_modules/results/results.repository';
 import { SBOMRepository } from 'src/codeclarity_modules/results/sbom/sbom.repository';
 import { VulnerabilitiesRepository } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.repository';
-import { LicensesRepository } from 'src/codeclarity_modules/results/licenses/licenses.repository';
-import { AnalysesRepository } from './analyses.repository';
-import { LanguageDetectionService } from './language-detection.service';
-import { AnalysisStatus } from './analysis.entity';
-import { AnalysisCreateBody } from './analysis.types';
+import { RabbitMQError } from 'src/types/error.types';
+
+import { ConfigService } from '@nestjs/config';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import * as amqp from 'amqplib';
+
+import { AnaylzerMissingConfigAttribute } from '../analyzers/analyzers.errors';
+import { AnalyzersRepository } from '../analyzers/analyzers.repository';
 import { AuthenticatedUser, ROLE } from '../auth/auth.types';
 import { MemberRole } from '../organizations/memberships/orgMembership.types';
-import { AnaylzerMissingConfigAttribute } from '../analyzers/analyzers.errors';
-import { RabbitMQError } from 'src/types/error.types';
-import * as amqp from 'amqplib';
-import { Policy } from 'src/codeclarity_modules/policies/policy.entity';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { OrganizationsRepository } from '../organizations/organizations.repository';
+import { ProjectMemberService } from '../projects/projectMember.service';
+import { ProjectsRepository } from '../projects/projects.repository';
+import { UsersRepository } from '../users/users.repository';
+
+
+import { AnalysesRepository } from './analyses.repository';
+import { AnalysesService } from './analyses.service';
+import { AnalysisStatus } from './analysis.entity';
+import type { AnalysisCreateBody } from './analysis.types';
+import { LanguageDetectionService } from './language-detection.service';
+
+
+
 
 // Mock amqplib
 jest.mock('amqplib', () => ({
@@ -128,7 +136,7 @@ describe('AnalysesService', () => {
                     provide: ConfigService,
                     useValue: {
                         getOrThrow: jest.fn((key: string) => {
-                            const config: { [key: string]: string } = {
+                            const config: Record<string, string> = {
                                 AMQP_ANALYSES_QUEUE: 'analyses',
                                 AMQP_PROTOCOL: 'amqp',
                                 AMQP_USER: 'user',

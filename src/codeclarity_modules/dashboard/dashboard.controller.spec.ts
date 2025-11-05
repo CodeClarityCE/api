@@ -1,8 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
+import type { LicenseDist } from 'src/codeclarity_modules/results/sbom/sbom.types';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
-import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
-import {
+import type {
     AttackVectorDist,
     CIAImpact,
     GetOverallAttackVectorDistQueryOptions,
@@ -15,11 +19,12 @@ import {
     LatestVulns,
     ProjectQuickStats,
     QuickStats,
-    SeverityInfoByWeek,
+    SeverityInfoByWeek} from './dashboard.types';
+import {
     ProjectGradeClass,
     Trend
 } from './dashboard.types';
-import { LicenseDist } from 'src/codeclarity_modules/results/sbom/sbom.types';
+
 
 describe('DashboardController', () => {
     let controller: DashboardController;

@@ -1,28 +1,31 @@
-import { Injectable } from '@nestjs/common';
-import { TypedPaginatedData } from 'src/types/pagination.types';
-import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
-import { EntityNotFound, IntegrationNotSupported, NotAuthorized } from 'src/types/error.types';
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { OrganizationLoggerService } from 'src/base_modules/organizations/log/organizationLogger.service';
-import { ProjectMemberService } from './projectMember.service';
-import { SortDirection } from 'src/types/sort.types';
-import { GithubRepositoriesService } from '../integrations/github/githubRepos.service';
-import { GitlabRepositoriesService } from '../integrations/gitlab/gitlabRepos.service';
-import { ProjectImportBody } from 'src/base_modules/projects/project.types';
-import { IntegrationProvider } from 'src/base_modules/integrations/integration.types';
-import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { ActionType } from 'src/base_modules/organizations/log/orgAuditLog.types';
-import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
-import { IntegrationType, Project } from 'src/base_modules/projects/project.entity';
-import { join } from 'path';
 import { existsSync } from 'fs';
 import { mkdir, rm } from 'fs/promises';
-import { UsersRepository } from '../users/users.repository';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
-import { FileRepository } from '../file/file.repository';
-import { IntegrationsRepository } from '../integrations/integrations.repository';
+import { join } from 'path';
+
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { IntegrationProvider } from 'src/base_modules/integrations/integration.types';
+import { OrganizationLoggerService } from 'src/base_modules/organizations/log/organizationLogger.service';
+import { ActionType } from 'src/base_modules/organizations/log/orgAuditLog.types';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
+import { IntegrationType, Project } from 'src/base_modules/projects/project.entity';
+import { ProjectImportBody } from 'src/base_modules/projects/project.types';
+import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
 import { AnalysisResultsRepository } from 'src/codeclarity_modules/results/results.repository';
+import { EntityNotFound, IntegrationNotSupported, NotAuthorized } from 'src/types/error.types';
+import { PaginationConfig, PaginationUserSuppliedConf , TypedPaginatedData } from 'src/types/pagination.types';
+import { SortDirection } from 'src/types/sort.types';
+
+import { Injectable } from '@nestjs/common';
+
 import { AnalysesRepository } from '../analyses/analyses.repository';
+import { FileRepository } from '../file/file.repository';
+import { GithubRepositoriesService } from '../integrations/github/githubRepos.service';
+import { GitlabRepositoriesService } from '../integrations/gitlab/gitlabRepos.service';
+import { IntegrationsRepository } from '../integrations/integrations.repository';
+import { OrganizationsRepository } from '../organizations/organizations.repository';
+import { UsersRepository } from '../users/users.repository';
+
+import { ProjectMemberService } from './projectMember.service';
 import { ProjectsRepository } from './projects.repository';
 
 export enum AllowedOrderByGetProjects {
@@ -78,7 +81,7 @@ export class ProjectService {
 
             let repo: RepositoryCache;
 
-            if (integration.integration_provider == IntegrationProvider.GITHUB) {
+            if (integration.integration_provider === IntegrationProvider.GITHUB) {
                 await this.githubRepositoriesService.syncGithubRepos(projectData.integration_id);
                 try {
                     repo = await this.githubRepositoriesService.getGithubRepository(
@@ -112,7 +115,7 @@ export class ProjectService {
                         throw err;
                     }
                 }
-            } else if (integration.integration_provider == IntegrationProvider.GITLAB) {
+            } else if (integration.integration_provider === IntegrationProvider.GITLAB) {
                 await this.gitlabRepositoriesService.syncGitlabRepos(projectData.integration_id);
                 try {
                     repo = await this.gitlabRepositoriesService.getGitlabRepository(
@@ -302,9 +305,9 @@ export class ProjectService {
 
         // Every moderator, admin or owner can remove a project.
         // a normal user can also delete it, iff he is the one that added the project
-        if (memberRole == MemberRole.USER) {
-            // Get edge and check if added_by == user.userId
-            if (!project.added_by || project.added_by.id != user.userId) {
+        if (memberRole === MemberRole.USER) {
+            // Get edge and check if added_by === user.userId
+            if (!project.added_by || project.added_by.id !== user.userId) {
                 throw new NotAuthorized();
             }
         }
@@ -312,7 +315,7 @@ export class ProjectService {
         const organization = await this.organizationsRepository.getOrganizationById(orgId, {
             projects: true
         });
-        organization.projects = organization.projects.filter((p) => p.id != id);
+        organization.projects = organization.projects.filter((p) => p.id !== id);
         await this.organizationsRepository.saveOrganization(organization);
 
         const analyses = await this.analysesRepository.getAnalysesByProjectId(project.id, {

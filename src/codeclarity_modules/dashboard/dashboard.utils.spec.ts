@@ -31,7 +31,7 @@ function getProjectScoreClassFromScore(score: number): ProjectGradeClass {
         return ProjectGradeClass.B_PLUS;
     } else if (score < 0.1 && score > 0) {
         return ProjectGradeClass.A;
-    } else if (score == 0) {
+    } else if (score === 0) {
         return ProjectGradeClass.A_PLUS;
     }
     return ProjectGradeClass.D;

@@ -1,11 +1,15 @@
-import { Injectable } from '@nestjs/common';
 import { Project } from 'src/base_modules/projects/project.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { EntityNotFound, NotAuthorized, ProjectDoesNotExist } from 'src/types/error.types';
 import { TypedPaginatedData } from 'src/types/pagination.types';
-import { AllowedOrderByGetProjects } from './projects.service';
 import { SortDirection } from 'src/types/sort.types';
+
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+
+
+import { AllowedOrderByGetProjects } from './projects.service';
+
 
 @Injectable()
 export class ProjectsRepository {
@@ -105,9 +109,9 @@ export class ProjectsRepository {
             .addOrderBy('analyses.created_on', 'DESC');
 
         // if (sortBy && sortDirection) {
-        //     if (sortBy == AllowedOrderByGetProjects.NAME)
+        //     if (sortBy === AllowedOrderByGetProjects.NAME)
         //         queryBuilder = queryBuilder.orderBy('name', sortDirection);
-        //     else if (sortBy == AllowedOrderByGetProjects.IMPORTED_ON)
+        //     else if (sortBy === AllowedOrderByGetProjects.IMPORTED_ON)
         //         queryBuilder = queryBuilder.orderBy('added_on', sortDirection);
         // }
 

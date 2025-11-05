@@ -1,12 +1,13 @@
-import { satisfies } from 'semver';
-import {
+import type {
     PaginationConfig,
     PaginationUserSuppliedConf,
     TypedPaginatedData
 } from 'src/types/pagination.types';
 
+import { satisfies } from 'semver';
+
 export function isNoneSeverity(severity: number) {
-    return severity == 0.0 || severity == null;
+    return severity === 0.0 || severity === null;
 }
 
 export function isLowSeverity(severity: number) {
@@ -47,15 +48,15 @@ export function getVersionsSatisfying(
     const versionToReturn: string[] = [];
     let constraint = '';
 
-    if (lower != null && upper != null) {
+    if (lower !== null && upper !== null) {
         if (upperIncluded) constraint = `>= ${lower}`;
         else constraint = `> ${lower}`;
         if (lowerIncluded) constraint += `<= ${upper}`;
         else constraint += `< ${upper}`;
-    } else if (lower == null && upper != null) {
+    } else if (lower === null && upper !== null) {
         if (lowerIncluded) constraint = `<= ${upper}`;
         else constraint = `< ${upper}`;
-    } else if (upper == null && lower != null) {
+    } else if (upper === null && lower !== null) {
         if (upperIncluded) constraint = `>= ${lower}`;
         else constraint = `> ${lower}`;
     } else {
@@ -75,7 +76,7 @@ export class NoPreviousAnalysis extends Error {}
 export class NoProjectAssociatedWithAnalysis extends Error {}
 
 export function paginate<Type>(
-    elements: Array<Type>,
+    elements: Type[],
     totalEntries: number,
     paginationUserSuppliedConf: PaginationUserSuppliedConf,
     paginationConfig: PaginationConfig
@@ -90,7 +91,7 @@ export function paginate<Type>(
     let maxEntriesPerPageSafe: number;
 
     if (
-        paginationUserSuppliedConf.currentPage == null ||
+        paginationUserSuppliedConf.currentPage === null ||
         paginationUserSuppliedConf.currentPage < 0
     ) {
         currentPageSafe = DEFAULT_PAGE;
@@ -99,7 +100,7 @@ export function paginate<Type>(
     }
 
     if (
-        paginationUserSuppliedConf.entriesPerPage == null ||
+        paginationUserSuppliedConf.entriesPerPage === null ||
         paginationUserSuppliedConf.entriesPerPage < 0 ||
         paginationUserSuppliedConf.entriesPerPage > MAX_ENTRIES_PER_PAGE
     ) {

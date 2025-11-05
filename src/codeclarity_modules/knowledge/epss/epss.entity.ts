@@ -1,6 +1,6 @@
-import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('epss')
 export class EPSS {

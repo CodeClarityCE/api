@@ -1,6 +1,7 @@
-import { File } from './file.entity';
-import { User } from '../users/users.entity';
 import { Project } from '../projects/project.entity';
+import { User } from '../users/users.entity';
+
+import { File } from './file.entity';
 
 describe('File Entity', () => {
     let file: File;

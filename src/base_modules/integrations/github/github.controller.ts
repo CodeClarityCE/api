@@ -1,26 +1,21 @@
-import {
-    Body,
-    Controller,
-    DefaultValuePipe,
-    Get,
-    Param,
-    ParseBoolPipe,
-    ParseIntPipe,
-    Patch,
-    Post,
-    Query
-} from '@nestjs/common';
-import { AuthUser } from 'src/decorators/UserDecorator';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import {
+    GithubTokenType,
+    LinkGithubCreateBody,
+    LinkGithubPatchBody
+} from 'src/base_modules/integrations/github/githubIntegration.types';
+import { Integration } from 'src/base_modules/integrations/integrations.entity';
+import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
+import { ApiErrorDecorator } from 'src/decorators/ApiException';
+import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
+import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
+import { AuthUser } from 'src/decorators/UserDecorator';
 import {
     CreatedResponse,
     NoDataResponse,
     TypedPaginatedResponse,
     TypedResponse
 } from 'src/types/apiResponses.types';
-import { GithubIntegrationService } from './github.service';
-import { ApiTags } from '@nestjs/swagger';
-import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import {
     DuplicateIntegration,
     EntityNotFound,
@@ -34,17 +29,24 @@ import {
     NotAuthenticated,
     NotAuthorized
 } from 'src/types/error.types';
-import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
-import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
 import { SortDirection } from 'src/types/sort.types';
-import { GithubRepositoriesService } from './githubRepos.service';
+
 import {
-    GithubTokenType,
-    LinkGithubCreateBody,
-    LinkGithubPatchBody
-} from 'src/base_modules/integrations/github/githubIntegration.types';
-import { Integration } from 'src/base_modules/integrations/integrations.entity';
-import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
+    Body,
+    Controller,
+    DefaultValuePipe,
+    Get,
+    Param,
+    ParseBoolPipe,
+    ParseIntPipe,
+    Patch,
+    Post,
+    Query
+} from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+
+import { GithubIntegrationService } from './github.service';
+import { GithubRepositoriesService } from './githubRepos.service';
 
 @Controller('org/:org_id/integrations/github')
 export class GithubIntegrationController {

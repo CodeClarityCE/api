@@ -1,6 +1,6 @@
 import { PublicAPIError } from 'src/types/error.types';
 
-export const errorMessages: { [key: string]: string } = {
+export const errorMessages: Record<string, string> = {
     AnalyzerDoesNotExist: 'The analyzer referenced does not exist.',
     AnaylzerMissingConfigAttribute:
         'A required configuration attribute to run an anylzer is missing.'

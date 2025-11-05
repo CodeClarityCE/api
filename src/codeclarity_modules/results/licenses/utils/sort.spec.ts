@@ -1,5 +1,6 @@
+import type { LicenseInfo } from '../licenses2.types';
+
 import { sort } from './sort';
-import { LicenseInfo } from '../licenses2.types';
 
 describe('sort', () => {
     const createMockLicenseInfo = (overrides: Partial<LicenseInfo> = {}): LicenseInfo => ({

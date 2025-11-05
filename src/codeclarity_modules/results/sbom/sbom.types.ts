@@ -1,4 +1,4 @@
-import { Source } from 'src/codeclarity_modules/knowledge/package/package.entity';
+import type { Source } from 'src/codeclarity_modules/knowledge/package/package.entity';
 
 export interface SeverityDist {
     critical: number;
@@ -26,8 +26,8 @@ export enum Status {
 
 export interface Dependency {
     Key: string;
-    Requires: { [key: string]: string };
-    Dependencies: { [key: string]: string };
+    Requires: Record<string, string>;
+    Dependencies: Record<string, string>;
     Optional: boolean;
     Bundled: boolean;
     Dev: boolean;
@@ -57,13 +57,13 @@ export interface DependencyDetails {
     name: string;
     version: string;
     latest_version: string;
-    dependencies: { [key: string]: string };
-    dev_dependencies: { [key: string]: string };
+    dependencies: Record<string, string>;
+    dev_dependencies: Record<string, string>;
     transitive: boolean;
     source?: Source;
     package_manager: string;
     license: string;
-    engines: { [key: string]: string };
+    engines: Record<string, string>;
     release_date: Date;
     lastest_release_date: Date;
     // file_path!: string;
@@ -83,7 +83,7 @@ export interface WorkSpaceDependency {
 }
 
 export interface WorkSpaceData {
-    dependencies: { [key: string]: { [key: string]: Dependency } };
+    dependencies: Record<string, Record<string, Dependency>>;
     start: {
         dependencies?: WorkSpaceDependency[];
         dev_dependencies?: WorkSpaceDependency[];
@@ -91,7 +91,7 @@ export interface WorkSpaceData {
 }
 
 export interface Output {
-    workspaces: { [key: string]: WorkSpaceData };
+    workspaces: Record<string, WorkSpaceData>;
     analysis_info: AnalysisInfo;
 }
 
@@ -115,13 +115,11 @@ export interface AnalysisInfo {
     default_workspace_name: string;
     self_managed_workspace_name: string;
     work_spaces_used: boolean;
-    work_space_package_file_paths: { [key: string]: string };
-    stats: { [key: string]: any };
+    work_space_package_file_paths: Record<string, string>;
+    stats: Record<string, any>;
 }
 
-export interface LicenseDist {
-    [licenseId: string]: number;
-}
+export type LicenseDist = Record<string, number>;
 
 export interface Stats {
     license_dist: LicenseDist;
@@ -153,6 +151,6 @@ export interface GraphOutput {
 }
 
 export interface WorkspacesOutput {
-    workspaces: Array<string>;
+    workspaces: string[];
     package_manager: string;
 }

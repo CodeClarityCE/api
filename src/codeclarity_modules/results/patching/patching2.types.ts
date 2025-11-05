@@ -8,7 +8,7 @@ export interface PatchInfo {
     introduction_type: any;
     patch_type: any;
     vulnerability_info: VulnerabilitySummary;
-    patches: { [key: string]: any };
+    patches: Record<string, any>;
 }
 
 export interface VulnerabilitySummary {

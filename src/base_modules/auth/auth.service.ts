@@ -1,4 +1,3 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import {
     AuthenticatedUser,
     GithubAuthenticatedUser,
@@ -6,26 +5,30 @@ import {
     TokenRefreshResponse,
     TokenResponse
 } from 'src/base_modules/auth/auth.types';
+import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/gitlab/gitlabToken.service';
+import { SocialType } from 'src/base_modules/users/user.types';
+import { User } from 'src/base_modules/users/users.entity';
+import { UsersService } from 'src/base_modules/users/users.service';
 import {
     AlreadyExists,
     EntityNotFound,
     FailedToAuthenticateSocialAccount
 } from 'src/types/error.types';
-import { SocialType } from 'src/base_modules/users/user.types';
+
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from 'src/base_modules/users/users.service';
+import * as bcrypt from 'bcrypt';
+import ms from 'ms';
+
+import { CannotPerformActionOnSocialAccount } from '../users/users.errors';
+import { UsersRepository } from '../users/users.repository';
+
+import { RegistrationNotVerified, WrongCredentials } from './auth.errors';
 import {
     CONST_JWT_TOKEN_EXPIRES_IN,
     CONST_PASSWORD_SALT_ROUNDS,
     CONST_REFRESH_JWT_TOKEN_EXPIRES_IN
 } from './constants';
-import * as bcrypt from 'bcrypt';
-import ms from 'ms';
-import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/gitlab/gitlabToken.service';
-import { User } from 'src/base_modules/users/users.entity';
-import { UsersRepository } from '../users/users.repository';
-import { CannotPerformActionOnSocialAccount } from '../users/users.errors';
-import { RegistrationNotVerified, WrongCredentials } from './auth.errors';
 
 @Injectable()
 export class AuthService {
@@ -137,7 +140,7 @@ export class AuthService {
      */
     private async signJWT(
         userId: string,
-        roles: Array<string>,
+        roles: string[],
         activated: boolean
     ): Promise<TokenResponse> {
         const current = new Date();

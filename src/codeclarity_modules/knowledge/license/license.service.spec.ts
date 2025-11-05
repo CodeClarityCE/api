@@ -1,7 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { LicenseService } from './license.service';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
+import type { License } from './license.entity';
 import { LicenseRepository } from './license.repository';
-import { License } from './license.entity';
+import { LicenseService } from './license.service';
 
 describe('LicenseService', () => {
     let service: LicenseService;

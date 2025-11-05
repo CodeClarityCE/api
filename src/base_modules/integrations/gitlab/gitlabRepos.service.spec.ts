@@ -1,19 +1,23 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { GitlabRepositoriesService } from './gitlabRepos.service';
-import { GitlabIntegrationService } from './gitlab.service';
-import { OrganizationsRepository } from '../../organizations/organizations.repository';
-import { IntegrationsRepository } from '../integrations.repository';
-import { Repository } from 'typeorm';
-import { RepositoryCache, RepositoryType } from '../../projects/repositoryCache.entity';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
+import type { Repository } from 'typeorm';
+
 import { EntityNotFound, NotAuthorized } from '../../../types/error.types';
-import { MemberRole } from '../../organizations/memberships/organization.memberships.entity';
-import { Integration, IntegrationProvider, IntegrationType } from '../integrations.entity';
-import { GitlabIntegrationToken } from '../Token';
-import { GitlabTokenType } from './gitlabIntegration.types';
+import type { PaginationUserSuppliedConf } from '../../../types/pagination.types';
 import { SortDirection } from '../../../types/sort.types';
-import { PaginationUserSuppliedConf } from '../../../types/pagination.types';
+import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
+import { MemberRole } from '../../organizations/memberships/organization.memberships.entity';
+import { OrganizationsRepository } from '../../organizations/organizations.repository';
+import { RepositoryCache, RepositoryType } from '../../projects/repositoryCache.entity';
+import type { Integration} from '../integrations.entity';
+import { IntegrationProvider, IntegrationType } from '../integrations.entity';
+import { IntegrationsRepository } from '../integrations.repository';
+import type { GitlabIntegrationToken } from '../Token';
+
+import { GitlabIntegrationService } from './gitlab.service';
+import { GitlabTokenType } from './gitlabIntegration.types';
+import { GitlabRepositoriesService } from './gitlabRepos.service';
 
 // Mock fetch globally
 global.fetch = jest.fn();

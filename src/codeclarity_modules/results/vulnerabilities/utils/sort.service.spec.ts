@@ -1,5 +1,7 @@
+import type { VulnerabilityMerged} from '../vulnerabilities.types';
+import { ConflictFlag } from '../vulnerabilities.types';
+
 import { VulnerabilitiesSortService } from './sort.service';
-import { VulnerabilityMerged, ConflictFlag } from '../vulnerabilities.types';
 
 // Use any type to avoid complex type conflicts between different WeaknessInfo interfaces
 

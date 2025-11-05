@@ -1,9 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import type { Repository } from 'typeorm';
+
 import { AnalysesRepository } from './analyses.repository';
 import { Analysis, AnalysisStatus } from './analysis.entity';
-import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
+
 
 describe('AnalysesRepository', () => {
     let analysesRepository: AnalysesRepository;

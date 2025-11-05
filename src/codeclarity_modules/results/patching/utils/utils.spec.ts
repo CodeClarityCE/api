@@ -1,11 +1,17 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { PatchingUtilsService } from './utils';
-import { Result } from '../../result.entity';
-import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
-import { Output as PatchesOutput } from '../patching.types';
 import { Status } from 'src/types/apiResponses.types';
+import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import type { Repository } from 'typeorm';
+
+import { Result } from '../../result.entity';
+import type { Output as PatchesOutput } from '../patching.types';
+
+import { PatchingUtilsService } from './utils';
+
+
 
 describe('PatchingUtilsService', () => {
     let service: PatchingUtilsService;

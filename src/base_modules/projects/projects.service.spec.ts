@@ -1,24 +1,26 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ProjectService } from './projects.service';
-import { OrganizationLoggerService } from '../organizations/log/organizationLogger.service';
-import { ProjectMemberService } from './projectMember.service';
-import { GithubRepositoriesService } from '../integrations/github/githubRepos.service';
-import { GitlabRepositoriesService } from '../integrations/gitlab/gitlabRepos.service';
-import { UsersRepository } from '../users/users.repository';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
-import { FileRepository } from '../file/file.repository';
-import { IntegrationsRepository } from '../integrations/integrations.repository';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
 import { AnalysisResultsRepository } from '../../codeclarity_modules/results/results.repository';
-import { AnalysesRepository } from '../analyses/analyses.repository';
-import { ProjectsRepository } from './projects.repository';
-import { AuthenticatedUser, ROLE } from '../auth/auth.types';
-import { Project } from './project.entity';
-import { ProjectImportBody } from './project.types';
-import { IntegrationProvider } from '../integrations/integration.types';
-import { MemberRole } from '../organizations/memberships/orgMembership.types';
 import { EntityNotFound, IntegrationNotSupported, NotAuthorized } from '../../types/error.types';
 import { SortDirection } from '../../types/sort.types';
-import { AllowedOrderByGetProjects } from './projects.service';
+import { AnalysesRepository } from '../analyses/analyses.repository';
+import { AuthenticatedUser, ROLE } from '../auth/auth.types';
+import { FileRepository } from '../file/file.repository';
+import { GithubRepositoriesService } from '../integrations/github/githubRepos.service';
+import { GitlabRepositoriesService } from '../integrations/gitlab/gitlabRepos.service';
+import type { IntegrationProvider } from '../integrations/integration.types';
+import { IntegrationsRepository } from '../integrations/integrations.repository';
+import { OrganizationLoggerService } from '../organizations/log/organizationLogger.service';
+import { MemberRole } from '../organizations/memberships/orgMembership.types';
+import { OrganizationsRepository } from '../organizations/organizations.repository';
+import { UsersRepository } from '../users/users.repository';
+
+import type { Project } from './project.entity';
+import type { ProjectImportBody } from './project.types';
+import { ProjectMemberService } from './projectMember.service';
+import { ProjectsRepository } from './projects.repository';
+import { ProjectService , AllowedOrderByGetProjects } from './projects.service';
 
 describe('ProjectService', () => {
     let service: ProjectService;

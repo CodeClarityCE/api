@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+
 import { Plugin } from './plugin.entity';
 import { PluginsRepository } from './plugin.repository';
 @Injectable()
@@ -18,7 +19,7 @@ export class PluginService {
      * Get all plugins
      * @returns all plugins
      */
-    async getAll(): Promise<Array<Plugin>> {
+    async getAll(): Promise<Plugin[]> {
         return this.pluginsRepository.getAll();
     }
 }

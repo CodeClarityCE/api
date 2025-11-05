@@ -1,13 +1,16 @@
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { ApiErrorDecorator } from 'src/decorators/ApiException';
+import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
+import { AuthUser } from 'src/decorators/UserDecorator';
+import { Response } from 'src/types/apiResponses.types';
+import { InternalError, NotAuthenticated, NotAuthorized } from 'src/types/error.types';
+
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
+
 import { Result } from './result.entity';
-import { ApiErrorDecorator } from 'src/decorators/ApiException';
-import { AuthUser } from 'src/decorators/UserDecorator';
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { InternalError, NotAuthenticated, NotAuthorized } from 'src/types/error.types';
 import { AnalysisResultsService } from './results.service';
-import { Response } from 'src/types/apiResponses.types';
+
 
 @Controller('/result')
 export class ResultsController {

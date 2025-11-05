@@ -1,9 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { LicensesRepository } from './licenses.repository';
-import { Result } from '../result.entity';
-import { Status } from './licenses.types';
 import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+
+import { Result } from '../result.entity';
+
+import { LicensesRepository } from './licenses.repository';
+import { Status } from './licenses.types';
+
 
 describe('LicensesRepository', () => {
     let repository: LicensesRepository;

@@ -1,14 +1,15 @@
-import { Status } from 'src/types/apiResponses.types';
-import { Vulnerability } from '../vulnerabilities/vulnerabilities.types';
+import type { Status } from 'src/types/apiResponses.types';
+
+import type { Vulnerability } from '../vulnerabilities/vulnerabilities.types';
 
 export interface Output {
-    workspaces: { [key: string]: Workspace };
+    workspaces: Record<string, Workspace>;
     analysis_info: AnalysisInfo;
 }
 
 export interface Workspace {
-    patches: { [key: string]: PatchInfo };
-    dev_patches: { [key: string]: PatchInfo };
+    patches: Record<string, PatchInfo>;
+    dev_patches: Record<string, PatchInfo>;
 }
 
 export interface PatchInfo {
@@ -17,7 +18,7 @@ export interface PatchInfo {
     Unpatchable: ToPatch[];
     Patchable: ToPatch[];
     Introduced: ToPatch[];
-    Patches: { [key: string]: SemVer };
+    Patches: Record<string, SemVer>;
     Update: SemVer;
 }
 

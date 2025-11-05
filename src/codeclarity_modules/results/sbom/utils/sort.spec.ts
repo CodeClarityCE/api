@@ -1,5 +1,6 @@
+import type { SbomDependency } from '../sbom.types';
+
 import { sort } from './sort';
-import { SbomDependency } from '../sbom.types';
 
 describe('sort', () => {
     const createMockDependency = (overrides: Partial<SbomDependency> = {}): SbomDependency => ({

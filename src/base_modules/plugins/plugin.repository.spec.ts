@@ -1,8 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { PluginsRepository } from './plugin.repository';
+import type { Repository } from 'typeorm';
+
 import { Plugin } from './plugin.entity';
+import { PluginsRepository } from './plugin.repository';
 
 describe('PluginsRepository', () => {
     let pluginsRepository: PluginsRepository;

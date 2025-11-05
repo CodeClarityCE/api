@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
 import { License } from 'src/codeclarity_modules/knowledge/license/license.entity';
 import { LicenseRepository } from 'src/codeclarity_modules/knowledge/license/license.repository';
+
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class LicenseService {
@@ -19,7 +20,7 @@ export class LicenseService {
      * Get a license policy
      * @returns the license policy
      */
-    async getAll(): Promise<Array<License>> {
+    async getAll(): Promise<License[]> {
         return await this.licenceRepo.getAllLicenseData();
     }
 }

@@ -1,3 +1,5 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { Expose } from 'class-transformer';
 import {
     Entity,
     Column,
@@ -10,18 +12,17 @@ import {
     JoinColumn,
     Index
 } from 'typeorm';
-import { ApiProperty } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
+
+import type { Policy } from '../../codeclarity_modules/policies/policy.entity';
+import type { Analysis } from '../analyses/analysis.entity';
+import type { Analyzer } from '../analyzers/analyzer.entity';
+import type { Email } from '../email/email.entity';
+import type { File } from '../file/file.entity';
+import type { Integration } from '../integrations/integrations.entity';
+import type { Invitation } from '../organizations/invitations/invitation.entity';
 import { OrganizationMemberships } from '../organizations/memberships/organization.memberships.entity';
 import type { Organization } from '../organizations/organization.entity';
-import type { Integration } from '../integrations/integrations.entity';
 import type { Project } from '../projects/project.entity';
-import type { Analyzer } from '../analyzers/analyzer.entity';
-import type { Analysis } from '../analyses/analysis.entity';
-import type { Policy } from '../../codeclarity_modules/policies/policy.entity';
-import type { File } from '../file/file.entity';
-import type { Email } from '../email/email.entity';
-import type { Invitation } from '../organizations/invitations/invitation.entity';
 
 export enum SocialType {
     GITHUB = 'GITHUB',

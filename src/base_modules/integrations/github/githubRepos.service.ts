@@ -1,24 +1,27 @@
-import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { GithubRepositorySchema } from 'src/base_modules/integrations/github/github.types';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
+import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import { RepositoryCache, RepositoryType } from 'src/base_modules/projects/repositoryCache.entity';
+import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import {
     EntityNotFound,
     FailedToRetrieveReposFromProvider,
     IntegrationInvalidToken,
     NotAuthorized
 } from 'src/types/error.types';
-import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
-import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from './constants';
-import { GithubRepositorySchema } from 'src/base_modules/integrations/github/github.types';
 import { SortDirection } from 'src/types/sort.types';
-import ms from 'ms';
-import { GithubIntegrationService } from './github.service';
-import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { RepositoryCache, RepositoryType } from 'src/base_modules/projects/repositoryCache.entity';
+
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import ms from 'ms';
 import { Repository } from 'typeorm';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+
 import { IntegrationsRepository } from '../integrations.repository';
+
+import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from './constants';
+import { GithubIntegrationService } from './github.service';
 
 @Injectable()
 export class GithubRepositoriesService {
@@ -138,7 +141,7 @@ export class GithubRepositoriesService {
             currentPage = Math.max(0, paginationUserSuppliedConf.currentPage);
 
         // If the user specifically request to re-sync the repos (for example in case a newly create repo does not show up)
-        if (forceRefresh != undefined && forceRefresh == true) {
+        if (forceRefresh !== undefined && forceRefresh === true) {
             await this.forceSyncGithubRepos(integrationId);
         } else {
             // Check if the github repo cache is synced
@@ -156,13 +159,13 @@ export class GithubRepositoriesService {
             .where('repo.integration = :integrationId', { integrationId });
 
         if (sortBy) {
-            if (sortBy == AllowedOrderBy.FULLY_QUALIFIED_NAME)
+            if (sortBy === AllowedOrderBy.FULLY_QUALIFIED_NAME)
                 repositoryQB = repositoryQB.orderBy('fully_qualified_name', sortDirection ?? 'ASC');
-            else if (sortBy == AllowedOrderBy.DESCRIPTION)
+            else if (sortBy === AllowedOrderBy.DESCRIPTION)
                 repositoryQB = repositoryQB.orderBy('description', sortDirection ?? 'ASC');
-            else if (sortBy == AllowedOrderBy.CREATED)
+            else if (sortBy === AllowedOrderBy.CREATED)
                 repositoryQB = repositoryQB.orderBy('created_at', sortDirection ?? 'ASC');
-            else if (sortBy == AllowedOrderBy.IMPORTED)
+            else if (sortBy === AllowedOrderBy.IMPORTED)
                 repositoryQB = repositoryQB.orderBy('imported_already', sortDirection ?? 'ASC');
         }
 
@@ -235,7 +238,7 @@ export class GithubRepositoriesService {
 
         const isSynced = await this.areGithubReposSynced(integrationId);
 
-        if (forceRefresh != undefined && forceRefresh == true) {
+        if (forceRefresh !== undefined && forceRefresh === true) {
             await this.forceSyncGithubRepos(integrationId);
         } else {
             if (!isSynced) {
@@ -358,7 +361,7 @@ export class GithubRepositoriesService {
                 per_page: entriesPerPage,
                 page: page,
                 sort: 'updated',
-                since: lastUpdated != undefined ? lastUpdated.toISOString() : undefined
+                since: lastUpdated !== undefined ? lastUpdated.toISOString() : undefined
             });
 
             const linkHeader = response.headers.link;
@@ -388,7 +391,7 @@ export class GithubRepositoriesService {
             return [repos, lastPage];
         } catch (err) {
             if ((err as any).status) {
-                if ((err as any).status == 401) {
+                if ((err as any).status === 401) {
                     throw new IntegrationInvalidToken();
                 } else {
                     throw new FailedToRetrieveReposFromProvider();

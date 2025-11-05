@@ -1,18 +1,24 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { VulnerabilitiesService } from './vulnerabilities.service';
-import { AnalysisResultsService } from '../results.service';
-import { VulnerabilitiesUtilsService } from './utils/utils.service';
-import { VulnerabilitiesSortService } from './utils/sort.service';
-import { VulnerabilitiesFilterService } from './utils/filter.service';
-import { SbomUtilsService } from '../sbom/utils/utils';
-import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.repository';
-import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
-import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
-import { EPSSRepository } from 'src/codeclarity_modules/knowledge/epss/epss.repository';
-import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
-import { UnknownWorkspace } from 'src/types/error.types';
-import { VulnerabilityPolicyService } from 'src/codeclarity_modules/policies/vulnerability/vulnerability.service';
 import { AnalysesRepository } from 'src/base_modules/analyses/analyses.repository';
+import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
+import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
+import { EPSSRepository } from 'src/codeclarity_modules/knowledge/epss/epss.repository';
+import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
+import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.repository';
+import { VulnerabilityPolicyService } from 'src/codeclarity_modules/policies/vulnerability/vulnerability.service';
+import { UnknownWorkspace } from 'src/types/error.types';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
+import { AnalysisResultsService } from '../results.service';
+import { SbomUtilsService } from '../sbom/utils/utils';
+
+import { VulnerabilitiesFilterService } from './utils/filter.service';
+import { VulnerabilitiesSortService } from './utils/sort.service';
+import { VulnerabilitiesUtilsService } from './utils/utils.service';
+import { VulnerabilitiesService } from './vulnerabilities.service';
+
+
 
 describe('VulnerabilitiesService', () => {
     let service: VulnerabilitiesService;

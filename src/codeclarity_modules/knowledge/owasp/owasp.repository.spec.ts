@@ -1,6 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { OWASPRepository } from './owasp.repository';
 import { EntityNotFound } from 'src/types/error.types';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
+import { OWASPRepository } from './owasp.repository';
+
 
 describe('OWASPRepository', () => {
     let repository: OWASPRepository;

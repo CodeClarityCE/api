@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 import {
     isNoneSeverity,
     isLowSeverity,
@@ -11,6 +10,8 @@ import {
     VulnerabilityMerged
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 
+import { Injectable } from '@nestjs/common';
+
 @Injectable()
 export class VulnerabilitiesFilterService {
     constructor() {}
@@ -19,7 +20,7 @@ export class VulnerabilitiesFilterService {
         vulnerabilities: VulnerabilityMerged[],
         searchKey: string | undefined,
         activeFilters: string[] | undefined
-    ): [VulnerabilityMerged[], { [key: string]: number }] {
+    ): [VulnerabilityMerged[], Record<string, number>] {
         // Validation of input
         let searchkeySafe: string;
         let activeFiltersSafe: string[];
@@ -51,20 +52,20 @@ export class VulnerabilitiesFilterService {
             'hide_possibly_incorrect_matching'
         ];
 
-        if (searchKey == null) {
+        if (searchKey === null) {
             searchkeySafe = '';
         } else {
             searchkeySafe = searchKey;
         }
 
-        if (activeFilters == null) {
+        if (activeFilters === null) {
             activeFiltersSafe = [];
         } else {
             activeFiltersSafe = activeFilters;
         }
 
         function filterBySearchKey(vulnerabilities: VulnerabilityMerged[]): VulnerabilityMerged[] {
-            if (searchKey == '') {
+            if (searchKey === '') {
                 return vulnerabilities;
             }
 
@@ -74,7 +75,7 @@ export class VulnerabilitiesFilterService {
             for (const vulnerability of vulnerabilities) {
                 for (const affected of vulnerability.Affected) {
                     if (
-                        affected.AffectedDependency != null &&
+                        affected.AffectedDependency !== null &&
                         affected.AffectedDependency.toLocaleLowerCase().includes(searchKey)
                     ) {
                         toReturn.push(vulnerability);
@@ -82,7 +83,7 @@ export class VulnerabilitiesFilterService {
                     }
                 }
                 if (
-                    vulnerability.Vulnerability != null &&
+                    vulnerability.Vulnerability !== null &&
                     vulnerability.Vulnerability.toLocaleLowerCase().includes(searchKey)
                 ) {
                     toReturn.push(vulnerability);
@@ -100,11 +101,11 @@ export class VulnerabilitiesFilterService {
             const toReturn = [];
 
             for (const vulnerability of vulnerabilities) {
-                if (vulnerability.Weaknesses != null) {
+                if (vulnerability.Weaknesses !== null) {
                     if (filters.includes('owasp_top_10_2021_a1')) {
                         let found = false;
                         for (const weakness of vulnerability.Weaknesses) {
-                            if (weakness.OWASPTop10Id == '1345') found = true;
+                            if (weakness.OWASPTop10Id === '1345') found = true;
                             break;
                         }
                         if (!found) continue;
@@ -112,7 +113,7 @@ export class VulnerabilitiesFilterService {
                     if (filters.includes('owasp_top_10_2021_a2')) {
                         let found = false;
                         for (const weakness of vulnerability.Weaknesses) {
-                            if (weakness.OWASPTop10Id == '1346') found = true;
+                            if (weakness.OWASPTop10Id === '1346') found = true;
                             break;
                         }
                         if (!found) continue;
@@ -120,7 +121,7 @@ export class VulnerabilitiesFilterService {
                     if (filters.includes('owasp_top_10_2021_a3')) {
                         let found = false;
                         for (const weakness of vulnerability.Weaknesses) {
-                            if (weakness.OWASPTop10Id == '1347') found = true;
+                            if (weakness.OWASPTop10Id === '1347') found = true;
                             break;
                         }
                         if (!found) continue;
@@ -128,7 +129,7 @@ export class VulnerabilitiesFilterService {
                     if (filters.includes('owasp_top_10_2021_a4')) {
                         let found = false;
                         for (const weakness of vulnerability.Weaknesses) {
-                            if (weakness.OWASPTop10Id == '1348') found = true;
+                            if (weakness.OWASPTop10Id === '1348') found = true;
                             break;
                         }
                         if (!found) continue;
@@ -136,7 +137,7 @@ export class VulnerabilitiesFilterService {
                     if (filters.includes('owasp_top_10_2021_a5')) {
                         let found = false;
                         for (const weakness of vulnerability.Weaknesses) {
-                            if (weakness.OWASPTop10Id == '1349') found = true;
+                            if (weakness.OWASPTop10Id === '1349') found = true;
                             break;
                         }
                         if (!found) continue;
@@ -144,7 +145,7 @@ export class VulnerabilitiesFilterService {
                     if (filters.includes('owasp_top_10_2021_a6')) {
                         let found = false;
                         for (const weakness of vulnerability.Weaknesses) {
-                            if (weakness.OWASPTop10Id == '1352') found = true;
+                            if (weakness.OWASPTop10Id === '1352') found = true;
                             break;
                         }
                         if (!found) continue;
@@ -152,7 +153,7 @@ export class VulnerabilitiesFilterService {
                     if (filters.includes('owasp_top_10_2021_a7')) {
                         let found = false;
                         for (const weakness of vulnerability.Weaknesses) {
-                            if (weakness.OWASPTop10Id == '1353') found = true;
+                            if (weakness.OWASPTop10Id === '1353') found = true;
                             break;
                         }
                         if (!found) continue;
@@ -160,7 +161,7 @@ export class VulnerabilitiesFilterService {
                     if (filters.includes('owasp_top_10_2021_a8')) {
                         let found = false;
                         for (const weakness of vulnerability.Weaknesses) {
-                            if (weakness.OWASPTop10Id == '1354') found = true;
+                            if (weakness.OWASPTop10Id === '1354') found = true;
                             break;
                         }
                         if (!found) continue;
@@ -168,7 +169,7 @@ export class VulnerabilitiesFilterService {
                     if (filters.includes('owasp_top_10_2021_a9')) {
                         let found = false;
                         for (const weakness of vulnerability.Weaknesses) {
-                            if (weakness.OWASPTop10Id == '1355') found = true;
+                            if (weakness.OWASPTop10Id === '1355') found = true;
                             break;
                         }
                         if (!found) continue;
@@ -176,7 +177,7 @@ export class VulnerabilitiesFilterService {
                     if (filters.includes('owasp_top_10_2021_a10')) {
                         let found = false;
                         for (const weakness of vulnerability.Weaknesses) {
-                            if (weakness.OWASPTop10Id == '1356') found = true;
+                            if (weakness.OWASPTop10Id === '1356') found = true;
                             break;
                         }
                         if (!found) continue;
@@ -184,7 +185,7 @@ export class VulnerabilitiesFilterService {
                     if (filters.includes('owasp_uncategorized')) {
                         let found = false;
                         for (const weakness of vulnerability.Weaknesses) {
-                            if (weakness.OWASPTop10Id != '') found = true;
+                            if (weakness.OWASPTop10Id !== '') found = true;
                             break;
                         }
                         if (found) continue;
@@ -192,13 +193,13 @@ export class VulnerabilitiesFilterService {
                 }
 
                 // if (filters.includes('patchable')) {
-                //     if (vulnerability.PatchType != PatchType.Full) continue;
+                //     if (vulnerability.PatchType !== PatchType.Full) continue;
                 // }
                 // if (filters.includes('partially_patchable')) {
-                //     if (vulnerability.PatchType != PatchType.Partial) continue;
+                //     if (vulnerability.PatchType !== PatchType.Partial) continue;
                 // }
                 // if (filters.includes('not_patchable')) {
-                //     if (vulnerability.PatchType != PatchType.None) continue;
+                //     if (vulnerability.PatchType !== PatchType.None) continue;
                 // }
 
                 if (filters.includes('severity_critical')) {
@@ -219,45 +220,42 @@ export class VulnerabilitiesFilterService {
 
                 if (filters.includes('availability_impact')) {
                     if (
-                        (vulnerability.Severity &&
-                            vulnerability.Severity.AvailabilityImpact == 'NONE') ||
-                        vulnerability.Severity.AvailabilityImpact == ''
+                        (vulnerability.Severity?.AvailabilityImpact === 'NONE') ||
+                        vulnerability.Severity.AvailabilityImpact === ''
                     )
                         continue;
                 }
                 if (filters.includes('confidentiality_impact')) {
                     if (
-                        (vulnerability.Severity &&
-                            vulnerability.Severity.ConfidentialityImpact == 'NONE') ||
-                        vulnerability.Severity.ConfidentialityImpact == ''
+                        (vulnerability.Severity?.ConfidentialityImpact === 'NONE') ||
+                        vulnerability.Severity.ConfidentialityImpact === ''
                     )
                         continue;
                 }
                 if (filters.includes('integrity_impact')) {
                     if (
-                        (vulnerability.Severity &&
-                            vulnerability.Severity.IntegrityImpact == 'NONE') ||
-                        vulnerability.Severity.IntegrityImpact == ''
+                        (vulnerability.Severity?.IntegrityImpact === 'NONE') ||
+                        vulnerability.Severity.IntegrityImpact === ''
                     )
                         continue;
                 }
                 if (filters.includes('hide_correct_matching')) {
                     if (
-                        vulnerability.Conflict.ConflictFlag == ConflictFlag.MATCH_CORRECT ||
+                        vulnerability.Conflict.ConflictFlag === ConflictFlag.MATCH_CORRECT ||
                         (vulnerability.Conflict.ConflictFlag as any) === 'MATCH_CORRECT'
                     )
                         continue;
                 }
                 if (filters.includes('hide_incorrect_matching')) {
                     if (
-                        vulnerability.Conflict.ConflictFlag == ConflictFlag.MATCH_INCORRECT ||
+                        vulnerability.Conflict.ConflictFlag === ConflictFlag.MATCH_INCORRECT ||
                         (vulnerability.Conflict.ConflictFlag as any) === 'MATCH_INCORRECT'
                     )
                         continue;
                 }
                 if (filters.includes('hide_possibly_incorrect_matching')) {
                     if (
-                        vulnerability.Conflict.ConflictFlag ==
+                        vulnerability.Conflict.ConflictFlag ===
                             ConflictFlag.MATCH_POSSIBLE_INCORRECT ||
                         (vulnerability.Conflict.ConflictFlag as any) === 'MATCH_POSSIBLE_INCORRECT'
                     ) {
@@ -273,7 +271,7 @@ export class VulnerabilitiesFilterService {
 
         const filteredBySearchKey = filterBySearchKey(vulnerabilities);
 
-        const counts: { [key: string]: number } = {};
+        const counts: Record<string, number> = {};
         for (const filter of possibleFilters) {
             if (filter in activeFiltersSafe) continue;
             const filters = [filter];

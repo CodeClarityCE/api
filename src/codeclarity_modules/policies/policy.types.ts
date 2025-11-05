@@ -1,5 +1,5 @@
-import { Expose, Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+import { Expose, Type } from 'class-transformer';
 
 export enum PolicyType {
     LICENSE_POLICY = 'LICENSE_POLICY',

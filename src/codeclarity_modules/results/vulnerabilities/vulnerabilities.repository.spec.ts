@@ -1,9 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { VulnerabilitiesRepository } from './vulnerabilities.repository';
-import { Result } from '../result.entity';
-import { Status } from './vulnerabilities.types';
 import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+
+import { Result } from '../result.entity';
+
+import { VulnerabilitiesRepository } from './vulnerabilities.repository';
+import { Status } from './vulnerabilities.types';
+
 
 describe('VulnerabilitiesRepository', () => {
     let repository: VulnerabilitiesRepository;

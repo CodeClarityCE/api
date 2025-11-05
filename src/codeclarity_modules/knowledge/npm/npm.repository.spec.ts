@@ -1,9 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { NPMPackageRepository } from './npm.repository';
-import { Package } from '../package/package.entity';
 import { EntityNotFound } from 'src/types/error.types';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import type { Repository } from 'typeorm';
+
+import { Package } from '../package/package.entity';
+
+import { NPMPackageRepository } from './npm.repository';
 
 describe('NPMPackageRepository', () => {
     let npmRepository: NPMPackageRepository;
@@ -145,7 +149,7 @@ describe('NPMPackageRepository', () => {
         });
 
         it('should handle very long package names', async () => {
-            const longPackageName = 'very-long-' + 'package-name-'.repeat(20) + 'final';
+            const longPackageName = `very-long-${  'package-name-'.repeat(20)  }final`;
             mockRepository.findOne.mockResolvedValue(null);
 
             await expect(npmRepository.getNpmPackageData(longPackageName)).rejects.toThrow(

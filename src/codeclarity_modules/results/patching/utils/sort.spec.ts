@@ -1,5 +1,6 @@
+import type { PatchInfo, VulnerabilitySummary } from '../patching2.types';
+
 import { sort } from './sort';
-import { PatchInfo, VulnerabilitySummary } from '../patching2.types';
 
 describe('sort', () => {
     const createMockVulnerabilitySummary = (): VulnerabilitySummary => ({

@@ -1,3 +1,5 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { Expose } from 'class-transformer';
 import {
     Entity,
     Column,
@@ -8,8 +10,6 @@ import {
     Index,
     JoinColumn
 } from 'typeorm';
-import { ApiProperty } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
 
 @Entity('package')
 @Index(['name', 'language'], { unique: true })
@@ -97,7 +97,7 @@ export class Package {
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    extra!: { [key: string]: any };
+    extra!: Record<string, any>;
 
     @OneToMany(() => Version, (version) => version.package)
     versions!: Relation<Version[]>;
@@ -121,17 +121,17 @@ export class Version {
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    dependencies!: { [key: string]: string };
+    dependencies!: Record<string, string>;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    dev_dependencies!: { [key: string]: string };
+    dev_dependencies!: Record<string, string>;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    extra!: { [key: string]: any };
+    extra!: Record<string, any>;
 
     @ManyToOne(() => Package, (pack) => pack.versions)
     @JoinColumn({ name: 'package_id' })

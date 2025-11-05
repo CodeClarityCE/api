@@ -1,5 +1,8 @@
-import { Result, ResultObject, ResultByAnalysisId, AnalysisInfo } from './result.entity';
 import { Analysis } from '../../base_modules/analyses/analysis.entity';
+
+import type { ResultObject, ResultByAnalysisId, AnalysisInfo } from './result.entity';
+import { Result } from './result.entity';
+
 
 describe('Result Entity', () => {
     let result: Result;
@@ -152,8 +155,8 @@ describe('Result Entity', () => {
         result.result = vulnResult;
 
         expect(result.plugin).toBe('js-vuln-finder');
-        expect((result.result.workspaces as any)['default'].affected_vulnerabilities).toBeDefined();
-        expect((result.result.workspaces as any)['default'].Vulnerabilities).toHaveLength(1);
+        expect((result.result.workspaces as any).default.affected_vulnerabilities).toBeDefined();
+        expect((result.result.workspaces as any).default.Vulnerabilities).toHaveLength(1);
     });
 
     it('should handle license scan results', () => {
@@ -181,8 +184,8 @@ describe('Result Entity', () => {
         result.result = licenseResult;
 
         expect(result.plugin).toBe('js-license');
-        expect((result.result.workspaces as any)['default'].LicensesDepMap).toBeDefined();
-        expect((result.result.workspaces as any)['default'].LicensesDepMap['MIT']).toHaveLength(2);
+        expect((result.result.workspaces as any).default.LicensesDepMap).toBeDefined();
+        expect((result.result.workspaces as any).default.LicensesDepMap.MIT).toHaveLength(2);
     });
 
     it('should handle empty result objects', () => {
@@ -283,9 +286,9 @@ describe('ResultObject Interface', () => {
         };
 
         expect(Object.keys(resultObject.workspaces)).toHaveLength(3);
-        expect((resultObject.workspaces as any)['frontend']).toBeDefined();
-        expect((resultObject.workspaces as any)['backend']).toBeDefined();
-        expect((resultObject.workspaces as any)['shared']).toBeDefined();
+        expect((resultObject.workspaces as any).frontend).toBeDefined();
+        expect((resultObject.workspaces as any).backend).toBeDefined();
+        expect((resultObject.workspaces as any).shared).toBeDefined();
     });
 });
 

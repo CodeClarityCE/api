@@ -1,5 +1,6 @@
-import { IsNotEmpty, IsOptional, IsEnum, IsBoolean, IsDateString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional, IsEnum, IsBoolean, IsDateString } from 'class-validator';
+
 import { StageBase } from '../analyzers/analyzer.types';
 
 /********************************************/
@@ -16,7 +17,7 @@ export class AnalysisCreateBody {
         example: { license_policy_id: '72305504' }
     })
     @IsNotEmpty()
-    config!: { [key: string]: { [key: string]: any } };
+    config!: Record<string, Record<string, any>>;
 
     @ApiProperty({ description: 'Which branch of the repository to analyze', example: 'main' })
     @IsNotEmpty()
@@ -103,7 +104,7 @@ export interface AnalysisCreate {
     created_on: Date;
     analyzer_id: string;
     created_by: string;
-    config: { [key: string]: { [key: string]: any } };
+    config: Record<string, Record<string, any>>;
     stage: number;
     status: AnalysisStatus;
     steps: AnalysisStage[][];

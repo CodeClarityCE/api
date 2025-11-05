@@ -1,31 +1,37 @@
-import { Injectable } from '@nestjs/common';
+import { Analysis, AnalysisStage, AnalysisStatus } from 'src/base_modules/analyses/analysis.entity';
 import { AnalysisCreateBody } from 'src/base_modules/analyses/analysis.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { RabbitMQError } from 'src/types/error.types';
-import { ProjectMemberService } from '../projects/projectMember.service';
-import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
-import { TypedPaginatedData } from 'src/types/pagination.types';
-import * as amqp from 'amqplib';
-import { ConfigService } from '@nestjs/config';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { AnalysisStartMessageCreate } from 'src/types/rabbitMqMessages.types';
-import { Output as VulnsOuptut } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
-import { Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
+import { Policy } from 'src/codeclarity_modules/policies/policy.entity';
+import { LicensesRepository } from 'src/codeclarity_modules/results/licenses/licenses.repository';
 import { Output as LicensesOutput } from 'src/codeclarity_modules/results/licenses/licenses.types';
-import { Analysis, AnalysisStage, AnalysisStatus } from 'src/base_modules/analyses/analysis.entity';
-import { UsersRepository } from '../users/users.repository';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
-import { ProjectsRepository } from '../projects/projects.repository';
-import { AnalyzersRepository } from '../analyzers/analyzers.repository';
 import { AnalysisResultsRepository } from 'src/codeclarity_modules/results/results.repository';
 import { SBOMRepository } from 'src/codeclarity_modules/results/sbom/sbom.repository';
+import { Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { VulnerabilitiesRepository } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.repository';
-import { LicensesRepository } from 'src/codeclarity_modules/results/licenses/licenses.repository';
-import { AnalysesRepository } from './analyses.repository';
-import { AnaylzerMissingConfigAttribute } from '../analyzers/analyzers.errors';
-import { Repository } from 'typeorm';
+import { Output as VulnsOuptut } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
+import { RabbitMQError } from 'src/types/error.types';
+import { PaginationConfig, PaginationUserSuppliedConf , TypedPaginatedData } from 'src/types/pagination.types';
+import { AnalysisStartMessageCreate } from 'src/types/rabbitMqMessages.types';
+
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Policy } from 'src/codeclarity_modules/policies/policy.entity';
+import * as amqp from 'amqplib';
+import { Repository } from 'typeorm';
+
+import { AnaylzerMissingConfigAttribute } from '../analyzers/analyzers.errors';
+import { AnalyzersRepository } from '../analyzers/analyzers.repository';
+import { OrganizationsRepository } from '../organizations/organizations.repository';
+import { ProjectMemberService } from '../projects/projectMember.service';
+import { ProjectsRepository } from '../projects/projects.repository';
+import { UsersRepository } from '../users/users.repository';
+
+
+import { AnalysesRepository } from './analyses.repository';
+
+
+
 
 @Injectable()
 export class AnalysesService {
@@ -103,10 +109,10 @@ export class AnalysesService {
         }
 
         // Initialize an object to hold the configuration structure for the analyzer steps
-        const config_structure: { [key: string]: any } = {};
+        const config_structure: Record<string, any> = {};
 
         // Initialize an object to hold the final configuration provided by the user
-        const config: { [key: string]: any } = {};
+        const config: Record<string, any> = {};
 
         // Array to store stages of the analysis process
         const stages: AnalysisStage[][] = [];
@@ -159,7 +165,7 @@ export class AnalysesService {
         for (const [pluginName, plugin_config] of Object.entries(config_structure)) {
             for (const [key] of Object.entries(plugin_config)) {
                 const config_element = config_structure[pluginName][key];
-                if (config_element.required && (!config[pluginName] || !config[pluginName][key])) {
+                if (config_element.required && (!config[pluginName]?.[key])) {
                     throw new AnaylzerMissingConfigAttribute();
                 }
             }
@@ -315,7 +321,7 @@ export class AnalysesService {
         projectId: string,
         id: string,
         user: AuthenticatedUser
-    ): Promise<Array<object>> {
+    ): Promise<object[]> {
         // (1) Check if user has access to org
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
@@ -666,7 +672,7 @@ export class AnalysesService {
     private filterStepsByLanguage(
         analyzerSteps: any[][],
         detectedLanguages: string[],
-        languageConfig?: { [key: string]: { plugins: string[] } | undefined }
+        languageConfig?: Record<string, { plugins: string[] } | undefined>
     ): any[][] {
         if (!languageConfig) {
             // If no language configuration, return all steps for backward compatibility
@@ -716,7 +722,7 @@ export class AnalysesService {
      * @private
      */
     private groupResultsByDay(results: any[]): any[] {
-        if (!results || results.length === 0) return [];
+        if (results?.length === 0) return [];
 
         // Group results by the day they were created
         const grouped = results.reduce(

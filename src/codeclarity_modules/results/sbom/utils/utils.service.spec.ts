@@ -1,15 +1,24 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
-import { SbomUtilsService } from './utils';
-import { Result } from 'src/codeclarity_modules/results/result.entity';
-import { VulnerabilitiesUtilsService } from '../../vulnerabilities/utils/utils.service';
-import { LicensesUtilsService } from '../../licenses/utils/utils';
+import type { Package } from 'src/codeclarity_modules/knowledge/package/package.entity';
 import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
-import { Status, Output as SBOMOutput } from '../sbom.types';
-import { Output as VulnsOutput } from '../../vulnerabilities/vulnerabilities.types';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { PluginFailed, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/error.types';
-import { Package } from 'src/codeclarity_modules/knowledge/package/package.entity';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import type { Repository} from 'typeorm';
+import { In } from 'typeorm';
+
+import { LicensesUtilsService } from '../../licenses/utils/utils';
+import { VulnerabilitiesUtilsService } from '../../vulnerabilities/utils/utils.service';
+import type { Output as VulnsOutput } from '../../vulnerabilities/vulnerabilities.types';
+import type { Output as SBOMOutput } from '../sbom.types';
+import { Status } from '../sbom.types';
+
+import { SbomUtilsService } from './utils';
+
+
+
 
 describe('SbomUtilsService', () => {
     let service: SbomUtilsService;
@@ -630,9 +639,9 @@ describe('SbomUtilsService', () => {
         });
 
         it('should have correct dependencies injected', () => {
-            expect(service['resultRepository']).toBe(resultRepository);
-            expect(service['vulnerabilitiesUtilsService']).toBe(vulnerabilitiesUtilsService);
-            expect(service['packageRepository']).toBe(packageRepository);
+            expect(service.resultRepository).toBe(resultRepository);
+            expect(service.vulnerabilitiesUtilsService).toBe(vulnerabilitiesUtilsService);
+            expect(service.packageRepository).toBe(packageRepository);
         });
     });
 });

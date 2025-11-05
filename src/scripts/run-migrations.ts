@@ -10,9 +10,9 @@ async function runAll() {
             if (!ds.isInitialized) await ds.initialize();
             await ds.runMigrations();
             await ds.destroy();
-            console.log(`Migrations executed for ${ds.options['database']}`);
+            console.log(`Migrations executed for ${ds.options.database}`);
         } catch (e) {
-            console.error(`Failed migrations for ${ds.options['database']}`, e);
+            console.error(`Failed migrations for ${ds.options.database}`, e);
             process.exit(1);
         }
     }

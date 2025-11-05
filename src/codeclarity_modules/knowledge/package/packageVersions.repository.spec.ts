@@ -1,8 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { VersionsRepository } from './packageVersions.repository';
-import { Package, Version } from './package.entity';
 import { EntityNotFound } from 'src/types/error.types';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+
+import { Package, Version } from './package.entity';
+import { VersionsRepository } from './packageVersions.repository';
 
 describe('VersionsRepository', () => {
     let repository: VersionsRepository;

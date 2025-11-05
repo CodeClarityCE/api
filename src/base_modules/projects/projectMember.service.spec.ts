@@ -1,9 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ProjectMemberService } from './projectMember.service';
-import { Project } from './project.entity';
+import type { Repository } from 'typeorm';
+
 import { NotAuthorized } from '../../types/error.types';
+
+import { Project } from './project.entity';
+import { ProjectMemberService } from './projectMember.service';
 
 describe('ProjectMemberService', () => {
     let service: ProjectMemberService;

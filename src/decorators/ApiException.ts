@@ -1,7 +1,12 @@
-import { Type, applyDecorators } from '@nestjs/common';
-import { ApiExtraModels, ApiResponse, ApiResponseOptions, getSchemaPath } from '@nestjs/swagger';
 import { Status } from 'src/types/apiResponses.types';
-import { APIError, PublicAPIError, errorMessages } from 'src/types/error.types';
+import type { APIError} from 'src/types/error.types';
+import { PublicAPIError, errorMessages } from 'src/types/error.types';
+
+import type { Type} from '@nestjs/common';
+import { applyDecorators } from '@nestjs/common';
+import type { ApiResponseOptions} from '@nestjs/swagger';
+import { ApiExtraModels, ApiResponse, getSchemaPath } from '@nestjs/swagger';
+
 
 export function ApiErrorDecorator({
     statusCode,
@@ -15,7 +20,7 @@ export function ApiErrorDecorator({
     const descriptions = [];
     let description = '';
     let example: any = {};
-    const examples: { [key: string]: any } = {};
+    const examples: Record<string, any> = {};
 
     if (errors.length > 1) {
         description = 'Throws errors: ';

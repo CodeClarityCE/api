@@ -1,6 +1,3 @@
-import { Controller, Post, Body, Get, UseGuards } from '@nestjs/common';
-import { NonAuthEndpoint } from 'src/decorators/SkipAuthDecorator';
-import { AuthUser } from 'src/decorators/UserDecorator';
 import {
     AuthenticateBody,
     AuthenticatedUser,
@@ -9,20 +6,23 @@ import {
     UserPasswordResetBody,
     UserPasswordResetRequestBody
 } from 'src/base_modules/auth/auth.types';
-import { AuthService } from './auth.service';
-import { RefreshJwtAuthGuard } from './guards/refresh-token.guard';
 import { UserCreateBody, RegistrationConfirmationBody } from 'src/base_modules/users/user.types';
-import { UsersService } from '../users/users.service';
-import { CreatedResponse, NoDataResponse, TypedResponse } from 'src/types/apiResponses.types';
-import { CombinedAuthGuard } from './guards/combined.guard';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
-import { ApiErrorDecorator } from 'src/decorators/ApiException';
-import { EmailAlreadyExists, EntityNotFound } from 'src/types/error.types';
-import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
-import { APIDocNoDataResponseDecorator } from 'src/decorators/NoDataResponse';
 import { User } from 'src/base_modules/users/users.entity';
+import { ApiErrorDecorator } from 'src/decorators/ApiException';
+import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
+import { APIDocNoDataResponseDecorator } from 'src/decorators/NoDataResponse';
+import { NonAuthEndpoint } from 'src/decorators/SkipAuthDecorator';
+import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
+import { AuthUser } from 'src/decorators/UserDecorator';
+import { CreatedResponse, NoDataResponse, TypedResponse } from 'src/types/apiResponses.types';
+import { EmailAlreadyExists, EntityNotFound } from 'src/types/error.types';
+
+import { Controller, Post, Body, Get, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+
 import { CannotPerformActionOnSocialAccount } from '../users/users.errors';
+import { UsersService } from '../users/users.service';
+
 import {
     AccountRegistrationVerificationTokenInvalidOrExpired,
     HandleAlreadyExists,
@@ -31,6 +31,9 @@ import {
     RegistrationNotVerified,
     WrongCredentials
 } from './auth.errors';
+import { AuthService } from './auth.service';
+import { CombinedAuthGuard } from './guards/combined.guard';
+import { RefreshJwtAuthGuard } from './guards/refresh-token.guard';
 
 @Controller('auth')
 export class AuthController {

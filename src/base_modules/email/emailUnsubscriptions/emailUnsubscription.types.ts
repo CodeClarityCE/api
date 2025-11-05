@@ -1,6 +1,6 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { IsNotEmpty } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
 
 export enum UnsubscriptionType {
     ALL_EMAILS = 'ALL_EMAILS',

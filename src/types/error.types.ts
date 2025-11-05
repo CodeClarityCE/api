@@ -1,6 +1,7 @@
-import { ValidationError } from 'class-validator';
-import { Status } from './apiResponses.types';
 import { ApiProperty } from '@nestjs/swagger';
+import { ValidationError } from 'class-validator';
+
+import { Status } from './apiResponses.types';
 
 export class APIError extends Error {
     // extends HttpException {
@@ -50,7 +51,7 @@ export class APIError extends Error {
     }
 }
 
-export const errorMessages: { [key: string]: string } = {
+export const errorMessages: Record<string, string> = {
     ValidationFailed: 'Malformed request',
     NotAuthenticated: 'You are not authenticated.',
     NotAuthorized: 'You are not authorized to perform this action.',

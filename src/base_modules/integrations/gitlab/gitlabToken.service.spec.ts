@@ -1,6 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
+import type { User } from '../../users/users.entity';
+
 import { GitlabIntegrationTokenService } from './gitlabToken.service';
-import { User } from '../../users/users.entity';
 
 // Mock fetch globally
 global.fetch = jest.fn();

@@ -1,12 +1,15 @@
-import { Module } from '@nestjs/common';
-import { GitlabModule } from './gitlab/gitlab.module';
-import { GithubModule } from './github/github.module';
-import { IntegrationsController } from './integrations.controller';
-import { IntegrationsService } from './integrations.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { OrganizationsModule } from '../organizations/organizations.module';
 import { Integration } from 'src/base_modules/integrations/integrations.entity';
+
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
+import { OrganizationsModule } from '../organizations/organizations.module';
+
+import { GithubModule } from './github/github.module';
+import { GitlabModule } from './gitlab/gitlab.module';
+import { IntegrationsController } from './integrations.controller';
 import { IntegrationsRepository } from './integrations.repository';
+import { IntegrationsService } from './integrations.service';
 
 @Module({
     imports: [

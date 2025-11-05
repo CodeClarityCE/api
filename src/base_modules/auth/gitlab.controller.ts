@@ -1,9 +1,3 @@
-import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
-import { NonAuthEndpoint } from 'src/decorators/SkipAuthDecorator';
-import { AuthService } from './auth.service';
-import { ConfigService } from '@nestjs/config';
-import { FastifyReply } from 'fastify';
-import axios, { AxiosError } from 'axios';
 import {
     GitlabAuthenticatedUser,
     Oauth2FinalizeBody,
@@ -11,21 +5,30 @@ import {
     TokenResponse
 } from 'src/base_modules/auth/auth.types';
 import {
+    GitlabUserResponse,
+    TokenResGitlabResponse
+} from 'src/base_modules/integrations/github.types';
+import { ApiErrorDecorator } from 'src/decorators/ApiException';
+import { NonAuthEndpoint } from 'src/decorators/SkipAuthDecorator';
+import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
+import { TypedResponse } from 'src/types/apiResponses.types';
+import {
     IntegrationInvalidToken,
     IntegrationTokenMissingPermissions,
     IntegrationTokenRetrievalFailed,
     AlreadyExists,
     FailedToAuthenticateSocialAccount
 } from 'src/types/error.types';
-import {
-    GitlabUserResponse,
-    TokenResGitlabResponse
-} from 'src/base_modules/integrations/github.types';
-import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
+
+import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ApiErrorDecorator } from 'src/decorators/ApiException';
-import { TypedResponse } from 'src/types/apiResponses.types';
-import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
+import axios, { AxiosError } from 'axios';
+import { FastifyReply } from 'fastify';
+
+import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
+
+import { AuthService } from './auth.service';
 
 @Controller('auth/gitlab')
 export class GitlabAuthController {
@@ -89,7 +92,7 @@ export class GitlabAuthController {
         // (3) Retrieve user info
         const user: GitlabUserResponse = await this.getUser(token.access_token);
 
-        if (user.email == null) {
+        if (user.email === null) {
             throw new FailedToAuthenticateSocialAccount();
         }
 
@@ -137,7 +140,7 @@ export class GitlabAuthController {
             if (err instanceof AxiosError) {
                 const axiosError: AxiosError = err;
                 if (axiosError.response) {
-                    if (axiosError.response.status == 401) {
+                    if (axiosError.response.status === 401) {
                         throw new IntegrationInvalidToken();
                     }
                 }
@@ -164,7 +167,7 @@ export class GitlabAuthController {
             if (err instanceof AxiosError) {
                 const axiosError: AxiosError = err;
                 if (axiosError.response) {
-                    if (axiosError.response.status == 401) {
+                    if (axiosError.response.status === 401) {
                         throw new IntegrationTokenMissingPermissions();
                     }
                 }

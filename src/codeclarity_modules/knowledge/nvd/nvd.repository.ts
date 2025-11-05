@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { EntityNotFound } from 'src/types/error.types';
 import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
+import { EntityNotFound } from 'src/types/error.types';
+
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 

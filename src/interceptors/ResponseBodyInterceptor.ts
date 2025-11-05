@@ -1,8 +1,9 @@
-import { CallHandler, ExecutionContext, NestInterceptor } from '@nestjs/common';
-import { map } from 'rxjs/operators';
-import { Observable } from 'rxjs';
 import { Status } from 'src/types/apiResponses.types';
-import { FastifyReply } from 'fastify';
+
+import type { CallHandler, ExecutionContext, NestInterceptor } from '@nestjs/common';
+import type { FastifyReply } from 'fastify';
+import type { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 /**
  * The goal of this interceptor is to add status_code and status fields to all responses bodies from the API
@@ -35,11 +36,11 @@ export class ResponseBodyInterceptor implements NestInterceptor {
 
                 if (!('status_code' in res)) {
                     // Check if status code is missing
-                    res['status_code'] = statusCode;
+                    res.status_code = statusCode;
                 }
                 if (!('status' in res)) {
                     // Check if status is missing
-                    res['status'] = status;
+                    res.status = status;
                 }
                 return res; // Return the updated response object
             })

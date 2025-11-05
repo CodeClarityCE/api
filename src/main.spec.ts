@@ -23,15 +23,17 @@ jest.mock('@nestjs/core', () => ({
     }
 }));
 
-import * as mainModule from './main';
-import { ValidationFailed } from './types/error.types';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+
 import { ValidationPipe } from '@nestjs/common';
 import { FastifyAdapter } from '@nestjs/platform-fastify';
+import { DocumentBuilder } from '@nestjs/swagger';
+
 import { ErrorFilter } from './filters/ExceptionFilter';
 import { ResponseBodyInterceptor } from './interceptors/ResponseBodyInterceptor';
-import { DocumentBuilder } from '@nestjs/swagger';
+import * as mainModule from './main';
+import { ValidationFailed } from './types/error.types';
 
 // Mock FastifyAdapter
 jest.mock('@nestjs/platform-fastify', () => {
@@ -550,7 +552,7 @@ describe('Main.ts Bootstrap Configuration and Testing', () => {
             process.env['PORT'] = '3000';
             expect(process.env['PORT']).toBe('3000');
 
-            const portValue = process.env['PORT']!;
+            const portValue = process.env['PORT'];
             expect(portValue).toBe('3000');
 
             process.env['PORT'] = originalPort;

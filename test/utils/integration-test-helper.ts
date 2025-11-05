@@ -1,15 +1,19 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { ConfigModule } from '@nestjs/config';
-import { validate } from '../../src/utils/validate-env';
+import type { NestFastifyApplication } from '@nestjs/platform-fastify';
+import { FastifyAdapter } from '@nestjs/platform-fastify';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import * as bcrypt from 'bcrypt';
+import { DataSource } from 'typeorm';
+
 import { AppModule } from '../../src/app.module';
-import { UsersRepository } from '../../src/base_modules/users/users.repository';
+import { MemberRole } from '../../src/base_modules/organizations/memberships/orgMembership.types';
+import { Organization } from '../../src/base_modules/organizations/organization.entity';
 import { OrganizationsRepository } from '../../src/base_modules/organizations/organizations.repository';
 import { User } from '../../src/base_modules/users/users.entity';
-import { Organization } from '../../src/base_modules/organizations/organization.entity';
-import { MemberRole } from '../../src/base_modules/organizations/memberships/orgMembership.types';
-import { DataSource } from 'typeorm';
-import * as bcrypt from 'bcrypt';
+import { UsersRepository } from '../../src/base_modules/users/users.repository';
+import { validate } from '../../src/utils/validate-env';
+
 
 export interface TestUser {
     user: User;
@@ -139,8 +143,8 @@ export class IntegrationTestHelper {
 
         // Generate tokens (mock since generateTokens doesn't exist)
         const tokens = {
-            access_token: 'mock-access-token-' + savedUser.id,
-            refresh_token: 'mock-refresh-token-' + savedUser.id
+            access_token: `mock-access-token-${  savedUser.id}`,
+            refresh_token: `mock-refresh-token-${  savedUser.id}`
         };
 
         return {

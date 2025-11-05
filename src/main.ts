@@ -1,10 +1,14 @@
 // Import necessary modules and classes from NestJS and Fastify libraries
 import compression from '@fastify/compress';
-import { NestFactory, Reflector } from '@nestjs/core';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import multipart from '@fastify/multipart';
+import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
+import { NestFactory, Reflector } from '@nestjs/core';
+import type { NestFastifyApplication } from '@nestjs/platform-fastify';
+import { FastifyAdapter } from '@nestjs/platform-fastify';
 
 // Import the main application module
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
 import { AppModule } from './app.module';
 
 // Import custom filters and interceptors for error handling and response body formatting
@@ -12,9 +16,7 @@ import { ErrorFilter } from './filters/ExceptionFilter';
 import { ResponseBodyInterceptor } from './interceptors/ResponseBodyInterceptor';
 
 // Import built-in classes for validation, serialization, and Swagger documentation
-import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { ValidationFailed } from './types/error.types';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 /**
  * The main entry point of the application.

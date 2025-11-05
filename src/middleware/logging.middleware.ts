@@ -1,7 +1,9 @@
+import { randomUUID } from 'crypto';
+
+import { CodeClarityLogger, LogContext } from 'src/services/logger.service';
+
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { CodeClarityLogger, LogContext } from 'src/services/logger.service';
-import { randomUUID } from 'crypto';
 
 export interface RequestWithLogging extends FastifyRequest {
     requestId?: string;
@@ -35,14 +37,14 @@ export class LoggingMiddleware implements NestMiddleware {
             requestId,
             method: req.method,
             url: req.url,
-            userAgent: req['headers']['user-agent'] as string,
+            userAgent: req.headers['user-agent']!,
             ip: this.getClientIP(req),
             ...(userId && { userId }),
             ...(organizationId && { organizationId })
         };
 
         // Don't log sensitive headers
-        const sanitizedHeaders = this.sanitizeHeaders(req['headers']);
+        const sanitizedHeaders = this.sanitizeHeaders(req.headers);
         if (Object.keys(sanitizedHeaders).length > 0) {
             requestContext['headers'] = sanitizedHeaders;
         }
@@ -85,8 +87,8 @@ export class LoggingMiddleware implements NestMiddleware {
      */
     private getClientIP(req: FastifyRequest): string {
         return (
-            (req['headers']['x-forwarded-for'] as string)?.split(',')[0] ||
-            (req['headers']['x-real-ip'] as string) ||
+            (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
+            (req.headers['x-real-ip'] as string) ||
             req.socket?.remoteAddress ||
             'unknown'
         );
@@ -145,7 +147,7 @@ export function RequestLogger() {
                 (arg) => arg && typeof arg === 'object' && arg.requestId
             ) as RequestWithLogging;
 
-            if (req && req.logger) {
+            if (req?.logger) {
                 // Add method-specific context
                 const context: LogContext = {
                     controller: target.constructor.name,

@@ -1,12 +1,16 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AnalysisResultsService } from './results.service';
-import { ProjectMemberService } from '../../base_modules/projects/projectMember.service';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 import { AnalysesRepository } from 'src/base_modules/analyses/analyses.repository';
-import { AnalysisResultsRepository } from './results.repository';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
+import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 import { EntityNotFound } from 'src/types/error.types';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
+import { ProjectMemberService } from '../../base_modules/projects/projectMember.service';
+
+import { AnalysisResultsRepository } from './results.repository';
+import { AnalysisResultsService } from './results.service';
 
 describe('AnalysisResultsService', () => {
     let service: AnalysisResultsService;

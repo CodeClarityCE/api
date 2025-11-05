@@ -1,3 +1,7 @@
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { AuthUser } from 'src/decorators/UserDecorator';
+import { NoDataResponse, TypedPaginatedResponse } from 'src/types/apiResponses.types';
+
 import {
     Controller,
     Get,
@@ -9,11 +13,9 @@ import {
     HttpException,
     HttpStatus
 } from '@nestjs/common';
-import { NoDataResponse, TypedPaginatedResponse } from 'src/types/apiResponses.types';
-import { AuthUser } from 'src/decorators/UserDecorator';
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+
 import { Notification } from './notification.entity';
 
 @Controller('/notifications')

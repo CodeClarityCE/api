@@ -1,5 +1,6 @@
-import { TypedPaginatedData } from './pagination.types';
 import { ApiProperty, ApiResponseProperty } from '@nestjs/swagger';
+
+import { TypedPaginatedData } from './pagination.types';
 
 /**
  * Enum representing a status.
@@ -50,7 +51,7 @@ export interface PaginatedResponse {
     /**
      * An object containing filter counts for each key.
      */
-    filter_count: { [key: string]: number };
+    filter_count: Record<string, number>;
 }
 
 /**
@@ -145,5 +146,5 @@ export class TypedPaginatedResponse<Type> implements TypedPaginatedData<Type> {
      * An object containing filter counts for each key.
      */
     @ApiProperty()
-    filter_count!: { [key: string]: number };
+    filter_count!: Record<string, number>;
 }

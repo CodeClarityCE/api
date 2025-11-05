@@ -118,7 +118,7 @@ export class EcosystemMapper {
      * Gets ecosystem from dependency PURL (Package URL) if available
      */
     static getEcosystemFromPurl(purl: string): string | null {
-        if (!purl || !purl.startsWith('pkg:')) {
+        if (!purl?.startsWith('pkg:')) {
             return null;
         }
 

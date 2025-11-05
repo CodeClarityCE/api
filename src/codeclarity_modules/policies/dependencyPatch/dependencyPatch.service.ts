@@ -1,12 +1,13 @@
-import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { TypedPaginatedData } from 'src/types/pagination.types';
-import { SortDirection } from 'src/types/sort.types';
 import {
     DependencyPatchPolicy,
     DependencyPatchPolicyCreateBody,
     DependencyPatchPolicyPatchBody
 } from 'src/codeclarity_modules/policies/dependencyPatch/dependencyPatchPolicy.types';
+import { TypedPaginatedData } from 'src/types/pagination.types';
+import { SortDirection } from 'src/types/sort.types';
+
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class DependencyPatchPolicyService {

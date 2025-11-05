@@ -178,7 +178,7 @@ export class GraphTraversalUtils {
         }
 
         // Find direct children
-        const children = graph.filter((node) => node.parentIds && node.parentIds.includes(nodeId));
+        const children = graph.filter((node) => node.parentIds?.includes(nodeId));
         result.children.push(...children);
 
         return result;

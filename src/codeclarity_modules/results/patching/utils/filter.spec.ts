@@ -1,5 +1,6 @@
+import type { PatchInfo, VulnerabilitySummary } from '../patching2.types';
+
 import { filter } from './filter';
-import { PatchInfo, VulnerabilitySummary } from '../patching2.types';
 
 describe('filter', () => {
     const createMockVulnerabilitySummary = (): VulnerabilitySummary => ({

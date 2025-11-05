@@ -1,6 +1,6 @@
-import { Entity, Column, PrimaryGeneratedColumn, Index } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
+import { Entity, Column, PrimaryGeneratedColumn, Index } from 'typeorm';
 
 @Entity('nvd')
 export class NVD {

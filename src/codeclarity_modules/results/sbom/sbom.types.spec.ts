@@ -1,9 +1,6 @@
-import {
+import type {
     SeverityDist,
-    LinkType,
-    Status,
     Dependency,
-    SbomDependency,
     DependencyDetails,
     WorkSpaceData,
     Output,
@@ -14,6 +11,11 @@ import {
     ParsedGitUrl,
     GraphOutput,
     WorkspacesOutput
+} from './sbom.types';
+import {
+    LinkType,
+    Status,
+    SbomDependency
 } from './sbom.types';
 
 describe('SBOM Types', () => {

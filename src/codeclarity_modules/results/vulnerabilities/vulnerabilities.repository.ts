@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { Status } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
+import { Status , Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
-import { Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
+
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Result } from 'src/codeclarity_modules/results/result.entity';
+
 
 @Injectable()
 export class VulnerabilitiesRepository {
@@ -34,7 +35,7 @@ export class VulnerabilitiesRepository {
         }
 
         const vulns: VulnsOutput = result.result as unknown as VulnsOutput;
-        if (vulns.analysis_info.status == Status.Failure) {
+        if (vulns.analysis_info.status === Status.Failure) {
             throw new PluginFailed();
         }
         return vulns;

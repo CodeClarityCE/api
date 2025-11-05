@@ -1,3 +1,5 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { Expose } from 'class-transformer';
 import {
     Entity,
     Column,
@@ -7,13 +9,12 @@ import {
     ManyToOne,
     OneToMany
 } from 'typeorm';
-import { ApiProperty } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
-import type { Organization } from '../organizations/organization.entity';
-import type { User } from '../users/users.entity';
-import type { RepositoryCache } from '../projects/repositoryCache.entity';
-import type { Project } from '../projects/project.entity';
+
 import type { Analysis } from '../analyses/analysis.entity';
+import type { Organization } from '../organizations/organization.entity';
+import type { Project } from '../projects/project.entity';
+import type { RepositoryCache } from '../projects/repositoryCache.entity';
+import type { User } from '../users/users.entity';
 
 export enum IntegrationType {
     VCS = 'VCS'

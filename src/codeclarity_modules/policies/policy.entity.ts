@@ -7,8 +7,9 @@ import {
     JoinTable,
     ManyToOne
 } from 'typeorm';
-import { Organization } from '../../base_modules/organizations/organization.entity';
+
 import { Analysis } from '../../base_modules/analyses/analysis.entity';
+import { Organization } from '../../base_modules/organizations/organization.entity';
 import { User } from '../../base_modules/users/users.entity';
 
 export enum PolicyType {

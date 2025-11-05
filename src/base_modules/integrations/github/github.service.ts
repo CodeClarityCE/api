@@ -1,6 +1,17 @@
-import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { GithubIntegrationTokenService } from './githubToken.service';
+import {
+    GithubTokenType,
+    LinkGithubCreateBody,
+    LinkGithubPatchBody
+} from 'src/base_modules/integrations/github/githubIntegration.types';
+import {
+    IntegrationProvider,
+    IntegrationType
+} from 'src/base_modules/integrations/integration.types';
+import { Integration } from 'src/base_modules/integrations/integrations.entity';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
+import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import { UsersRepository } from 'src/base_modules/users/users.repository';
 import {
     DuplicateIntegration,
     EntityNotFound,
@@ -13,21 +24,13 @@ import {
     NotAMember,
     NotAuthorized
 } from 'src/types/error.types';
-import { GithubIntegrationToken } from '../Token';
-import {
-    GithubTokenType,
-    LinkGithubCreateBody,
-    LinkGithubPatchBody
-} from 'src/base_modules/integrations/github/githubIntegration.types';
-import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import {
-    IntegrationProvider,
-    IntegrationType
-} from 'src/base_modules/integrations/integration.types';
-import { Integration } from 'src/base_modules/integrations/integrations.entity';
-import { UsersRepository } from 'src/base_modules/users/users.repository';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+
+import { Injectable } from '@nestjs/common';
+
 import { IntegrationsRepository } from '../integrations.repository';
+import { GithubIntegrationToken } from '../Token';
+
+import { GithubIntegrationTokenService } from './githubToken.service';
 
 @Injectable()
 export class GithubIntegrationService {
@@ -77,8 +80,7 @@ export class GithubIntegrationService {
 
         // Check if the organization already has a GitHub integration
         if (
-            organization.integrations &&
-            organization.integrations.some(
+            organization.integrations?.some(
                 (i) => i.integration_provider === IntegrationProvider.GITHUB
             )
         ) {

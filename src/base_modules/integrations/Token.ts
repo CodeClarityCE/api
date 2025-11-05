@@ -1,12 +1,13 @@
+import { GithubTokenType } from 'src/base_modules/integrations/github/githubIntegration.types';
 import { GitlabTokenType } from 'src/base_modules/integrations/gitlab/gitlabIntegration.types';
-import { GithubIntegrationTokenService } from './github/githubToken.service';
-import { GitlabIntegrationTokenService } from './gitlab/gitlabToken.service';
 import {
     IntegrationTokenExpired,
     IntegrationTokenRefreshFailed,
     IntegrationWrongTokenType
 } from 'src/types/error.types';
-import { GithubTokenType } from 'src/base_modules/integrations/github/githubIntegration.types';
+
+import type { GithubIntegrationTokenService } from './github/githubToken.service';
+import type { GitlabIntegrationTokenService } from './gitlab/gitlabToken.service';
 
 export class UnkownTokenType extends Error {}
 
@@ -114,12 +115,12 @@ export class GitlabIntegrationToken extends IntegrationToken {
      * @throws {IntegrationWrongTokenType} In case the token type is not supported
      */
     async validatePermissions(): Promise<void> {
-        if (this.gitlabTokenType == GitlabTokenType.OAUTH_TOKEN) {
+        if (this.gitlabTokenType === GitlabTokenType.OAUTH_TOKEN) {
             await this.gitlabIntegrationTokenService.validateOAuthAccessTokenPermissions(
                 this.token,
                 {}
             );
-        } else if (this.gitlabTokenType == GitlabTokenType.PERSONAL_ACCESS_TOKEN) {
+        } else if (this.gitlabTokenType === GitlabTokenType.PERSONAL_ACCESS_TOKEN) {
             await this.gitlabIntegrationTokenService.validatePersonalAccessTokenPermissions(
                 this.token,
                 this.gitlabInstanceUrl,
@@ -136,7 +137,7 @@ export class GitlabIntegrationToken extends IntegrationToken {
      */
     async refreshIfNecessary(): Promise<void> {
         // Gitlab Oauth tokens expire and Gitlab personal access tokens cannot be refreshed
-        if (this.gitlabTokenType != GitlabTokenType.OAUTH_TOKEN) return;
+        if (this.gitlabTokenType !== GitlabTokenType.OAUTH_TOKEN) return;
 
         const expired = await this.isExpired();
         if (expired) {
@@ -229,9 +230,9 @@ export class GithubIntegrationToken extends IntegrationToken {
      * @throws {IntegrationWrongTokenType} In case the token type is not supported
      */
     async validatePermissions(): Promise<void> {
-        if (this.githubTokenType == GithubTokenType.OAUTH_TOKEN) {
+        if (this.githubTokenType === GithubTokenType.OAUTH_TOKEN) {
             await this.githubIntegrationTokenService.validateOauthTokenPermissions(this.token, {});
-        } else if (this.githubTokenType == GithubTokenType.CLASSIC_TOKEN) {
+        } else if (this.githubTokenType === GithubTokenType.CLASSIC_TOKEN) {
             await this.githubIntegrationTokenService.validateClassicTokenPermissions(
                 this.token,
                 {}

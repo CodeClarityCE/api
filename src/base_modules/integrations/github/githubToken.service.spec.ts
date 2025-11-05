@@ -1,11 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { GithubIntegrationTokenService } from './githubToken.service';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
 import {
     IntegrationInvalidToken,
     IntegrationTokenExpired,
     IntegrationTokenMissingPermissions,
     IntegrationTokenRetrievalFailed
 } from '../../../types/error.types';
+
+import { GithubIntegrationTokenService } from './githubToken.service';
 
 // Mock dynamic import of octokit
 jest.mock('octokit', () => ({

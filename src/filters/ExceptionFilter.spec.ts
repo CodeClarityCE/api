@@ -1,5 +1,3 @@
-import { ArgumentsHost, HttpException } from '@nestjs/common';
-import { ErrorFilter } from './ExceptionFilter';
 import { Status } from 'src/types/apiResponses.types';
 import {
     PublicAPIError,
@@ -7,7 +5,12 @@ import {
     NotAuthenticated,
     ValidationFailed
 } from 'src/types/error.types';
-import { ValidationError } from 'class-validator';
+
+import type { ArgumentsHost} from '@nestjs/common';
+import { HttpException } from '@nestjs/common';
+import type { ValidationError } from 'class-validator';
+
+import { ErrorFilter } from './ExceptionFilter';
 
 describe('ExceptionFilter', () => {
     let filter: ErrorFilter;

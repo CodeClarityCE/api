@@ -4,9 +4,7 @@ export interface LanguageDetectionResult {
     detected_languages: string[];
     primary_language: string | undefined;
     detection_confidence: number;
-    detected_files: {
-        [language: string]: string[];
-    };
+    detected_files: Record<string, string[]>;
 }
 
 @Injectable()
@@ -32,7 +30,7 @@ export class LanguageDetectionService {
         // - Repository metadata analysis
 
         const detectedLanguages: string[] = [];
-        const detectedFiles: { [language: string]: string[] } = {};
+        const detectedFiles: Record<string, string[]> = {};
 
         // JavaScript detection patterns
         const jsFiles = ['package.json', 'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'];

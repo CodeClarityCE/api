@@ -1,10 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { DependencyPatchPolicyService } from './dependencyPatch.service';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { SortDirection } from 'src/types/sort.types';
-import {
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
+import { DependencyPatchPolicyService } from './dependencyPatch.service';
+import type {
     DependencyPatchPolicyCreateBody,
-    DependencyPatchPolicyPatchBody,
+    DependencyPatchPolicyPatchBody} from './dependencyPatchPolicy.types';
+import {
     FullFixVersionSelection,
     PartialFixVersionSelection
 } from './dependencyPatchPolicy.types';

@@ -1,11 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PluginModule } from './plugin.module';
+
 import { PluginController } from './plugin.controller';
-import { PluginService } from './plugin.service';
-import { PluginsRepository } from './plugin.repository';
 import { Plugin } from './plugin.entity';
+import { PluginModule } from './plugin.module';
+import { PluginsRepository } from './plugin.repository';
+import { PluginService } from './plugin.service';
 
 describe('PluginModule', () => {
     describe('Module Metadata', () => {

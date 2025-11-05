@@ -1,9 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { NVDRepository } from './nvd.repository';
-import { NVD } from './nvd.entity';
 import { EntityNotFound } from 'src/types/error.types';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import type { Repository } from 'typeorm';
+
+import { NVD } from './nvd.entity';
+import { NVDRepository } from './nvd.repository';
 
 describe('NVDRepository', () => {
     let nvdRepository: NVDRepository;
@@ -390,7 +393,7 @@ describe('NVDRepository', () => {
         });
 
         it('should handle very long CVE ID strings', async () => {
-            const longCveId = 'CVE-2023-' + '1'.repeat(1000);
+            const longCveId = `CVE-2023-${  '1'.repeat(1000)}`;
             mockRepository.findOne.mockResolvedValue(null);
 
             const result = await nvdRepository.getVulnWithoutFailing(longCveId);

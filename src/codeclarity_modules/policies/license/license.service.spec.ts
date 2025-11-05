@@ -1,12 +1,18 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { LicensePolicyService } from './license.service';
-import { Policy, PolicyType } from '../policy.entity';
-import { LicensePolicyCreateBody, LicensePolicyType } from './licensePolicy.types';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 import { UsersRepository } from 'src/base_modules/users/users.repository';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+
+import { Policy, PolicyType } from '../policy.entity';
+
+import { LicensePolicyService } from './license.service';
+import type { LicensePolicyCreateBody} from './licensePolicy.types';
+import { LicensePolicyType } from './licensePolicy.types';
+
 
 describe('LicensePolicyService', () => {
     let service: LicensePolicyService;

@@ -1,17 +1,23 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { JwtService } from '@nestjs/jwt';
-import { AuthService } from './auth.service';
-import { UsersService } from '../users/users.service';
-import { UsersRepository } from '../users/users.repository';
-import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
-import { WrongCredentials, RegistrationNotVerified } from './auth.errors';
-import { CannotPerformActionOnSocialAccount } from '../users/users.errors';
 import { FailedToAuthenticateSocialAccount, EntityNotFound } from 'src/types/error.types';
-import { SocialType } from '../users/user.types';
-import { ROLE } from './auth.types';
-import { User } from '../users/users.entity';
-import { GithubAuthenticatedUser, GitlabAuthenticatedUser, AuthenticatedUser } from './auth.types';
+
+import { JwtService } from '@nestjs/jwt';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
+
+import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
+import { SocialType } from '../users/user.types';
+import type { User } from '../users/users.entity';
+import { CannotPerformActionOnSocialAccount } from '../users/users.errors';
+import { UsersRepository } from '../users/users.repository';
+import { UsersService } from '../users/users.service';
+
+import { WrongCredentials, RegistrationNotVerified } from './auth.errors';
+import { AuthService } from './auth.service';
+import type { GithubAuthenticatedUser, GitlabAuthenticatedUser} from './auth.types';
+import { ROLE , AuthenticatedUser } from './auth.types';
+
+
 
 // Mock the ms module before importing the service
 jest.mock('ms', () => ({

@@ -1,5 +1,6 @@
+import type { LicenseInfo } from '../licenses2.types';
+
 import { filter } from './filter';
-import { LicenseInfo } from '../licenses2.types';
 
 describe('filter', () => {
     const createMockLicenseInfo = (overrides: Partial<LicenseInfo> = {}): LicenseInfo => ({

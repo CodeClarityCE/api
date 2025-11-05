@@ -1,14 +1,12 @@
-import { Injectable } from '@nestjs/common';
-import { PaginatedResponse } from 'src/types/apiResponses.types';
-import {
-    AffectedVuln,
-    Source,
-    Vulnerability,
-    VulnerabilityMerged,
-    ConflictFlag
-} from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
+import { AnalysesRepository } from 'src/base_modules/analyses/analyses.repository';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { AnalysisResultsService } from '../results.service';
+import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
+import { EPSSRepository } from 'src/codeclarity_modules/knowledge/epss/epss.repository';
+import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
+import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.repository';
+import { VulnerabilityPolicyService } from 'src/codeclarity_modules/policies/vulnerability/vulnerability.service';
+import { Output as SBOMOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
+import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
 import {
     isNoneSeverity,
     isLowSeverity,
@@ -17,24 +15,30 @@ import {
     isCriticalSeverity,
     paginate
 } from 'src/codeclarity_modules/results/utils/utils';
-import { UnknownWorkspace } from 'src/types/error.types';
-import { Output as SBOMOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
-import { Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
-import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
+import {
+    AffectedVuln,
+    Source,
+    Vulnerability,
+    VulnerabilityMerged,
+    ConflictFlag
+, Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import {
     AnalysisStats,
     newAnalysisStats
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities2.types';
-import { VulnerabilitiesUtilsService } from './utils/utils.service';
-import { VulnerabilitiesSortService } from './utils/sort.service';
-import { VulnerabilitiesFilterService } from './utils/filter.service';
+import { PaginatedResponse } from 'src/types/apiResponses.types';
+import { UnknownWorkspace } from 'src/types/error.types';
+
+import { Injectable } from '@nestjs/common';
+
+import { AnalysisResultsService } from '../results.service';
 import { SbomUtilsService } from '../sbom/utils/utils';
-import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.repository';
-import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
-import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
-import { EPSSRepository } from 'src/codeclarity_modules/knowledge/epss/epss.repository';
-import { VulnerabilityPolicyService } from 'src/codeclarity_modules/policies/vulnerability/vulnerability.service';
-import { AnalysesRepository } from 'src/base_modules/analyses/analyses.repository';
+
+import { VulnerabilitiesFilterService } from './utils/filter.service';
+import { VulnerabilitiesSortService } from './utils/sort.service';
+import { VulnerabilitiesUtilsService } from './utils/utils.service';
+
+
 
 @Injectable()
 export class VulnerabilitiesService {
@@ -77,10 +81,10 @@ export class VulnerabilitiesService {
         ];
 
         function getContinuousFromDiscreteCIA(metric: string): number {
-            if (metric == 'COMPLETE') return 1.0; // CVSS 2
-            if (metric == 'PARTIAL') return 0.5; // CVSS 2
-            if (metric == 'HIGH') return 1.0; // CVSS 3
-            if (metric == 'LOW') return 0.5; // CVSS 3
+            if (metric === 'COMPLETE') return 1.0; // CVSS 2
+            if (metric === 'PARTIAL') return 0.5; // CVSS 2
+            if (metric === 'HIGH') return 1.0; // CVSS 3
+            if (metric === 'LOW') return 0.5; // CVSS 3
             return 0.0;
         }
 
@@ -148,28 +152,28 @@ export class VulnerabilitiesService {
                 //     wStats.number_of_transitive_vulnerabilities += 1;
             }
 
-            if (finding.Severity != null) {
+            if (finding.Severity !== null) {
                 sumConfidentiality += getContinuousFromDiscreteCIA(
                     finding.Severity.ConfidentialityImpact
                 );
                 countConfidentiality += 1;
             }
-            if (finding.Severity != null) {
+            if (finding.Severity !== null) {
                 sumAvailability += getContinuousFromDiscreteCIA(
                     finding.Severity.AvailabilityImpact
                 );
                 countAvailability += 1;
             }
-            if (finding.Severity != null) {
+            if (finding.Severity !== null) {
                 sumIntegrity += getContinuousFromDiscreteCIA(finding.Severity.IntegrityImpact);
                 countIntegrity += 1;
             }
 
-            if (finding.Severity != null) {
+            if (finding.Severity !== null) {
                 sumSeverity += finding.Severity.Severity;
                 countseverity += 1;
             }
-            if (finding.Severity != null) {
+            if (finding.Severity !== null) {
                 if (finding.Severity.Severity > maxSeverity)
                     maxSeverity = finding.Severity.Severity;
             }
@@ -217,14 +221,14 @@ export class VulnerabilitiesService {
                     }
                 }
 
-                if (finding.Severity != null) {
+                if (finding.Severity !== null) {
                     const severity = finding.Severity.Severity;
                     if (isNoneSeverity(severity)) wStats.number_of_none += 1;
                     else if (isLowSeverity(severity)) wStats.number_of_low += 1;
                     else if (isMediumSeverity(severity)) wStats.number_of_medium += 1;
                     else if (isHighSeverity(severity)) wStats.number_of_high += 1;
                     else if (isCriticalSeverity(severity)) wStats.number_of_critical += 1;
-                } else if (finding.Severity == null) wStats.number_of_none += 1;
+                } else if (finding.Severity === null) wStats.number_of_none += 1;
             }
 
             encounteredVulns.add(finding.VulnerabilityId);
@@ -265,28 +269,28 @@ export class VulnerabilitiesService {
             //         wBeforeStats.number_of_transitive_vulnerabilities += 1;
             // }
 
-            if (finding.Severity != null) {
+            if (finding.Severity !== null) {
                 sumConfidentiality += getContinuousFromDiscreteCIA(
                     finding.Severity.ConfidentialityImpact
                 );
                 countConfidentiality += 1;
             }
-            if (finding.Severity != null) {
+            if (finding.Severity !== null) {
                 sumAvailability += getContinuousFromDiscreteCIA(
                     finding.Severity.AvailabilityImpact
                 );
                 countAvailability += 1;
             }
-            if (finding.Severity != null) {
+            if (finding.Severity !== null) {
                 sumIntegrity += getContinuousFromDiscreteCIA(finding.Severity.IntegrityImpact);
                 countIntegrity += 1;
             }
 
-            if (finding.Severity != null) {
+            if (finding.Severity !== null) {
                 sumSeverity += finding.Severity.Severity;
                 countseverity += 1;
             }
-            if (finding.Severity != null) {
+            if (finding.Severity !== null) {
                 if (finding.Severity.Severity > maxSeverity)
                     maxSeverity = finding.Severity.Severity;
             }
@@ -331,14 +335,14 @@ export class VulnerabilitiesService {
                 }
             }
 
-            if (finding.Severity != null) {
+            if (finding.Severity !== null) {
                 const severity = finding.Severity.Severity;
                 if (isNoneSeverity(severity)) wBeforeStats.number_of_none += 1;
                 else if (isLowSeverity(severity)) wBeforeStats.number_of_low += 1;
                 else if (isMediumSeverity(severity)) wBeforeStats.number_of_medium += 1;
                 else if (isHighSeverity(severity)) wBeforeStats.number_of_high += 1;
                 else if (isCriticalSeverity(severity)) wBeforeStats.number_of_critical += 1;
-            } else if (finding.Severity == null) wBeforeStats.number_of_none += 1;
+            } else if (finding.Severity === null) wBeforeStats.number_of_none += 1;
 
             beforeEncounteredVulns.add(finding.VulnerabilityId);
         }
@@ -423,7 +427,7 @@ export class VulnerabilitiesService {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
         let active_filters: string[] = [];
-        if (active_filters_string != null)
+        if (active_filters_string !== null)
             active_filters = active_filters_string.replace('[', '').replace(']', '').split(',');
 
         // GET SBOM DATA
@@ -621,7 +625,7 @@ export class VulnerabilitiesService {
                 }
             }
 
-            if (osvDescription == '' && nvdDescription != '') finding.Description = nvdDescription;
+            if (osvDescription === '' && nvdDescription !== '') finding.Description = nvdDescription;
             else {
                 if (osvSummary.length > 0) {
                     osvSummary = osvSummary.charAt(0).toUpperCase() + osvSummary.slice(1);
@@ -634,7 +638,7 @@ export class VulnerabilitiesService {
                         osvDescription += '.';
                     }
                 }
-                finding.Description = '#### ' + osvSummary + '.\n\n' + osvDescription;
+                finding.Description = `#### ${  osvSummary  }.\n\n${  osvDescription}`;
             }
 
             // Attach weakness info
@@ -712,19 +716,19 @@ export class VulnerabilitiesService {
         let text = '';
 
         for (const char of description) {
-            if (char == '#' && parsingHeader == false) {
-                if (text != '') sections.push(text);
+            if (char === '#' && parsingHeader === false) {
+                if (text !== '') sections.push(text);
                 parsingHeader = true;
                 text = '';
                 continue;
             }
 
-            if (char != '#') parsingHeader = false;
+            if (char !== '#') parsingHeader = false;
 
-            if (char != '#') text += char;
+            if (char !== '#') text += char;
         }
 
-        if (text != '') {
+        if (text !== '') {
             sections.push(text);
         }
 
@@ -733,7 +737,7 @@ export class VulnerabilitiesService {
         let index = -1;
         for (const section of sections) {
             index += 1;
-            if (index == 0) {
+            if (index === 0) {
                 selectedSections.push(section);
                 continue;
             }
@@ -748,7 +752,7 @@ export class VulnerabilitiesService {
             const section = selectedSections[selectedSections.length - 1]!;
             let trimEndNewLines = true;
             for (let i = section.length - 1; i >= 0; i--) {
-                if (section[i] != '\n') {
+                if (section[i] !== '\n') {
                     trimEndNewLines = false;
                 }
                 if (!trimEndNewLines) {
@@ -779,8 +783,7 @@ export class VulnerabilitiesService {
             // Extract vulnerability policies from vuln-finder configuration
             const vulnFinderConfig = (analysis.config as any)['vuln-finder'];
             if (
-                !vulnFinderConfig ||
-                !vulnFinderConfig.vulnerabilityPolicy ||
+                !vulnFinderConfig?.vulnerabilityPolicy ||
                 !Array.isArray(vulnFinderConfig.vulnerabilityPolicy)
             ) {
                 return { vulnerabilities: new Set(), policies: new Map() };

@@ -1,13 +1,17 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { Repository } from 'typeorm';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { DashboardService } from './dashboard.service';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
-import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { ProjectGradeClass } from './dashboard.types';
+import { Organization } from 'src/base_modules/organizations/organization.entity';
+import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 import { NotAuthorized } from 'src/types/error.types';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import type { Repository } from 'typeorm';
+
+import { DashboardService } from './dashboard.service';
+import { ProjectGradeClass } from './dashboard.types';
+
 
 describe('DashboardService', () => {
     let service: DashboardService;

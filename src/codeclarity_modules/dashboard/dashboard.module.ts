@@ -1,10 +1,14 @@
-import { Module } from '@nestjs/common';
-import { DashboardService } from './dashboard.service';
-import { DashboardController } from './dashboard.controller';
-import { KnowledgeModule } from '../knowledge/knowledge.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { OrganizationsModule } from 'src/base_modules/organizations/organizations.module';
+
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
+import { KnowledgeModule } from '../knowledge/knowledge.module';
+
+import { DashboardController } from './dashboard.controller';
+import { DashboardService } from './dashboard.service';
+
 
 @Module({
     imports: [

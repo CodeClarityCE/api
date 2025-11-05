@@ -1,13 +1,16 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
-import * as bcrypt from 'bcrypt';
-import { User } from 'src/base_modules/users/users.entity';
-import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
+import type { Organization } from 'src/base_modules/organizations/organization.entity';
+import type { User } from 'src/base_modules/users/users.entity';
+
+import type { INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import * as bcrypt from 'bcrypt';
+import type { Repository, DataSource } from 'typeorm';
+
 
 /**
  * Test utilities for setting up NestJS applications and modules

@@ -1,3 +1,27 @@
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { Project } from 'src/base_modules/projects/project.entity';
+import { ProjectImportBody } from 'src/base_modules/projects/project.types';
+import { ApiErrorDecorator } from 'src/decorators/ApiException';
+import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
+import { APIDocNoDataResponseDecorator } from 'src/decorators/NoDataResponse';
+import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
+import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
+import { AuthUser } from 'src/decorators/UserDecorator';
+import {
+    CreatedResponse,
+    NoDataResponse,
+    TypedPaginatedResponse,
+    TypedResponse
+} from 'src/types/apiResponses.types';
+import {
+    AlreadyExists,
+    EntityNotFound,
+    InternalError,
+    NotAuthenticated,
+    NotAuthorized
+} from 'src/types/error.types';
+import { SortDirection } from 'src/types/sort.types';
+
 import {
     Controller,
     Get,
@@ -9,31 +33,11 @@ import {
     DefaultValuePipe,
     ParseIntPipe
 } from '@nestjs/common';
-import { AllowedOrderByGetProjects, ProjectService } from './projects.service';
-import {
-    CreatedResponse,
-    NoDataResponse,
-    TypedPaginatedResponse,
-    TypedResponse
-} from 'src/types/apiResponses.types';
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { AuthUser } from 'src/decorators/UserDecorator';
 import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { ApiErrorDecorator } from 'src/decorators/ApiException';
-import {
-    AlreadyExists,
-    EntityNotFound,
-    InternalError,
-    NotAuthenticated,
-    NotAuthorized
-} from 'src/types/error.types';
-import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
-import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
-import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
-import { APIDocNoDataResponseDecorator } from 'src/decorators/NoDataResponse';
-import { SortDirection } from 'src/types/sort.types';
-import { ProjectImportBody } from 'src/base_modules/projects/project.types';
-import { Project } from 'src/base_modules/projects/project.entity';
+
+import { AllowedOrderByGetProjects, ProjectService } from './projects.service';
+
+
 
 @ApiBearerAuth()
 @Controller('org/:org_id/projects')
@@ -93,8 +97,8 @@ export class ProjectController {
         @Query('sort_key') sort_key?: AllowedOrderByGetProjects,
         @Query('sort_direction') sort_direction?: SortDirection
     ): Promise<TypedPaginatedResponse<Project>> {
-        const pageParam = page ? parseInt(page + '') : 0;
-        const entriesPerPageParam = entries_per_page ? parseInt(entries_per_page + '') : 0;
+        const pageParam = page ? parseInt(`${page  }`) : 0;
+        const entriesPerPageParam = entries_per_page ? parseInt(`${entries_per_page  }`) : 0;
         return await this.projectsService.getMany(
             org_id,
             { currentPage: pageParam, entriesPerPage: entriesPerPageParam },

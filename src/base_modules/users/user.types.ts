@@ -1,5 +1,5 @@
-import { IsNotEmpty, IsEmail, IsOptional, Length, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsEmail, IsOptional, Length, IsString } from 'class-validator';
 
 /********************************************/
 /*             HTTP Post bodies             */

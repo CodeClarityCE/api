@@ -1,10 +1,6 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { GitlabIntegrationService } from './gitlab.service';
-import { GitlabIntegrationTokenService } from './gitlabToken.service';
-import { OrganizationsRepository } from '../../organizations/organizations.repository';
-import { IntegrationsRepository } from '../integrations.repository';
-import { UsersRepository } from '../../users/users.repository';
-import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
 import {
     DuplicateIntegration,
     EntityNotFound,
@@ -17,16 +13,26 @@ import {
     NotAMember,
     NotAuthorized
 } from '../../../types/error.types';
+import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
+import { MemberRole } from '../../organizations/memberships/orgMembership.types';
+import type { Organization } from '../../organizations/organization.entity';
+import { OrganizationsRepository } from '../../organizations/organizations.repository';
+import type { User } from '../../users/users.entity';
+import { UsersRepository } from '../../users/users.repository';
+import { IntegrationProvider, IntegrationType } from '../integrations.entity';
+import type { Integration} from '../integrations.entity';
+import { IntegrationsRepository } from '../integrations.repository';
+
+import { GitlabIntegrationService } from './gitlab.service';
 import {
     GitlabIntegration,
-    GitlabTokenType,
+    GitlabTokenType
+} from './gitlabIntegration.types';
+import type {
     LinkGitlabCreateBody,
     LinkGitlabPatchBody
 } from './gitlabIntegration.types';
-import { MemberRole } from '../../organizations/memberships/orgMembership.types';
-import { Integration, IntegrationProvider, IntegrationType } from '../integrations.entity';
-import { User } from '../../users/users.entity';
-import { Organization } from '../../organizations/organization.entity';
+import { GitlabIntegrationTokenService } from './gitlabToken.service';
 
 describe('GitlabIntegrationService', () => {
     let service: GitlabIntegrationService;

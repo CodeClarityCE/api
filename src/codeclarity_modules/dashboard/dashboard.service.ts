@@ -1,21 +1,7 @@
 import { Injectable } from '@nestjs/common';
+
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import {
-    AttackVectorDist,
-    CIAImpact,
-    LatestVulns,
-    ProjectQuickStats,
-    ProjectGradeClass,
-    QuickStats,
-    SeverityInfoByWeek,
-    Trend
-} from 'src/codeclarity_modules/dashboard/dashboard.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import {
-    PaginationConfig,
-    PaginationUserSuppliedConf,
-    TypedPaginatedData
-} from 'src/types/pagination.types';
 // Native Date API utility functions
 function subtractMonths(date: Date, months: number): Date {
     const result = new Date(date);
@@ -31,13 +17,29 @@ function getWeekNumber(date: Date): number {
     const dayDiff = (target.getTime() - jan4.getTime()) / 86400000;
     return 1 + Math.ceil(dayDiff / 7);
 }
-import { SortDirection } from 'src/types/sort.types';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
+import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import {
+    AttackVectorDist,
+    CIAImpact,
+    LatestVulns,
+    ProjectQuickStats,
+    ProjectGradeClass,
+    QuickStats,
+    SeverityInfoByWeek,
+    Trend
+} from 'src/codeclarity_modules/dashboard/dashboard.types';
 import { LicenseDist, Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
+import {
+    PaginationConfig,
+    PaginationUserSuppliedConf,
+    TypedPaginatedData
+} from 'src/types/pagination.types';
+import { SortDirection } from 'src/types/sort.types';
+
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 
 @Injectable()
 export class DashboardService {
@@ -93,7 +95,7 @@ export class DashboardService {
                 const week_number = getWeekNumber(analysis.created_on);
                 const year = analysis.created_on.getFullYear();
                 let weekInfo = severityInfoByWeek.find(
-                    (info) => info.week_number.week == week_number && info.week_number.year == year
+                    (info) => info.week_number.week === week_number && info.week_number.year === year
                 );
 
                 if (!weekInfo) {
@@ -191,7 +193,7 @@ export class DashboardService {
                             const attack_vector = vuln.Severity.Vector;
 
                             let attackVector = attackVectorDist.find(
-                                (vector) => vector.attack_vector == attack_vector
+                                (vector) => vector.attack_vector === attack_vector
                             );
 
                             if (!attackVector) {
@@ -491,7 +493,7 @@ export class DashboardService {
                             throw new Error('Not implemented');
 
                             // TODO: implement this feature
-                            // if (_cwe == 'DEPRECATED') quickStats.nmb_deprecated++;
+                            // if (_cwe === 'DEPRECATED') quickStats.nmb_deprecated++;
                         });
                     }
                 });
@@ -555,14 +557,14 @@ export class DashboardService {
         // let sortByKey: SortField<ProjectQuickStatsInternal> | undefined = undefined;
 
         // if (sortBy) {
-        //     if (sortBy == AllowedOrderBy.GRADE) sortByKey = 'grade';
-        //     else if (sortBy == AllowedOrderBy.PROJECT) sortByKey = 'project.name';
-        //     else if (sortBy == AllowedOrderBy.NMB_VULNS) sortByKey = 'nmb_vulnerabilities';
-        //     else if (sortBy == AllowedOrderBy.AVG_SEVERITY) sortByKey = 'avg_severity';
-        //     else if (sortBy == AllowedOrderBy.SUM_SEVERITY) sortByKey = 'sum_severity';
-        //     else if (sortBy == AllowedOrderBy.NMB_DEPRECATED_DEPS) sortByKey = 'nmb_deprecated';
-        //     else if (sortBy == AllowedOrderBy.NMB_OUTDATED_DEPS) sortByKey = 'nmb_outdated';
-        //     else if (sortBy == AllowedOrderBy.NMB_LICENSE_CONFLICTS)
+        //     if (sortBy === AllowedOrderBy.GRADE) sortByKey = 'grade';
+        //     else if (sortBy === AllowedOrderBy.PROJECT) sortByKey = 'project.name';
+        //     else if (sortBy === AllowedOrderBy.NMB_VULNS) sortByKey = 'nmb_vulnerabilities';
+        //     else if (sortBy === AllowedOrderBy.AVG_SEVERITY) sortByKey = 'avg_severity';
+        //     else if (sortBy === AllowedOrderBy.SUM_SEVERITY) sortByKey = 'sum_severity';
+        //     else if (sortBy === AllowedOrderBy.NMB_DEPRECATED_DEPS) sortByKey = 'nmb_deprecated';
+        //     else if (sortBy === AllowedOrderBy.NMB_OUTDATED_DEPS) sortByKey = 'nmb_outdated';
+        //     else if (sortBy === AllowedOrderBy.NMB_LICENSE_CONFLICTS)
         //         sortByKey = 'nmb_license_compliance_violations';
         // }
 

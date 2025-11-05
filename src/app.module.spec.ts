@@ -1,6 +1,7 @@
-import { defaultOptions, AppModule } from './app.module';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+
+import { defaultOptions, AppModule } from './app.module';
 
 describe('AppModule', () => {
     beforeEach(() => {

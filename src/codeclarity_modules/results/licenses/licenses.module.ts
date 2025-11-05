@@ -1,17 +1,22 @@
-import { forwardRef, Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { LicensesService } from './licenses.service';
-import { LicensesController } from './licenses.controller';
-import { Result } from 'src/codeclarity_modules/results/result.entity';
-import { AnalysisResultsService } from '../results.service';
+import { AnalysesModule } from 'src/base_modules/analyses/analyses.module';
 import { OrganizationsModule } from 'src/base_modules/organizations/organizations.module';
 import { ProjectsModule } from 'src/base_modules/projects/projects.module';
-import { AnalysesModule } from 'src/base_modules/analyses/analyses.module';
-import { LicensesRepository } from './licenses.repository';
-import { LicensesUtilsService } from './utils/utils';
 import { KnowledgeModule } from 'src/codeclarity_modules/knowledge/knowledge.module';
-import { SbomModule } from '../sbom/sbom.module';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
+
+import { forwardRef, Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
 import { AnalysisResultsRepository } from '../results.repository';
+import { AnalysisResultsService } from '../results.service';
+import { SbomModule } from '../sbom/sbom.module';
+
+import { LicensesController } from './licenses.controller';
+import { LicensesRepository } from './licenses.repository';
+import { LicensesService } from './licenses.service';
+import { LicensesUtilsService } from './utils/utils';
+
+
 
 @Module({
     imports: [

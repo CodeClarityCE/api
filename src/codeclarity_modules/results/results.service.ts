@@ -1,11 +1,14 @@
+import { AnalysesRepository } from 'src/base_modules/analyses/analyses.repository';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { ProjectMemberService } from '../../base_modules/projects/projectMember.service';
-import { Injectable } from '@nestjs/common';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
-import { AnalysesRepository } from 'src/base_modules/analyses/analyses.repository';
-import { AnalysisResultsRepository } from './results.repository';
 import { EntityNotFound } from 'src/types/error.types';
+
+import { Injectable } from '@nestjs/common';
+
+import { ProjectMemberService } from '../../base_modules/projects/projectMember.service';
+
+import { AnalysisResultsRepository } from './results.repository';
 
 @Injectable()
 export class AnalysisResultsService {

@@ -1,6 +1,6 @@
 import { PublicAPIError } from 'src/types/error.types';
 
-export const errorMessages: { [key: string]: string } = {
+export const errorMessages: Record<string, string> = {
     InvitationOrgAlreadyExists:
         'An invitation for the user to join the organization already exists.'
 };

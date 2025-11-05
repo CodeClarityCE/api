@@ -1,13 +1,12 @@
 import { Injectable } from '@nestjs/common';
+
 import { Stage } from './analyzer.types';
 
 export interface AnalyzerTemplate {
     name: string;
     description: string;
     supported_languages: string[];
-    language_config: {
-        [key: string]: { plugins: string[] };
-    };
+    language_config: Record<string, { plugins: string[] }>;
     logo: string;
     steps: Stage[][];
 }

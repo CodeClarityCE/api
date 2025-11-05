@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+
+import { Injectable } from '@nestjs/common';
 
 /**
  * This service offers methods for working with API Keys

@@ -1,4 +1,4 @@
-import { Package, Version, Source, LicenseNpm } from './package.entity';
+import type { Package, Version, Source, LicenseNpm } from './package.entity';
 
 describe('Package Entity', () => {
     describe('Package entity properties', () => {
@@ -278,7 +278,7 @@ describe('Package Entity', () => {
                 dependencies: null as any,
                 dev_dependencies: null as any,
                 extra: null as any,
-                package: null as any as any
+                package: null as any
             };
 
             expect(minimalVersion.dependencies).toBeNull();
@@ -361,7 +361,7 @@ describe('Package Entity', () => {
             expect(complexVersion.dependencies['lodash']).toBe('^4.17.21');
             expect(complexVersion.dependencies['express']).toBe('~4.18.0');
             expect(complexVersion.dependencies['react']).toBe('>=16.8.0 <19.0.0');
-            expect(complexVersion.extra['peerDependencies']['react']).toBe('>=16.8.0');
+            expect(complexVersion.extra['peerDependencies'].react).toBe('>=16.8.0');
             expect(complexVersion.extra['bundleDependencies']).toContain('internal-lib');
             expect(complexVersion.extra['workspaces']).toContain('packages/*');
         });
@@ -574,7 +574,7 @@ describe('Package Entity', () => {
             expect(typeof jsonbPackage.source).toBe('object');
             expect(Array.isArray(jsonbPackage.licenses)).toBe(true);
             expect(typeof jsonbPackage.extra).toBe('object');
-            expect(jsonbPackage.extra['nested'].deeply['nested'].value).toBe('deep');
+            expect(jsonbPackage.extra['nested'].deeply.nested.value).toBe('deep');
             expect(jsonbPackage.extra['array']).toHaveLength(5);
             expect(jsonbPackage.extra['boolean']).toBe(true);
             expect(jsonbPackage.extra['number']).toBe(42);

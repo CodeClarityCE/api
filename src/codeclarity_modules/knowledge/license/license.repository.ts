@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { License } from 'src/codeclarity_modules/knowledge/license/license.entity';
 import { EntityNotFound } from 'src/types/error.types';
+
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -23,7 +24,7 @@ export class LicenseRepository {
         return license;
     }
 
-    async getAllLicenseData(): Promise<Array<License>> {
+    async getAllLicenseData(): Promise<License[]> {
         const licenses = await this.licenseRepository.find({});
         return licenses;
     }

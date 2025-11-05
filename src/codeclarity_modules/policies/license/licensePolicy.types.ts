@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 import {
     IsArray,
@@ -8,6 +9,8 @@ import {
     IsString,
     Length
 } from 'class-validator';
+
+import { TeamMember } from '../../../base_modules/users/teamMember.types';
 import {
     DefaultablePolicyCreate,
     DefaultablePolicyUpdate,
@@ -15,9 +18,7 @@ import {
     PolicyType,
     PolicyUpdate
 } from '../policy.types';
-import { ApiProperty } from '@nestjs/swagger';
 // import { OptionalTransform } from 'src/transformers/transformer';
-import { TeamMember } from '../../../base_modules/users/teamMember.types';
 
 /********************************************/
 /*                   Enums                  */

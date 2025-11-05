@@ -1,14 +1,3 @@
-import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
-import { NonAuthEndpoint } from 'src/decorators/SkipAuthDecorator';
-import { AuthService } from './auth.service';
-import { ConfigService } from '@nestjs/config';
-import { FastifyReply } from 'fastify';
-import axios, { AxiosError } from 'axios';
-import {
-    GithubEmail,
-    GithubOAuthAccessTokenResponse,
-    GithubUserResponse
-} from 'src/base_modules/integrations/github/github.types';
 import {
     GithubAuthenticatedUser,
     Oauth2FinalizeBody,
@@ -16,16 +5,29 @@ import {
     TokenResponse
 } from 'src/base_modules/auth/auth.types';
 import {
+    GithubEmail,
+    GithubOAuthAccessTokenResponse,
+    GithubUserResponse
+} from 'src/base_modules/integrations/github/github.types';
+import { ApiErrorDecorator } from 'src/decorators/ApiException';
+import { NonAuthEndpoint } from 'src/decorators/SkipAuthDecorator';
+import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
+import { TypedResponse } from 'src/types/apiResponses.types';
+import {
     AlreadyExists,
     IntegrationInvalidToken,
     IntegrationTokenMissingPermissions,
     IntegrationTokenRetrievalFailed,
     FailedToAuthenticateSocialAccount
 } from 'src/types/error.types';
+
+import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ApiErrorDecorator } from 'src/decorators/ApiException';
-import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
-import { TypedResponse } from 'src/types/apiResponses.types';
+import axios, { AxiosError } from 'axios';
+import { FastifyReply } from 'fastify';
+
+import { AuthService } from './auth.service';
 
 @Controller('auth/github')
 export class GithubAuthController {
@@ -125,7 +127,7 @@ export class GithubAuthController {
             if (err instanceof AxiosError) {
                 const axiosError: AxiosError = err;
                 if (axiosError.response) {
-                    if (axiosError.response.status == 401) {
+                    if (axiosError.response.status === 401) {
                         throw new IntegrationInvalidToken();
                     }
                 }
@@ -152,7 +154,7 @@ export class GithubAuthController {
             if (err instanceof AxiosError) {
                 const axiosError: AxiosError = err;
                 if (axiosError.response) {
-                    if (axiosError.response.status == 401) {
+                    if (axiosError.response.status === 401) {
                         throw new IntegrationTokenMissingPermissions();
                     }
                 }
@@ -190,7 +192,7 @@ export class GithubAuthController {
             if (err instanceof AxiosError) {
                 const axiosError: AxiosError = err;
                 if (axiosError.response) {
-                    if (axiosError.response.status == 401) {
+                    if (axiosError.response.status === 401) {
                         throw new IntegrationTokenMissingPermissions();
                     }
                 }

@@ -1,8 +1,6 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { GitlabIntegrationController } from './gitlab.controller';
-import { GitlabIntegrationService } from './gitlab.service';
-import { GitlabRepositoriesService } from './gitlabRepos.service';
-import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
 import {
     EntityNotFound,
     NotAuthorized,
@@ -16,14 +14,22 @@ import {
     InternalError,
     NotAuthenticated
 } from '../../../types/error.types';
-import {
+import { SortDirection } from '../../../types/sort.types';
+import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
+import type { RepositoryCache } from '../../projects/repositoryCache.entity';
+
+import { GitlabIntegrationController } from './gitlab.controller';
+import { GitlabIntegrationService } from './gitlab.service';
+import type {
     GitlabIntegration,
-    GitlabTokenType,
     LinkGitlabCreateBody,
     LinkGitlabPatchBody
 } from './gitlabIntegration.types';
-import { RepositoryCache } from '../../projects/repositoryCache.entity';
-import { SortDirection } from '../../../types/sort.types';
+import {
+    GitlabTokenType
+} from './gitlabIntegration.types';
+import { GitlabRepositoriesService } from './gitlabRepos.service';
+
 
 describe('GitlabIntegrationController', () => {
     let controller: GitlabIntegrationController;

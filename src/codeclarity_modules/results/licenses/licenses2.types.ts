@@ -1,6 +1,6 @@
 export interface Output {
     license_infos: LicenseInfo[];
-    dependency_infos: { [key: string]: DepShortInfo };
+    dependency_infos: Record<string, DepShortInfo>;
 }
 
 export interface DepShortInfo {

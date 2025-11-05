@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
 import { Integration } from 'src/base_modules/integrations/integrations.entity';
+import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
+import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
+
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
+
 
 @Injectable()
 export class IntegrationsRepository {

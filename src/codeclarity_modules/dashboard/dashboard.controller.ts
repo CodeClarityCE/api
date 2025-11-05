@@ -1,9 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
-import { DashboardService } from './dashboard.service';
-import { ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { AuthUser } from 'src/decorators/UserDecorator';
-import { TypedPaginatedResponse, TypedResponse } from 'src/types/apiResponses.types';
 import {
     AttackVectorDist,
     CIAImpact,
@@ -19,12 +14,19 @@ import {
     QuickStats,
     SeverityInfoByWeek
 } from 'src/codeclarity_modules/dashboard/dashboard.types';
-import { APIDocTypedManyResponseDecorator } from 'src/decorators/TypedManyResponse';
-import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
-import { InternalError, NotAuthenticated, NotAuthorized } from 'src/types/error.types';
-import { ApiErrorDecorator } from 'src/decorators/ApiException';
-import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
 import { LicenseDist } from 'src/codeclarity_modules/results/sbom/sbom.types';
+import { ApiErrorDecorator } from 'src/decorators/ApiException';
+import { APIDocTypedManyResponseDecorator } from 'src/decorators/TypedManyResponse';
+import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
+import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
+import { AuthUser } from 'src/decorators/UserDecorator';
+import { TypedPaginatedResponse, TypedResponse } from 'src/types/apiResponses.types';
+import { InternalError, NotAuthenticated, NotAuthorized } from 'src/types/error.types';
+
+import { Controller, Get, Param, Query } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+
+import { DashboardService } from './dashboard.service';
 
 @Controller('/org/:org_id/dashboard')
 export class DashboardController {

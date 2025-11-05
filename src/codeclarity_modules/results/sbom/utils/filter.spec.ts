@@ -1,5 +1,6 @@
+import type { SbomDependency } from '../sbom.types';
+
 import { filter } from './filter';
-import { SbomDependency } from '../sbom.types';
 
 describe('filter', () => {
     const createMockDependency = (overrides: Partial<SbomDependency> = {}): SbomDependency => ({

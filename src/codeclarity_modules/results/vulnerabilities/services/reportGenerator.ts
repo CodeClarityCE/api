@@ -1,4 +1,22 @@
-import { Injectable } from '@nestjs/common';
+// import { getVersionsSatisfyingConstraint } from 'src/codeclarity_modules/results/utils/utils';
+import { CVSS2, CVSS3, CVSS31 } from 'src/codeclarity_modules/knowledge/cvss.types';
+import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
+import { FriendsOfPhp } from 'src/codeclarity_modules/knowledge/friendsofphp/friendsofphp.entity';
+import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
+import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
+import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
+import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.repository';
+import { OWASPRepository } from 'src/codeclarity_modules/knowledge/owasp/owasp.repository';
+import { OwaspTop10Info } from 'src/codeclarity_modules/knowledge/owasp/owasp.types';
+import { Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
+import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
+import { VersionsRepository } from 'src/codeclarity_modules/knowledge/package/packageVersions.repository';
+import { PatchInfo } from 'src/codeclarity_modules/results/patching/patching.types';
+import { Dependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
+import {
+    Vulnerability,
+    AffectedInfo
+} from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import {
     VulnerabilityDetails,
     VulnerabilityInfo,
@@ -10,26 +28,9 @@ import {
     SeverityInfo,
     OtherInfo
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities2.types';
-import {
-    Vulnerability,
-    AffectedInfo
-} from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
-// import { getVersionsSatisfyingConstraint } from 'src/codeclarity_modules/results/utils/utils';
+
+import { Injectable } from '@nestjs/common';
 import { satisfies } from 'semver';
-import { VersionsRepository } from 'src/codeclarity_modules/knowledge/package/packageVersions.repository';
-import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.repository';
-import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
-import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
-import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
-import { OWASPRepository } from 'src/codeclarity_modules/knowledge/owasp/owasp.repository';
-import { Dependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
-import { CVSS2, CVSS3, CVSS31 } from 'src/codeclarity_modules/knowledge/cvss.types';
-import { PatchInfo } from 'src/codeclarity_modules/results/patching/patching.types';
-import { OwaspTop10Info } from 'src/codeclarity_modules/knowledge/owasp/owasp.types';
-import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
-import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
-import { FriendsOfPhp } from 'src/codeclarity_modules/knowledge/friendsofphp/friendsofphp.entity';
-import { Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
 
 abstract class BaseReportGenerator {
     patchesData!: PatchInfo;
@@ -86,7 +87,7 @@ abstract class BaseReportGenerator {
     //             }
 
     //             if (previousPart) {
-    //                 if (previousPart.FixedString == null) {
+    //                 if (previousPart.FixedString === null) {
     //                     continue;
     //                 } else {
     //                     const versionsBetween = getVersionsSatisfyingConstraint(
@@ -100,7 +101,7 @@ abstract class BaseReportGenerator {
     //                     }
     //                 }
     //             } else {
-    //                 if (currentPart.FixedString && nextPart == null) {
+    //                 if (currentPart.FixedString && nextPart === null) {
     //                     const versionsBetween = getVersionsSatisfyingConstraint(
     //                         versionsStrings,
     //                         `>= ${currentPart.FixedString}`
@@ -112,7 +113,7 @@ abstract class BaseReportGenerator {
     //                             patchedStringPart += versionsBetween[0];
     //                         }
     //                     }
-    //                 } else if (currentPart.FixedString && nextPart != null) {
+    //                 } else if (currentPart.FixedString && nextPart !== null) {
     //                     const versionsBetween = getVersionsSatisfyingConstraint(
     //                         versionsStrings,
     //                         `>= ${currentPart.FixedString} < ${nextPart.IntroducedString}`
@@ -130,7 +131,7 @@ abstract class BaseReportGenerator {
     //             if (!patchedStringParts.includes(patchedStringPart))
     //                 patchedStringParts.push(patchedStringPart);
 
-    //             if (i == affectedData.Ranges.length - 1) {
+    //             if (i === affectedData.Ranges.length - 1) {
     //                 if (currentPart.FixedString) {
     //                     if (!patchedStringParts.includes(`>= ${currentPart.FixedString}`))
     //                         patchedStringParts.push(`>= ${currentPart.FixedString}`);
@@ -170,7 +171,7 @@ abstract class BaseReportGenerator {
         const isFramework = this.vulnsData.AffectedDependency?.startsWith('framework-');
 
         // Handle null safety for framework vulnerabilities
-        if (source == 'NVD') {
+        if (source === 'NVD') {
             if (
                 this.vulnsData.NVDMatch &&
                 this.vulnsData.NVDMatch.AffectedInfo &&
@@ -192,12 +193,12 @@ abstract class BaseReportGenerator {
 
         // First try to get affected versions from the actual vulnerability data
         // This ensures we show the real CVE data regardless of whether it's a false positive
-        if (source == 'NVD' && this.nvdItem) {
+        if (source === 'NVD' && this.nvdItem) {
             const nvdAffectedVersions = await this.extractNVDAffectedVersions();
             if (nvdAffectedVersions.length > 0) {
                 return nvdAffectedVersions.join(', ');
             }
-        } else if (source == 'OSV' && this.osvItem) {
+        } else if (source === 'OSV' && this.osvItem) {
             const osvAffectedVersions = await this.extractOSVAffectedVersions();
             if (osvAffectedVersions.length > 0) {
                 return osvAffectedVersions.join(', ');
@@ -209,11 +210,11 @@ abstract class BaseReportGenerator {
             for (const range of affectedData.Ranges) {
                 let affectedStringPart = '';
                 affectedStringPart += `>= ${range.IntroducedSemver.Major}.${range.IntroducedSemver.Minor}.${range.IntroducedSemver.Patch}`;
-                if (range.IntroducedSemver.PreReleaseTag != '')
+                if (range.IntroducedSemver.PreReleaseTag !== '')
                     affectedStringPart += `-${range.IntroducedSemver.PreReleaseTag}`;
 
                 affectedStringPart += ` < ${range.FixedSemver.Major}.${range.FixedSemver.Minor}.${range.FixedSemver.Patch}`;
-                if (range.FixedSemver.PreReleaseTag != '')
+                if (range.FixedSemver.PreReleaseTag !== '')
                     affectedStringPart += `-${range.FixedSemver.PreReleaseTag}`;
                 affectedStringParts.push(affectedStringPart);
             }
@@ -227,7 +228,7 @@ abstract class BaseReportGenerator {
 
         // Final fallback for framework vulnerabilities without proper AffectedInfo
         if (affectedStringParts.length === 0 && isFramework && this.vulnsData.AffectedVersion) {
-            return this.vulnsData.AffectedVersion + ' (check advisory for details)';
+            return `${this.vulnsData.AffectedVersion  } (check advisory for details)`;
         }
 
         return affectedStringParts.join(' || ');
@@ -383,12 +384,12 @@ abstract class BaseReportGenerator {
     }
 
     async getWeaknessData(): Promise<
-        [WeaknessInfo[], { [key: string]: CommonConsequencesInfo[] }]
+        [WeaknessInfo[], Record<string, CommonConsequencesInfo[]>]
     > {
-        const common_consequences: { [key: string]: CommonConsequencesInfo[] } = {};
+        const common_consequences: Record<string, CommonConsequencesInfo[]> = {};
         const weakenessses: WeaknessInfo[] = [];
 
-        if (this.vulnsData.Weaknesses == null) return [weakenessses, common_consequences];
+        if (this.vulnsData.Weaknesses === null) return [weakenessses, common_consequences];
 
         for (const _weakeness of this.vulnsData.Weaknesses) {
             try {
@@ -451,19 +452,19 @@ abstract class BaseReportGenerator {
             // if (packageInfo.Keywords) dependencyInfo.keywords = packageInfo.Keywords;
             // dependencyInfo.published = versionInfo.Time;
 
-            // if (packageInfo.Homepage && packageInfo.Homepage != '') {
+            // if (packageInfo.Homepage && packageInfo.Homepage !== '') {
             //     dependencyInfo.homepage = packageInfo.Homepage;
             // }
 
-            // if (this.dependencyData.git_url != null) {
-            //     if (this.dependencyData.git_url.host_type == 'GITHUB') {
+            // if (this.dependencyData.git_url !== null) {
+            //     if (this.dependencyData.git_url.host_type === 'GITHUB') {
             //         dependencyInfo.github_link = this.dependencyData.git_url;
             //         dependencyInfo.issues_link =
             //             this.dependencyData.git_url.repo_full_path + '/issues';
             //     }
             // }
 
-            // if (this.packageManager == 'NPM' || this.packageManager == 'YARN') {
+            // if (this.packageManager === 'NPM' || this.packageManager === 'YARN') {
             //     dependencyInfo.package_manager_links.push({
             //         package_manager: 'NPM',
             //         url: `https://www.npmjs.com/package/${this.dependencyData.name}`
@@ -482,10 +483,10 @@ abstract class BaseReportGenerator {
     }
 
     getOwaspTop10Info(): OwaspTop10Info | null {
-        if (this.vulnsData.Weaknesses == null) return null;
+        if (this.vulnsData.Weaknesses === null) return null;
 
         for (const weakeness of this.vulnsData.Weaknesses) {
-            if (weakeness.OWASPTop10Id != '') {
+            if (weakeness.OWASPTop10Id !== '') {
                 try {
                     return this.owaspRepository.getOwaspTop10CategoryInfo(weakeness.OWASPTop10Id);
                 } catch (err) {
@@ -501,7 +502,7 @@ abstract class BaseReportGenerator {
     async extractNVDAffectedVersions(): Promise<string[]> {
         const ranges: string[] = [];
 
-        if (!this.nvdItem || !this.nvdItem.affected) {
+        if (!this.nvdItem?.affected) {
             return ranges;
         }
 
@@ -564,7 +565,7 @@ abstract class BaseReportGenerator {
         const allSpecificVersions: string[] = [];
         const allRanges: string[] = [];
 
-        if (!this.osvItem || !this.osvItem.affected) {
+        if (!this.osvItem?.affected) {
             return descriptions;
         }
 
@@ -735,14 +736,14 @@ abstract class BaseReportGenerator {
             if (nvdItem.metrics.cvssMetricV2) {
                 if (nvdItem.metrics.cvssMetricV2.length > 1) {
                     for (const cvss2 of nvdItem.metrics.cvssMetricV2) {
-                        if (cvss2.source == 'nvd@nist.gov') {
+                        if (cvss2.source === 'nvd@nist.gov') {
                             severityInfo.cvss_2 = await this.parseCVSS2Vector(
                                 cvss2.cvssData.vectorString
                             );
                             break;
                         }
                     }
-                } else if (nvdItem.metrics.cvssMetricV2.length == 1) {
+                } else if (nvdItem.metrics.cvssMetricV2.length === 1) {
                     const cvss2 = nvdItem.metrics.cvssMetricV2[0];
                     severityInfo.cvss_2 = await this.parseCVSS2Vector(cvss2.cvssData.vectorString);
                 }
@@ -751,14 +752,14 @@ abstract class BaseReportGenerator {
             if (nvdItem.metrics.cvssMetricV30) {
                 if (nvdItem.metrics.cvssMetricV30.length > 1) {
                     for (const cvss3 of nvdItem.metrics.cvssMetricV30) {
-                        if (cvss3.source == 'nvd@nist.gov') {
+                        if (cvss3.source === 'nvd@nist.gov') {
                             severityInfo.cvss_3 = await this.parseCVSS3Vector(
                                 cvss3.cvssData.vectorString
                             );
                             break;
                         }
                     }
-                } else if (nvdItem.metrics.cvssMetricV30.length == 1) {
+                } else if (nvdItem.metrics.cvssMetricV30.length === 1) {
                     const cvss3 = nvdItem.metrics.cvssMetricV30[0];
                     severityInfo.cvss_3 = await this.parseCVSS3Vector(cvss3.cvssData.vectorString);
                 }
@@ -767,14 +768,14 @@ abstract class BaseReportGenerator {
             if (nvdItem.metrics.cvssMetricV31) {
                 if (nvdItem.metrics.cvssMetricV31.length > 1) {
                     for (const cvss31 of nvdItem.metrics.cvssMetricV31) {
-                        if (cvss31.source == 'nvd@nist.gov') {
+                        if (cvss31.source === 'nvd@nist.gov') {
                             severityInfo.cvss_3 = await this.parseCVSS3Vector(
                                 cvss31.cvssData.vectorString
                             );
                             break;
                         }
                     }
-                } else if (nvdItem.metrics.cvssMetricV31.length == 1) {
+                } else if (nvdItem.metrics.cvssMetricV31.length === 1) {
                     const cvss31 = nvdItem.metrics.cvssMetricV31[0];
                     severityInfo.cvss_31 = await this.parseCVSS31Vector(
                         cvss31.cvssData.vectorString
@@ -783,7 +784,7 @@ abstract class BaseReportGenerator {
             }
         }
 
-        if (severityInfo.cvss_2 != undefined) {
+        if (severityInfo.cvss_2 !== undefined) {
             severityInfo.cvss_2.user_interaction_required =
                 nvdItem.metrics.cvssMetricV2[0].userInteractionRequired;
         }
@@ -796,9 +797,9 @@ abstract class BaseReportGenerator {
 
         if (osvItem.severity && osvItem.severity.length > 0) {
             for (const severity of osvItem.severity) {
-                if (severity.type == 'CVSS_V3') {
+                if (severity.type === 'CVSS_V3') {
                     severityInfo.cvss_3 = await this.parseCVSS3Vector(severity.score);
-                } else if (severity.type == 'CVSS_V2') {
+                } else if (severity.type === 'CVSS_V2') {
                     severityInfo.cvss_2 = await this.parseCVSS2Vector(severity.score);
                 }
             }
@@ -860,7 +861,7 @@ export class OSVReportGenerator extends BaseReportGenerator {
 
         /** Vulnerability Info */
         const vulnInfo: VulnerabilityInfo = {
-            vulnerability_id: this.osvItem.cve == null ? this.osvItem.osv_id : this.osvItem.cve,
+            vulnerability_id: this.osvItem.cve === null ? this.osvItem.osv_id : this.osvItem.cve,
             description: this.#cleanOsvDescription(this.osvItem.details),
             version_info: {
                 affected_versions_string: '',
@@ -952,9 +953,9 @@ export class OSVReportGenerator extends BaseReportGenerator {
         let severityInfo: SeverityInfo = await this.getCVSSOSVInfo(this.osvItem);
 
         if (
-            severityInfo.cvss_2 == null &&
-            severityInfo.cvss_31 == null &&
-            severityInfo.cvss_3 == null
+            severityInfo.cvss_2 === null &&
+            severityInfo.cvss_31 === null &&
+            severityInfo.cvss_3 === null
         ) {
             if (this.nvdItem) {
                 severityInfo = await this.getCVSSNVDInfo(this.nvdItem);
@@ -998,19 +999,19 @@ export class OSVReportGenerator extends BaseReportGenerator {
         let text = '';
 
         for (const char of description) {
-            if (char == '#' && parsingHeader == false) {
-                if (text != '') sections.push(text);
+            if (char === '#' && parsingHeader === false) {
+                if (text !== '') sections.push(text);
                 parsingHeader = true;
                 text = '';
                 continue;
             }
 
-            if (char != '#') parsingHeader = false;
+            if (char !== '#') parsingHeader = false;
 
-            if (char != '#') text += char;
+            if (char !== '#') text += char;
         }
 
-        if (text != '') {
+        if (text !== '') {
             sections.push(text);
         }
 
@@ -1019,7 +1020,7 @@ export class OSVReportGenerator extends BaseReportGenerator {
         let index = -1;
         for (const section of sections) {
             index += 1;
-            if (index == 0) {
+            if (index === 0) {
                 selectedSections.push(section);
                 continue;
             }
@@ -1034,7 +1035,7 @@ export class OSVReportGenerator extends BaseReportGenerator {
             const section = selectedSections[selectedSections.length - 1]!;
             let trimEndNewLines = true;
             for (let i = section.length - 1; i >= 0; i--) {
-                if (section[i] != '\n') {
+                if (section[i] !== '\n') {
                     trimEndNewLines = false;
                 }
                 if (!trimEndNewLines) {
@@ -1130,7 +1131,7 @@ export class NVDReportGenerator extends BaseReportGenerator {
         }
 
         for (const description of this.nvdItem.descriptions) {
-            if (description.lang == 'en') {
+            if (description.lang === 'en') {
                 vulnInfo.description = description.value;
                 break;
             }
@@ -1209,9 +1210,9 @@ export class NVDReportGenerator extends BaseReportGenerator {
         let severityInfo: SeverityInfo = await this.getCVSSNVDInfo(this.nvdItem);
 
         if (
-            severityInfo.cvss_2 == null &&
-            severityInfo.cvss_31 == null &&
-            severityInfo.cvss_3 == null
+            severityInfo.cvss_2 === null &&
+            severityInfo.cvss_31 === null &&
+            severityInfo.cvss_3 === null
         ) {
             if (this.osvItem) {
                 severityInfo = await this.getCVSSOSVInfo(this.osvItem);

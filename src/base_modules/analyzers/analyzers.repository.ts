@@ -1,9 +1,12 @@
-import { Injectable } from '@nestjs/common';
 import { Analyzer } from 'src/base_modules/analyzers/analyzer.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { NotAuthorized } from 'src/types/error.types';
 import { TypedPaginatedData } from 'src/types/pagination.types';
+
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+
+
 import { AnalyzerDoesNotExist } from './analyzers.errors';
 
 /**

@@ -1,6 +1,6 @@
 import { PublicAPIError } from 'src/types/error.types';
 
-export const errorMessages: { [key: string]: string } = {
+export const errorMessages: Record<string, string> = {
     SetupAlreadyDone:
         'The requested action cannot be performed on the social account because it is already setup.',
     FailedToSendAccountRegistrationVerificationEmail:

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+
 import { Plugin } from './plugin.entity';
 @Injectable()
 export class PluginsRepository {
@@ -26,7 +27,7 @@ export class PluginsRepository {
      * Get all plugins
      * @returns all plugins
      */
-    async getAll(): Promise<Array<Plugin>> {
+    async getAll(): Promise<Plugin[]> {
         const plugins = await this.pluginRepository.find();
         if (!plugins) {
             throw new Error('No plugins found');

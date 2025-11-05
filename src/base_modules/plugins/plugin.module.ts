@@ -1,11 +1,13 @@
-import { Module } from '@nestjs/common';
-import { PluginController } from './plugin.controller';
-import { PluginService } from './plugin.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
-import { Plugin } from './plugin.entity';
 import { defaultOptions } from 'src/app.module';
+
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
+import { PluginController } from './plugin.controller';
+import { Plugin } from './plugin.entity';
 import { PluginsRepository } from './plugin.repository';
+import { PluginService } from './plugin.service';
 
 @Module({
     imports: [

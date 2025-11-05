@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
 import {
     IntegrationInvalidToken,
     IntegrationTokenExpired,
     IntegrationTokenMissingPermissions,
     IntegrationTokenRetrievalFailed
 } from 'src/types/error.types';
+
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class GithubIntegrationTokenService {
@@ -76,7 +77,7 @@ export class GithubIntegrationTokenService {
             }
 
             for (const necessaryScope of necessaryScopes) {
-                if (necessaryScope == 'public_repo') {
+                if (necessaryScope === 'public_repo') {
                     if (scopes.has('repo')) {
                         continue;
                     }
@@ -93,7 +94,7 @@ export class GithubIntegrationTokenService {
             }
 
             if ((err as any).status) {
-                if ((err as any).status == 401) {
+                if ((err as any).status === 401) {
                     throw new IntegrationInvalidToken();
                 }
             }
@@ -123,9 +124,9 @@ export class GithubIntegrationTokenService {
 
             if (tokenExpiry) {
                 let date: Date | undefined = undefined;
-                if (typeof tokenExpiry == 'string') {
+                if (typeof tokenExpiry === 'string') {
                     date = new Date(Date.parse(tokenExpiry));
-                } else if (typeof tokenExpiry == 'number') {
+                } else if (typeof tokenExpiry === 'number') {
                     date = new Date(tokenExpiry);
                 }
 
@@ -154,7 +155,7 @@ export class GithubIntegrationTokenService {
             }
 
             if ((err as any).status) {
-                if ((err as any).status == 401) {
+                if ((err as any).status === 401) {
                     throw new IntegrationInvalidToken();
                 }
             }

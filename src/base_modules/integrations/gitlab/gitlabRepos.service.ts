@@ -1,18 +1,21 @@
-import { Injectable } from '@nestjs/common';
-import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { MemberRole } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
+import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import { RepositoryCache, RepositoryType } from 'src/base_modules/projects/repositoryCache.entity';
+import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
+import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
-import { Repository } from 'typeorm';
-import { RepositoryCache, RepositoryType } from 'src/base_modules/projects/repositoryCache.entity';
-import { GitlabIntegrationService } from './gitlab.service';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
-import { IntegrationsRepository } from '../integrations.repository';
+
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MemberRole } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
-import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
 import ms from 'ms';
+import { Repository } from 'typeorm';
+
 import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from '../github/constants';
+import { IntegrationsRepository } from '../integrations.repository';
+
+import { GitlabIntegrationService } from './gitlab.service';
 
 @Injectable()
 export class GitlabRepositoriesService {
@@ -49,9 +52,9 @@ export class GitlabRepositoriesService {
 
         try {
             const response = await fetch(
-                integration.service_domain +
-                    '/api/v4/projects?owned=true&membership=true&per_page=' +
-                    entriesPerPage,
+                `${integration.service_domain 
+                    }/api/v4/projects?owned=true&membership=true&per_page=${ 
+                    entriesPerPage}`,
                 {
                     headers: {
                         'PRIVATE-TOKEN': rawToken
@@ -162,7 +165,7 @@ export class GitlabRepositoriesService {
 
         const isSynced = await this.areGitlabReposSynced(integrationId);
 
-        if (forceRefresh != undefined && forceRefresh == true) {
+        if (forceRefresh !== undefined && forceRefresh === true) {
             await this.syncGitlabRepos(integrationId);
         } else {
             if (!isSynced) {
@@ -175,13 +178,13 @@ export class GitlabRepositoriesService {
             .where('repo.integration = :integrationId', { integrationId });
 
         if (sortBy) {
-            if (sortBy == AllowedOrderBy.FULLY_QUALIFIED_NAME)
+            if (sortBy === AllowedOrderBy.FULLY_QUALIFIED_NAME)
                 repositoryQB = repositoryQB.orderBy('fully_qualified_name', sortDirection ?? 'ASC');
-            else if (sortBy == AllowedOrderBy.DESCRIPTION)
+            else if (sortBy === AllowedOrderBy.DESCRIPTION)
                 repositoryQB = repositoryQB.orderBy('description', sortDirection ?? 'ASC');
-            else if (sortBy == AllowedOrderBy.CREATED)
+            else if (sortBy === AllowedOrderBy.CREATED)
                 repositoryQB = repositoryQB.orderBy('created_at', sortDirection ?? 'ASC');
-            else if (sortBy == AllowedOrderBy.IMPORTED)
+            else if (sortBy === AllowedOrderBy.IMPORTED)
                 repositoryQB = repositoryQB.orderBy('imported_already', sortDirection ?? 'ASC');
         }
 
@@ -277,7 +280,7 @@ export class GitlabRepositoriesService {
 
         const isSynced = await this.areGitlabReposSynced(integrationId);
 
-        if (forceRefresh != undefined && forceRefresh == true) {
+        if (forceRefresh !== undefined && forceRefresh === true) {
             await this.syncGitlabRepos(integrationId);
         } else {
             if (!isSynced) {

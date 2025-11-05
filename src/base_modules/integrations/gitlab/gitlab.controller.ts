@@ -1,26 +1,23 @@
-import {
-    Body,
-    Controller,
-    DefaultValuePipe,
-    Get,
-    Param,
-    ParseBoolPipe,
-    ParseIntPipe,
-    Patch,
-    Post,
-    Query
-} from '@nestjs/common';
-import { AuthUser } from 'src/decorators/UserDecorator';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import {
+    GitlabIntegration,
+    GitlabTokenType,
+    LinkGitlabCreateBody,
+    LinkGitlabPatchBody
+} from 'src/base_modules/integrations/gitlab/gitlabIntegration.types';
+import { Repository } from 'src/base_modules/integrations/integration.types';
+import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
+import { ApiErrorDecorator } from 'src/decorators/ApiException';
+import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
+import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
+import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
+import { AuthUser } from 'src/decorators/UserDecorator';
 import {
     CreatedResponse,
     NoDataResponse,
     TypedPaginatedResponse,
     TypedResponse
 } from 'src/types/apiResponses.types';
-import { GitlabIntegrationService } from './gitlab.service';
-import { ApiTags } from '@nestjs/swagger';
-import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
 import {
     DuplicateIntegration,
     EntityNotFound,
@@ -34,19 +31,24 @@ import {
     NotAuthenticated,
     NotAuthorized
 } from 'src/types/error.types';
-import { ApiErrorDecorator } from 'src/decorators/ApiException';
-import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
-import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
 import { SortDirection } from 'src/types/sort.types';
-import { GitlabRepositoriesService } from './gitlabRepos.service';
+
 import {
-    GitlabIntegration,
-    GitlabTokenType,
-    LinkGitlabCreateBody,
-    LinkGitlabPatchBody
-} from 'src/base_modules/integrations/gitlab/gitlabIntegration.types';
-import { Repository } from 'src/base_modules/integrations/integration.types';
-import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
+    Body,
+    Controller,
+    DefaultValuePipe,
+    Get,
+    Param,
+    ParseBoolPipe,
+    ParseIntPipe,
+    Patch,
+    Post,
+    Query
+} from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+
+import { GitlabIntegrationService } from './gitlab.service';
+import { GitlabRepositoriesService } from './gitlabRepos.service';
 
 @Controller('org/:org_id/integrations/gitlab')
 export class GitlabIntegrationController {

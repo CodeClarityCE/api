@@ -1,22 +1,27 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { OSVReportGenerator, NVDReportGenerator } from './reportGenerator';
-import { VersionsRepository } from 'src/codeclarity_modules/knowledge/package/packageVersions.repository';
-import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.repository';
-import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
+
 import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
-import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
+import type { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
+import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
+import type { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
+import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.repository';
 import { OWASPRepository } from 'src/codeclarity_modules/knowledge/owasp/owasp.repository';
+import type { OwaspTop10Info } from 'src/codeclarity_modules/knowledge/owasp/owasp.types';
+import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
+import { VersionsRepository } from 'src/codeclarity_modules/knowledge/package/packageVersions.repository';
+import type { Dependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import {
-    Vulnerability,
     Source,
     ConflictFlag,
-    WeaknessInfo,
     SeverityType
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
-import { Dependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
-import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
-import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
-import { OwaspTop10Info } from 'src/codeclarity_modules/knowledge/owasp/owasp.types';
+import type {
+    Vulnerability,
+    WeaknessInfo} from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
+
+import { Test } from '@nestjs/testing';
+import type { TestingModule } from '@nestjs/testing';
+
+import { OSVReportGenerator, NVDReportGenerator } from './reportGenerator';
 
 describe('ReportGenerator Services', () => {
     let osvReportGenerator: OSVReportGenerator;

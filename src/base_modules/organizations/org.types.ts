@@ -1,8 +1,11 @@
+import { User } from 'src/base_modules/users/users.entity';
+
+import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { IsDefined, IsNotEmpty, Length } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+
 import { MemberRole } from './memberships/orgMembership.types';
-import { User } from 'src/base_modules/users/users.entity';
+
 
 /********************************************/
 /*             Database entities            */

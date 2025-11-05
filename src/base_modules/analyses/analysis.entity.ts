@@ -1,3 +1,5 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { Expose } from 'class-transformer';
 import {
     Entity,
     Column,
@@ -7,15 +9,14 @@ import {
     ManyToOne,
     OneToMany
 } from 'typeorm';
+
 import { Policy } from '../../codeclarity_modules/policies/policy.entity';
-import { Project } from '../projects/project.entity';
 import { Result } from '../../codeclarity_modules/results/result.entity';
 import { Analyzer } from '../analyzers/analyzer.entity';
-import { Organization } from '../organizations/organization.entity';
 import { Integration } from '../integrations/integrations.entity';
+import { Organization } from '../organizations/organization.entity';
+import { Project } from '../projects/project.entity';
 import { User } from '../users/users.entity';
-import { ApiProperty } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
 
 export enum AnalysisStatus {
     REQUESTED = 'requested',
@@ -53,7 +54,7 @@ export class Analysis {
     created_on!: Date;
 
     @Column('jsonb')
-    config!: { [key: string]: { [key: string]: any } };
+    config!: Record<string, Record<string, any>>;
 
     @Column({
         nullable: true

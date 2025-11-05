@@ -1,7 +1,9 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException } from '@nestjs/common';
 import { Status } from 'src/types/apiResponses.types';
-import { FastifyReply } from 'fastify';
 import { PrivateAPIError, PublicAPIError } from 'src/types/error.types';
+
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException } from '@nestjs/common';
+import { FastifyReply } from 'fastify';
+
 
 /**
  * The goal of this filter is to filter the information we expose to users in case of an exception
@@ -29,7 +31,7 @@ export class ErrorFilter implements ExceptionFilter {
             const error: PublicAPIError = exception;
             status = error.getHttpStatusCode();
             const rawError: any = error;
-            delete rawError['errorCause'];
+            delete rawError.errorCause;
             const object = snakeCase(rawError);
             response.status(status).send(JSON.stringify(object));
             return;
@@ -49,12 +51,12 @@ export class ErrorFilter implements ExceptionFilter {
         } else {
             console.error('[UnhandledException]', exception);
             // Catch any other unexpected exceptions and return a generic InternalError response
-            if ('name' in exception && exception['name'] == 'FastifyError') {
+            if ('name' in exception && exception.name === 'FastifyError') {
                 const fastifyException: any = exception;
-                if (fastifyException['statusCode'] >= 400 && fastifyException['statusCode'] < 500) {
+                if (fastifyException.statusCode >= 400 && fastifyException.statusCode < 500) {
                     errorCode = 'BadRequest';
                     status = 400;
-                    message = fastifyException['message'];
+                    message = fastifyException.message;
                 }
             }
         }
@@ -84,7 +86,7 @@ function snakeCase(fields: any) {
 
         const snakeKey = key
             .replace(/\.?([A-Z]+)/g, function (_x, y) {
-                return '_' + y.toLowerCase();
+                return `_${  y.toLowerCase()}`;
             })
             .replace(/^_/, '');
 

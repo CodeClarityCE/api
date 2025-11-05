@@ -1,10 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
+import { Reflector } from '@nestjs/core';
+import { JwtService } from '@nestjs/jwt';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
+import { EmailAlreadyExists } from '../../types/error.types';
+import type { UserCreateBody, RegistrationConfirmationBody } from '../users/user.types';
+import type { User } from '../users/users.entity';
 import { UsersService } from '../users/users.service';
-import { AuthenticatedUser, ROLE, TokenResponse, TokenRefreshResponse } from './auth.types';
-import { UserCreateBody, RegistrationConfirmationBody } from '../users/user.types';
-import { User } from '../users/users.entity';
+
+import { AuthController } from './auth.controller';
 import {
     WrongCredentials,
     RegistrationNotVerified,
@@ -12,9 +16,9 @@ import {
     AccountRegistrationVerificationTokenInvalidOrExpired,
     PasswordResetTokenInvalidOrExpired
 } from './auth.errors';
-import { EmailAlreadyExists } from '../../types/error.types';
-import { JwtService } from '@nestjs/jwt';
-import { Reflector } from '@nestjs/core';
+import { AuthService } from './auth.service';
+import type { TokenResponse, TokenRefreshResponse } from './auth.types';
+import { AuthenticatedUser, ROLE } from './auth.types';
 import { CombinedAuthGuard } from './guards/combined.guard';
 import { RefreshJwtAuthGuard } from './guards/refresh-token.guard';
 

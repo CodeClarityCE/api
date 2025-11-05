@@ -1,3 +1,5 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { Expose } from 'class-transformer';
 import {
     Entity,
     Column,
@@ -8,17 +10,18 @@ import {
     Relation,
     OneToMany
 } from 'typeorm';
-import { ApiProperty } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
-import { OrganizationMemberships } from './memberships/organization.memberships.entity';
-import type { User } from '../users/users.entity';
-import type { Integration } from '../integrations/integrations.entity';
-import type { Log } from './log/log.entity';
+
+
 import type { Policy } from '../../codeclarity_modules/policies/policy.entity';
-import type { Project } from '../projects/project.entity';
-import type { Analyzer } from '../analyzers/analyzer.entity';
 import type { Analysis } from '../analyses/analysis.entity';
+import type { Analyzer } from '../analyzers/analyzer.entity';
+import type { Integration } from '../integrations/integrations.entity';
+import type { Project } from '../projects/project.entity';
+import type { User } from '../users/users.entity';
+
 import type { Invitation } from './invitations/invitation.entity';
+import type { Log } from './log/log.entity';
+import { OrganizationMemberships } from './memberships/organization.memberships.entity';
 
 @Entity()
 export class Organization {

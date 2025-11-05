@@ -1,3 +1,5 @@
+import type { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
+
 import {
     isNoneSeverity,
     isLowSeverity,
@@ -10,7 +12,6 @@ import {
     NoPreviousAnalysis,
     NoProjectAssociatedWithAnalysis
 } from './utils';
-import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
 
 describe('utils', () => {
     describe('severity checking functions', () => {

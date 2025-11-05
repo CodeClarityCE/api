@@ -1,8 +1,9 @@
-import { compare as semverCompare } from 'semver';
-import { Injectable } from '@nestjs/common';
-import { EntityNotFound } from 'src/types/error.types';
 import { Package, Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
+import { EntityNotFound } from 'src/types/error.types';
+
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { compare as semverCompare } from 'semver';
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -18,7 +19,7 @@ export class VersionsRepository {
     async getVersion(
         dependencyName: string,
         dependencyVersion: string,
-        language: string = 'javascript'
+        language = 'javascript'
     ): Promise<Version> {
         if (dependencyName.includes('/')) {
             dependencyName.replace('/', ':');
@@ -47,7 +48,7 @@ export class VersionsRepository {
 
     async getDependencyVersions(
         dependency: string,
-        language: string = 'javascript'
+        language = 'javascript'
     ): Promise<Version[]> {
         if (dependency.includes('/')) {
             dependency.replace('/', ':');

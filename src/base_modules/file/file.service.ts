@@ -1,16 +1,20 @@
-import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
+import { join } from 'path';
+
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { File as FileEntity } from 'src/base_modules/file/file.entity';
-import { UploadData } from './file.controller';
-import { join } from 'path';
-import { escapeString } from 'src/utils/cleaner';
 import { MemberRole } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
-import { UsersRepository } from '../users/users.repository';
+import { escapeString } from 'src/utils/cleaner';
+
+import { Injectable } from '@nestjs/common';
+import { MulterFile } from '@webundsoehne/nest-fastify-file-upload';
+
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { ProjectsRepository } from '../projects/projects.repository';
+import { UsersRepository } from '../users/users.repository';
+
+import { UploadData } from './file.controller';
 import { FileRepository } from './file.repository';
-import { MulterFile } from '@webundsoehne/nest-fastify-file-upload';
 
 @Injectable()
 export class FileService {
@@ -73,7 +77,7 @@ export class FileService {
         const fileNameWithSuffix = `${baseName}.part${paddedId}`;
 
         // If this is not the last chunk of the file
-        if (queryParams.last == 'false') {
+        if (queryParams.last === 'false') {
             const filePath = join(folderPath, fileNameWithSuffix); // Define the file path
 
             // Create a write stream for appending to the file
@@ -92,7 +96,7 @@ export class FileService {
                         const stringHash = hashArray
                             .map((b) => b.toString(16).padStart(2, '0'))
                             .join('');
-                        if (queryParams.hash != stringHash) {
+                        if (queryParams.hash !== stringHash) {
                             console.error('NOT THE SAME HASH!');
                             console.error('Hash:', stringHash);
                             console.error('Original Hash:', queryParams.hash);
@@ -139,7 +143,7 @@ export class FileService {
 
             let index = 0;
             for (const file of validFiles) {
-                const match = file.match(/(\d+)$/);
+                const match = /(\d+)$/.exec(file);
                 if (match) {
                     const currentIdx = parseInt(match[1]!, 10);
                     if (currentIdx !== index) {
@@ -186,7 +190,7 @@ export class FileService {
         }
 
         // If this is not a chunked upload or if it's the last chunk
-        if (queryParams.chunk == 'false' || queryParams.last == 'true') {
+        if (queryParams.chunk === 'false' || queryParams.last === 'true') {
             // Save the file to the database
             const file_entity = new FileEntity();
             file_entity.added_by = added_by;

@@ -6,18 +6,24 @@ jest.mock('fs', () => ({
     readFileSync: jest.fn()
 }));
 
-import { Test, TestingModule } from '@nestjs/testing';
-import { ExecutionContext } from '@nestjs/common';
+import * as fs from 'fs';
+
+import type { Request } from 'express';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { SKIP_AUTH_KEY } from 'src/decorators/SkipAuthDecorator';
+import { NotAuthenticated, AccountNotActivated } from 'src/types/error.types';
+
+import type { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import type { Socket } from 'socket.io';
+
 import { CombinedAuthGuard } from './combined.guard';
-import { SKIP_AUTH_KEY } from 'src/decorators/SkipAuthDecorator';
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { NotAuthenticated, AccountNotActivated } from 'src/types/error.types';
-import { JWTPayload } from './jwt.types';
-import { Request } from 'express';
-import { Socket } from 'socket.io';
-import * as fs from 'fs';
+import type { JWTPayload } from './jwt.types';
+
+
 
 describe('CombinedAuthGuard', () => {
     let guard: CombinedAuthGuard;

@@ -1,9 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ExecutionContext } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { JwtAuthGuard } from './jwt-auth.guard';
 import { SKIP_AUTH_KEY } from 'src/decorators/SkipAuthDecorator';
 import { NotAuthenticated } from 'src/types/error.types';
+
+import type { ExecutionContext } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
+import { JwtAuthGuard } from './jwt-auth.guard';
+
 
 describe('JwtAuthGuard', () => {
     let guard: JwtAuthGuard;

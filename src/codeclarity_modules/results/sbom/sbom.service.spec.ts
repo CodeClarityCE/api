@@ -1,12 +1,19 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { SBOMService } from './sbom.service';
-import { AnalysisResultsService } from '../results.service';
-import { SbomUtilsService } from './utils/utils';
-import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
-import { Result } from '../result.entity';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
+import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
 import { PluginResultNotAvailable, UnknownWorkspace, EntityNotFound } from 'src/types/error.types';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+
+import { Result } from '../result.entity';
+import { AnalysisResultsService } from '../results.service';
+
+import { SBOMService } from './sbom.service';
+import { SbomUtilsService } from './utils/utils';
+
+
+
 
 describe('SBOMService', () => {
     let service: SBOMService;

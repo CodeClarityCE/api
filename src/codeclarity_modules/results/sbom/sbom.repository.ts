@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { Output as SBOMOutput, Status } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
-import { Result } from 'src/codeclarity_modules/results/result.entity';
+
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 
@@ -35,7 +36,7 @@ export class SBOMRepository {
         }
 
         const sbom: SBOMOutput = result.result as unknown as SBOMOutput;
-        if (sbom.analysis_info.status == Status.Failure) {
+        if (sbom.analysis_info.status === Status.Failure) {
             throw new PluginFailed();
         }
         return sbom;

@@ -1,9 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
 import { OptionalTransform } from 'src/transformers/transformer';
-import { IntegrationProvider } from '../../base_modules/integrations/integration.types';
-import { IsDateString, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
-import { Transform } from 'class-transformer';
 import { SortDirection } from 'src/types/sort.types';
+
+import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
+import { IsDateString, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+
+import { IntegrationProvider } from '../../base_modules/integrations/integration.types';
+
+
 
 export class DashboardQueryOptions {
     @IsOptional()
@@ -36,11 +40,11 @@ export class GetProjectsQuickStatsQueryOptions extends DashboardQueryOptions {
     @IsOptional()
     @IsNumber()
     @Transform(({ value }) => parseInt(value))
-    page: number = 0;
+    page = 0;
     @IsOptional()
     @IsNumber()
     @Transform(({ value }) => parseInt(value))
-    entries_per_page: number = 10;
+    entries_per_page = 10;
     @IsNotEmpty()
     sort_key?: string;
     @IsOptional()
@@ -82,7 +86,7 @@ export class SeverityInfoByWeek {
     @ApiProperty()
     summed_severity!: number;
 
-    projects!: Array<string>;
+    projects!: string[];
 }
 
 export class SeverityInfoByWeekInternal {
@@ -140,7 +144,7 @@ export class SeverityClassCount {
 
 export class LatestVulns {
     // @ApiProperty({ type: [LatestVuln] })
-    vulns!: { [vuln_id: string]: LatestVulnInfo };
+    vulns!: Record<string, LatestVulnInfo>;
     @ApiProperty({ type: [SeverityClassCount] })
     severity_count!: SeverityClassCount[];
 }

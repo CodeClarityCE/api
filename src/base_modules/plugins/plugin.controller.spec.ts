@@ -1,8 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { PluginController } from './plugin.controller';
-import { PluginService } from './plugin.service';
-import { Plugin } from './plugin.entity';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
+import { PluginController } from './plugin.controller';
+import type { Plugin } from './plugin.entity';
+import { PluginService } from './plugin.service';
 
 describe('PluginController', () => {
     let pluginController: PluginController;
@@ -56,7 +59,7 @@ describe('PluginController', () => {
         }).compile();
 
         pluginController = module.get<PluginController>(PluginController);
-        pluginService = module.get(PluginService) as jest.Mocked<PluginService>;
+        pluginService = module.get(PluginService);
     });
 
     afterEach(() => {

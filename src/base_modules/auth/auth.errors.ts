@@ -1,6 +1,6 @@
 import { PublicAPIError } from 'src/types/error.types';
 
-export const errorMessages: { [key: string]: string } = {
+export const errorMessages: Record<string, string> = {
     SetupAlreadyDone:
         'An error occured while trying to send the account registration verficiation email.',
     AccountRegistrationVerificationTokenInvalidOrExpired:

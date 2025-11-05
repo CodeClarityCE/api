@@ -1,10 +1,15 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { EntityNotFound, UserDoesNotExist } from 'src/types/error.types';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { UsersRepository } from './users.repository';
-import { User } from './users.entity';
+
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { ProjectsRepository } from '../projects/projects.repository';
-import { EntityNotFound, UserDoesNotExist } from 'src/types/error.types';
+
+import { User } from './users.entity';
+import { UsersRepository } from './users.repository';
+
 
 describe('UsersRepository', () => {
     let usersRepository: UsersRepository;

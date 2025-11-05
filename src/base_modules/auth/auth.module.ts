@@ -1,20 +1,25 @@
+import * as fs from 'fs';
+
+import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/gitlab/gitlabToken.service';
+
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
-import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
-import { AuthService } from './auth.service';
+import { PassportModule } from '@nestjs/passport';
+
+import { EmailModule } from '../email/email.module';
+import { OrganizationsModule } from '../organizations/organizations.module';
+import { UsersModule } from '../users/users.module';
+
 import { AuthController } from './auth.controller';
-import { CombinedAuthGuard } from './guards/combined.guard';
+import { AuthService } from './auth.service';
 import { CONST_JWT_ALGORITHM, CONST_JWT_TOKEN_EXPIRES_IN } from './constants';
-import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/gitlab/gitlabToken.service';
 import { GithubAuthController } from './github.controller';
 import { GitlabAuthController } from './gitlab.controller';
-import { EmailModule } from '../email/email.module';
-import { UsersModule } from '../users/users.module';
-import { OrganizationsModule } from '../organizations/organizations.module';
+import { CombinedAuthGuard } from './guards/combined.guard';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RefreshJWTStrategy } from './strategies/refresh-token.strategy';
-import * as fs from 'fs';
+
 /**
  * Authentication module, that secures the endpoints of the API
  */

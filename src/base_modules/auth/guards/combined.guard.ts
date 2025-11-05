@@ -1,16 +1,19 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+import { Request } from 'express';
+import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
+import { JWTPayload } from 'src/base_modules/auth/guards/jwt.types';
+import { SKIP_AUTH_KEY } from 'src/decorators/SkipAuthDecorator';
+import { NotAuthenticated, AccountNotActivated } from 'src/types/error.types';
+
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { SKIP_AUTH_KEY } from 'src/decorators/SkipAuthDecorator';
-import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
-import { NotAuthenticated, AccountNotActivated } from 'src/types/error.types';
 import { Algorithm } from 'jsonwebtoken';
-import { JWTPayload } from 'src/base_modules/auth/guards/jwt.types';
-import { Request } from 'express';
 import { Socket } from 'socket.io';
+
 // import { ApiKeysService } from 'src/codeclarity_modules/apiKeys/apiKeys.service';
-import { readFileSync } from 'fs';
-import { join } from 'path';
 
 /**
  * This is a guard that combines JWT and API authentication.
@@ -43,13 +46,13 @@ export class CombinedAuthGuard implements CanActivate {
         let apiHeader: string | string[] | undefined = undefined;
         let request: Request | undefined = undefined;
         let socket: Socket | undefined = undefined;
-        if (context.getType() == 'ws') {
+        if (context.getType() === 'ws') {
             // console.log(context.switchToWs().getClient());
-            socket = context.switchToWs().getClient() as Socket;
+            socket = context.switchToWs().getClient();
             authHeader = socket.handshake.headers.authorization;
         } else {
             // If the endpoint requires authentication, check jwt and api tokens
-            request = context.switchToHttp().getRequest() as Request;
+            request = context.switchToHttp().getRequest();
             authHeader = request.headers.authorization;
             apiHeader = request.headers['x-api-key'] ?? request.headers['X-API-KEY'];
         }
@@ -68,9 +71,9 @@ export class CombinedAuthGuard implements CanActivate {
             if (!userJWT?.activated) throw new AccountNotActivated();
             if (jwtTokenValid) {
                 if (request) {
-                    request['user'] = userJWT;
+                    request.user = userJWT;
                 } else if (socket) {
-                    socket.data['user'] = userJWT;
+                    socket.data.user = userJWT;
                 }
                 return true;
             }
@@ -118,7 +121,7 @@ export class CombinedAuthGuard implements CanActivate {
     private extractAPITokenFromHeader(
         apiHeader: string | string[] | undefined
     ): string | undefined {
-        if (apiHeader && typeof apiHeader == 'string') {
+        if (apiHeader && typeof apiHeader === 'string') {
             return apiHeader;
         }
         return undefined;
@@ -140,7 +143,7 @@ export class CombinedAuthGuard implements CanActivate {
                 true,
                 new AuthenticatedUser(
                     payload.userId,
-                    payload.roles as Array<ROLE>,
+                    payload.roles as ROLE[],
                     payload.activated
                 )
             ];

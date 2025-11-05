@@ -1,19 +1,22 @@
-import { forwardRef, Module } from '@nestjs/common';
-import { ProjectController } from './projects.controller';
-import { ProjectMemberService } from './projectMember.service';
-import { ProjectService } from './projects.service';
 import { Project } from 'src/base_modules/projects/project.entity';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
-import { UsersModule } from '../users/users.module';
-import { OrganizationsModule } from '../organizations/organizations.module';
+import { ResultsModule } from 'src/codeclarity_modules/results/results.module';
+
+import { forwardRef, Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
+import { AnalysesModule } from '../analyses/analyses.module';
 import { FileModule } from '../file/file.module';
-import { IntegrationsModule } from '../integrations/integrations.module';
 import { GithubModule } from '../integrations/github/github.module';
 import { GitlabModule } from '../integrations/gitlab/gitlab.module';
-import { ResultsModule } from 'src/codeclarity_modules/results/results.module';
-import { AnalysesModule } from '../analyses/analyses.module';
+import { IntegrationsModule } from '../integrations/integrations.module';
+import { OrganizationsModule } from '../organizations/organizations.module';
+import { UsersModule } from '../users/users.module';
+
+import { ProjectMemberService } from './projectMember.service';
+import { ProjectController } from './projects.controller';
 import { ProjectsRepository } from './projects.repository';
+import { ProjectService } from './projects.service';
 
 @Module({
     imports: [

@@ -1,3 +1,16 @@
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { Integration } from 'src/base_modules/integrations/integrations.entity';
+import { ApiErrorDecorator } from 'src/decorators/ApiException';
+import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
+import { AuthUser } from 'src/decorators/UserDecorator';
+import { NoDataResponse, TypedPaginatedResponse } from 'src/types/apiResponses.types';
+import {
+    EntityNotFound,
+    InternalError,
+    NotAuthenticated,
+    NotAuthorized
+} from 'src/types/error.types';
+
 import {
     Controller,
     DefaultValuePipe,
@@ -7,22 +20,12 @@ import {
     ParseIntPipe,
     Query
 } from '@nestjs/common';
-import { IntegrationsService } from './integrations.service';
-import { NoDataResponse, TypedPaginatedResponse } from 'src/types/apiResponses.types';
-import { AuthUser } from 'src/decorators/UserDecorator';
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
 import { ApiTags } from '@nestjs/swagger';
-import { ApiErrorDecorator } from 'src/decorators/ApiException';
-import {
-    EntityNotFound,
-    InternalError,
-    NotAuthenticated,
-    NotAuthorized
-} from 'src/types/error.types';
-import { Integration } from 'src/base_modules/integrations/integrations.entity';
+
 import { OrganizationsRepository } from '../organizations/organizations.repository';
+
 import { IntegrationsRepository } from './integrations.repository';
+import { IntegrationsService } from './integrations.service';
 
 @Controller('org/:org_id/integrations')
 export class IntegrationsController {

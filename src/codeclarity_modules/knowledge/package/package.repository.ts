@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { EntityNotFound } from 'src/types/error.types';
 import { Package } from 'src/codeclarity_modules/knowledge/package/package.entity';
-import { Repository } from 'typeorm';
+import { EntityNotFound } from 'src/types/error.types';
+
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class PackageRepository {
@@ -13,7 +14,7 @@ export class PackageRepository {
 
     async getPackageInfo(
         dependencyName: string,
-        language: string = 'javascript'
+        language = 'javascript'
     ): Promise<Package> {
         if (dependencyName.includes('/')) {
             dependencyName.replace('/', ':');
@@ -27,7 +28,7 @@ export class PackageRepository {
 
     async getPackageInfoWithoutFailing(
         dependencyName: string,
-        language: string = 'javascript'
+        language = 'javascript'
     ): Promise<Package | null> {
         if (dependencyName.includes('/')) {
             dependencyName.replace('/', ':');
@@ -43,7 +44,7 @@ export class PackageRepository {
     async getVersionInfo(
         dependency_name: string,
         dependency_version: string,
-        language: string = 'javascript'
+        language = 'javascript'
     ): Promise<Package> {
         // Use query builder to avoid TypeORM relation issues with column names
         const package_version = await this.packageRepository

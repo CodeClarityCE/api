@@ -1,14 +1,19 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { JwtService } from '@nestjs/jwt';
-import { Reflector } from '@nestjs/core';
-import { FindingsController } from './vulnerabilities.controller';
-import { VulnerabilitiesService } from './vulnerabilities.service';
-import { VulnerabilityService } from './vulnerability.service';
-import { PaginatedResponse } from 'src/types/apiResponses.types';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { CombinedAuthGuard } from 'src/base_modules/auth/guards/combined.guard';
+import type { PaginatedResponse } from 'src/types/apiResponses.types';
 import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
-import { AnalysisStats, VulnerabilityDetails, newAnalysisStats } from './vulnerabilities2.types';
+
+import { Reflector } from '@nestjs/core';
+import { JwtService } from '@nestjs/jwt';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
+import { FindingsController } from './vulnerabilities.controller';
+import { VulnerabilitiesService } from './vulnerabilities.service';
+import type { AnalysisStats, VulnerabilityDetails} from './vulnerabilities2.types';
+import { newAnalysisStats } from './vulnerabilities2.types';
+import { VulnerabilityService } from './vulnerability.service';
+
 
 describe('FindingsController', () => {
     let controller: FindingsController;
