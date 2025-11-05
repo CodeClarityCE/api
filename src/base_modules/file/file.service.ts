@@ -199,7 +199,7 @@ export class FileService {
             file_entity.type = queryParams.type;
             file_entity.name = escapedFileName;
 
-            this.fileRepository.saveFile(file_entity);
+            await this.fileRepository.saveFile(file_entity);
         }
     }
 

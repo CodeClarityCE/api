@@ -1,23 +1,20 @@
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import {
-    Output as PatchesOutput,
-    Workspace
-} from 'src/codeclarity_modules/results/patching/patching.types';
+import { Injectable } from '@nestjs/common';
 
-// import { Output as VulnsOuptut } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
     AnalysisStats,
     newAnalysisStats
 } from 'src/codeclarity_modules/results/patching/patching2.types';
+import {
+    Output as PatchesOutput,
+    Workspace
+} from 'src/codeclarity_modules/results/patching/patching.types';
 import { Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
 import { UnknownWorkspace } from 'src/types/error.types';
 
-import { Injectable } from '@nestjs/common';
-
 import { AnalysisResultsService } from '../results.service';
 import { SbomUtilsService } from '../sbom/utils/utils';
-
 import { PatchingUtilsService } from './utils/utils';
 
 @Injectable()

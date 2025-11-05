@@ -4,17 +4,11 @@ import multipart from '@fastify/multipart';
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
-
-// Import the main application module
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { AppModule } from './app.module';
-
-// Import custom filters and interceptors for error handling and response body formatting
 import { ErrorFilter } from './filters/ExceptionFilter';
 import { ResponseBodyInterceptor } from './interceptors/ResponseBodyInterceptor';
-
-// Import built-in classes for validation, serialization, and Swagger documentation
 import { ValidationFailed } from './types/error.types';
 
 /**
@@ -23,7 +17,7 @@ import { ValidationFailed } from './types/error.types';
 async function bootstrap() {
     // Create a new NestJS application instance using Fastify as the underlying server
     const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
-    app.register(multipart, {
+    await app.register(multipart, {
         limits: {
             fileSize: 25 * 1024 * 1024 //25 MB
         }
@@ -102,4 +96,4 @@ async function bootstrap() {
 }
 
 // Call the bootstrap function to start the application
-bootstrap();
+void bootstrap();

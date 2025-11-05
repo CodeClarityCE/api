@@ -18,4 +18,4 @@ async function runAll() {
     }
 }
 
-runAll();
+void runAll();

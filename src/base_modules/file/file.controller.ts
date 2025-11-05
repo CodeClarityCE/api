@@ -76,7 +76,7 @@ export class FileController {
             throw new InternalError('500', 'No file provided');
         }
 
-        this.fileService.uploadFile(user, file, project_id, organization_id, queryParams);
+        await this.fileService.uploadFile(user, file, project_id, organization_id, queryParams);
         return;
     }
 

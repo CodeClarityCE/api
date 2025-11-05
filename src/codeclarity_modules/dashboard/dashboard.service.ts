@@ -1,7 +1,30 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
+import { Organization } from 'src/base_modules/organizations/organization.entity';
+import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import {
+    AttackVectorDist,
+    CIAImpact,
+    LatestVulns,
+    ProjectGradeClass,
+    ProjectQuickStats,
+    QuickStats,
+    SeverityInfoByWeek,
+    Trend
+} from 'src/codeclarity_modules/dashboard/dashboard.types';
+import { LicenseDist, Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
+import { Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
+import {
+    PaginationConfig,
+    PaginationUserSuppliedConf,
+    TypedPaginatedData
+} from 'src/types/pagination.types';
+import { SortDirection } from 'src/types/sort.types';
+
 // Native Date API utility functions
 function subtractMonths(date: Date, months: number): Date {
     const result = new Date(date);
@@ -17,29 +40,6 @@ function getWeekNumber(date: Date): number {
     const dayDiff = (target.getTime() - jan4.getTime()) / 86400000;
     return 1 + Math.ceil(dayDiff / 7);
 }
-import { Organization } from 'src/base_modules/organizations/organization.entity';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
-import {
-    AttackVectorDist,
-    CIAImpact,
-    LatestVulns,
-    ProjectQuickStats,
-    ProjectGradeClass,
-    QuickStats,
-    SeverityInfoByWeek,
-    Trend
-} from 'src/codeclarity_modules/dashboard/dashboard.types';
-import { LicenseDist, Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
-import { Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
-import {
-    PaginationConfig,
-    PaginationUserSuppliedConf,
-    TypedPaginatedData
-} from 'src/types/pagination.types';
-import { SortDirection } from 'src/types/sort.types';
-
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 
 @Injectable()
 export class DashboardService {

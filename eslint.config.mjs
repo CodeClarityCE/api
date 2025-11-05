@@ -264,16 +264,23 @@ export default [
       "import/no-unresolved": "off", // TypeScript handles this
       "import/no-duplicates": ["error"],
       "import/order": [
-        "warn", // Downgraded from error - stylistic preference
+        "warn",
         {
           "groups": [
             "builtin",  // Node.js built-in modules
             "external", // npm packages
-            "internal", // Internal modules
-            "parent",   // Parent directories
-            "sibling",  // Same directory
+            "internal", // Internal modules (src/*)
+            "parent",   // Parent directories (../)
+            "sibling",  // Same directory (./)
             "index"     // Index files
           ],
+          "pathGroups": [
+            {
+              "pattern": "src/**",
+              "group": "internal"
+            }
+          ],
+          "pathGroupsExcludedImportTypes": [],
           "newlines-between": "always",
           "alphabetize": {
             "order": "asc",

@@ -45,4 +45,4 @@ if (!arg) {
     console.error('Missing argument');
     process.exit(1);
 }
-run(arg);
+void run(arg);
