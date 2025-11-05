@@ -1,8 +1,8 @@
-import { FailedToAuthenticateSocialAccount, EntityNotFound } from 'src/types/error.types';
 
 import { JwtService } from '@nestjs/jwt';
 import { Test, type TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
+import { FailedToAuthenticateSocialAccount, EntityNotFound } from 'src/types/error.types';
 
 import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
 import { SocialType } from '../users/user.types';

@@ -1,6 +1,6 @@
+import { Test, type TestingModule } from '@nestjs/testing';
 import { NotAuthorized, NotAMember } from 'src/types/error.types';
 
-import { Test, type TestingModule } from '@nestjs/testing';
 
 import { AuthenticatedUser, ROLE } from '../auth/auth.types';
 import { MemberRole } from '../organizations/memberships/orgMembership.types';

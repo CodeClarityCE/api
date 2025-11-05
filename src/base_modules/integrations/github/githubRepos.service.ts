@@ -1,3 +1,6 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import ms from 'ms';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { GithubRepositorySchema } from 'src/base_modules/integrations/github/github.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
@@ -12,10 +15,6 @@ import {
 } from 'src/types/error.types';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
-
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import ms from 'ms';
 import { Repository } from 'typeorm';
 
 import { IntegrationsRepository } from '../integrations.repository';

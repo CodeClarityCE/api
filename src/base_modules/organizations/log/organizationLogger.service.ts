@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
     ActionType,
@@ -8,7 +9,6 @@ import { MemberRole } from 'src/base_modules/organizations/memberships/orgMember
 import { TypedPaginatedData , PaginationUserSuppliedConf } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
 
-import { Injectable } from '@nestjs/common';
 
 import { UsersRepository } from '../../users/users.repository';
 import { OrganizationsRepository } from '../organizations.repository';

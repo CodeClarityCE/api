@@ -1,3 +1,15 @@
+import {
+    Body,
+    Controller,
+    DefaultValuePipe,
+    Delete,
+    Get,
+    Param,
+    ParseIntPipe,
+    Patch,
+    Post,
+    Query
+} from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
     DependencyPatchPolicy,
@@ -12,18 +24,6 @@ import {
     TypedResponse
 } from 'src/types/apiResponses.types';
 
-import {
-    Body,
-    Controller,
-    DefaultValuePipe,
-    Delete,
-    Get,
-    Param,
-    ParseIntPipe,
-    Patch,
-    Post,
-    Query
-} from '@nestjs/common';
 
 import { DependencyPatchPolicyService } from './dependencyPatch.service';
 

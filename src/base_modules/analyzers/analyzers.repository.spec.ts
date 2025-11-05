@@ -1,8 +1,7 @@
-import { NotAuthorized } from 'src/types/error.types';
-import type { TypedPaginatedData } from 'src/types/pagination.types';
-
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { NotAuthorized } from 'src/types/error.types';
+import type { TypedPaginatedData } from 'src/types/pagination.types';
 import type { Repository } from 'typeorm';
 
 import { Analyzer } from './analyzer.entity';

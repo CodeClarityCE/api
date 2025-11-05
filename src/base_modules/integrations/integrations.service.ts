@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { Integration } from 'src/base_modules/integrations/integrations.entity';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
@@ -5,7 +6,6 @@ import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import { NotAMember, NotAuthorized } from 'src/types/error.types';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
 
-import { Injectable } from '@nestjs/common';
 
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 

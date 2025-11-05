@@ -1,9 +1,9 @@
+import { Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { DepShortInfo } from 'src/codeclarity_modules/results/licenses/licenses2.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { PaginatedResponse } from 'src/types/apiResponses.types';
 
-import { Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 
 import { LicensesService } from './licenses.service';
 

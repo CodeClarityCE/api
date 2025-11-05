@@ -2,6 +2,7 @@ import { existsSync } from 'fs';
 import { mkdir, rm } from 'fs/promises';
 import { join } from 'path';
 
+import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { IntegrationProvider } from 'src/base_modules/integrations/integration.types';
 import { OrganizationLoggerService } from 'src/base_modules/organizations/log/organizationLogger.service';
@@ -15,7 +16,6 @@ import { EntityNotFound, IntegrationNotSupported, NotAuthorized } from 'src/type
 import { PaginationConfig, PaginationUserSuppliedConf , TypedPaginatedData } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
 
-import { Injectable } from '@nestjs/common';
 
 import { AnalysesRepository } from '../analyses/analyses.repository';
 import { FileRepository } from '../file/file.repository';

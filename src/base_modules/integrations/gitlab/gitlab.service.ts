@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
     GitlabIntegration,
@@ -22,7 +23,6 @@ import {
     NotAuthorized
 } from 'src/types/error.types';
 
-import { Injectable } from '@nestjs/common';
 
 import { VCSIntegrationMetaData } from '../integration.types';
 import { Integration, IntegrationProvider, IntegrationType } from '../integrations.entity';

@@ -1,3 +1,16 @@
+import {
+    Controller,
+    Get,
+    Post,
+    Put,
+    Param,
+    Delete,
+    Body,
+    Query,
+    ParseIntPipe,
+    DefaultValuePipe
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Analysis } from 'src/base_modules/analyses/analysis.entity';
 import { AnalysisCreateBody, ScheduleUpdateBody } from 'src/base_modules/analyses/analysis.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
@@ -15,19 +28,6 @@ import {
 } from 'src/types/apiResponses.types';
 import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
 
-import {
-    Controller,
-    Get,
-    Post,
-    Put,
-    Param,
-    Delete,
-    Body,
-    Query,
-    ParseIntPipe,
-    DefaultValuePipe
-} from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 
 import {

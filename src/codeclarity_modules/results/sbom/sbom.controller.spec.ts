@@ -1,7 +1,7 @@
+import { Test, type TestingModule } from '@nestjs/testing';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import type { PaginatedResponse } from 'src/types/apiResponses.types';
 
-import { Test, type TestingModule } from '@nestjs/testing';
 
 import { SBOMController } from './sbom.controller';
 import { SBOMService } from './sbom.service';

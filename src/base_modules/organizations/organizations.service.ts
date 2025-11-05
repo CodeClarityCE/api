@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { Email, EmailType } from 'src/base_modules/email/email.entity';
 import { Invitation } from 'src/base_modules/organizations/invitations/invitation.entity';
@@ -15,7 +16,6 @@ import { TypedPaginatedData , PaginationUserSuppliedConf } from 'src/types/pagin
 import { SortDirection } from 'src/types/sort.types';
 import { genRandomString , hash } from 'src/utils/crypto';
 
-import { Injectable } from '@nestjs/common';
 
 import { EmailRepository } from '../email/email.repository';
 import { EmailService } from '../email/email.service';

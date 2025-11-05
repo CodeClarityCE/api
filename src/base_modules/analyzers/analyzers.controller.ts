@@ -1,14 +1,3 @@
-import { Analyzer } from 'src/base_modules/analyzers/analyzer.entity';
-import { AnalyzerCreateBody } from 'src/base_modules/analyzers/analyzer.types';
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { AuthUser } from 'src/decorators/UserDecorator';
-import {
-    CreatedResponse,
-    NoDataResponse,
-    TypedPaginatedResponse,
-    TypedResponse
-} from 'src/types/apiResponses.types';
-
 import {
     Controller,
     Get,
@@ -22,6 +11,17 @@ import {
     ParseIntPipe
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { Analyzer } from 'src/base_modules/analyzers/analyzer.entity';
+import { AnalyzerCreateBody } from 'src/base_modules/analyzers/analyzer.types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { AuthUser } from 'src/decorators/UserDecorator';
+import {
+    CreatedResponse,
+    NoDataResponse,
+    TypedPaginatedResponse,
+    TypedResponse
+} from 'src/types/apiResponses.types';
+
 
 import { AnalyzerTemplatesService, AnalyzerTemplate } from './analyzer-templates.service';
 import { AnalyzersService } from './analyzers.service';

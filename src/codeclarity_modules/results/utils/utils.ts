@@ -1,10 +1,10 @@
+import { satisfies } from 'semver';
 import type {
     PaginationConfig,
     PaginationUserSuppliedConf,
     TypedPaginatedData
 } from 'src/types/pagination.types';
 
-import { satisfies } from 'semver';
 
 export function isNoneSeverity(severity: number) {
     return severity === 0.0 || severity === null;

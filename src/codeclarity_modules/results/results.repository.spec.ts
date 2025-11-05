@@ -1,7 +1,7 @@
-import { EntityNotFound } from 'src/types/error.types';
 
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { EntityNotFound } from 'src/types/error.types';
 
 import { Result } from './result.entity';
 import { AnalysisResultsRepository } from './results.repository';

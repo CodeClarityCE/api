@@ -1,8 +1,8 @@
+import { Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { PaginatedResponse, Response } from 'src/types/apiResponses.types';
 
-import { Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 
 import { VulnerabilitiesService } from './vulnerabilities.service';
 import { VulnerabilityService } from './vulnerability.service';

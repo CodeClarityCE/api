@@ -1,8 +1,8 @@
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException } from '@nestjs/common';
+import { FastifyReply } from 'fastify';
 import { Status } from 'src/types/apiResponses.types';
 import { PrivateAPIError, PublicAPIError } from 'src/types/error.types';
 
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException } from '@nestjs/common';
-import { FastifyReply } from 'fastify';
 
 
 /**

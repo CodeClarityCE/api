@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import { AnalysesRepository } from 'src/base_modules/analyses/analyses.repository';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
@@ -29,7 +30,6 @@ import {
 import { PaginatedResponse } from 'src/types/apiResponses.types';
 import { UnknownWorkspace } from 'src/types/error.types';
 
-import { Injectable } from '@nestjs/common';
 
 import { AnalysisResultsService } from '../results.service';
 import { SbomUtilsService } from '../sbom/utils/utils';

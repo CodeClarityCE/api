@@ -2,16 +2,17 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 import { Request } from 'express';
-import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
-import { JWTPayload } from 'src/base_modules/auth/guards/jwt.types';
-import { SKIP_AUTH_KEY } from 'src/decorators/SkipAuthDecorator';
-import { NotAuthenticated, AccountNotActivated } from 'src/types/error.types';
+
 
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { Algorithm } from 'jsonwebtoken';
 import { Socket } from 'socket.io';
+import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
+import { JWTPayload } from 'src/base_modules/auth/guards/jwt.types';
+import { SKIP_AUTH_KEY } from 'src/decorators/SkipAuthDecorator';
+import { NotAuthenticated, AccountNotActivated } from 'src/types/error.types';
 
 // import { ApiKeysService } from 'src/codeclarity_modules/apiKeys/apiKeys.service';
 

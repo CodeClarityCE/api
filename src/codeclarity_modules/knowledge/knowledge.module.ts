@@ -1,3 +1,5 @@
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { CWE } from 'src/codeclarity_modules/knowledge/cwe/cwe.entity';
 import { License } from 'src/codeclarity_modules/knowledge/license/license.entity';
 import { LicenseRepository } from 'src/codeclarity_modules/knowledge/license/license.repository';
@@ -5,8 +7,6 @@ import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
 import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
 import { Package, Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
 
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { DatabaseService } from '../../services/database.service';
 import {

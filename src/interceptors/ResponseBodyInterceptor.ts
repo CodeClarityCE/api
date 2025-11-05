@@ -1,9 +1,9 @@
-import { Status } from 'src/types/apiResponses.types';
 
 import type { CallHandler, ExecutionContext, NestInterceptor } from '@nestjs/common';
 import type { FastifyReply } from 'fastify';
 import type { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { Status } from 'src/types/apiResponses.types';
 
 /**
  * The goal of this interceptor is to add status_code and status fields to all responses bodies from the API

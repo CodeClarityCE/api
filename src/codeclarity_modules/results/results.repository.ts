@@ -1,8 +1,7 @@
-import { Result } from 'src/codeclarity_modules/results/result.entity';
-import { EntityNotFound } from 'src/types/error.types';
-
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
+import { EntityNotFound } from 'src/types/error.types';
 import { Repository } from 'typeorm';
 
 

@@ -1,3 +1,5 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { Dependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import {
@@ -6,9 +8,6 @@ import {
     Status
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { PluginFailed, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/error.types';
-
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 @Injectable()

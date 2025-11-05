@@ -1,10 +1,10 @@
+import { forwardRef, Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { Invitation } from 'src/base_modules/organizations/invitations/invitation.entity';
 import { Log } from 'src/base_modules/organizations/log/log.entity';
 import { OrganizationMemberships } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 
-import { forwardRef, Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { EmailModule } from '../email/email.module';
 import { UsersModule } from '../users/users.module';

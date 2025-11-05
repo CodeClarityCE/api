@@ -1,9 +1,9 @@
-import { OptionalTransform } from 'src/transformers/transformer';
-import { SortDirection } from 'src/types/sort.types';
 
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsDateString, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { OptionalTransform } from 'src/transformers/transformer';
+import { SortDirection } from 'src/types/sort.types';
 
 import { IntegrationProvider } from '../../base_modules/integrations/integration.types';
 

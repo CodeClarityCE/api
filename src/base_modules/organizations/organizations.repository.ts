@@ -1,3 +1,5 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import {
     MemberRole,
     OrganizationMemberships
@@ -6,9 +8,6 @@ import { isMemberRoleLessThan } from 'src/base_modules/organizations/memberships
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
 import { TypedPaginatedData } from 'src/types/pagination.types';
-
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 

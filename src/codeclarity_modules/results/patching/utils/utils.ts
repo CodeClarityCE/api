@@ -1,10 +1,9 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Output as PatchesOutput } from 'src/codeclarity_modules/results/patching/patching.types';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { Status } from 'src/types/apiResponses.types';
 import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
-
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 @Injectable()

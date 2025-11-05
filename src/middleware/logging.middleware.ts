@@ -1,9 +1,9 @@
 import { randomUUID } from 'crypto';
 
-import { CodeClarityLogger, LogContext } from 'src/services/logger.service';
 
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { CodeClarityLogger, LogContext } from 'src/services/logger.service';
 
 export interface RequestWithLogging extends FastifyRequest {
     requestId?: string;

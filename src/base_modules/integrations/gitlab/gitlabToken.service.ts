@@ -1,7 +1,7 @@
+import { Injectable } from '@nestjs/common';
 import { GitlabIntegration } from 'src/base_modules/integrations/gitlab/gitlabIntegration.types';
 import { User } from 'src/base_modules/users/users.entity';
 
-import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class GitlabIntegrationTokenService {

@@ -1,9 +1,9 @@
+import { forwardRef, Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrganizationsModule } from 'src/base_modules/organizations/organizations.module';
 import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
 import { UsersModule } from 'src/base_modules/users/users.module';
 
-import { forwardRef, Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { IntegrationsModule } from '../integrations.module';
 

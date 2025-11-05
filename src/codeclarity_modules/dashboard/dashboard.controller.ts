@@ -1,3 +1,5 @@
+import { Controller, Get, Param, Query } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
     AttackVectorDist,
@@ -23,8 +25,6 @@ import { AuthUser } from 'src/decorators/UserDecorator';
 import { TypedPaginatedResponse, TypedResponse } from 'src/types/apiResponses.types';
 import { InternalError, NotAuthenticated, NotAuthorized } from 'src/types/error.types';
 
-import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 
 import { DashboardService } from './dashboard.service';
 

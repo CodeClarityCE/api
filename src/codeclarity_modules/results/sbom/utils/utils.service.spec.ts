@@ -1,10 +1,9 @@
+import { Test, type TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import type { Package } from 'src/codeclarity_modules/knowledge/package/package.entity';
 import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { PluginFailed, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/error.types';
-
-import { Test, type TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { In, type Repository } from 'typeorm';
 
 import { LicensesUtilsService } from '../../licenses/utils/utils';

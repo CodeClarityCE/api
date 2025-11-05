@@ -1,11 +1,10 @@
+import { Test, type TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 import { NotAuthorized } from 'src/types/error.types';
-
-import { Test, type TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
 
 import { DashboardService } from './dashboard.service';

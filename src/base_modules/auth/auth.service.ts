@@ -1,3 +1,7 @@
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+import ms from 'ms';
 import {
     AuthenticatedUser,
     GithubAuthenticatedUser,
@@ -15,10 +19,6 @@ import {
     FailedToAuthenticateSocialAccount
 } from 'src/types/error.types';
 
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
-import ms from 'ms';
 
 import { CannotPerformActionOnSocialAccount } from '../users/users.errors';
 import { UsersRepository } from '../users/users.repository';

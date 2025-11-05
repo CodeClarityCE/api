@@ -1,7 +1,7 @@
-import { TypedResponse } from 'src/types/apiResponses.types';
 
 import { applyDecorators, type Type } from '@nestjs/common';
 import { ApiExtraModels, ApiOkResponse, getSchemaPath } from '@nestjs/swagger';
+import { TypedResponse } from 'src/types/apiResponses.types';
 
 
 export const APIDocTypedResponseDecorator = <DataDto extends Type<unknown>>(dataDto: DataDto) =>

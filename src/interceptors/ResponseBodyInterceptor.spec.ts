@@ -1,7 +1,7 @@
-import { Status } from 'src/types/apiResponses.types';
 
 import type { CallHandler, ExecutionContext } from '@nestjs/common';
 import { of } from 'rxjs';
+import { Status } from 'src/types/apiResponses.types';
 
 import { ResponseBodyInterceptor } from './ResponseBodyInterceptor';
 

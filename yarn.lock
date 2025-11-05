@@ -3815,8 +3815,8 @@ __metadata:
 
 "@types/cvss-parser@file:cvss-parser-js/::locator=api%40workspace%3A.":
   version: 0.0.1-alpha
-  resolution: "@types/cvss-parser@file:cvss-parser-js/#cvss-parser-js/::hash=3c9940&locator=api%40workspace%3A."
-  checksum: 10/4b6ccebcfafb7a0d2f12f28a0a1112d9d57852775b38903f025eff499d4b069e06738e96e079fb0a1c586b3ccae9454603796cac27e7a503cd6afce6d976bb51
+  resolution: "@types/cvss-parser@file:cvss-parser-js/#cvss-parser-js/::hash=ab727b&locator=api%40workspace%3A."
+  checksum: 10/6b5e51559346cbe10c36f1a58b76f3c870685d43946c19df458d66d68e0088552ae417d8e3bb27576f9156b4602203c3d8fea8721219adb79a8cedb2b79dc9a1
   languageName: node
   linkType: hard
 
@@ -6147,8 +6147,8 @@ __metadata:
 
 "cvss-parser@file:cvss-parser-js/::locator=api%40workspace%3A.":
   version: 0.0.1-alpha
-  resolution: "cvss-parser@file:cvss-parser-js/#cvss-parser-js/::hash=d7888d&locator=api%40workspace%3A."
-  checksum: 10/d42e0a29256aa069a566f253bf1a0de4467dd890d62eb4b2bbd4535a428df58c16d7f730b4e07dc1352ae4487e3ad4c22f71b4e9ececb90e19a6d5a72355d37e
+  resolution: "cvss-parser@file:cvss-parser-js/#cvss-parser-js/::hash=a94285&locator=api%40workspace%3A."
+  checksum: 10/17f168d49114c340f08a41e2253ca323a4a2571812e4746d06a7eb1ffa818860779ba5f4f1bc58dddebe5c28c86eafca0a4aa8beeb1023a2c10db8a3df23cb53
   languageName: node
   linkType: hard
 

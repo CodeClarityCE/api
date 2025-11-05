@@ -1,7 +1,7 @@
-import { OptionalTransform } from 'src/transformers/transformer';
 
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
+import { OptionalTransform } from 'src/transformers/transformer';
 
 /********************************************/
 /*                  Enums                   */

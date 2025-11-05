@@ -1,9 +1,9 @@
+import { forwardRef, Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { Project } from 'src/base_modules/projects/project.entity';
 import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
 import { ResultsModule } from 'src/codeclarity_modules/results/results.module';
 
-import { forwardRef, Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AnalysesModule } from '../analyses/analyses.module';
 import { FileModule } from '../file/file.module';

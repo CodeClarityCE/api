@@ -1,3 +1,7 @@
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import * as amqp from 'amqplib';
 import { Analysis, AnalysisStage, AnalysisStatus } from 'src/base_modules/analyses/analysis.entity';
 import { AnalysisCreateBody } from 'src/base_modules/analyses/analysis.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
@@ -13,11 +17,6 @@ import { Output as VulnsOuptut } from 'src/codeclarity_modules/results/vulnerabi
 import { RabbitMQError } from 'src/types/error.types';
 import { PaginationConfig, PaginationUserSuppliedConf , TypedPaginatedData } from 'src/types/pagination.types';
 import { AnalysisStartMessageCreate } from 'src/types/rabbitMqMessages.types';
-
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import * as amqp from 'amqplib';
 import { Repository } from 'typeorm';
 
 import { AnaylzerMissingConfigAttribute } from '../analyzers/analyzers.errors';

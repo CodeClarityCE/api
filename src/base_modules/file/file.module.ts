@@ -1,7 +1,7 @@
-import { File } from 'src/base_modules/file/file.entity';
 
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { File } from 'src/base_modules/file/file.entity';
 
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { ProjectsModule } from '../projects/projects.module';

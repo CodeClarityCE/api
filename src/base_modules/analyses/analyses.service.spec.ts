@@ -1,3 +1,7 @@
+import { ConfigService } from '@nestjs/config';
+import { Test, type TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import * as amqp from 'amqplib';
 import { Policy } from 'src/codeclarity_modules/policies/policy.entity';
 import { LicensesRepository } from 'src/codeclarity_modules/results/licenses/licenses.repository';
 import { AnalysisResultsRepository } from 'src/codeclarity_modules/results/results.repository';
@@ -5,10 +9,6 @@ import { SBOMRepository } from 'src/codeclarity_modules/results/sbom/sbom.reposi
 import { VulnerabilitiesRepository } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.repository';
 import { RabbitMQError } from 'src/types/error.types';
 
-import { ConfigService } from '@nestjs/config';
-import { Test, type TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import * as amqp from 'amqplib';
 
 import { AnaylzerMissingConfigAttribute } from '../analyzers/analyzers.errors';
 import { AnalyzersRepository } from '../analyzers/analyzers.repository';

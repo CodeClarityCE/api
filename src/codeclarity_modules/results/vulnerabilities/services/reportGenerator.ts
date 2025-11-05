@@ -1,4 +1,6 @@
 // import { getVersionsSatisfyingConstraint } from 'src/codeclarity_modules/results/utils/utils';
+import { Injectable } from '@nestjs/common';
+import { satisfies } from 'semver';
 import { CVSS2, CVSS3, CVSS31 } from 'src/codeclarity_modules/knowledge/cvss.types';
 import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
 import { FriendsOfPhp } from 'src/codeclarity_modules/knowledge/friendsofphp/friendsofphp.entity';
@@ -29,8 +31,6 @@ import {
     OtherInfo
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities2.types';
 
-import { Injectable } from '@nestjs/common';
-import { satisfies } from 'semver';
 
 abstract class BaseReportGenerator {
     patchesData!: PatchInfo;

@@ -1,8 +1,8 @@
-import { User } from 'src/base_modules/users/users.entity';
 
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MailerService } from '@nestjs-modules/mailer';
+import { User } from 'src/base_modules/users/users.entity';
 
 /**
  * Email service for sending emails to users.

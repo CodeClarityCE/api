@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import {
     isNoneSeverity,
     isLowSeverity,
@@ -10,7 +11,6 @@ import {
     VulnerabilityMerged
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 
-import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class VulnerabilitiesFilterService {

@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
 import {
@@ -17,7 +18,6 @@ import { paginate } from 'src/codeclarity_modules/results/utils/utils';
 import { PaginatedResponse } from 'src/types/apiResponses.types';
 import { EntityNotFound, UnknownWorkspace } from 'src/types/error.types';
 
-import { Injectable } from '@nestjs/common';
 
 import { AnalysisResultsService } from '../results.service';
 

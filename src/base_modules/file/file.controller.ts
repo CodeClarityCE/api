@@ -1,18 +1,6 @@
 import { readFile } from 'fs';
 import { join } from 'path';
 
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { ApiErrorDecorator } from 'src/decorators/ApiException';
-import { AuthUser } from 'src/decorators/UserDecorator';
-import { NoDataResponse, TypedResponse } from 'src/types/apiResponses.types';
-import {
-    EntityNotFound,
-    InternalError,
-    NotAuthenticated,
-    NotAuthorized
-} from 'src/types/error.types';
-import { escapeString } from 'src/utils/cleaner';
-
 import {
     Body,
     Controller,
@@ -25,6 +13,18 @@ import {
 } from '@nestjs/common';
 import { ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { FileInterceptor, MulterFile } from '@webundsoehne/nest-fastify-file-upload';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { ApiErrorDecorator } from 'src/decorators/ApiException';
+import { AuthUser } from 'src/decorators/UserDecorator';
+import { NoDataResponse, TypedResponse } from 'src/types/apiResponses.types';
+import {
+    EntityNotFound,
+    InternalError,
+    NotAuthenticated,
+    NotAuthorized
+} from 'src/types/error.types';
+import { escapeString } from 'src/utils/cleaner';
+
 
 import { FileService } from './file.service';
 

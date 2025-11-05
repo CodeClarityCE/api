@@ -1,7 +1,7 @@
-import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
 
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
 import { In } from 'typeorm';
 
 import { Result } from '../result.entity';

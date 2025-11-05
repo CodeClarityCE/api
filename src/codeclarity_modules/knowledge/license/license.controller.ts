@@ -1,9 +1,9 @@
+import { Controller, Get, Param } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { License } from 'src/codeclarity_modules/knowledge/license/license.entity';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { TypedResponse } from 'src/types/apiResponses.types';
 
-import { Controller, Get, Param } from '@nestjs/common';
 
 import { LicenseService } from './license.service';
 

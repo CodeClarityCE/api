@@ -1,7 +1,7 @@
-import { Integration } from 'src/base_modules/integrations/integrations.entity';
 
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Integration } from 'src/base_modules/integrations/integrations.entity';
 
 import { OrganizationsModule } from '../organizations/organizations.module';
 

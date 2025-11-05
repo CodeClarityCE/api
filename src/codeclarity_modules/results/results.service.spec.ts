@@ -1,10 +1,10 @@
+import { Test, type TestingModule } from '@nestjs/testing';
 import { AnalysesRepository } from 'src/base_modules/analyses/analyses.repository';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 import { EntityNotFound } from 'src/types/error.types';
 
-import { Test, type TestingModule } from '@nestjs/testing';
 
 import { ProjectMemberService } from '../../base_modules/projects/projectMember.service';
 

@@ -1,3 +1,4 @@
+import { Test, type TestingModule } from '@nestjs/testing';
 import { AnalysesRepository } from 'src/base_modules/analyses/analyses.repository';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
@@ -7,7 +8,6 @@ import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.reposit
 import { VulnerabilityPolicyService } from 'src/codeclarity_modules/policies/vulnerability/vulnerability.service';
 import { UnknownWorkspace } from 'src/types/error.types';
 
-import { Test, type TestingModule } from '@nestjs/testing';
 
 import { AnalysisResultsService } from '../results.service';
 import { SbomUtilsService } from '../sbom/utils/utils';

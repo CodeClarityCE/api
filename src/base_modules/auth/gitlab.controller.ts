@@ -1,3 +1,8 @@
+import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import axios, { AxiosError } from 'axios';
+import { FastifyReply } from 'fastify';
 import {
     GitlabAuthenticatedUser,
     Oauth2FinalizeBody,
@@ -20,11 +25,6 @@ import {
     FailedToAuthenticateSocialAccount
 } from 'src/types/error.types';
 
-import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import axios, { AxiosError } from 'axios';
-import { FastifyReply } from 'fastify';
 
 import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
 

@@ -1,3 +1,16 @@
+import {
+    Body,
+    Controller,
+    DefaultValuePipe,
+    Get,
+    Param,
+    ParseBoolPipe,
+    ParseIntPipe,
+    Patch,
+    Post,
+    Query
+} from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
     GithubTokenType,
@@ -31,19 +44,6 @@ import {
 } from 'src/types/error.types';
 import { SortDirection } from 'src/types/sort.types';
 
-import {
-    Body,
-    Controller,
-    DefaultValuePipe,
-    Get,
-    Param,
-    ParseBoolPipe,
-    ParseIntPipe,
-    Patch,
-    Post,
-    Query
-} from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 
 import { GithubIntegrationService } from './github.service';
 import { GithubRepositoriesService } from './githubRepos.service';

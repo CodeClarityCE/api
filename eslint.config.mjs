@@ -56,6 +56,11 @@ export default [
       import: importPlugin,
     },
 
+    settings: {
+      // Explicitly mark src/** as internal modules for import/order
+      'import/internal-regex': '^src/',
+    },
+
     rules: {
       // ==========================================
       // TypeScript Rules - Strictness
@@ -269,18 +274,11 @@ export default [
           "groups": [
             "builtin",  // Node.js built-in modules
             "external", // npm packages
-            "internal", // Internal modules (src/*)
+            "internal", // Internal modules (src/*) - via import/internal-regex
             "parent",   // Parent directories (../)
             "sibling",  // Same directory (./)
             "index"     // Index files
           ],
-          "pathGroups": [
-            {
-              "pattern": "src/**",
-              "group": "internal"
-            }
-          ],
-          "pathGroupsExcludedImportTypes": [],
           "newlines-between": "always",
           "alphabetize": {
             "order": "asc",

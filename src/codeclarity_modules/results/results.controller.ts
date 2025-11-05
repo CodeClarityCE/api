@@ -1,3 +1,5 @@
+import { Controller, Get, Query } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
@@ -5,8 +7,6 @@ import { AuthUser } from 'src/decorators/UserDecorator';
 import { Response } from 'src/types/apiResponses.types';
 import { InternalError, NotAuthenticated, NotAuthorized } from 'src/types/error.types';
 
-import { Controller, Get, Query } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 
 import { Result } from './result.entity';
 import { AnalysisResultsService } from './results.service';

@@ -1,3 +1,4 @@
+import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { Email, EmailType } from 'src/base_modules/email/email.entity';
 import {
@@ -16,7 +17,6 @@ import { User } from 'src/base_modules/users/users.entity';
 import { NotAuthorized } from 'src/types/error.types';
 import { genRandomString, hash } from 'src/utils/crypto';
 
-import { Inject, Injectable, forwardRef } from '@nestjs/common';
 
 import {
     AccountRegistrationVerificationTokenInvalidOrExpired,

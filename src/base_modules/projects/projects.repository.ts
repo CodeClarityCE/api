@@ -1,10 +1,9 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Project } from 'src/base_modules/projects/project.entity';
 import { EntityNotFound, NotAuthorized, ProjectDoesNotExist } from 'src/types/error.types';
 import { TypedPaginatedData } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
-
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 

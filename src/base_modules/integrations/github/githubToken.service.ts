@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import {
     IntegrationInvalidToken,
     IntegrationTokenExpired,
@@ -5,7 +6,6 @@ import {
     IntegrationTokenRetrievalFailed
 } from 'src/types/error.types';
 
-import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class GithubIntegrationTokenService {

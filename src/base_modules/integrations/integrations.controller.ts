@@ -1,3 +1,13 @@
+import {
+    Controller,
+    DefaultValuePipe,
+    Delete,
+    Get,
+    Param,
+    ParseIntPipe,
+    Query
+} from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { Integration } from 'src/base_modules/integrations/integrations.entity';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
@@ -11,16 +21,6 @@ import {
     NotAuthorized
 } from 'src/types/error.types';
 
-import {
-    Controller,
-    DefaultValuePipe,
-    Delete,
-    Get,
-    Param,
-    ParseIntPipe,
-    Query
-} from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 

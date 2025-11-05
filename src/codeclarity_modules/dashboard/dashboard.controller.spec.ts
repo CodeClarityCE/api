@@ -1,7 +1,7 @@
+import { Test, type TestingModule } from '@nestjs/testing';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import type { LicenseDist } from 'src/codeclarity_modules/results/sbom/sbom.types';
 
-import { Test, type TestingModule } from '@nestjs/testing';
 
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
