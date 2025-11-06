@@ -1283,6 +1283,25 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@darraghor/eslint-plugin-nestjs-typed@npm:^6.9.3":
+  version: 6.9.3
+  resolution: "@darraghor/eslint-plugin-nestjs-typed@npm:6.9.3"
+  dependencies:
+    "@typescript-eslint/scope-manager": "npm:^8.44.1"
+    "@typescript-eslint/type-utils": "npm:^8.44.1"
+    "@typescript-eslint/utils": "npm:^8.44.1"
+    eslint-module-utils: "npm:2.12.1"
+    glob: "npm:11.0.3"
+    reflect-metadata: "npm:0.2.2"
+    ts-api-utils: "npm:2.1.0"
+  peerDependencies:
+    "@typescript-eslint/parser": ^7.0.0 || ^8.0.0
+    class-validator: "*"
+    eslint: ">=9.18.0"
+  checksum: 10/046903f4d02370fdd411d51ff7a46c668519d5c3ec768e5752751f5eb5442c9bd66d27c3c1a745207533c4b9f2fb9264779f3d467bb24c4201f168e2762ed1e7
+  languageName: node
+  linkType: hard
+
 "@emnapi/core@npm:^1.4.3":
   version: 1.4.5
   resolution: "@emnapi/core@npm:1.4.5"
@@ -4261,7 +4280,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@typescript-eslint/scope-manager@npm:8.46.3":
+"@typescript-eslint/scope-manager@npm:8.46.3, @typescript-eslint/scope-manager@npm:^8.44.1":
   version: 8.46.3
   resolution: "@typescript-eslint/scope-manager@npm:8.46.3"
   dependencies:
@@ -4302,6 +4321,22 @@ __metadata:
     eslint: ^8.57.0 || ^9.0.0
     typescript: ">=4.8.4 <6.0.0"
   checksum: 10/db989c1f55624b34da24eaf0dc230ee696a1f2a614ea95a8dd3b8635ad47d748140be2345ed7afcee844dfabd41129f5a8ca583b1a4d6ecc7d581f89c5e508e2
+  languageName: node
+  linkType: hard
+
+"@typescript-eslint/type-utils@npm:^8.44.1":
+  version: 8.46.3
+  resolution: "@typescript-eslint/type-utils@npm:8.46.3"
+  dependencies:
+    "@typescript-eslint/types": "npm:8.46.3"
+    "@typescript-eslint/typescript-estree": "npm:8.46.3"
+    "@typescript-eslint/utils": "npm:8.46.3"
+    debug: "npm:^4.3.4"
+    ts-api-utils: "npm:^2.1.0"
+  peerDependencies:
+    eslint: ^8.57.0 || ^9.0.0
+    typescript: ">=4.8.4 <6.0.0"
+  checksum: 10/b29cd001c715033ec9cd5fdf2723915f1b4c6c9342283ed00d20e4b942117625facba9a2cf3914b06633c2af9a167430f8f134323627adb0be85f73da4e89d72
   languageName: node
   linkType: hard
 
@@ -4371,6 +4406,21 @@ __metadata:
     eslint: ^8.57.0 || ^9.0.0
     typescript: ">=4.8.4 <6.0.0"
   checksum: 10/a8fed8aebd34a559c5abd780649edd6be632531e4930b19642f0fdc862b77bff463ef200e8ced48ba489c3fceee7443b6735c87b918b97b98e95e842cd8a38b5
+  languageName: node
+  linkType: hard
+
+"@typescript-eslint/utils@npm:8.46.3, @typescript-eslint/utils@npm:^8.44.1":
+  version: 8.46.3
+  resolution: "@typescript-eslint/utils@npm:8.46.3"
+  dependencies:
+    "@eslint-community/eslint-utils": "npm:^4.7.0"
+    "@typescript-eslint/scope-manager": "npm:8.46.3"
+    "@typescript-eslint/types": "npm:8.46.3"
+    "@typescript-eslint/typescript-estree": "npm:8.46.3"
+  peerDependencies:
+    eslint: ^8.57.0 || ^9.0.0
+    typescript: ">=4.8.4 <6.0.0"
+  checksum: 10/369c962bc20a2a6022ef4533ad55ab4e3d2403e7e200505b29fae6f0b8fc99be8fe149d929781f5ead0d3f88f2c74904f60aaa3771e6773e2b7dd8f61f07a534
   languageName: node
   linkType: hard
 
@@ -4984,6 +5034,7 @@ __metadata:
   resolution: "api@workspace:."
   dependencies:
     "@css-inline/css-inline": "npm:0.17.0"
+    "@darraghor/eslint-plugin-nestjs-typed": "npm:^6.9.3"
     "@eslint/js": "npm:9.38.0"
     "@fastify/compress": "npm:8.1.0"
     "@fastify/multipart": "npm:9.2.1"
@@ -6901,7 +6952,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-module-utils@npm:^2.12.1":
+"eslint-module-utils@npm:2.12.1, eslint-module-utils@npm:^2.12.1":
   version: 2.12.1
   resolution: "eslint-module-utils@npm:2.12.1"
   dependencies:
@@ -12999,7 +13050,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ts-api-utils@npm:^2.1.0":
+"ts-api-utils@npm:2.1.0, ts-api-utils@npm:^2.1.0":
   version: 2.1.0
   resolution: "ts-api-utils@npm:2.1.0"
   peerDependencies:
