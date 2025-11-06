@@ -18,7 +18,7 @@ export class ErrorFilter implements ExceptionFilter {
      * The goal of this method is to filter out sensitive information from error responses,
      * as well as convert them to snake_case format (underscores instead of camel case).
      */
-    catch(exception: Error, host: ArgumentsHost) {
+    catch(exception: Error, host: ArgumentsHost): void {
         const ctx = host.switchToHttp();
         const response = ctx.getResponse<FastifyReply>();
         let status = 500;
@@ -77,7 +77,7 @@ export class ErrorFilter implements ExceptionFilter {
  *
  * This function is used to convert the error objects returned in API responses from NestJS's default camel case format to snake case, which is what our API clients expect.
  */
-function snakeCase(fields: any) {
+function snakeCase(fields: any): any {
     for (const key in fields) {
         if (fields[key] instanceof Object) {
             // Recursively call this function on nested objects

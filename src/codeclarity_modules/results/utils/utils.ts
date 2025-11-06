@@ -6,27 +6,27 @@ import type {
 } from 'src/types/pagination.types';
 
 
-export function isNoneSeverity(severity: number) {
+export function isNoneSeverity(severity: number): boolean {
     return severity === 0.0 || severity === null;
 }
 
-export function isLowSeverity(severity: number) {
+export function isLowSeverity(severity: number): boolean {
     return severity < 4.0 && severity > 0.0;
 }
 
-export function isMediumSeverity(severity: number) {
+export function isMediumSeverity(severity: number): boolean {
     return severity >= 4.0 && severity < 7.0;
 }
 
-export function isHighSeverity(severity: number) {
+export function isHighSeverity(severity: number): boolean {
     return severity >= 7.0 && severity < 9.0;
 }
 
-export function isCriticalSeverity(severity: number) {
+export function isCriticalSeverity(severity: number): boolean {
     return severity >= 9.0;
 }
 
-export function getVersionsSatisfyingConstraint(allVersions: string[], constraint: string) {
+export function getVersionsSatisfyingConstraint(allVersions: string[], constraint: string): string[] {
     const versionToReturn: string[] = [];
 
     for (const version of allVersions) {
@@ -44,7 +44,7 @@ export function getVersionsSatisfying(
     upper: string | null,
     lowerIncluded: boolean,
     upperIncluded: boolean
-) {
+): string[] {
     const versionToReturn: string[] = [];
     let constraint = '';
 

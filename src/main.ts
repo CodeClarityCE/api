@@ -14,7 +14,7 @@ import { ValidationFailed } from './types/error.types';
 /**
  * The main entry point of the application.
  */
-async function bootstrap() {
+async function bootstrap(): Promise<void> {
     // Create a new NestJS application instance using Fastify as the underlying server
     const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
     await app.register(multipart, {

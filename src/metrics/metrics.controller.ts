@@ -11,7 +11,7 @@ export class MetricsController {
 
     @Get()
     @NonAuthEndpoint()
-    async getMetrics(@Res() res: FastifyReply) {
+    async getMetrics(@Res() res: FastifyReply): Promise<void> {
         const metrics = await this.metricsService.getMetrics();
         res.type('text/plain');
         res.send(metrics);

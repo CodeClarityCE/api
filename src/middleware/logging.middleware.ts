@@ -19,7 +19,7 @@ export interface RequestWithLogging extends FastifyRequest {
 export class LoggingMiddleware implements NestMiddleware {
     private readonly logger = CodeClarityLogger.forService('api-http');
 
-    use(req: RequestWithLogging, res: FastifyReply, next: () => void) {
+    use(req: RequestWithLogging, res: FastifyReply, next: () => void): void {
         // Generate unique request ID
         const requestId = randomUUID();
         req.requestId = requestId;

@@ -11,7 +11,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         super();
     }
 
-    canActivate(context: ExecutionContext) {
+    canActivate(context: ExecutionContext): boolean | Promise<boolean> {
         // Check if this endpoint is a public / non-auth endpoint
         const isNonAuthEndpoint = this.reflector.getAllAndOverride<boolean>(SKIP_AUTH_KEY, [
             context.getHandler(),
@@ -22,7 +22,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         }
 
         // Othwerwise check the jwt with the defined jwt strategy
-        return super.canActivate(context);
+        return super.canActivate(context) as boolean | Promise<boolean>;
     }
 
     handleRequest(err: any, user: any): any {

@@ -21,7 +21,7 @@ export class MetricsService {
         return register.metrics();
     }
 
-    setHealthStatus(status: number) {
+    setHealthStatus(status: number): void {
         this.healthGauge.set({ service: 'api', component: 'overall' }, status);
     }
 }

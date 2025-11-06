@@ -8,6 +8,7 @@ import { EntityNotFound } from 'src/types/error.types';
 
 import { ProjectMemberService } from '../../base_modules/projects/projectMember.service';
 
+import { Result } from './result.entity';
 import { AnalysisResultsRepository } from './results.repository';
 
 @Injectable()
@@ -31,7 +32,7 @@ export class AnalysisResultsService {
         projectId: string,
         analysisId: string,
         user: AuthenticatedUser
-    ) {
+    ): Promise<void> {
         // (1) Check if user has access to org
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
@@ -48,7 +49,7 @@ export class AnalysisResultsService {
         analysis_id: string,
         type: string,
         user: AuthenticatedUser
-    ) {
+    ): Promise<Result> {
         await this.checkAccess(org_id, project_id, analysis_id, user);
 
         // Special handling for SBOM requests - use fallback logic

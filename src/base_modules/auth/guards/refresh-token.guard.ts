@@ -8,9 +8,9 @@ import { NotAuthenticated } from 'src/types/error.types';
  */
 @Injectable()
 export class RefreshJwtAuthGuard extends AuthGuard('jwt-refresh') {
-    canActivate(context: ExecutionContext) {
+    canActivate(context: ExecutionContext): boolean | Promise<boolean> {
         // Othwerwise check the jwt with the defined jwt strategy
-        return super.canActivate(context);
+        return super.canActivate(context) as boolean | Promise<boolean>;
     }
 
     handleRequest(err: any, user: any): any {
