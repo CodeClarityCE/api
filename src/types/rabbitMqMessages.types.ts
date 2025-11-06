@@ -30,7 +30,7 @@ export interface DispatcherPluginMessage {
     /**
      * Arbitrary data associated with this message (type determined at runtime).
      */
-    Data: any;
+    Data: unknown;
 
     /**
      * The ID of the analysis related to this message.

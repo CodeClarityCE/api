@@ -21,11 +21,11 @@ export class TestUtils {
     static getTestDatabaseConfig() {
         return {
             type: 'postgres' as const,
-            host: process.env['DB_HOST'] || 'localhost',
-            port: parseInt(process.env['DB_PORT'] || '5432'),
-            username: process.env['DB_USERNAME'] || 'testuser',
-            password: process.env['DB_PASSWORD'] || 'testpass',
-            database: process.env['DB_NAME'] || 'codeclarity_test',
+            host: process.env['DB_HOST'] ?? 'localhost',
+            port: parseInt(process.env['DB_PORT'] ?? '5432'),
+            username: process.env['DB_USERNAME'] ?? 'testuser',
+            password: process.env['DB_PASSWORD'] ?? 'testpass',
+            database: process.env['DB_NAME'] ?? 'codeclarity_test',
             entities: ['src/**/*.entity.ts'],
             synchronize: true,
             dropSchema: true,

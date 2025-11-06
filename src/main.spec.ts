@@ -265,7 +265,7 @@ describe('Main.ts Bootstrap Configuration and Testing', () => {
             // Core NestJS imports
             expect(mainContent).toContain("import { NestFactory, Reflector } from '@nestjs/core'");
             expect(mainContent).toContain(
-                "import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify'"
+                "import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'"
             );
             expect(mainContent).toContain(
                 "import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common'"

@@ -35,7 +35,7 @@ class EnvironmentVariables {
      * The port number to listen on.
      */
     @IsNumber()
-    @Transform(({ value }) => parseInt(value, 10))
+    @Transform(({ value }: { value: string }) => parseInt(value, 10))
     PORT!: number;
 
     /**
@@ -137,7 +137,7 @@ class EnvironmentVariables {
      * The port number to connect on.
      */
     @IsNumber()
-    @Transform(({ value }) => parseInt(value, 10))
+    @Transform(({ value }: { value: string }) => parseInt(value, 10))
     MAIL_PORT!: number;
 
     /**
@@ -206,8 +206,8 @@ class DevEnvironmentVariables extends EnvironmentVariables {
      */
     @IsNotEmpty()
     @Transform(
-        (v) => {
-            return v.obj.REQUIRE_ACCOUNT_VERIFICATION === 'true' ? true : false;
+        (v: { obj: Record<string, unknown> }) => {
+            return v.obj['REQUIRE_ACCOUNT_VERIFICATION'] === 'true' ? true : false;
         },
         { toClassOnly: true }
     )
@@ -217,7 +217,7 @@ class DevEnvironmentVariables extends EnvironmentVariables {
 /**
  * Function that validates the environment variables and throws an error if they are invalid.
  */
-function validateBootstrap() {
+function validateBootstrap(): void {
     const env = process.env['ENV'];
 
     // Check if the 'ENV' environment variable is set
@@ -270,7 +270,7 @@ function validateBootstrap() {
 /**
  * Function that validates a given configuration object and returns the validated instance.
  */
-export function validate(config: Record<string, unknown>) {
+export function validate(config: Record<string, unknown>): EnvironmentVariables | DevEnvironmentVariables {
     const env = process.env['ENV'];
 
     // Check if the 'ENV' environment variable is set

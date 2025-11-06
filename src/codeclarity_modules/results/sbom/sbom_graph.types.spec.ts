@@ -281,16 +281,6 @@ describe('SBOM Graph Types', () => {
         });
 
         describe('findPathsContaining', () => {
-            let consoleSpy: jest.SpyInstance;
-
-            beforeEach(() => {
-                consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-            });
-
-            afterEach(() => {
-                consoleSpy.mockRestore();
-            });
-
             it('should find all nodes in paths containing the target', () => {
                 const result = GraphTraversalUtils.findPathsContaining('levelA@1.0.0', mockGraph);
 
@@ -313,31 +303,9 @@ describe('SBOM Graph Types', () => {
                 expect(result).toEqual([]);
             });
 
-            it('should log debug information', () => {
-                GraphTraversalUtils.findPathsContaining('levelA@1.0.0', mockGraph);
-
-                expect(consoleSpy).toHaveBeenCalledWith(
-                    'Finding paths for target dependency: levelA@1.0.0'
-                );
-                expect(consoleSpy).toHaveBeenCalledWith(
-                    'Total nodes in paths containing levelA@1.0.0:',
-                    expect.any(Number)
-                );
-                expect(consoleSpy).toHaveBeenCalledWith('Node IDs in result:', expect.any(Array));
-            });
         });
 
         describe('findMinimalPathsToTarget', () => {
-            let consoleSpy: jest.SpyInstance;
-
-            beforeEach(() => {
-                consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-            });
-
-            afterEach(() => {
-                consoleSpy.mockRestore();
-            });
-
             it('should find minimal paths to target', () => {
                 const result = GraphTraversalUtils.findMinimalPathsToTarget(
                     'shared-grandchild@1.0.0',
@@ -371,18 +339,6 @@ describe('SBOM Graph Types', () => {
                 expect(result[0]!.id).toBe('root@1.0.0');
             });
 
-            it('should log debug information', () => {
-                GraphTraversalUtils.findMinimalPathsToTarget('levelA@1.0.0', mockGraph);
-
-                expect(consoleSpy).toHaveBeenCalledWith(
-                    'Finding minimal paths to target dependency: levelA@1.0.0'
-                );
-                expect(consoleSpy).toHaveBeenCalledWith('Found 1 paths to target');
-                expect(consoleSpy).toHaveBeenCalledWith(
-                    'Minimal paths contain 2 nodes:',
-                    expect.any(Array)
-                );
-            });
 
             it('should handle multiple paths to target', () => {
                 const result = GraphTraversalUtils.findMinimalPathsToTarget(

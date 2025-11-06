@@ -2,6 +2,7 @@
 import { JwtService } from '@nestjs/jwt';
 import { Test, type TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
+
 import { FailedToAuthenticateSocialAccount, EntityNotFound } from 'src/types/error.types';
 
 import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
@@ -84,38 +85,55 @@ describe('AuthService', () => {
     );
 
     beforeEach(async () => {
+        const mockUsersService = {
+            sendUserRegistrationVerificationEmail: jest.fn(),
+            existsSocialUser: jest.fn(),
+            registerSocial: jest.fn()
+        };
+
+        const mockUsersRepository = {
+            getUserByEmail: jest.fn(),
+            getUserById: jest.fn(),
+            save: jest.fn()
+        };
+
+        const mockJwtService = {
+            sign: jest.fn(),
+            signAsync: jest.fn(),
+            verify: jest.fn()
+        };
+
+        const mockGitlabIntegrationTokenService = {
+            createGitlabIntegrationToken: jest.fn()
+        };
+
         const module: TestingModule = await Test.createTestingModule({
             providers: [
-                AuthService,
+                {
+                    provide: AuthService,
+                    useFactory: (
+                        jwt: JwtService,
+                        gitlab: GitlabIntegrationTokenService,
+                        users: UsersService,
+                        usersRepo: UsersRepository
+                    ) => new AuthService(jwt, gitlab, users, usersRepo),
+                    inject: [JwtService, GitlabIntegrationTokenService, UsersService, UsersRepository]
+                },
                 {
                     provide: JwtService,
-                    useValue: {
-                        sign: jest.fn(),
-                        signAsync: jest.fn(),
-                        verify: jest.fn()
-                    }
-                },
-                {
-                    provide: UsersService,
-                    useValue: {
-                        sendUserRegistrationVerificationEmail: jest.fn(),
-                        existsSocialUser: jest.fn(),
-                        registerSocial: jest.fn()
-                    }
-                },
-                {
-                    provide: UsersRepository,
-                    useValue: {
-                        getUserByEmail: jest.fn(),
-                        getUserById: jest.fn(),
-                        save: jest.fn()
-                    }
+                    useValue: mockJwtService
                 },
                 {
                     provide: GitlabIntegrationTokenService,
-                    useValue: {
-                        createGitlabIntegrationToken: jest.fn()
-                    }
+                    useValue: mockGitlabIntegrationTokenService
+                },
+                {
+                    provide: UsersService,
+                    useValue: mockUsersService
+                },
+                {
+                    provide: UsersRepository,
+                    useValue: mockUsersRepository
                 }
             ]
         }).compile();

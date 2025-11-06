@@ -123,7 +123,7 @@ export class PrivateAPIError extends APIError {
 }
 
 export class ValidationFailed extends PublicAPIError {
-    validationErrors!: any[];
+    validationErrors!: unknown[];
     constructor(errors: ValidationError[], cause?: unknown) {
         super('ValidationFailed', 'Malformed request', 400, cause);
         this.validationErrors = [];

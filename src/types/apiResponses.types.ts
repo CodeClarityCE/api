@@ -23,7 +23,7 @@ export interface PaginatedResponse {
     /**
      * The data returned by the API call.
      */
-    data: any;
+    data: unknown;
     /**
      * The current page number.
      */
@@ -67,7 +67,7 @@ export class Response {
      * The data returned by the API call.
      */
     @ApiProperty()
-    data!: any;
+    data!: unknown;
 }
 
 /**

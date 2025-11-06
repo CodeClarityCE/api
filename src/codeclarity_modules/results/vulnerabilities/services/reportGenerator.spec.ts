@@ -1,5 +1,6 @@
 
 import { Test, type TestingModule } from '@nestjs/testing';
+
 import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
 import type { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
 import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
@@ -218,7 +219,8 @@ describe('ReportGenerator Services', () => {
                 {
                     source: 'nvd@nist.gov',
                     cvssData: {
-                        vectorString: 'AV:N/AC:L/Au:N/C:P/I:P/A:P'
+                        vectorString: 'AV:N/AC:L/Au:N/C:P/I:P/A:P',
+                        baseScore: 7.5
                     },
                     userInteractionRequired: false
                 }
@@ -227,7 +229,8 @@ describe('ReportGenerator Services', () => {
                 {
                     source: 'nvd@nist.gov',
                     cvssData: {
-                        vectorString: 'CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H'
+                        vectorString: 'CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
+                        baseScore: 9.8
                     }
                 }
             ],
@@ -235,7 +238,8 @@ describe('ReportGenerator Services', () => {
                 {
                     source: 'nvd@nist.gov',
                     cvssData: {
-                        vectorString: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H'
+                        vectorString: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
+                        baseScore: 9.8
                     }
                 }
             ]

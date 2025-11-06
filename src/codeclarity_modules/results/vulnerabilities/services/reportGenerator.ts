@@ -953,9 +953,9 @@ export class OSVReportGenerator extends BaseReportGenerator {
         let severityInfo: SeverityInfo = await this.getCVSSOSVInfo(this.osvItem);
 
         if (
-            severityInfo.cvss_2 === null &&
-            severityInfo.cvss_31 === null &&
-            severityInfo.cvss_3 === null
+            !severityInfo.cvss_2 &&
+            !severityInfo.cvss_31 &&
+            !severityInfo.cvss_3
         ) {
             if (this.nvdItem) {
                 severityInfo = await this.getCVSSNVDInfo(this.nvdItem);
@@ -1210,9 +1210,9 @@ export class NVDReportGenerator extends BaseReportGenerator {
         let severityInfo: SeverityInfo = await this.getCVSSNVDInfo(this.nvdItem);
 
         if (
-            severityInfo.cvss_2 === null &&
-            severityInfo.cvss_31 === null &&
-            severityInfo.cvss_3 === null
+            !severityInfo.cvss_2 &&
+            !severityInfo.cvss_31 &&
+            !severityInfo.cvss_3
         ) {
             if (this.osvItem) {
                 severityInfo = await this.getCVSSOSVInfo(this.osvItem);

@@ -68,7 +68,7 @@ export class EcosystemMapper {
      * Gets ecosystem info for a given plugin name
      */
     static getEcosystemInfo(pluginName: string): EcosystemInfoRuntime | null {
-        return PLUGIN_ECOSYSTEM_MAP[pluginName] || null;
+        return PLUGIN_ECOSYSTEM_MAP[pluginName] ?? null;
     }
 
     /**
@@ -92,7 +92,7 @@ export class EcosystemMapper {
         const entry = Object.values(PLUGIN_ECOSYSTEM_MAP).find(
             (info) => info.ecosystem === ecosystem
         );
-        return entry || null;
+        return entry ?? null;
     }
 
     /**
@@ -139,7 +139,7 @@ export class EcosystemMapper {
                 gem: 'rubygems'
             };
 
-            return purlToEcosystem[type] || null;
+            return purlToEcosystem[type] ?? null;
         } catch {
             return null;
         }

@@ -220,9 +220,9 @@ class TestProjectsController {
             }
         ];
 
-        const search = paginationDto.search || '';
-        const page = paginationDto.page || 0;
-        const entriesPerPage = paginationDto.entries_per_page || 10;
+        const search = paginationDto.search ?? '';
+        const page = paginationDto.page ?? 0;
+        const entriesPerPage = paginationDto.entries_per_page ?? 10;
 
         const filteredProjects = search
             ? mockProjects.filter((p) => p.name.includes(search))
@@ -329,11 +329,11 @@ class TestAnalysesController {
             message: 'Analyses retrieved successfully',
             data: {
                 data: mockAnalyses,
-                page: paginationDto.page || 0,
+                page: paginationDto.page ?? 0,
                 entry_count: mockAnalyses.length,
-                entries_per_page: paginationDto.entries_per_page || 10,
+                entries_per_page: paginationDto.entries_per_page ?? 10,
                 total_entries: mockAnalyses.length,
-                total_pages: Math.ceil(mockAnalyses.length / (paginationDto.entries_per_page || 10))
+                total_pages: Math.ceil(mockAnalyses.length / (paginationDto.entries_per_page ?? 10))
             }
         };
     }

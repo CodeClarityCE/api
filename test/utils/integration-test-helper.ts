@@ -93,13 +93,13 @@ export class IntegrationTestHelper {
         }> = {}
     ): Promise<TestUser> {
         const userData = {
-            email: overrides.email || 'test@example.com',
-            password: overrides.password || 'TestPassword123!',
-            firstName: overrides.firstName || 'Test',
-            lastName: overrides.lastName || 'User',
-            orgName: overrides.orgName || 'Test Organization',
-            orgDescription: overrides.orgDescription || 'Test organization description',
-            role: overrides.role || MemberRole.ADMIN
+            email: overrides.email ?? 'test@example.com',
+            password: overrides.password ?? 'TestPassword123!',
+            firstName: overrides.firstName ?? 'Test',
+            lastName: overrides.lastName ?? 'User',
+            orgName: overrides.orgName ?? 'Test Organization',
+            orgDescription: overrides.orgDescription ?? 'Test organization description',
+            role: overrides.role ?? MemberRole.ADMIN
         };
 
         // Hash password
@@ -116,7 +116,7 @@ export class IntegrationTestHelper {
         user.activated = true;
         user.social = false;
         user.setup_done = true;
-        user.handle = userData.email.split('@')[0] || 'user';
+        user.handle = userData.email.split('@')[0] ?? 'user';
 
         const savedUser = await this.usersRepository.saveUser(user);
 
