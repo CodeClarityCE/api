@@ -2,10 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
     Output as LicensesOutput,
+    Status,
     WorkSpaceLicenseInfo
 } from 'src/codeclarity_modules/results/licenses/licenses.types';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
-import { Status } from 'src/types/apiResponses.types';
 import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
 import { Repository } from 'typeorm';
 

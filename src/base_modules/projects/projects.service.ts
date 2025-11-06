@@ -4,7 +4,7 @@ import { join } from 'path';
 
 import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { IntegrationProvider } from 'src/base_modules/integrations/integration.types';
+import { IntegrationProvider } from 'src/base_modules/integrations/integrations.entity';
 import { OrganizationLoggerService } from 'src/base_modules/organizations/log/organizationLogger.service';
 import { ActionType } from 'src/base_modules/organizations/log/orgAuditLog.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
