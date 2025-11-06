@@ -4,11 +4,11 @@ import { join } from 'path';
 
 import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { IntegrationProvider } from 'src/base_modules/integrations/integrations.entity';
+import { IntegrationProvider as IntegrationProviderEntity } from 'src/base_modules/integrations/integrations.entity';
 import { OrganizationLoggerService } from 'src/base_modules/organizations/log/organizationLogger.service';
 import { ActionType } from 'src/base_modules/organizations/log/orgAuditLog.types';
-import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { IntegrationType, Project } from 'src/base_modules/projects/project.entity';
+import { MemberRole } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
+import { IntegrationProvider, IntegrationType, Project } from 'src/base_modules/projects/project.entity';
 import { ProjectImportBody } from 'src/base_modules/projects/project.types';
 import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
 import { AnalysisResultsRepository } from 'src/codeclarity_modules/results/results.repository';
@@ -81,7 +81,7 @@ export class ProjectService {
 
             let repo: RepositoryCache;
 
-            if (integration.integration_provider === IntegrationProvider.GITHUB) {
+            if (integration.integration_provider === IntegrationProviderEntity.GITHUB) {
                 await this.githubRepositoriesService.syncGithubRepos(projectData.integration_id);
                 try {
                     repo = await this.githubRepositoriesService.getGithubRepository(
@@ -115,7 +115,7 @@ export class ProjectService {
                         throw err;
                     }
                 }
-            } else if (integration.integration_provider === IntegrationProvider.GITLAB) {
+            } else if (integration.integration_provider === IntegrationProviderEntity.GITLAB) {
                 await this.gitlabRepositoriesService.syncGitlabRepos(projectData.integration_id);
                 try {
                     repo = await this.gitlabRepositoriesService.getGitlabRepository(
@@ -155,11 +155,11 @@ export class ProjectService {
 
             project.name = repo.fully_qualified_name;
             project.description = repo.description;
-            project.type = integration.integration_provider;
+            project.type = integration.integration_provider as unknown as IntegrationProvider;
             project.integration = integration;
             project.default_branch = repo.default_branch;
             project.service_domain = repo.service_domain;
-            project.integration_provider = integration.integration_provider;
+            project.integration_provider = integration.integration_provider as unknown as IntegrationProvider;
             project.url = projectData.url;
         } else {
             project.name = projectData.name;

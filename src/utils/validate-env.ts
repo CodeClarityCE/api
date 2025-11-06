@@ -245,8 +245,11 @@ function validateBootstrap() {
         throw res.error;
     }
 
+    // Type-cast env to Environment for type-safe comparison
+    const typedEnv = env as Environment;
+
     // Determine which class to use for validation based on the environment
-    if (env === Environment.Development) {
+    if (typedEnv === Environment.Development) {
         validatedConfig = plainToInstance(DevEnvironmentVariables, process.env, {
             enableImplicitConversion: true
         });
@@ -275,8 +278,11 @@ export function validate(config: Record<string, unknown>) {
         throw Error("'ENV' environment variable missing");
     }
 
+    // Type-cast env to Environment for type-safe comparison
+    const typedEnv = env as Environment;
+
     // Determine which class to use for validation based on the environment
-    if (env === Environment.Development) {
+    if (typedEnv === Environment.Development) {
         const validatedConfig = plainToInstance(DevEnvironmentVariables, config, {
             enableImplicitConversion: true
         });

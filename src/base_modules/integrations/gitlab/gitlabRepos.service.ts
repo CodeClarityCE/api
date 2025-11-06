@@ -135,6 +135,9 @@ export class GitlabRepositoriesService {
             IMPORTED = 'imported'
         }
 
+        // Type-safe comparison by casting sortBy to AllowedOrderBy
+        const typedSortBy = sortBy as AllowedOrderBy | undefined;
+
         // (1) Check that the user has the right to access the org
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
@@ -176,14 +179,14 @@ export class GitlabRepositoriesService {
             .createQueryBuilder('repo')
             .where('repo.integration = :integrationId', { integrationId });
 
-        if (sortBy) {
-            if (sortBy === AllowedOrderBy.FULLY_QUALIFIED_NAME)
+        if (typedSortBy) {
+            if (typedSortBy === AllowedOrderBy.FULLY_QUALIFIED_NAME)
                 repositoryQB = repositoryQB.orderBy('fully_qualified_name', sortDirection ?? 'ASC');
-            else if (sortBy === AllowedOrderBy.DESCRIPTION)
+            else if (typedSortBy === AllowedOrderBy.DESCRIPTION)
                 repositoryQB = repositoryQB.orderBy('description', sortDirection ?? 'ASC');
-            else if (sortBy === AllowedOrderBy.CREATED)
+            else if (typedSortBy === AllowedOrderBy.CREATED)
                 repositoryQB = repositoryQB.orderBy('created_at', sortDirection ?? 'ASC');
-            else if (sortBy === AllowedOrderBy.IMPORTED)
+            else if (typedSortBy === AllowedOrderBy.IMPORTED)
                 repositoryQB = repositoryQB.orderBy('imported_already', sortDirection ?? 'ASC');
         }
 
