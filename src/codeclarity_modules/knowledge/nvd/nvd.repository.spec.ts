@@ -1,9 +1,7 @@
-
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { EntityNotFound } from 'src/types/error.types';
 import type { Repository } from 'typeorm';
-
 import { NVD } from './nvd.entity';
 import { NVDRepository } from './nvd.repository';
 
@@ -392,7 +390,7 @@ describe('NVDRepository', () => {
         });
 
         it('should handle very long CVE ID strings', async () => {
-            const longCveId = `CVE-2023-${  '1'.repeat(1000)}`;
+            const longCveId = `CVE-2023-${'1'.repeat(1000)}`;
             mockRepository.findOne.mockResolvedValue(null);
 
             const result = await nvdRepository.getVulnWithoutFailing(longCveId);

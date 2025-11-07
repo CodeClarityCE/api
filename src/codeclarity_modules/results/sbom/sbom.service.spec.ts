@@ -3,16 +3,10 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
 import { PluginResultNotAvailable, UnknownWorkspace, EntityNotFound } from 'src/types/error.types';
-
-
 import { Result } from '../result.entity';
 import { AnalysisResultsService } from '../results.service';
-
 import { SBOMService } from './sbom.service';
 import { SbomUtilsService } from './utils/utils';
-
-
-
 
 describe('SBOMService', () => {
     let service: SBOMService;

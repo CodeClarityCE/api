@@ -27,14 +27,10 @@ import {
     TypedResponse
 } from 'src/types/apiResponses.types';
 import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
-
-
-
 import {
     AnalyzerDoesNotExist,
     AnaylzerMissingConfigAttribute
 } from '../analyzers/analyzers.errors';
-
 import { AnalysesService } from './analyses.service';
 
 @ApiBearerAuth()

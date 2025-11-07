@@ -1,5 +1,4 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-
 import {
     EntityNotFound,
     NotAuthorized,
@@ -16,7 +15,6 @@ import {
 import { SortDirection } from '../../../types/sort.types';
 import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
 import type { RepositoryCache } from '../../projects/repositoryCache.entity';
-
 import { GitlabIntegrationController } from './gitlab.controller';
 import { GitlabIntegrationService } from './gitlab.service';
 import {
@@ -26,7 +24,6 @@ import {
     GitlabTokenType
 } from './gitlabIntegration.types';
 import { GitlabRepositoriesService } from './gitlabRepos.service';
-
 
 describe('GitlabIntegrationController', () => {
     let controller: GitlabIntegrationController;

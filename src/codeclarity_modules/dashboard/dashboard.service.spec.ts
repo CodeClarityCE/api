@@ -6,10 +6,8 @@ import { Organization } from 'src/base_modules/organizations/organization.entity
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 import { NotAuthorized } from 'src/types/error.types';
 import type { Repository } from 'typeorm';
-
 import { DashboardService } from './dashboard.service';
 import { ProjectGradeClass } from './dashboard.types';
-
 
 describe('DashboardService', () => {
     let service: DashboardService;

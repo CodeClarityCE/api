@@ -3,6 +3,7 @@ import pluginJs from "@eslint/js";
 import tseslint from "typescript-eslint";
 import security from "eslint-plugin-security";
 import importPlugin from "eslint-plugin-import";
+import prettierConfig from "eslint-config-prettier";
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
@@ -35,6 +36,7 @@ export default [
   ...tseslint.configs.recommendedTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
   security.configs.recommended,
+  prettierConfig, // Must be last to override conflicting rules
 
   // ==========================================
   // Main Configuration
@@ -279,7 +281,7 @@ export default [
             "sibling",  // Same directory (./)
             "index"     // Index files
           ],
-          "newlines-between": "always",
+          "newlines-between": "never",
           "alphabetize": {
             "order": "asc",
             "caseInsensitive": true

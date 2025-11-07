@@ -1,7 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
-
 import { EPSS } from './epss.entity';
 import { EPSSRepository } from './epss.repository';
 
@@ -125,7 +124,7 @@ describe('EPSSRepository', () => {
         });
 
         it('should handle very long CVE IDs', async () => {
-            const longCveId = `CVE-2023-${  '1'.repeat(1000)}`;
+            const longCveId = `CVE-2023-${'1'.repeat(1000)}`;
             mockRepository.findOne.mockResolvedValue(null);
 
             const result = await epssRepository.getByCVE(longCveId);

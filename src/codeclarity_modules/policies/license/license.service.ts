@@ -10,10 +10,13 @@ import {
 } from 'src/codeclarity_modules/policies/license/licensePolicy.types';
 import { Policy, PolicyFrontend } from 'src/codeclarity_modules/policies/policy.entity';
 import { PolicyType } from 'src/codeclarity_modules/policies/policy.types';
-import { PaginationConfig, TypedPaginatedData , PaginationUserSuppliedConf } from 'src/types/pagination.types';
+import {
+    PaginationConfig,
+    TypedPaginatedData,
+    PaginationUserSuppliedConf
+} from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
 import { Repository } from 'typeorm';
-
 
 @Injectable()
 export class LicensePolicyService {

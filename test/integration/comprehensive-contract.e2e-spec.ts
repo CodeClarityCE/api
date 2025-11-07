@@ -7,8 +7,10 @@ import {
     Param,
     Query,
     ValidationPipe,
-    UseGuards
-, CanActivate, ExecutionContext } from '@nestjs/common';
+    UseGuards,
+    CanActivate,
+    ExecutionContext
+} from '@nestjs/common';
 import { APP_PIPE } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test, TestingModule } from '@nestjs/testing';

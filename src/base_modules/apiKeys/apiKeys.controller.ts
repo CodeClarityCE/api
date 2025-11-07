@@ -3,8 +3,6 @@ import { ApiTags } from '@nestjs/swagger';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { NoDataResponse, TypedPaginatedResponse } from 'src/types/apiResponses.types';
-
-
 import { ApiKeysService } from './apiKeys.service';
 
 @Controller('api_keys')

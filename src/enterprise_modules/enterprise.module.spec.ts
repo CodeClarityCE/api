@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-
 import { EnterpriseModule } from './enterprise.module';
 
 describe('EnterpriseModule', () => {

@@ -3,10 +3,7 @@ import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { License } from 'src/codeclarity_modules/knowledge/license/license.entity';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { TypedResponse } from 'src/types/apiResponses.types';
-
-
 import { LicenseService } from './license.service';
-
 
 @Controller('knowledge/license')
 export class LicenseController {

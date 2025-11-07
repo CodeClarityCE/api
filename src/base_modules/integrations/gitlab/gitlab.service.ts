@@ -22,12 +22,9 @@ import {
     NotAMember,
     NotAuthorized
 } from 'src/types/error.types';
-
-
 import { VCSIntegrationMetaData } from '../integration.types';
 import { Integration, IntegrationProvider, IntegrationType } from '../integrations.entity';
 import { IntegrationsRepository } from '../integrations.repository';
-
 import { GitlabIntegrationTokenService } from './gitlabToken.service';
 
 // https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#prefill-personal-access-token-name-and-scopes

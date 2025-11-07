@@ -12,18 +12,14 @@ import {
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { TeamMember } from 'src/base_modules/users/teamMember.types';
 import { EntityNotFound } from 'src/types/error.types';
-import { TypedPaginatedData , PaginationUserSuppliedConf } from 'src/types/pagination.types';
+import { TypedPaginatedData, PaginationUserSuppliedConf } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
-import { genRandomString , hash } from 'src/utils/crypto';
-
-
+import { genRandomString, hash } from 'src/utils/crypto';
 import { EmailRepository } from '../email/email.repository';
 import { EmailService } from '../email/email.service';
 import { UsersRepository } from '../users/users.repository';
-
 import { InvitationsRepository } from './invitations/invitations.repository';
 import { OrganizationsRepository } from './organizations.repository';
-
 
 @Injectable()
 export class OrganizationsService {

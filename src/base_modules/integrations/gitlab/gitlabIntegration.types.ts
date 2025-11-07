@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 import { IsEnum, IsNotEmpty, IsUrl } from 'class-validator';
-
 import {
     AccessTokenBasedIntegration,
     AccessTokenBasedIntegrationCreate,

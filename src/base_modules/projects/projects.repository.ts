@@ -5,10 +5,7 @@ import { EntityNotFound, NotAuthorized, ProjectDoesNotExist } from 'src/types/er
 import { TypedPaginatedData } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
 import { Repository } from 'typeorm';
-
-
 import { AllowedOrderByGetProjects } from './projects.service';
-
 
 @Injectable()
 export class ProjectsRepository {

@@ -19,14 +19,10 @@ import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { CreatedResponse, NoDataResponse, TypedResponse } from 'src/types/apiResponses.types';
 import { EntityNotFound, InternalError, NotAuthorized, Unsupported } from 'src/types/error.types';
-
-
-
 import {
     AccountRegistrationVerificationTokenInvalidOrExpired,
     PasswordsDoNotMatch
 } from '../auth/auth.errors';
-
 import {
     SetupAlreadyDone,
     FailedToSendAccountRegistrationVerificationEmail,

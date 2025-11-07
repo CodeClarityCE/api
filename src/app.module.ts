@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions.js';
-
 import { AuthModule } from './base_modules/auth/auth.module';
 import { BaseModule } from './base_modules/base.module';
 import { CodeClarityModule } from './codeclarity_modules/codeclarity.module';

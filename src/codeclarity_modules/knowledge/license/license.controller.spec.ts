@@ -1,7 +1,5 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
-
-
 import { LicenseController } from './license.controller';
 import type { License } from './license.entity';
 import { LicenseService } from './license.service';

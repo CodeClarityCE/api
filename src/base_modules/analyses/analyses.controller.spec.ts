@@ -1,17 +1,14 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-
 import { EntityNotFound, NotAuthorized } from '../../types/error.types';
 import {
     AnalyzerDoesNotExist,
     AnaylzerMissingConfigAttribute
 } from '../analyzers/analyzers.errors';
 import { AuthenticatedUser, ROLE } from '../auth/auth.types';
-
 import { AnalysesController } from './analyses.controller';
 import { AnalysesService } from './analyses.service';
 import type { Analysis } from './analysis.entity';
 import type { AnalysisCreateBody } from './analysis.types';
-
 
 describe('AnalysesController', () => {
     let controller: AnalysesController;

@@ -4,13 +4,9 @@ import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 import { UsersRepository } from 'src/base_modules/users/users.repository';
-
-
 import { Policy, PolicyType } from '../policy.entity';
-
 import { LicensePolicyService } from './license.service';
 import { LicensePolicyType, type LicensePolicyCreateBody } from './licensePolicy.types';
-
 
 describe('LicensePolicyService', () => {
     let service: LicensePolicyService;

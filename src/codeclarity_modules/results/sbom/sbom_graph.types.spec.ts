@@ -1,4 +1,8 @@
-import { GraphTraversalUtils, type GraphDependency, type NodeTraversalResult } from './sbom_graph.types';
+import {
+    GraphTraversalUtils,
+    type GraphDependency,
+    type NodeTraversalResult
+} from './sbom_graph.types';
 
 describe('SBOM Graph Types', () => {
     describe('GraphDependency interface', () => {
@@ -302,7 +306,6 @@ describe('SBOM Graph Types', () => {
 
                 expect(result).toEqual([]);
             });
-
         });
 
         describe('findMinimalPathsToTarget', () => {
@@ -338,7 +341,6 @@ describe('SBOM Graph Types', () => {
                 expect(result).toHaveLength(1);
                 expect(result[0]!.id).toBe('root@1.0.0');
             });
-
 
             it('should handle multiple paths to target', () => {
                 const result = GraphTraversalUtils.findMinimalPathsToTarget(

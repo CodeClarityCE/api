@@ -1,7 +1,10 @@
 import { Analysis } from '../../base_modules/analyses/analysis.entity';
-
-import { Result, type ResultObject, type ResultByAnalysisId, type AnalysisInfo } from './result.entity';
-
+import {
+    Result,
+    type ResultObject,
+    type ResultByAnalysisId,
+    type AnalysisInfo
+} from './result.entity';
 
 describe('Result Entity', () => {
     let result: Result;

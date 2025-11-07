@@ -1,4 +1,3 @@
-
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { compare as semverCompare } from 'semver';
@@ -46,10 +45,7 @@ export class VersionsRepository {
         return version;
     }
 
-    async getDependencyVersions(
-        dependency: string,
-        language = 'javascript'
-    ): Promise<Version[]> {
+    async getDependencyVersions(dependency: string, language = 'javascript'): Promise<Version[]> {
         if (dependency.includes('/')) {
             dependency.replace('/', ':');
         }

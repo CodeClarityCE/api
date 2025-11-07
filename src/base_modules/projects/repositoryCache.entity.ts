@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
-
 import { Integration } from '../integrations/integrations.entity';
 
 export enum RepositoryType {

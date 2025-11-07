@@ -24,8 +24,6 @@ import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { TypedPaginatedResponse, TypedResponse } from 'src/types/apiResponses.types';
 import { InternalError, NotAuthenticated, NotAuthorized } from 'src/types/error.types';
-
-
 import { DashboardService } from './dashboard.service';
 
 @Controller('/org/:org_id/dashboard')

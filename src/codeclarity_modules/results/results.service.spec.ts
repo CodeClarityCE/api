@@ -4,10 +4,7 @@ import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 import { EntityNotFound } from 'src/types/error.types';
-
-
 import { ProjectMemberService } from '../../base_modules/projects/projectMember.service';
-
 import { AnalysisResultsRepository } from './results.repository';
 import { AnalysisResultsService } from './results.service';
 

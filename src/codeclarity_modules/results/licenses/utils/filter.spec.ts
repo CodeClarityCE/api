@@ -1,5 +1,4 @@
 import type { LicenseInfo } from '../licenses2.types';
-
 import { filter } from './filter';
 
 describe('filter', () => {
@@ -353,8 +352,9 @@ describe('filter', () => {
             });
 
             it('should filter out licenses with undefined license_category', () => {
-                const { license_category: _removed, ...mitWithoutCategory } =
-                    createMockLicenseInfo({ id: 'MIT' });
+                const { license_category: _removed, ...mitWithoutCategory } = createMockLicenseInfo(
+                    { id: 'MIT' }
+                );
                 const licenses = [
                     mitWithoutCategory as LicenseInfo,
                     createMockLicenseInfo({
@@ -587,11 +587,12 @@ describe('filter', () => {
         });
 
         it('should handle licenses with mixed null/undefined categories', () => {
-            const { license_category: _removed, ...licenseWithoutCategory } =
-                createMockLicenseInfo({
+            const { license_category: _removed, ...licenseWithoutCategory } = createMockLicenseInfo(
+                {
                     license_compliance_violation: false,
                     unable_to_infer: true
-                });
+                }
+            );
             const licenses = [
                 createMockLicenseInfo({
                     license_category: null as any,
@@ -686,7 +687,7 @@ describe('filter', () => {
                     name: undefined as any,
                     unable_to_infer: false,
                     license_compliance_violation: false,
-                    deps_using_license: [],
+                    deps_using_license: []
                 }
             ];
 

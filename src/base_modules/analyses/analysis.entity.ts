@@ -9,7 +9,6 @@ import {
     ManyToOne,
     OneToMany
 } from 'typeorm';
-
 import { Policy } from '../../codeclarity_modules/policies/policy.entity';
 import { Result } from '../../codeclarity_modules/results/result.entity';
 import { Analyzer } from '../analyzers/analyzer.entity';

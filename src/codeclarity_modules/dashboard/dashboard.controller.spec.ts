@@ -1,8 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import type { LicenseDist } from 'src/codeclarity_modules/results/sbom/sbom.types';
-
-
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
 import {
@@ -22,7 +20,6 @@ import {
     ProjectGradeClass,
     Trend
 } from './dashboard.types';
-
 
 describe('DashboardController', () => {
     let controller: DashboardController;

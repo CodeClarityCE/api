@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
-
 import { TeamMember } from '../../users/teamMember.types';
 
 /********************************************/

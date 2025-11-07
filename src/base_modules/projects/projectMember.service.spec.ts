@@ -1,9 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
-
 import { NotAuthorized } from '../../types/error.types';
-
 import { Project } from './project.entity';
 import { ProjectMemberService } from './projectMember.service';
 

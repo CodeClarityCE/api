@@ -8,8 +8,6 @@ import { AnalysisResultsRepository } from 'src/codeclarity_modules/results/resul
 import { SBOMRepository } from 'src/codeclarity_modules/results/sbom/sbom.repository';
 import { VulnerabilitiesRepository } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.repository';
 import { RabbitMQError } from 'src/types/error.types';
-
-
 import { AnaylzerMissingConfigAttribute } from '../analyzers/analyzers.errors';
 import { AnalyzersRepository } from '../analyzers/analyzers.repository';
 import { AuthenticatedUser, ROLE } from '../auth/auth.types';
@@ -18,16 +16,11 @@ import { OrganizationsRepository } from '../organizations/organizations.reposito
 import { ProjectMemberService } from '../projects/projectMember.service';
 import { ProjectsRepository } from '../projects/projects.repository';
 import { UsersRepository } from '../users/users.repository';
-
-
 import { AnalysesRepository } from './analyses.repository';
 import { AnalysesService } from './analyses.service';
 import { AnalysisStatus } from './analysis.entity';
 import type { AnalysisCreateBody } from './analysis.types';
 import { LanguageDetectionService } from './language-detection.service';
-
-
-
 
 // Mock amqplib
 jest.mock('amqplib', () => ({

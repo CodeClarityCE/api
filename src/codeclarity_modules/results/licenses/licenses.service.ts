@@ -14,13 +14,9 @@ import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
 import { paginate } from 'src/codeclarity_modules/results/utils/utils';
 import { PaginatedResponse } from 'src/types/apiResponses.types';
 import { UnknownWorkspace } from 'src/types/error.types';
-
-
 import { AnalysisResultsService } from '../results.service';
 import { SbomUtilsService } from '../sbom/utils/utils';
-
 import { LicensesUtilsService } from './utils/utils';
-
 
 @Injectable()
 export class LicensesService {
@@ -28,7 +24,7 @@ export class LicensesService {
         private readonly analysisResultsService: AnalysisResultsService,
         private readonly licenseRepository: LicenseRepository,
         private readonly licensesUtilsService: LicensesUtilsService,
-        private readonly sbomUtilsService: SbomUtilsService,
+        private readonly sbomUtilsService: SbomUtilsService
     ) {}
 
     async getLicensesUsed(
@@ -190,7 +186,7 @@ export class LicensesService {
         const safeAllDeps = [];
         for (const dep of allDeps) {
             const lastIndex = dep.lastIndexOf('@');
-            const replaced = `${dep.slice(0, lastIndex)  }:${  dep.slice(lastIndex + 1)}`;
+            const replaced = `${dep.slice(0, lastIndex)}:${dep.slice(lastIndex + 1)}`;
             safeAllDeps.push(replaced);
         }
 
@@ -199,7 +195,7 @@ export class LicensesService {
             const versionIndex = key.lastIndexOf(':');
             const depName = key.slice(0, versionIndex);
             const depVersion = key.slice(versionIndex + 1);
-            const depKey = `${depName  }@${  depVersion}`;
+            const depKey = `${depName}@${depVersion}`;
             let packageManagerUrl = '';
 
             if (sbomOutput.analysis_info.package_manager === 'NPM') {
@@ -249,9 +245,7 @@ export class LicensesService {
         };
     }
 
-    private async getDependencyVersions(
-        versionsArray: string[]
-    ): Promise<Record<string, Version>> {
+    private async getDependencyVersions(versionsArray: string[]): Promise<Record<string, Version>> {
         const safeVersionsArray: string[] = [];
 
         for (let version of versionsArray) {

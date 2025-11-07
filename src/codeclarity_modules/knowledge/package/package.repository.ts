@@ -11,10 +11,7 @@ export class PackageRepository {
         private packageRepository: Repository<Package>
     ) {}
 
-    async getPackageInfo(
-        dependencyName: string,
-        language = 'javascript'
-    ): Promise<Package> {
+    async getPackageInfo(dependencyName: string, language = 'javascript'): Promise<Package> {
         if (dependencyName.includes('/')) {
             dependencyName.replace('/', ':');
         }

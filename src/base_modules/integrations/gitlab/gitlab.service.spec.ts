@@ -1,5 +1,4 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-
 import {
     DuplicateIntegration,
     EntityNotFound,
@@ -20,7 +19,6 @@ import type { User } from '../../users/users.entity';
 import { UsersRepository } from '../../users/users.repository';
 import { IntegrationProvider, IntegrationType, type Integration } from '../integrations.entity';
 import { IntegrationsRepository } from '../integrations.repository';
-
 import { GitlabIntegrationService } from './gitlab.service';
 import {
     type LinkGitlabCreateBody,

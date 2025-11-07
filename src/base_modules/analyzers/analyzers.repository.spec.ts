@@ -3,11 +3,9 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotAuthorized } from 'src/types/error.types';
 import type { TypedPaginatedData } from 'src/types/pagination.types';
 import type { Repository } from 'typeorm';
-
 import { Analyzer } from './analyzer.entity';
 import { AnalyzerDoesNotExist } from './analyzers.errors';
 import { AnalyzersRepository } from './analyzers.repository';
-
 
 describe('AnalyzersRepository', () => {
     let analyzersRepository: AnalyzersRepository;

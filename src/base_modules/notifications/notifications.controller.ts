@@ -14,14 +14,13 @@ import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { NoDataResponse, TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import { Repository } from 'typeorm';
-
 import { Notification } from './notification.entity';
 
 @Controller('/notifications')
 export class NotificationsController {
     constructor(
         @InjectRepository(Notification, 'codeclarity')
-        private readonly notificationsRepo: Repository<Notification>,
+        private readonly notificationsRepo: Repository<Notification>
     ) {}
 
     @Get('')

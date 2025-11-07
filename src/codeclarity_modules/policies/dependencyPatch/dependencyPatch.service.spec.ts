@@ -1,8 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { SortDirection } from 'src/types/sort.types';
-
-
 import { DependencyPatchPolicyService } from './dependencyPatch.service';
 import {
     type DependencyPatchPolicyCreateBody,

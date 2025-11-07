@@ -18,11 +18,8 @@ import {
     EntityNotFound,
     FailedToAuthenticateSocialAccount
 } from 'src/types/error.types';
-
-
 import { CannotPerformActionOnSocialAccount } from '../users/users.errors';
 import { UsersRepository } from '../users/users.repository';
-
 import { RegistrationNotVerified, WrongCredentials } from './auth.errors';
 import {
     CONST_JWT_TOKEN_EXPIRES_IN,

@@ -10,7 +10,6 @@ import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
 import { TypedPaginatedData } from 'src/types/pagination.types';
 import { Repository } from 'typeorm';
 
-
 /**
  * Injectable service for handling organizations and their memberships.
  */

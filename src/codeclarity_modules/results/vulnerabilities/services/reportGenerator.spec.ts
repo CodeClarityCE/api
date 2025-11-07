@@ -1,6 +1,4 @@
-
 import { Test, type TestingModule } from '@nestjs/testing';
-
 import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
 import type { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
 import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
@@ -18,8 +16,6 @@ import {
     ConflictFlag,
     SeverityType
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
-
-
 import { OSVReportGenerator, NVDReportGenerator } from './reportGenerator';
 
 describe('ReportGenerator Services', () => {

@@ -1,5 +1,4 @@
 import { plainToClass } from 'class-transformer';
-
 import { Plugin } from './plugin.entity';
 
 describe('Plugin Entity', () => {

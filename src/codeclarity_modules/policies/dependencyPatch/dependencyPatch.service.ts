@@ -8,7 +8,6 @@ import {
 import { TypedPaginatedData } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
 
-
 @Injectable()
 export class DependencyPatchPolicyService {
     /**

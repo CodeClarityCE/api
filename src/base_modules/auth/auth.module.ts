@@ -1,16 +1,12 @@
 import * as fs from 'fs';
-
-
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/gitlab/gitlabToken.service';
-
 import { EmailModule } from '../email/email.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { UsersModule } from '../users/users.module';
-
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { CONST_JWT_ALGORITHM, CONST_JWT_TOKEN_EXPIRES_IN } from './constants';

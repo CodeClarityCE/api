@@ -50,8 +50,6 @@ import {
     UserDoesNotExist
 } from 'src/types/error.types';
 import { SortDirection } from 'src/types/sort.types';
-
-
 import { OrganizationMemberships } from './memberships/organization.memberships.entity';
 import { InvitationOrgAlreadyExists } from './organizations.errors';
 import { OrganizationsService } from './organizations.service';

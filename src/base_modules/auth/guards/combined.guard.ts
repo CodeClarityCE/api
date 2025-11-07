@@ -1,9 +1,6 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
-
 import { Request } from 'express';
-
-
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
@@ -142,11 +139,7 @@ export class CombinedAuthGuard implements CanActivate {
             // TODO: get roles from payload
             return [
                 true,
-                new AuthenticatedUser(
-                    payload.userId,
-                    payload.roles as ROLE[],
-                    payload.activated
-                )
+                new AuthenticatedUser(payload.userId, payload.roles as ROLE[], payload.activated)
             ];
         } catch {
             return [false, undefined];

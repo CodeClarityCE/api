@@ -1,10 +1,8 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
-
 import type { Project } from '../projects/project.entity';
 import type { User } from '../users/users.entity';
-
 import { File } from './file.entity';
 import { FileRepository } from './file.repository';
 

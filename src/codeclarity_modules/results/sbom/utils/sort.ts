@@ -1,7 +1,6 @@
 import { gt, lt } from 'semver';
 import type { SbomDependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
 
-
 function sort(
     dependencies: SbomDependency[],
     sortBy: string | undefined,
@@ -41,7 +40,11 @@ function sort(
         sortBySafe = sortBy;
     }
 
-    if (sortDirection === null || sortDirection === undefined || (sortDirection !== 'DESC' && sortDirection !== 'ASC')) {
+    if (
+        sortDirection === null ||
+        sortDirection === undefined ||
+        (sortDirection !== 'DESC' && sortDirection !== 'ASC')
+    ) {
         sortDirectionSafe = DEFAULT_SORT_DIRECTION;
     } else {
         sortDirectionSafe = sortDirection;

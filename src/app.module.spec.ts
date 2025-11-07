@@ -1,6 +1,5 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
-
 import { defaultOptions, AppModule } from './app.module';
 
 describe('AppModule', () => {

@@ -23,10 +23,7 @@ import {
     TypedPaginatedResponse,
     TypedResponse
 } from 'src/types/apiResponses.types';
-
-
 import { DependencyPatchPolicyService } from './dependencyPatch.service';
-
 
 @Controller('org/:org_id/policies/dependency_patch')
 export class DependencyPatchPolicyController {

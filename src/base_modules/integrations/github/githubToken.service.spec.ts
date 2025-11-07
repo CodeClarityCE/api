@@ -1,12 +1,10 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-
 import {
     IntegrationInvalidToken,
     IntegrationTokenExpired,
     IntegrationTokenMissingPermissions,
     IntegrationTokenRetrievalFailed
 } from '../../../types/error.types';
-
 import { GithubIntegrationTokenService } from './githubToken.service';
 
 // Mock dynamic import of octokit

@@ -18,11 +18,8 @@ import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { CreatedResponse, NoDataResponse, TypedResponse } from 'src/types/apiResponses.types';
 import { EmailAlreadyExists, EntityNotFound } from 'src/types/error.types';
-
-
 import { CannotPerformActionOnSocialAccount } from '../users/users.errors';
 import { UsersService } from '../users/users.service';
-
 import {
     AccountRegistrationVerificationTokenInvalidOrExpired,
     HandleAlreadyExists,

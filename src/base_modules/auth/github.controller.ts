@@ -25,8 +25,6 @@ import {
     IntegrationTokenRetrievalFailed,
     FailedToAuthenticateSocialAccount
 } from 'src/types/error.types';
-
-
 import { AuthService } from './auth.service';
 
 @Controller('auth/github')

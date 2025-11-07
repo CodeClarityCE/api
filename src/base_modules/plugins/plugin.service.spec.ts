@@ -1,5 +1,4 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-
 import type { Plugin } from './plugin.entity';
 import { PluginsRepository } from './plugin.repository';
 import { PluginService } from './plugin.service';

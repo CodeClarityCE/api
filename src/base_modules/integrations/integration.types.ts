@@ -1,4 +1,3 @@
-
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 import { OptionalTransform } from 'src/transformers/transformer';
@@ -38,7 +37,7 @@ export abstract class AccessTokenBasedIntegration<_Type> {
 
     @ApiProperty()
     @Expose()
-    @OptionalTransform((v) => new Date(v))
+    @OptionalTransform((v: unknown) => new Date(v as string))
     expiry_date?: Date;
 
     @ApiProperty()
@@ -96,7 +95,7 @@ export class Integration {
 
 export class VCSIntegrationMetaData {
     @Expose()
-    @OptionalTransform((v) => new Date(v))
+    @OptionalTransform((v: unknown) => new Date(v as string))
     last_repository_sync?: Date;
 }
 

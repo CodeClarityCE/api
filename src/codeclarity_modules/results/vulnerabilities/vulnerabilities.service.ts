@@ -21,24 +21,20 @@ import {
     Source,
     Vulnerability,
     VulnerabilityMerged,
-    ConflictFlag
-, Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
+    ConflictFlag,
+    Output as VulnsOutput
+} from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import {
     AnalysisStats,
     newAnalysisStats
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities2.types';
 import { PaginatedResponse } from 'src/types/apiResponses.types';
 import { UnknownWorkspace } from 'src/types/error.types';
-
-
 import { AnalysisResultsService } from '../results.service';
 import { SbomUtilsService } from '../sbom/utils/utils';
-
 import { VulnerabilitiesFilterService } from './utils/filter.service';
 import { VulnerabilitiesSortService } from './utils/sort.service';
 import { VulnerabilitiesUtilsService } from './utils/utils.service';
-
-
 
 @Injectable()
 export class VulnerabilitiesService {
@@ -228,7 +224,8 @@ export class VulnerabilitiesService {
                     else if (isMediumSeverity(severity)) wStats.number_of_medium += 1;
                     else if (isHighSeverity(severity)) wStats.number_of_high += 1;
                     else if (isCriticalSeverity(severity)) wStats.number_of_critical += 1;
-                } else if (finding.Severity === null || finding.Severity === undefined) wStats.number_of_none += 1;
+                } else if (finding.Severity === null || finding.Severity === undefined)
+                    wStats.number_of_none += 1;
             }
 
             encounteredVulns.add(finding.VulnerabilityId);
@@ -342,7 +339,8 @@ export class VulnerabilitiesService {
                 else if (isMediumSeverity(severity)) wBeforeStats.number_of_medium += 1;
                 else if (isHighSeverity(severity)) wBeforeStats.number_of_high += 1;
                 else if (isCriticalSeverity(severity)) wBeforeStats.number_of_critical += 1;
-            } else if (finding.Severity === null || finding.Severity === undefined) wBeforeStats.number_of_none += 1;
+            } else if (finding.Severity === null || finding.Severity === undefined)
+                wBeforeStats.number_of_none += 1;
 
             beforeEncounteredVulns.add(finding.VulnerabilityId);
         }
@@ -625,7 +623,8 @@ export class VulnerabilitiesService {
                 }
             }
 
-            if (osvDescription === '' && nvdDescription !== '') finding.Description = nvdDescription;
+            if (osvDescription === '' && nvdDescription !== '')
+                finding.Description = nvdDescription;
             else {
                 if (osvSummary.length > 0) {
                     osvSummary = osvSummary.charAt(0).toUpperCase() + osvSummary.slice(1);
@@ -638,7 +637,7 @@ export class VulnerabilitiesService {
                         osvDescription += '.';
                     }
                 }
-                finding.Description = `#### ${  osvSummary  }.\n\n${  osvDescription}`;
+                finding.Description = `#### ${osvSummary}.\n\n${osvDescription}`;
             }
 
             // Attach weakness info
@@ -814,7 +813,10 @@ export class VulnerabilitiesService {
                     }
                 } catch (err) {
                     // Skip invalid policy IDs
-                    console.warn(`Could not fetch vulnerability policy ${policyId}:`, (err as Error).message);
+                    console.warn(
+                        `Could not fetch vulnerability policy ${policyId}:`,
+                        (err as Error).message
+                    );
                 }
             }
 

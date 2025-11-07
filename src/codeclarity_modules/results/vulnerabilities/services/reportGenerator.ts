@@ -31,7 +31,6 @@ import {
     OtherInfo
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities2.types';
 
-
 abstract class BaseReportGenerator {
     patchesData!: PatchInfo;
     vulnsData!: Vulnerability;
@@ -228,7 +227,7 @@ abstract class BaseReportGenerator {
 
         // Final fallback for framework vulnerabilities without proper AffectedInfo
         if (affectedStringParts.length === 0 && isFramework && this.vulnsData.AffectedVersion) {
-            return `${this.vulnsData.AffectedVersion  } (check advisory for details)`;
+            return `${this.vulnsData.AffectedVersion} (check advisory for details)`;
         }
 
         return affectedStringParts.join(' || ');
@@ -383,13 +382,12 @@ abstract class BaseReportGenerator {
         return this.patchesData;
     }
 
-    async getWeaknessData(): Promise<
-        [WeaknessInfo[], Record<string, CommonConsequencesInfo[]>]
-    > {
+    async getWeaknessData(): Promise<[WeaknessInfo[], Record<string, CommonConsequencesInfo[]>]> {
         const common_consequences: Record<string, CommonConsequencesInfo[]> = {};
         const weakenessses: WeaknessInfo[] = [];
 
-        if (this.vulnsData.Weaknesses === null || this.vulnsData.Weaknesses === undefined) return [weakenessses, common_consequences];
+        if (this.vulnsData.Weaknesses === null || this.vulnsData.Weaknesses === undefined)
+            return [weakenessses, common_consequences];
 
         for (const _weakeness of this.vulnsData.Weaknesses) {
             try {
@@ -483,7 +481,8 @@ abstract class BaseReportGenerator {
     }
 
     getOwaspTop10Info(): OwaspTop10Info | null {
-        if (this.vulnsData.Weaknesses === null || this.vulnsData.Weaknesses === undefined) return null;
+        if (this.vulnsData.Weaknesses === null || this.vulnsData.Weaknesses === undefined)
+            return null;
 
         for (const weakeness of this.vulnsData.Weaknesses) {
             if (weakeness.OWASPTop10Id !== '') {
@@ -952,11 +951,7 @@ export class OSVReportGenerator extends BaseReportGenerator {
         /** Severities */
         let severityInfo: SeverityInfo = await this.getCVSSOSVInfo(this.osvItem);
 
-        if (
-            !severityInfo.cvss_2 &&
-            !severityInfo.cvss_31 &&
-            !severityInfo.cvss_3
-        ) {
+        if (!severityInfo.cvss_2 && !severityInfo.cvss_31 && !severityInfo.cvss_3) {
             if (this.nvdItem) {
                 severityInfo = await this.getCVSSNVDInfo(this.nvdItem);
             }
@@ -1209,11 +1204,7 @@ export class NVDReportGenerator extends BaseReportGenerator {
         /** Severities */
         let severityInfo: SeverityInfo = await this.getCVSSNVDInfo(this.nvdItem);
 
-        if (
-            !severityInfo.cvss_2 &&
-            !severityInfo.cvss_31 &&
-            !severityInfo.cvss_3
-        ) {
+        if (!severityInfo.cvss_2 && !severityInfo.cvss_31 && !severityInfo.cvss_3) {
             if (this.osvItem) {
                 severityInfo = await this.getCVSSOSVInfo(this.osvItem);
             }

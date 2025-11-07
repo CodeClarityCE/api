@@ -9,7 +9,6 @@ import {
     IsString,
     Length
 } from 'class-validator';
-
 import { TeamMember } from '../../../base_modules/users/teamMember.types';
 import {
     DefaultablePolicyCreate,

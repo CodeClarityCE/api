@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-
 import { Plugin } from './plugin.entity';
 import { PluginsRepository } from './plugin.repository';
 @Injectable()

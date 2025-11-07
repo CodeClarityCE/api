@@ -1,9 +1,7 @@
-
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { File } from 'src/base_modules/file/file.entity';
 import { FindOptionsWhere, ObjectId, Repository } from 'typeorm';
-
 import { User } from '../users/users.entity';
 
 /**

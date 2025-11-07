@@ -33,11 +33,7 @@ import {
     NotAuthorized
 } from 'src/types/error.types';
 import { SortDirection } from 'src/types/sort.types';
-
-
 import { AllowedOrderByGetProjects, ProjectService } from './projects.service';
-
-
 
 @ApiBearerAuth()
 @Controller('org/:org_id/projects')
@@ -97,8 +93,8 @@ export class ProjectController {
         @Query('sort_key') sort_key?: AllowedOrderByGetProjects,
         @Query('sort_direction') sort_direction?: SortDirection
     ): Promise<TypedPaginatedResponse<Project>> {
-        const pageParam = page ? parseInt(`${page  }`) : 0;
-        const entriesPerPageParam = entries_per_page ? parseInt(`${entries_per_page  }`) : 0;
+        const pageParam = page ? parseInt(`${page}`) : 0;
+        const entriesPerPageParam = entries_per_page ? parseInt(`${entries_per_page}`) : 0;
         return await this.projectsService.getMany(
             org_id,
             { currentPage: pageParam, entriesPerPage: entriesPerPageParam },

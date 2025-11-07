@@ -9,7 +9,6 @@ import {
     OneToMany,
     ManyToOne
 } from 'typeorm';
-
 import type { Analysis } from '../analyses/analysis.entity';
 import type { File } from '../file/file.entity';
 import type { Integration } from '../integrations/integrations.entity';

@@ -1,22 +1,27 @@
 import { existsSync } from 'fs';
 import { mkdir, rm } from 'fs/promises';
 import { join } from 'path';
-
 import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { IntegrationProvider as IntegrationProviderEntity } from 'src/base_modules/integrations/integrations.entity';
 import { OrganizationLoggerService } from 'src/base_modules/organizations/log/organizationLogger.service';
 import { ActionType } from 'src/base_modules/organizations/log/orgAuditLog.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
-import { IntegrationProvider, IntegrationType, Project } from 'src/base_modules/projects/project.entity';
+import {
+    IntegrationProvider,
+    IntegrationType,
+    Project
+} from 'src/base_modules/projects/project.entity';
 import { ProjectImportBody } from 'src/base_modules/projects/project.types';
 import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
 import { AnalysisResultsRepository } from 'src/codeclarity_modules/results/results.repository';
 import { EntityNotFound, IntegrationNotSupported, NotAuthorized } from 'src/types/error.types';
-import { PaginationConfig, PaginationUserSuppliedConf , TypedPaginatedData } from 'src/types/pagination.types';
+import {
+    PaginationConfig,
+    PaginationUserSuppliedConf,
+    TypedPaginatedData
+} from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
-
-
 import { AnalysesRepository } from '../analyses/analyses.repository';
 import { FileRepository } from '../file/file.repository';
 import { GithubRepositoriesService } from '../integrations/github/githubRepos.service';
@@ -24,7 +29,6 @@ import { GitlabRepositoriesService } from '../integrations/gitlab/gitlabRepos.se
 import { IntegrationsRepository } from '../integrations/integrations.repository';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { UsersRepository } from '../users/users.repository';
-
 import { ProjectMemberService } from './projectMember.service';
 import { ProjectsRepository } from './projects.repository';
 
@@ -159,7 +163,8 @@ export class ProjectService {
             project.integration = integration;
             project.default_branch = repo.default_branch;
             project.service_domain = repo.service_domain;
-            project.integration_provider = integration.integration_provider as unknown as IntegrationProvider;
+            project.integration_provider =
+                integration.integration_provider as unknown as IntegrationProvider;
             project.url = projectData.url;
         } else {
             project.name = projectData.name;

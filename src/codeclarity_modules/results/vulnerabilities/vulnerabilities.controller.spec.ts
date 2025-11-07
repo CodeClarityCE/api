@@ -5,13 +5,14 @@ import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { CombinedAuthGuard } from 'src/base_modules/auth/guards/combined.guard';
 import type { PaginatedResponse } from 'src/types/apiResponses.types';
 import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
-
-
 import { FindingsController } from './vulnerabilities.controller';
 import { VulnerabilitiesService } from './vulnerabilities.service';
-import { newAnalysisStats, type AnalysisStats, type VulnerabilityDetails } from './vulnerabilities2.types';
+import {
+    newAnalysisStats,
+    type AnalysisStats,
+    type VulnerabilityDetails
+} from './vulnerabilities2.types';
 import { VulnerabilityService } from './vulnerability.service';
-
 
 describe('FindingsController', () => {
     let controller: FindingsController;

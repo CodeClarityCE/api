@@ -17,15 +17,10 @@ import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
 import { paginate } from 'src/codeclarity_modules/results/utils/utils';
 import { PaginatedResponse } from 'src/types/apiResponses.types';
 import { EntityNotFound, UnknownWorkspace } from 'src/types/error.types';
-
-
 import { AnalysisResultsService } from '../results.service';
-
-
 import { GraphDependency, GraphTraversalUtils } from './sbom_graph.types';
 import { filter } from './utils/filter';
 import { sort } from './utils/sort';
-
 
 @Injectable()
 export class SBOMService {
@@ -48,7 +43,7 @@ export class SBOMService {
         analysisId: string,
         workspace: string,
         user: AuthenticatedUser,
-        ecosystem_filter?: string  
+        ecosystem_filter?: string
     ): Promise<AnalysisStats> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
@@ -241,7 +236,7 @@ export class SBOMService {
         sort_direction: string | undefined,
         active_filters_string: string | undefined,
         search_key: string | undefined,
-        ecosystem_filter?: string  
+        ecosystem_filter?: string
     ): Promise<PaginatedResponse> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
@@ -434,7 +429,8 @@ export class SBOMService {
 
         if (dependencyName && dependencyName in mergedSbom.workspaces[workspace]!.dependencies) {
             if (
-                dependencyVersion && dependencyVersion in mergedSbom.workspaces[workspace]!.dependencies[dependencyName]!
+                dependencyVersion &&
+                dependencyVersion in mergedSbom.workspaces[workspace]!.dependencies[dependencyName]!
             ) {
                 return await this.sbomUtilsService.getDependencyData(
                     analysisId,
@@ -472,8 +468,9 @@ export class SBOMService {
             throw new EntityNotFound('Dependency parameter is required');
         }
 
-        const dependenciesMap: Record<string, Record<string, Dependency>> =
-            mergedSbom.workspaces[workspace]!.dependencies;
+        const dependenciesMap: Record<string, Record<string, Dependency>> = mergedSbom.workspaces[
+            workspace
+        ]!.dependencies;
 
         // Check if dependencies exist in this workspace
         if (!dependenciesMap || Object.keys(dependenciesMap).length === 0) {
@@ -496,10 +493,7 @@ export class SBOMService {
         }
 
         // If the target node is a direct dependency and does not already have the virtual root as a parent, add it
-        if (
-            virtualRoot &&
-            (!targetNode.parentIds?.includes(SBOMService.VIRTUAL_ROOT_ID))
-        ) {
+        if (virtualRoot && !targetNode.parentIds?.includes(SBOMService.VIRTUAL_ROOT_ID)) {
             // Add virtual root as parent
             targetNode.parentIds = Array.from(
                 new Set([...(targetNode.parentIds || []), SBOMService.VIRTUAL_ROOT_ID])
@@ -526,8 +520,8 @@ export class SBOMService {
         // Always include the virtual root if any of the path nodes are its direct children
         if (virtualRoot && !pathNodes.some((node) => node.id === virtualRoot.id)) {
             // Check if any path node is a child of virtual root
-            const hasVirtualRootChild = pathNodes.some(
-                (node) => node.parentIds?.includes(SBOMService.VIRTUAL_ROOT_ID)
+            const hasVirtualRootChild = pathNodes.some((node) =>
+                node.parentIds?.includes(SBOMService.VIRTUAL_ROOT_ID)
             );
 
             if (hasVirtualRootChild) {

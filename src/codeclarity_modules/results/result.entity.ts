@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, Relation } from 'typeorm';
-
 import type { Analysis } from '../../base_modules/analyses/analysis.entity';
 
 @Entity()

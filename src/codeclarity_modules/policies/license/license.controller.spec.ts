@@ -1,9 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
-
-
 import { PolicyType, type Policy, type PolicyFrontend } from '../policy.entity';
-
 import { LicensePolicyController } from './license.controller';
 import { LicensePolicyService } from './license.service';
 import {

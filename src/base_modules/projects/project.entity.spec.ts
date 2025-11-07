@@ -1,5 +1,4 @@
 import { plainToClass } from 'class-transformer';
-
 import { Project, IntegrationType, IntegrationProvider } from './project.entity';
 
 describe('Project Entity', () => {

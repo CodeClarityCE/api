@@ -1,8 +1,6 @@
-
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 import { OptionalTransform } from 'src/transformers/transformer';
-
 import { MemberRole } from '../organizations/memberships/orgMembership.types';
 
 export class TeamMember {

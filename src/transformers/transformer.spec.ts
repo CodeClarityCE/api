@@ -1,22 +1,21 @@
 import { plainToClass } from 'class-transformer';
-
 import { OptionalTransform } from './transformer';
 
 describe('OptionalTransform', () => {
     class TestClass {
-        @OptionalTransform((value: string) => new Date(value))
+        @OptionalTransform((value) => new Date(value as string))
         date?: Date;
 
-        @OptionalTransform((value: string) => value.toUpperCase())
+        @OptionalTransform((value) => (value as string).toUpperCase())
         text?: string;
 
-        @OptionalTransform((value: string) => parseInt(value, 10))
+        @OptionalTransform((value) => parseInt(value as string, 10))
         number?: number;
 
-        @OptionalTransform((value: string) => value === 'true')
+        @OptionalTransform((value) => (value as string) === 'true')
         boolean?: boolean;
 
-        @OptionalTransform((value: any) => JSON.parse(value))
+        @OptionalTransform((value) => JSON.parse(value as string))
         json?: object;
     }
 
@@ -194,8 +193,8 @@ describe('OptionalTransform', () => {
     describe('type system compatibility', () => {
         it('should work with different transformer types', () => {
             class ComplexClass {
-                @OptionalTransform((value: string) => ({
-                    parsed: value.split(',').map((s) => s.trim())
+                @OptionalTransform((value) => ({
+                    parsed: (value as string).split(',').map((s) => s.trim())
                 }))
                 complexField?: { parsed: string[] };
             }
@@ -210,7 +209,10 @@ describe('OptionalTransform', () => {
 
         it('should handle transformer returning objects', () => {
             class ObjectClass {
-                @OptionalTransform((value: string) => ({ value, length: value.length }))
+                @OptionalTransform((value) => {
+                    const str = value as string;
+                    return { value: str, length: str.length };
+                })
                 objectField?: { value: string; length: number };
             }
 
@@ -226,18 +228,18 @@ describe('OptionalTransform', () => {
 
     describe('function behavior', () => {
         it('should return a Transform decorator', () => {
-            const transform = OptionalTransform((value: string) => value.toUpperCase());
+            const transform = OptionalTransform((value) => (value as string).toUpperCase());
             expect(typeof transform).toBe('function');
         });
 
         it('should accept any transformer function', () => {
-            const customTransform = (value: any) => `custom_${value}`;
+            const customTransform = (value: unknown) => `custom_${value as string}`;
             const decorator = OptionalTransform(customTransform);
             expect(typeof decorator).toBe('function');
         });
 
         it('should preserve the original transformer logic when value is not null/undefined', () => {
-            const mockTransformer = jest.fn((value: string) => value.toUpperCase());
+            const mockTransformer = jest.fn((value: unknown) => (value as string).toUpperCase());
             const decorator = OptionalTransform(mockTransformer);
 
             class TestClass {
@@ -252,7 +254,7 @@ describe('OptionalTransform', () => {
         });
 
         it('should not call the transformer when value is null', () => {
-            const mockTransformer = jest.fn((value: string) => value.toUpperCase());
+            const mockTransformer = jest.fn((value: unknown) => (value as string).toUpperCase());
             const decorator = OptionalTransform(mockTransformer);
 
             class TestClass {
@@ -267,7 +269,7 @@ describe('OptionalTransform', () => {
         });
 
         it('should not call the transformer when value is undefined', () => {
-            const mockTransformer = jest.fn((value: string) => value.toUpperCase());
+            const mockTransformer = jest.fn((value: unknown) => (value as string).toUpperCase());
             const decorator = OptionalTransform(mockTransformer);
 
             class TestClass {

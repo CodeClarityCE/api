@@ -1,7 +1,5 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
-
-
 import { PluginController } from './plugin.controller';
 import type { Plugin } from './plugin.entity';
 import { PluginService } from './plugin.service';

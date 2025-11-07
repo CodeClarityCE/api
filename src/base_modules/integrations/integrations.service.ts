@@ -5,10 +5,7 @@ import { MemberRole } from 'src/base_modules/organizations/memberships/orgMember
 import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import { NotAMember, NotAuthorized } from 'src/types/error.types';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
-
-
 import { OrganizationsRepository } from '../organizations/organizations.repository';
-
 import { IntegrationsRepository } from './integrations.repository';
 
 @Injectable()

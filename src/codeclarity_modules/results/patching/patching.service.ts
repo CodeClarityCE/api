@@ -11,10 +11,8 @@ import {
 import { Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
 import { UnknownWorkspace } from 'src/types/error.types';
-
 import { AnalysisResultsService } from '../results.service';
 import { SbomUtilsService } from '../sbom/utils/utils';
-
 import { PatchingUtilsService } from './utils/utils';
 
 @Injectable()
@@ -22,7 +20,7 @@ export class PatchingService {
     constructor(
         private readonly analysisResultsService: AnalysisResultsService,
         private readonly patchingUtilsService: PatchingUtilsService,
-        private readonly sbomUtilsService: SbomUtilsService,
+        private readonly sbomUtilsService: SbomUtilsService
     ) {}
 
     async getPatches(

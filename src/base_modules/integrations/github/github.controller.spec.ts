@@ -1,5 +1,4 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-
 import {
     DuplicateIntegration,
     EntityNotFound,
@@ -17,7 +16,6 @@ import { SortDirection } from '../../../types/sort.types';
 import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
 import type { RepositoryCache } from '../../projects/repositoryCache.entity';
 import type { Integration } from '../integrations.entity';
-
 import { GithubIntegrationController } from './github.controller';
 import { GithubIntegrationService } from './github.service';
 import {
@@ -26,8 +24,6 @@ import {
     GithubTokenType
 } from './githubIntegration.types';
 import { GithubRepositoriesService } from './githubRepos.service';
-
-
 
 describe('GithubIntegrationController', () => {
     let controller: GithubIntegrationController;

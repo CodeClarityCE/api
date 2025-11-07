@@ -9,7 +9,6 @@ import {
     ManyToOne,
     OneToMany
 } from 'typeorm';
-
 import type { Analysis } from '../analyses/analysis.entity';
 import type { Organization } from '../organizations/organization.entity';
 import type { Project } from '../projects/project.entity';

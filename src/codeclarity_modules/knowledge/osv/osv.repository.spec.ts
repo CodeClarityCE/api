@@ -1,9 +1,7 @@
-
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { EntityNotFound } from 'src/types/error.types';
 import type { Repository } from 'typeorm';
-
 import { OSV } from './osv.entity';
 import { OSVRepository } from './osv.repository';
 
@@ -537,7 +535,7 @@ describe('OSVRepository', () => {
         });
 
         it('should handle very long IDs', async () => {
-            const longId = `GHSA-${  'x'.repeat(1000)}`;
+            const longId = `GHSA-${'x'.repeat(1000)}`;
             mockRepository.findOne.mockResolvedValue(null);
 
             const result = await osvRepository.getVulnByOSVIDWithoutFailing(longId);

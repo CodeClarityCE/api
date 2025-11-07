@@ -1,5 +1,4 @@
 import { ConflictFlag, type VulnerabilityMerged } from '../vulnerabilities.types';
-
 import { VulnerabilitiesSortService } from './sort.service';
 
 // Use any type to avoid complex type conflicts between different WeaknessInfo interfaces
@@ -282,8 +281,7 @@ describe('VulnerabilitiesSortService', () => {
                         }
                     ] as any
                 }),
-                createMockVulnerability({
-                })
+                createMockVulnerability({})
             ];
 
             const sorted = service.sort(vulnerabilities, 'owasp_top_10', 'DESC');

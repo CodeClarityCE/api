@@ -1,9 +1,7 @@
-
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { EntityNotFound } from 'src/types/error.types';
 import type { Repository } from 'typeorm';
-
 import { License } from './license.entity';
 import { LicenseRepository } from './license.repository';
 
@@ -158,7 +156,7 @@ describe('LicenseRepository', () => {
         });
 
         it('should handle very long license IDs', async () => {
-            const longLicenseId = `VERY-LONG-${  'LICENSE-'.repeat(50)  }1.0`;
+            const longLicenseId = `VERY-LONG-${'LICENSE-'.repeat(50)}1.0`;
             mockRepository.findOne.mockResolvedValue(null);
 
             await expect(licenseRepository.getLicenseData(longLicenseId)).rejects.toThrow(

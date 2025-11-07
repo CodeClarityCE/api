@@ -1,5 +1,4 @@
 import { Entity, Column, PrimaryGeneratedColumn, Relation, ManyToOne } from 'typeorm';
-
 import type { User } from '../users/users.entity';
 
 export enum EmailType {

@@ -5,13 +5,10 @@ import { OrganizationsModule } from 'src/base_modules/organizations/organization
 import { ProjectsModule } from 'src/base_modules/projects/projects.module';
 import { KnowledgeModule } from 'src/codeclarity_modules/knowledge/knowledge.module';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
-
-
 import { LicenseModule } from '../licenses/licenses.module';
 import { AnalysisResultsRepository } from '../results.repository';
 import { AnalysisResultsService } from '../results.service';
 import { VulnerabilitiesModule } from '../vulnerabilities/vulnerabilities.module';
-
 import { SBOMController } from './sbom.controller';
 import { SBOMRepository } from './sbom.repository';
 import { SBOMService } from './sbom.service';

@@ -3,13 +3,9 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Status } from 'src/types/apiResponses.types';
 import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
 import type { Repository } from 'typeorm';
-
 import { Result } from '../../result.entity';
 import type { Output as LicensesOutput } from '../licenses.types';
-
 import { LicensesUtilsService } from './utils';
-
-
 
 describe('LicensesUtilsService', () => {
     let service: LicensesUtilsService;

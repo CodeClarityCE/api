@@ -1,7 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
-
 import {
     PluginResultNotAvailable,
     PluginFailed,
@@ -10,7 +9,6 @@ import {
 import { Result } from '../../result.entity';
 import type { Dependency } from '../../sbom/sbom.types';
 import { Status } from '../vulnerabilities.types';
-
 import { VulnerabilitiesUtilsService } from './utils.service';
 
 describe('VulnerabilitiesUtilsService', () => {

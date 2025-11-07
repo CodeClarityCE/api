@@ -1,18 +1,14 @@
 import * as fs from 'fs';
 import { join } from 'path';
-
 import { Injectable } from '@nestjs/common';
 import { MulterFile } from '@webundsoehne/nest-fastify-file-upload';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { File as FileEntity } from 'src/base_modules/file/file.entity';
 import { MemberRole } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
 import { escapeString } from 'src/utils/cleaner';
-
-
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { ProjectsRepository } from '../projects/projects.repository';
 import { UsersRepository } from '../users/users.repository';
-
 import { UploadData } from './file.controller';
 import { FileRepository } from './file.repository';
 

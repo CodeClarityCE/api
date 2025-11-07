@@ -1,7 +1,5 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-
 import type { User } from '../../users/users.entity';
-
 import { GitlabIntegrationTokenService } from './gitlabToken.service';
 
 // Mock fetch globally

@@ -1,5 +1,4 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-
 import {
     DuplicateIntegration,
     EntityNotFound,
@@ -21,7 +20,6 @@ import { UsersRepository } from '../../users/users.repository';
 import { IntegrationProvider, IntegrationType } from '../integration.types';
 import type { Integration } from '../integrations.entity';
 import { IntegrationsRepository } from '../integrations.repository';
-
 import { GithubIntegrationService } from './github.service';
 import {
     type LinkGithubCreateBody,
@@ -29,8 +27,6 @@ import {
     GithubTokenType
 } from './githubIntegration.types';
 import { GithubIntegrationTokenService } from './githubToken.service';
-
-
 
 describe('GithubIntegrationService', () => {
     let service: GithubIntegrationService;

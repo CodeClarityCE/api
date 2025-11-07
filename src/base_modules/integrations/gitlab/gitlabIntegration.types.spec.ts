@@ -1,8 +1,6 @@
 import { plainToClass } from 'class-transformer';
 import { validate } from 'class-validator';
-
-import { IntegrationProvider, IntegrationType , VCSIntegrationMetaData } from '../integration.types';
-
+import { IntegrationProvider, IntegrationType, VCSIntegrationMetaData } from '../integration.types';
 import {
     GitlabIntegration,
     GitlabTokenType,
@@ -11,7 +9,6 @@ import {
     GitLabIntegrationCreate,
     GitLabIntegrationUpdate
 } from './gitlabIntegration.types';
-
 
 describe('GitlabIntegration Types', () => {
     describe('GitlabTokenType', () => {

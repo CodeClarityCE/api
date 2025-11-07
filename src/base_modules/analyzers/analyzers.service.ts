@@ -4,14 +4,14 @@ import { AnalyzerCreateBody } from 'src/base_modules/analyzers/analyzer.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { ActionType } from 'src/base_modules/organizations/log/orgAuditLog.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { TypedPaginatedData , PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
-
-
-
+import {
+    TypedPaginatedData,
+    PaginationConfig,
+    PaginationUserSuppliedConf
+} from 'src/types/pagination.types';
 import { OrganizationLoggerService } from '../organizations/log/organizationLogger.service';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { UsersRepository } from '../users/users.repository';
-
 import { AnalyzersRepository } from './analyzers.repository';
 
 @Injectable()

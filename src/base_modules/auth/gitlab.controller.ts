@@ -24,10 +24,7 @@ import {
     AlreadyExists,
     FailedToAuthenticateSocialAccount
 } from 'src/types/error.types';
-
-
 import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
-
 import { AuthService } from './auth.service';
 
 @Controller('auth/gitlab')

@@ -1,5 +1,4 @@
 import type { LicenseInfo } from '../licenses2.types';
-
 import { sort } from './sort';
 
 describe('sort', () => {

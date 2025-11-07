@@ -5,7 +5,6 @@ import type {
     TypedPaginatedData
 } from 'src/types/pagination.types';
 
-
 export function isNoneSeverity(severity: number): boolean {
     return severity === 0.0 || severity === null;
 }
@@ -26,7 +25,10 @@ export function isCriticalSeverity(severity: number): boolean {
     return severity >= 9.0;
 }
 
-export function getVersionsSatisfyingConstraint(allVersions: string[], constraint: string): string[] {
+export function getVersionsSatisfyingConstraint(
+    allVersions: string[],
+    constraint: string
+): string[] {
     const versionToReturn: string[] = [];
 
     for (const version of allVersions) {

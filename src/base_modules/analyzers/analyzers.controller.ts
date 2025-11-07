@@ -21,18 +21,13 @@ import {
     TypedPaginatedResponse,
     TypedResponse
 } from 'src/types/apiResponses.types';
-
-
 import { AnalyzerTemplatesService, AnalyzerTemplate } from './analyzer-templates.service';
 import { AnalyzersService } from './analyzers.service';
-
 
 @ApiBearerAuth()
 @Controller('/org/:org_id/analyzers')
 export class AnalyzersController {
-    constructor(
-        private readonly analyzersService: AnalyzersService,
-    ) {}
+    constructor(private readonly analyzersService: AnalyzersService) {}
 
     @Post('')
     async create(

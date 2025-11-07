@@ -43,8 +43,6 @@ import {
     NotAuthorized
 } from 'src/types/error.types';
 import { SortDirection } from 'src/types/sort.types';
-
-
 import { GithubIntegrationService } from './github.service';
 import { GithubRepositoriesService } from './githubRepos.service';
 

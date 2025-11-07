@@ -8,7 +8,6 @@ import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
 import { Repository } from 'typeorm';
 
-
 @Injectable()
 export class LicensesRepository {
     constructor(

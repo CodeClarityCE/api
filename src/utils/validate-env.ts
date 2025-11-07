@@ -263,14 +263,16 @@ function validateBootstrap(): void {
 
     // Check if there were any validation errors
     if (errors.length > 0) {
-        throw new Error(`Environment variables failed to validate\n\n${  errors.toString()}`);
+        throw new Error(`Environment variables failed to validate\n\n${errors.toString()}`);
     }
 }
 
 /**
  * Function that validates a given configuration object and returns the validated instance.
  */
-export function validate(config: Record<string, unknown>): EnvironmentVariables | DevEnvironmentVariables {
+export function validate(
+    config: Record<string, unknown>
+): EnvironmentVariables | DevEnvironmentVariables {
     const env = process.env['ENV'];
 
     // Check if the 'ENV' environment variable is set

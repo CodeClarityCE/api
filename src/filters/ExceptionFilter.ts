@@ -3,8 +3,6 @@ import { FastifyReply } from 'fastify';
 import { Status } from 'src/types/apiResponses.types';
 import { PrivateAPIError, PublicAPIError } from 'src/types/error.types';
 
-
-
 /**
  * The goal of this filter is to filter the information we expose to users in case of an exception
  * Additionally we change the error body to underscore/snake case
@@ -86,7 +84,7 @@ function snakeCase(fields: any): any {
 
         const snakeKey = key
             .replace(/\.?([A-Z]+)/g, function (_x, y) {
-                return `_${  y.toLowerCase()}`;
+                return `_${y.toLowerCase()}`;
             })
             .replace(/^_/, '');
 

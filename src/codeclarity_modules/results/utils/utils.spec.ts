@@ -1,5 +1,4 @@
 import type { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
-
 import {
     isNoneSeverity,
     isLowSeverity,

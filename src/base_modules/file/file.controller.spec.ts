@@ -1,16 +1,10 @@
 import { readFile } from 'fs';
-
 import { Test, type TestingModule } from '@nestjs/testing';
 import type { MulterFile } from '@webundsoehne/nest-fastify-file-upload';
-
 import { InternalError } from '../../types/error.types';
 import { AuthenticatedUser, ROLE } from '../auth/auth.types';
-
 import { FileController, type UploadData } from './file.controller';
 import { FileService } from './file.service';
-
-
-
 
 jest.mock('fs', () => ({
     ...jest.requireActual('fs'),
@@ -437,7 +431,7 @@ describe('FileController', () => {
         });
 
         it('should handle very long file names', async () => {
-            const longFileName = `${'a'.repeat(255)  }.txt`;
+            const longFileName = `${'a'.repeat(255)}.txt`;
             const longUploadData: UploadData = {
                 ...mockUploadData,
                 file_name: longFileName

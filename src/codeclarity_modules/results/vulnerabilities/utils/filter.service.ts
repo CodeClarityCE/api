@@ -11,7 +11,6 @@ import {
     VulnerabilityMerged
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 
-
 @Injectable()
 export class VulnerabilitiesFilterService {
     constructor() {}
@@ -220,21 +219,21 @@ export class VulnerabilitiesFilterService {
 
                 if (filters.includes('availability_impact')) {
                     if (
-                        (vulnerability.Severity?.AvailabilityImpact === 'NONE') ||
+                        vulnerability.Severity?.AvailabilityImpact === 'NONE' ||
                         vulnerability.Severity.AvailabilityImpact === ''
                     )
                         continue;
                 }
                 if (filters.includes('confidentiality_impact')) {
                     if (
-                        (vulnerability.Severity?.ConfidentialityImpact === 'NONE') ||
+                        vulnerability.Severity?.ConfidentialityImpact === 'NONE' ||
                         vulnerability.Severity.ConfidentialityImpact === ''
                     )
                         continue;
                 }
                 if (filters.includes('integrity_impact')) {
                     if (
-                        (vulnerability.Severity?.IntegrityImpact === 'NONE') ||
+                        vulnerability.Severity?.IntegrityImpact === 'NONE' ||
                         vulnerability.Severity.IntegrityImpact === ''
                     )
                         continue;

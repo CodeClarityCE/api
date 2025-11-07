@@ -27,7 +27,8 @@ export class SetupAlreadyDone extends PublicAPIError {
 
 export class FailedToSendAccountRegistrationVerificationEmail extends PublicAPIError {
     static errorCode = 'FailedToSendAccountRegistrationVerificationEmail';
-    static errorMessage = errorMessages[FailedToSendAccountRegistrationVerificationEmail.errorCode]!;
+    static errorMessage =
+        errorMessages[FailedToSendAccountRegistrationVerificationEmail.errorCode]!;
     static statusCode = 500;
     constructor(cause?: unknown) {
         super(

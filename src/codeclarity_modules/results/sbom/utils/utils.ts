@@ -13,10 +13,7 @@ import {
 import { Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { PluginFailed, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/error.types';
 import { Repository, In } from 'typeorm';
-
 import { VulnerabilitiesUtilsService } from '../../vulnerabilities/utils/utils.service';
-
-
 import { EcosystemMapper } from './ecosystem-mapper';
 
 @Injectable()
@@ -220,7 +217,10 @@ export class SbomUtilsService {
             }
         }
 
-        const startObj: { dependencies?: WorkSpaceDependency[]; dev_dependencies?: WorkSpaceDependency[] } = {};
+        const startObj: {
+            dependencies?: WorkSpaceDependency[];
+            dev_dependencies?: WorkSpaceDependency[];
+        } = {};
         if (mergedStartDependencies.length > 0) {
             startObj.dependencies = mergedStartDependencies;
         }

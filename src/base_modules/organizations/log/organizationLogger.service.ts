@@ -6,13 +6,10 @@ import {
     getTypeClassOfAction
 } from 'src/base_modules/organizations/log/orgAuditLog.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { TypedPaginatedData , PaginationUserSuppliedConf } from 'src/types/pagination.types';
+import { TypedPaginatedData, PaginationUserSuppliedConf } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
-
-
 import { UsersRepository } from '../../users/users.repository';
 import { OrganizationsRepository } from '../organizations.repository';
-
 import { Log } from './log.entity';
 import { LogsRepository } from './logs.repository';
 

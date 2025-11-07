@@ -15,22 +15,20 @@ import { Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.
 import { VulnerabilitiesRepository } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.repository';
 import { Output as VulnsOuptut } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { RabbitMQError } from 'src/types/error.types';
-import { PaginationConfig, PaginationUserSuppliedConf , TypedPaginatedData } from 'src/types/pagination.types';
+import {
+    PaginationConfig,
+    PaginationUserSuppliedConf,
+    TypedPaginatedData
+} from 'src/types/pagination.types';
 import { AnalysisStartMessageCreate } from 'src/types/rabbitMqMessages.types';
 import { Repository } from 'typeorm';
-
 import { AnaylzerMissingConfigAttribute } from '../analyzers/analyzers.errors';
 import { AnalyzersRepository } from '../analyzers/analyzers.repository';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { ProjectMemberService } from '../projects/projectMember.service';
 import { ProjectsRepository } from '../projects/projects.repository';
 import { UsersRepository } from '../users/users.repository';
-
-
 import { AnalysesRepository } from './analyses.repository';
-
-
-
 
 @Injectable()
 export class AnalysesService {
@@ -164,7 +162,7 @@ export class AnalysesService {
         for (const [pluginName, plugin_config] of Object.entries(config_structure)) {
             for (const [key] of Object.entries(plugin_config)) {
                 const config_element = config_structure[pluginName][key];
-                if (config_element.required && (!config[pluginName]?.[key])) {
+                if (config_element.required && !config[pluginName]?.[key]) {
                     throw new AnaylzerMissingConfigAttribute();
                 }
             }
@@ -344,8 +342,9 @@ export class AnalysesService {
             {
                 x: 'Latest',
                 y: 'Vulnerabilities',
-                v: vulnOutput.workspaces[vulnOutput.analysis_info.default_workspace_name]
-                    ?.Vulnerabilities?.length || 0
+                v:
+                    vulnOutput.workspaces[vulnOutput.analysis_info.default_workspace_name]
+                        ?.Vulnerabilities?.length || 0
             },
             {
                 x: 'Latest',

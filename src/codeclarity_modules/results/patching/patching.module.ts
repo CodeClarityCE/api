@@ -6,17 +6,13 @@ import { OrganizationsModule } from 'src/base_modules/organizations/organization
 import { ProjectsModule } from 'src/base_modules/projects/projects.module';
 import { UsersModule } from 'src/base_modules/users/users.module';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
-
-
 import { AnalysisResultsRepository } from '../results.repository';
 import { AnalysisResultsService } from '../results.service';
 import { SbomModule } from '../sbom/sbom.module';
 import { VulnerabilitiesModule } from '../vulnerabilities/vulnerabilities.module';
-
 import { PatchingController } from './patching.controller';
 import { PatchingService } from './patching.service';
 import { PatchingUtilsService } from './utils/utils';
-
 
 @Module({
     imports: [

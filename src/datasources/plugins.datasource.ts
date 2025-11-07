@@ -1,6 +1,5 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
-
 import { buildBaseOptions } from './base-options';
 
 const isTs = __filename.endsWith('.ts');

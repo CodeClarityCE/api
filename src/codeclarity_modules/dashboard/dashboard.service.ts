@@ -94,7 +94,8 @@ export class DashboardService {
                 const week_number = getWeekNumber(analysis.created_on);
                 const year = analysis.created_on.getFullYear();
                 let weekInfo = severityInfoByWeek.find(
-                    (info) => info.week_number.week === week_number && info.week_number.year === year
+                    (info) =>
+                        info.week_number.week === week_number && info.week_number.year === year
                 );
 
                 if (!weekInfo) {

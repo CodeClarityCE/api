@@ -3,8 +3,6 @@ import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { DepShortInfo } from 'src/codeclarity_modules/results/licenses/licenses2.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { PaginatedResponse } from 'src/types/apiResponses.types';
-
-
 import { LicensesService } from './licenses.service';
 
 @Controller('/org/:org_id/projects/:project_id/analysis')
@@ -32,8 +30,8 @@ export class LicensesController {
             analysis_id,
             user,
             workspace,
-            page ? parseInt(`${page  }`) : -1,
-            entries_per_page ? parseInt(`${entries_per_page  }`) : -1,
+            page ? parseInt(`${page}`) : -1,
+            entries_per_page ? parseInt(`${entries_per_page}`) : -1,
             sort_by,
             sort_direction,
             active_filters,

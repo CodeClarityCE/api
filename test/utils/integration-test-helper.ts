@@ -3,7 +3,6 @@ import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fa
 import { Test, type TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 import { DataSource } from 'typeorm';
-
 import { AppModule } from '../../src/app.module';
 import { MemberRole } from '../../src/base_modules/organizations/memberships/orgMembership.types';
 import { Organization } from '../../src/base_modules/organizations/organization.entity';
@@ -11,7 +10,6 @@ import { OrganizationsRepository } from '../../src/base_modules/organizations/or
 import { User } from '../../src/base_modules/users/users.entity';
 import { UsersRepository } from '../../src/base_modules/users/users.repository';
 import { validate } from '../../src/utils/validate-env';
-
 
 export interface TestUser {
     user: User;
@@ -141,8 +139,8 @@ export class IntegrationTestHelper {
 
         // Generate tokens (mock since generateTokens doesn't exist)
         const tokens = {
-            access_token: `mock-access-token-${  savedUser.id}`,
-            refresh_token: `mock-refresh-token-${  savedUser.id}`
+            access_token: `mock-access-token-${savedUser.id}`,
+            refresh_token: `mock-refresh-token-${savedUser.id}`
         };
 
         return {

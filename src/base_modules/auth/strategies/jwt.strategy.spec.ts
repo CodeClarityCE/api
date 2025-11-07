@@ -7,11 +7,8 @@ jest.mock('fs', () => ({
 }));
 
 import * as fs from 'fs';
-
 import { Test, type TestingModule } from '@nestjs/testing';
-
 import { JwtStrategy } from './jwt.strategy';
-
 
 describe('JwtStrategy', () => {
     let strategy: JwtStrategy;

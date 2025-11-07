@@ -6,7 +6,6 @@ import {
     IntegrationTokenRetrievalFailed
 } from 'src/types/error.types';
 
-
 @Injectable()
 export class GithubIntegrationTokenService {
     constructor() {}

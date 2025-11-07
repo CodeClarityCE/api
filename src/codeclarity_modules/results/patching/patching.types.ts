@@ -1,5 +1,4 @@
 import type { Status } from 'src/types/apiResponses.types';
-
 import type { Vulnerability } from '../vulnerabilities/vulnerabilities.types';
 
 export interface Output {

@@ -2,8 +2,6 @@ import { Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Query } from '@
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { PaginatedResponse, Response } from 'src/types/apiResponses.types';
-
-
 import { SBOMService } from './sbom.service';
 
 @Controller('/org/:org_id/projects/:project_id/analysis')
@@ -31,8 +29,8 @@ export class SBOMController {
             analysis_id,
             user,
             workspace,
-            page ? parseInt(`${page  }`) : -1,
-            entries_per_page ? parseInt(`${entries_per_page  }`) : -1,
+            page ? parseInt(`${page}`) : -1,
+            entries_per_page ? parseInt(`${entries_per_page}`) : -1,
             sort_by,
             sort_direction,
             active_filters,

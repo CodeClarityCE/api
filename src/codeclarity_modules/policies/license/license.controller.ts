@@ -23,8 +23,6 @@ import {
     TypedPaginatedResponse,
     TypedResponse
 } from 'src/types/apiResponses.types';
-
-
 import { LicensePolicyService } from './license.service';
 
 @Controller('org/:org_id/policies/license_policy')

@@ -6,7 +6,10 @@ import {
     LinkGithubPatchBody
 } from 'src/base_modules/integrations/github/githubIntegration.types';
 import { IntegrationType } from 'src/base_modules/integrations/integration.types';
-import { Integration, IntegrationProvider } from 'src/base_modules/integrations/integrations.entity';
+import {
+    Integration,
+    IntegrationProvider
+} from 'src/base_modules/integrations/integrations.entity';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 import { UsersRepository } from 'src/base_modules/users/users.repository';
@@ -22,11 +25,8 @@ import {
     NotAMember,
     NotAuthorized
 } from 'src/types/error.types';
-
-
 import { IntegrationsRepository } from '../integrations.repository';
 import { GithubIntegrationToken } from '../Token';
-
 import { GithubIntegrationTokenService } from './githubToken.service';
 
 @Injectable()

@@ -4,8 +4,6 @@ import { Analyzer } from 'src/base_modules/analyzers/analyzer.entity';
 import { NotAuthorized } from 'src/types/error.types';
 import { TypedPaginatedData } from 'src/types/pagination.types';
 import { Repository } from 'typeorm';
-
-
 import { AnalyzerDoesNotExist } from './analyzers.errors';
 
 /**

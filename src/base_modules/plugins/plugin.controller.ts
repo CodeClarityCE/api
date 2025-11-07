@@ -6,8 +6,6 @@ import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { TypedResponse } from 'src/types/apiResponses.types';
 import { InternalError, NotAuthenticated } from 'src/types/error.types';
-
-
 import { Plugin } from './plugin.entity';
 import { PluginService } from './plugin.service';
 

@@ -16,8 +16,6 @@ import {
 import { User } from 'src/base_modules/users/users.entity';
 import { NotAuthorized } from 'src/types/error.types';
 import { genRandomString, hash } from 'src/utils/crypto';
-
-
 import {
     AccountRegistrationVerificationTokenInvalidOrExpired,
     PasswordsDoNotMatch
@@ -26,7 +24,6 @@ import { AuthService } from '../auth/auth.service';
 import { EmailRepository } from '../email/email.repository';
 import { EmailService } from '../email/email.service';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
-
 import {
     CannotPerformActionOnSocialAccount,
     FailedToSendAccountRegistrationVerificationEmail

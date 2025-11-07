@@ -7,10 +7,7 @@ jest.mock('fs', () => ({
 }));
 
 import * as fs from 'fs';
-
 import type { Request } from 'express';
-
-
 import type { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
@@ -19,11 +16,8 @@ import type { Socket } from 'socket.io';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { SKIP_AUTH_KEY } from 'src/decorators/SkipAuthDecorator';
 import { NotAuthenticated, AccountNotActivated } from 'src/types/error.types';
-
 import { CombinedAuthGuard } from './combined.guard';
 import type { JWTPayload } from './jwt.types';
-
-
 
 describe('CombinedAuthGuard', () => {
     let guard: CombinedAuthGuard;

@@ -1,12 +1,10 @@
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { Test, type TestingModule } from '@nestjs/testing';
-
 import { EmailAlreadyExists } from '../../types/error.types';
 import type { UserCreateBody, RegistrationConfirmationBody } from '../users/user.types';
 import type { User } from '../users/users.entity';
 import { UsersService } from '../users/users.service';
-
 import { AuthController } from './auth.controller';
 import {
     WrongCredentials,
@@ -16,7 +14,12 @@ import {
     PasswordResetTokenInvalidOrExpired
 } from './auth.errors';
 import { AuthService } from './auth.service';
-import { AuthenticatedUser, ROLE, type TokenResponse, type TokenRefreshResponse } from './auth.types';
+import {
+    AuthenticatedUser,
+    ROLE,
+    type TokenResponse,
+    type TokenRefreshResponse
+} from './auth.types';
 import { CombinedAuthGuard } from './guards/combined.guard';
 import { RefreshJwtAuthGuard } from './guards/refresh-token.guard';
 

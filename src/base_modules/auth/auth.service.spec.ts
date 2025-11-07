@@ -1,22 +1,21 @@
-
 import { JwtService } from '@nestjs/jwt';
 import { Test, type TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
-
 import { FailedToAuthenticateSocialAccount, EntityNotFound } from 'src/types/error.types';
-
 import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
 import { SocialType } from '../users/user.types';
 import type { User } from '../users/users.entity';
 import { CannotPerformActionOnSocialAccount } from '../users/users.errors';
 import { UsersRepository } from '../users/users.repository';
 import { UsersService } from '../users/users.service';
-
 import { WrongCredentials, RegistrationNotVerified } from './auth.errors';
 import { AuthService } from './auth.service';
-import { ROLE, AuthenticatedUser, type GithubAuthenticatedUser, type GitlabAuthenticatedUser } from './auth.types';
-
-
+import {
+    ROLE,
+    AuthenticatedUser,
+    type GithubAuthenticatedUser,
+    type GitlabAuthenticatedUser
+} from './auth.types';
 
 // Mock the ms module before importing the service
 jest.mock('ms', () => ({
@@ -117,7 +116,12 @@ describe('AuthService', () => {
                         users: UsersService,
                         usersRepo: UsersRepository
                     ) => new AuthService(jwt, gitlab, users, usersRepo),
-                    inject: [JwtService, GitlabIntegrationTokenService, UsersService, UsersRepository]
+                    inject: [
+                        JwtService,
+                        GitlabIntegrationTokenService,
+                        UsersService,
+                        UsersRepository
+                    ]
                 },
                 {
                     provide: JwtService,

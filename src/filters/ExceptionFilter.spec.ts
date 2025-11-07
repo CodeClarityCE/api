@@ -7,8 +7,6 @@ import {
     NotAuthenticated,
     ValidationFailed
 } from 'src/types/error.types';
-
-
 import { ErrorFilter } from './ExceptionFilter';
 
 describe('ExceptionFilter', () => {

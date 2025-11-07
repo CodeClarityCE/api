@@ -1,19 +1,14 @@
 import { join } from 'path';
-
-
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { Email } from 'src/base_modules/email/email.entity';
-
 import { EmailRepository } from './email.repository';
 import { EmailService } from './email.service';
 import { EmailUnsubscriptionController } from './emailUnsubscriptions/emailUnsubscriptions.controller';
 import { EmailUnsubscriptionService } from './emailUnsubscriptions/emailUnsubscriptions.service';
-
-
 
 @Module({
     imports: [

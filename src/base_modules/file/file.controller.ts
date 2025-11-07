@@ -1,6 +1,5 @@
 import { readFile } from 'fs';
 import { join } from 'path';
-
 import {
     Body,
     Controller,
@@ -24,10 +23,7 @@ import {
     NotAuthorized
 } from 'src/types/error.types';
 import { escapeString } from 'src/utils/cleaner';
-
-
 import { FileService } from './file.service';
-
 
 export interface UploadData {
     type: string;

@@ -1,8 +1,6 @@
 import { Controller, Get, Res } from '@nestjs/common';
 import { FastifyReply } from 'fastify';
-
 import { NonAuthEndpoint } from '../decorators/SkipAuthDecorator';
-
 import { MetricsService } from './metrics.service';
 
 @Controller('metrics')

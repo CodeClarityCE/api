@@ -6,14 +6,11 @@ import { LicenseRepository } from 'src/codeclarity_modules/knowledge/license/lic
 import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
 import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
 import { Package, Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
-
-
 import { DatabaseService } from '../../services/database.service';
 import {
     NVDReportGenerator,
     OSVReportGenerator
 } from '../results/vulnerabilities/services/reportGenerator';
-
 import { CWERepository } from './cwe/cwe.repository';
 import { EPSS } from './epss/epss.entity';
 import { EPSSRepository } from './epss/epss.repository';

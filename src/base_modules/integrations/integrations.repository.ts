@@ -5,7 +5,6 @@ import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
 import { Repository } from 'typeorm';
 
-
 @Injectable()
 export class IntegrationsRepository {
     constructor(

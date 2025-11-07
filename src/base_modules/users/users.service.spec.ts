@@ -1,13 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { NotAuthorized } from 'src/types/error.types';
 import * as crypto from 'src/utils/crypto';
-
-
-
-
-
-
-
 import {
     AccountRegistrationVerificationTokenInvalidOrExpired,
     PasswordsDoNotMatch
@@ -23,7 +16,6 @@ import {
 } from '../organizations/memberships/organization.memberships.entity';
 import type { Organization } from '../organizations/organization.entity';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
-
 import type { UserCreateBody, UserPasswordPatchBody, UserPatchBody } from './user.types';
 import type { User } from './users.entity';
 import {
@@ -32,7 +24,6 @@ import {
 } from './users.errors';
 import { UsersRepository } from './users.repository';
 import { UsersService } from './users.service';
-
 
 describe('UsersService', () => {
     let service: UsersService;

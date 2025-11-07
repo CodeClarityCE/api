@@ -1,9 +1,7 @@
-
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { EntityNotFound } from 'src/types/error.types';
 import type { Repository } from 'typeorm';
-
 import { CWE } from './cwe.entity';
 import { CWERepository } from './cwe.repository';
 
@@ -311,7 +309,7 @@ describe('CWERepository', () => {
         });
 
         it('should handle very long CWE ID strings', async () => {
-            const longCweId = `CWE-${  '1'.repeat(1000)}`;
+            const longCweId = `CWE-${'1'.repeat(1000)}`;
             mockRepository.findOne.mockResolvedValue(null);
 
             const result = await cweRepository.getCWEWithoutFailing(longCweId);

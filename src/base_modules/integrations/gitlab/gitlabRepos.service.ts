@@ -10,10 +10,8 @@ import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
 import { Repository } from 'typeorm';
-
 import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from '../github/constants';
 import { IntegrationsRepository } from '../integrations.repository';
-
 import { GitlabIntegrationService } from './gitlab.service';
 
 @Injectable()
@@ -51,9 +49,9 @@ export class GitlabRepositoriesService {
 
         try {
             const response = await fetch(
-                `${integration.service_domain 
-                    }/api/v4/projects?owned=true&membership=true&per_page=${ 
-                    entriesPerPage}`,
+                `${
+                    integration.service_domain
+                }/api/v4/projects?owned=true&membership=true&per_page=${entriesPerPage}`,
                 {
                     headers: {
                         'PRIVATE-TOKEN': rawToken
@@ -67,7 +65,7 @@ export class GitlabRepositoriesService {
                 );
             }
 
-            const projects = await response.json() as any[];
+            const projects = (await response.json()) as any[];
 
             // Process the projects and save them to the repository cache
             for (const project of projects) {

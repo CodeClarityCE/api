@@ -1,4 +1,3 @@
-
 import { applyDecorators } from '@nestjs/common';
 import { ApiCreatedResponse, ApiExtraModels, getSchemaPath } from '@nestjs/swagger';
 import { CreatedResponse, Status } from 'src/types/apiResponses.types';

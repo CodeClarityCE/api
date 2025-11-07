@@ -7,17 +7,12 @@ import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.reposit
 import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.repository';
 import { VulnerabilityPolicyService } from 'src/codeclarity_modules/policies/vulnerability/vulnerability.service';
 import { UnknownWorkspace } from 'src/types/error.types';
-
-
 import { AnalysisResultsService } from '../results.service';
 import { SbomUtilsService } from '../sbom/utils/utils';
-
 import { VulnerabilitiesFilterService } from './utils/filter.service';
 import { VulnerabilitiesSortService } from './utils/sort.service';
 import { VulnerabilitiesUtilsService } from './utils/utils.service';
 import { VulnerabilitiesService } from './vulnerabilities.service';
-
-
 
 describe('VulnerabilitiesService', () => {
     let service: VulnerabilitiesService;
@@ -761,8 +756,12 @@ describe('VulnerabilitiesService', () => {
             );
 
             expect(result.data).toHaveLength(1);
-            expect(result.data[0].Affected).toHaveLength(2);
-            expect(result.data[0].VLAI).toHaveLength(2);
+            expect(
+                (result.data as { Affected: unknown[]; VLAI: unknown[] }[])[0]!.Affected
+            ).toHaveLength(2);
+            expect(
+                (result.data as { Affected: unknown[]; VLAI: unknown[] }[])[0]!.VLAI
+            ).toHaveLength(2);
         });
 
         it('should handle CVE vulnerability descriptions', async () => {
@@ -842,7 +841,7 @@ describe('VulnerabilitiesService', () => {
             expect(mockOSVRepository.getVulnByCVEIDWithoutFailing).toHaveBeenCalledWith(
                 'CVE-2024-1234'
             );
-            expect(result.data[0].Description).toBe('#### .\n\n');
+            expect((result.data as { Description: string }[])[0]!.Description).toBe('#### .\n\n');
         });
 
         it('should handle GHSA vulnerability descriptions', async () => {
@@ -921,7 +920,9 @@ describe('VulnerabilitiesService', () => {
             expect(mockOSVRepository.getVulnByOSVIDWithoutFailing).toHaveBeenCalledWith(
                 'GHSA-xxxx-yyyy-zzzz'
             );
-            expect(result.data[0].Description).toContain('Test GHSA summary');
+            expect((result.data as { Description: string }[])[0]!.Description).toContain(
+                'Test GHSA summary'
+            );
         });
 
         it('should handle weaknesses with CWE information', async () => {
@@ -998,8 +999,20 @@ describe('VulnerabilitiesService', () => {
             );
 
             expect(mockCWERepository.getCWEWithoutFailing).toHaveBeenCalledWith('79');
-            expect(result.data[0].Weaknesses[0].WeaknessName).toBe('Test CWE Name');
-            expect(result.data[0].Weaknesses[0].WeaknessDescription).toBe('Test CWE Description');
+            expect(
+                (
+                    result.data as {
+                        Weaknesses: { WeaknessName: string; WeaknessDescription: string }[];
+                    }[]
+                )[0]!.Weaknesses[0]!.WeaknessName
+            ).toBe('Test CWE Name');
+            expect(
+                (
+                    result.data as {
+                        Weaknesses: { WeaknessName: string; WeaknessDescription: string }[];
+                    }[]
+                )[0]!.Weaknesses[0]!.WeaknessDescription
+            ).toBe('Test CWE Description');
         });
 
         it('should handle weaknesses with CWE lookup failure', async () => {
@@ -1076,9 +1089,39 @@ describe('VulnerabilitiesService', () => {
                 undefined
             );
 
-            expect(result.data[0].Weaknesses[0].WeaknessName).toBe('');
-            expect(result.data[0].Weaknesses[0].WeaknessDescription).toBe('');
-            expect(result.data[0].Weaknesses[0].WeaknessExtendedDescription).toBe('');
+            expect(
+                (
+                    result.data as {
+                        Weaknesses: {
+                            WeaknessName: string;
+                            WeaknessDescription: string;
+                            WeaknessExtendedDescription: string;
+                        }[];
+                    }[]
+                )[0]!.Weaknesses[0]!.WeaknessName
+            ).toBe('');
+            expect(
+                (
+                    result.data as {
+                        Weaknesses: {
+                            WeaknessName: string;
+                            WeaknessDescription: string;
+                            WeaknessExtendedDescription: string;
+                        }[];
+                    }[]
+                )[0]!.Weaknesses[0]!.WeaknessDescription
+            ).toBe('');
+            expect(
+                (
+                    result.data as {
+                        Weaknesses: {
+                            WeaknessName: string;
+                            WeaknessDescription: string;
+                            WeaknessExtendedDescription: string;
+                        }[];
+                    }[]
+                )[0]!.Weaknesses[0]!.WeaknessExtendedDescription
+            ).toBe('');
         });
 
         it('should handle NVD description when OSV is empty', async () => {
@@ -1155,7 +1198,7 @@ describe('VulnerabilitiesService', () => {
                 undefined
             );
 
-            expect(result.data[0].Description).toBe('#### .\n\n');
+            expect((result.data as { Description: string }[])[0]!.Description).toBe('#### .\n\n');
         });
 
         it('should handle OSV description formatting with capitalization and punctuation', async () => {
@@ -1235,7 +1278,7 @@ describe('VulnerabilitiesService', () => {
                 undefined
             );
 
-            expect(result.data[0].Description).toBe(
+            expect((result.data as { Description: string }[])[0]!.Description).toBe(
                 '#### Test osv summary.\n\nTest osv details without period.'
             );
         });
@@ -1317,7 +1360,7 @@ describe('VulnerabilitiesService', () => {
                 undefined
             );
 
-            expect(result.data[0].Description).toBe(
+            expect((result.data as { Description: string }[])[0]!.Description).toBe(
                 '#### Test summary.\n\nTest details with code ```'
             );
         });

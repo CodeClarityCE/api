@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-
 import { Stage } from './analyzer.types';
 
 export interface AnalyzerTemplate {

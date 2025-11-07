@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 import { IsBoolean, IsEnum, IsNotEmpty, IsOptional, IsString, Length } from 'class-validator';
-
 import {
     DefaultablePolicyCreate,
     DefaultablePolicyUpdate,

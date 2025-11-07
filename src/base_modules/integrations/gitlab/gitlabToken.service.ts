@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { GitlabIntegration } from 'src/base_modules/integrations/gitlab/gitlabIntegration.types';
 import { User } from 'src/base_modules/users/users.entity';
 
-
 @Injectable()
 export class GitlabIntegrationTokenService {
     /**
@@ -53,7 +52,7 @@ export class GitlabIntegrationTokenService {
                 throw new Error('Token does not have the required permissions.');
             }
         } catch (error) {
-            if (error instanceof Error && ((error)).message.includes('401')) {
+            if (error instanceof Error && error.message.includes('401')) {
                 throw new Error('Invalid or revoked token');
             }
             throw new Error(`Failed to validate token: ${(error as Error).message}`);
@@ -100,7 +99,7 @@ export class GitlabIntegrationTokenService {
             return [false, undefined]; // Token does not have an expiry date
         } catch (error) {
             console.error('Error fetching access token expiry:', error);
-            if (error instanceof Error && ((error)).message.includes('Invalid or revoked token')) {
+            if (error instanceof Error && error.message.includes('Invalid or revoked token')) {
                 throw error;
             }
             if (

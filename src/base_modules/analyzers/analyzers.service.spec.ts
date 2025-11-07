@@ -1,12 +1,10 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-
 import { AuthenticatedUser, ROLE } from '../auth/auth.types';
 import { OrganizationLoggerService } from '../organizations/log/organizationLogger.service';
 import { ActionType } from '../organizations/log/orgAuditLog.types';
 import { MemberRole } from '../organizations/memberships/orgMembership.types';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { UsersRepository } from '../users/users.repository';
-
 import type { Analyzer } from './analyzer.entity';
 import type { AnalyzerCreateBody } from './analyzer.types';
 import { AnalyzersRepository } from './analyzers.repository';

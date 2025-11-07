@@ -12,7 +12,6 @@ import {
     JoinColumn,
     Index
 } from 'typeorm';
-
 import type { Policy } from '../../codeclarity_modules/policies/policy.entity';
 import type { Analysis } from '../analyses/analysis.entity';
 import type { Analyzer } from '../analyzers/analyzer.entity';

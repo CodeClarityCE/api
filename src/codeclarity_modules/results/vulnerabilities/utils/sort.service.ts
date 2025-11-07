@@ -1,4 +1,3 @@
-
 import { Injectable } from '@nestjs/common';
 import { gt, lt } from 'semver';
 import { VulnerabilityMerged } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
@@ -40,7 +39,11 @@ export class VulnerabilitiesSortService {
             sortBySafe = sortBy;
         }
 
-        if (sortDirection === null || sortDirection === undefined || (sortDirection !== 'DESC' && sortDirection !== 'ASC')) {
+        if (
+            sortDirection === null ||
+            sortDirection === undefined ||
+            (sortDirection !== 'DESC' && sortDirection !== 'ASC')
+        ) {
             sortDirectionSafe = DEFAULT_SORT_DIRECTION;
         } else {
             sortDirectionSafe = sortDirection;
@@ -122,9 +125,15 @@ export class VulnerabilitiesSortService {
                     b.Weaknesses[0]!.OWASPTop10Id === ''
                 )
                     return sortDirectionSafe === 'DESC' ? -1 : 1;
-                if (parseInt(a.Weaknesses[0]!.OWASPTop10Id) > parseInt(b.Weaknesses[0]!.OWASPTop10Id))
+                if (
+                    parseInt(a.Weaknesses[0]!.OWASPTop10Id) >
+                    parseInt(b.Weaknesses[0]!.OWASPTop10Id)
+                )
                     return sortDirectionSafe === 'DESC' ? 1 : -1;
-                if (parseInt(a.Weaknesses[0]!.OWASPTop10Id) < parseInt(b.Weaknesses[0]!.OWASPTop10Id))
+                if (
+                    parseInt(a.Weaknesses[0]!.OWASPTop10Id) <
+                    parseInt(b.Weaknesses[0]!.OWASPTop10Id)
+                )
                     return sortDirectionSafe === 'DESC' ? -1 : 1;
                 return 0;
             });

@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsUrl } from 'class-validator';
-
 import { IntegrationProvider } from '../integrations/integration.types';
 
 /********************************************/

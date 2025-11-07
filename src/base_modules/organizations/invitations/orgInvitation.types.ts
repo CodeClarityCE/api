@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 import { IsEmail, IsEnum, IsNotEmpty } from 'class-validator';
-
 import { MemberRole } from '../memberships/orgMembership.types';
 
 /********************************************/

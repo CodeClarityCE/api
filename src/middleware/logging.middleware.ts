@@ -1,6 +1,4 @@
 import { randomUUID } from 'crypto';
-
-
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { CodeClarityLogger, LogContext } from 'src/services/logger.service';

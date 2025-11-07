@@ -16,9 +16,7 @@ import {
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
 import { Repository } from 'typeorm';
-
 import { IntegrationsRepository } from '../integrations.repository';
-
 import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from './constants';
 import { GithubIntegrationService } from './github.service';
 

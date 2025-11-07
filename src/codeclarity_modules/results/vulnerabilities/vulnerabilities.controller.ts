@@ -2,8 +2,6 @@ import { Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Query } from '@
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { PaginatedResponse, Response } from 'src/types/apiResponses.types';
-
-
 import { VulnerabilitiesService } from './vulnerabilities.service';
 import { VulnerabilityService } from './vulnerability.service';
 
@@ -36,8 +34,8 @@ export class FindingsController {
             analysis_id,
             user,
             workspace,
-            page ? parseInt(`${page  }`) : -1,
-            entries_per_page ? parseInt(`${entries_per_page  }`) : -1,
+            page ? parseInt(`${page}`) : -1,
+            entries_per_page ? parseInt(`${entries_per_page}`) : -1,
             sort_by,
             sort_direction,
             active_filters,

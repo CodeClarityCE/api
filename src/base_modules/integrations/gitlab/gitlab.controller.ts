@@ -45,8 +45,6 @@ import {
     NotAuthorized
 } from 'src/types/error.types';
 import { SortDirection } from 'src/types/sort.types';
-
-
 import { GitlabIntegrationService } from './gitlab.service';
 import { GitlabRepositoriesService } from './gitlabRepos.service';
 

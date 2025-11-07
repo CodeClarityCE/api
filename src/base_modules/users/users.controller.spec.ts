@@ -1,7 +1,6 @@
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { Test, type TestingModule } from '@nestjs/testing';
-
 import { EntityNotFound, NotAuthorized } from '../../types/error.types';
 import {
     PasswordsDoNotMatch,
@@ -9,7 +8,6 @@ import {
 } from '../auth/auth.errors';
 import { AuthenticatedUser, ROLE } from '../auth/auth.types';
 import { CombinedAuthGuard } from '../auth/guards/combined.guard';
-
 import type {
     UserCompleteSocialCreateBody,
     UserPasswordPatchBody,
@@ -28,7 +26,6 @@ import {
     CannotPerformActionOnSocialAccount
 } from './users.errors';
 import { UsersService } from './users.service';
-
 
 describe('UsersController', () => {
     let controller: UsersController;

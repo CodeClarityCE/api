@@ -1,4 +1,3 @@
-
 import { ExecutionContext, Injectable } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { NotAuthenticated } from 'src/types/error.types';

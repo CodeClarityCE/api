@@ -6,11 +6,8 @@ import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPagin
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { Response } from 'src/types/apiResponses.types';
 import { InternalError, NotAuthenticated, NotAuthorized } from 'src/types/error.types';
-
-
 import { Result } from './result.entity';
 import { AnalysisResultsService } from './results.service';
-
 
 @Controller('/result')
 export class ResultsController {
