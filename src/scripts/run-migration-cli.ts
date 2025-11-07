@@ -1,7 +1,11 @@
 import 'reflect-metadata';
 import * as dotenv from 'dotenv';
+import { type DataSource } from 'typeorm';
+import { CodeClarityDataSource } from '../datasources/codeclarity.datasource';
+import { KnowledgeDataSource } from '../datasources/knowledge.datasource';
+import { PluginsDataSource } from '../datasources/plugins.datasource';
 
-const ENV = process.env['ENV'] || 'dev';
+const ENV = process.env['ENV'] ?? 'dev';
 try {
     dotenv.config({ path: `env/.env.${ENV}` });
 } catch (err) {
@@ -11,17 +15,13 @@ try {
     }
 }
 
-import { CodeClarityDataSource } from '../datasources/codeclarity.datasource';
-import { KnowledgeDataSource } from '../datasources/knowledge.datasource';
-import { PluginsDataSource } from '../datasources/plugins.datasource';
-
-const map: Record<string, any> = {
+const map: Record<string, DataSource> = {
     codeclarity: CodeClarityDataSource,
     knowledge: KnowledgeDataSource,
     plugins: PluginsDataSource
 };
 
-async function run(connection: string) {
+async function run(connection: string): Promise<void> {
     const ds = map[connection];
     if (!ds) {
         console.error(`Unknown datasource ${connection}`);
@@ -33,7 +33,7 @@ async function run(connection: string) {
         }
         await ds.runMigrations();
         await ds.destroy();
-        console.log(`Migrations run for ${connection}`);
+        console.warn(`Migrations run for ${connection}`);
     } catch (e) {
         console.error(e);
         process.exit(1);
