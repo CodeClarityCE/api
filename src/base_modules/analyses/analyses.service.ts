@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as amqp from 'amqplib';
 import { Analysis, AnalysisStage, AnalysisStatus } from 'src/base_modules/analyses/analysis.entity';
-import { AnalysisCreateBody } from 'src/base_modules/analyses/analysis.types';
+import { AnalysisCreateBody, AnalysisRun } from 'src/base_modules/analyses/analysis.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { Policy } from 'src/codeclarity_modules/policies/policy.entity';
@@ -648,7 +648,7 @@ export class AnalysesService {
         projectId: string,
         analysisId: string,
         user: AuthenticatedUser
-    ): Promise<any[]> {
+    ): Promise<AnalysisRun[]> {
         // Verify permissions
         await this.projectsRepository.doesProjectBelongToOrg(projectId, orgId);
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
@@ -719,7 +719,7 @@ export class AnalysesService {
      * @returns Array of run summary objects, sorted by date (newest first)
      * @private
      */
-    private groupResultsByDay(results: any[]): any[] {
+    private groupResultsByDay(results: any[]): AnalysisRun[] {
         if (results?.length === 0) return [];
 
         // Group results by the day they were created

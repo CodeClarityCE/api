@@ -36,8 +36,7 @@ export class VulnerabilitiesUtilsService {
         });
 
         // Fall back to js-vuln-finder for backward compatibility
-        if (!result) {
-            result = await this.resultRepository.findOne({
+        result ??= await this.resultRepository.findOne({
                 relations: { analysis: true },
                 where: {
                     analysis: {
@@ -52,7 +51,6 @@ export class VulnerabilitiesUtilsService {
                 },
                 cache: true
             });
-        }
 
         if (!result) {
             throw new PluginResultNotAvailable();

@@ -67,24 +67,24 @@ export class SBOMService {
         const wStats: AnalysisStats = newAnalysisStats();
 
         wStats.number_of_non_dev_dependencies =
-            sbom.workspaces[workspace]?.start.dependencies?.length || 0;
+            sbom.workspaces[workspace]?.start.dependencies?.length ?? 0;
         wStats.number_of_dev_dependencies =
-            sbom.workspaces[workspace]?.start.dev_dependencies?.length || 0;
+            sbom.workspaces[workspace]?.start.dev_dependencies?.length ?? 0;
 
         wPrevStats.number_of_non_dev_dependencies =
-            sbomPrevious.workspaces[workspace]?.start.dependencies?.length || 0;
+            sbomPrevious.workspaces[workspace]?.start.dependencies?.length ?? 0;
         wPrevStats.number_of_dev_dependencies =
-            sbomPrevious.workspaces[workspace]?.start.dev_dependencies?.length || 0;
+            sbomPrevious.workspaces[workspace]?.start.dev_dependencies?.length ?? 0;
 
         for (const [dep_key, dep] of Object.entries(dependencies)) {
             for (const [version_key, version] of Object.entries(dep)) {
                 // Handle case sensitivity for different plugin formats
-                const isDirect = version.Direct || (version as any).direct;
-                const isTransitive = version.Transitive || (version as any).transitive;
-                const isBundled = version.Bundled || (version as any).bundled;
-                const isOptional = version.Optional || (version as any).optional;
-                const isDev = version.Dev || (version as any).dev || false;
-                const isProd = version.Prod || (version as any).prod || false;
+                const isDirect = version.Direct ?? (version as any).direct;
+                const isTransitive = version.Transitive ?? (version as any).transitive;
+                const isBundled = version.Bundled ?? (version as any).bundled;
+                const isOptional = version.Optional ?? (version as any).optional;
+                const isDev = version.Dev ?? (version as any).dev ?? false;
+                const isProd = version.Prod ?? (version as any).prod ?? false;
 
                 // Only count dependencies that are actually used (have dev or prod flags)
                 if (isDev || isProd) {
@@ -143,8 +143,8 @@ export class SBOMService {
                 const isTransitive = version.Transitive || (version as any).transitive;
                 const isBundled = version.Bundled || (version as any).bundled;
                 const isOptional = version.Optional || (version as any).optional;
-                const isDev = version.Dev || (version as any).dev || false;
-                const isProd = version.Prod || (version as any).prod || false;
+                const isDev = version.Dev ?? (version as any).dev ?? false;
+                const isProd = version.Prod ?? (version as any).prod ?? false;
 
                 // Only count dependencies that are actually used (have dev or prod flags)
                 if (isDev || isProd) {
@@ -284,8 +284,8 @@ export class SBOMService {
                     name: dep_key,
                     version: version_key,
                     newest_release: version_key,
-                    dev: version.Dev || (version as any).dev || false,
-                    prod: version.Prod || (version as any).prod || false,
+                    dev: version.Dev ?? (version as any).dev ?? false,
+                    prod: version.Prod ?? (version as any).prod ?? false,
                     is_direct_count: is_direct,
                     is_transitive_count: version.Transitive || (version as any).transitive ? 1 : 0,
                     // Add ecosystem and source plugin information
@@ -496,10 +496,10 @@ export class SBOMService {
         if (virtualRoot && !targetNode.parentIds?.includes(SBOMService.VIRTUAL_ROOT_ID)) {
             // Add virtual root as parent
             targetNode.parentIds = Array.from(
-                new Set([...(targetNode.parentIds || []), SBOMService.VIRTUAL_ROOT_ID])
+                new Set([...(targetNode.parentIds ?? []), SBOMService.VIRTUAL_ROOT_ID])
             );
             // Add target node as child of virtual root if not already present
-            if (!virtualRoot.childrenIds) virtualRoot.childrenIds = [];
+            virtualRoot.childrenIds ??= [];
             if (!virtualRoot.childrenIds.includes(targetNode.id)) {
                 virtualRoot.childrenIds.push(targetNode.id);
             }

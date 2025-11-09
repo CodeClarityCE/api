@@ -13,7 +13,7 @@ describe('VulnerabilitiesFilterService', () => {
     const createMockVulnerability = (
         overrides: Partial<VulnerabilityMerged> = {}
     ): VulnerabilityMerged => ({
-        Id: overrides.Id || `test-id-${Math.random()}`,
+        Id: overrides.Id ?? `test-id-${Math.random()}`,
         Sources: [],
         Affected: [
             {

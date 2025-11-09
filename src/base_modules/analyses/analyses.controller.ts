@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Analysis } from 'src/base_modules/analyses/analysis.entity';
-import { AnalysisCreateBody, ScheduleUpdateBody } from 'src/base_modules/analyses/analysis.types';
+import { AnalysisCreateBody, AnalysisRun, ScheduleUpdateBody } from 'src/base_modules/analyses/analysis.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
@@ -260,7 +260,7 @@ export class AnalysesController {
         @Param('project_id') project_id: string,
         @Param('analysis_id') analysis_id: string,
         @AuthUser() user: AuthenticatedUser
-    ): Promise<TypedResponse<any[]>> {
+    ): Promise<TypedResponse<AnalysisRun[]>> {
         const runs = await this.analysesService.getAnalysisRuns(
             org_id,
             project_id,

@@ -16,7 +16,7 @@ import { ValidationFailed } from './types/error.types';
 async function bootstrap(): Promise<void> {
     // Create a new NestJS application instance using Fastify as the underlying server
     const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
-    await app.register(multipart, {
+    await app.register(multipart as Parameters<typeof app.register>[0], {
         limits: {
             fileSize: 25 * 1024 * 1024 //25 MB
         }
@@ -25,17 +25,31 @@ async function bootstrap(): Promise<void> {
      * Add a polyfill to make Passport.js compatible with Fastify.
      * This is necessary because Fastify has a different API than Express.js.
      */
+    interface RawResponse {
+        setHeader: (key: string, value: string) => void;
+        end: () => void;
+    }
+
     app.getHttpAdapter()
         .getInstance()
-        .addHook('onRequest', (request: any, reply: any, done) => {
+        .addHook('onRequest', (request, reply, done) => {
             // Set up the reply object to mimic the Express.js API
-            reply.setHeader = function (key: any, value: any) {
+            interface ReplyWithPolyfill {
+                raw: RawResponse;
+                setHeader?: (key: string, value: string) => void;
+                end?: () => void;
+            }
+            interface RequestWithRes {
+                res?: unknown;
+            }
+
+            (reply as unknown as ReplyWithPolyfill).setHeader = function (this: { raw: RawResponse }, key: string, value: string) {
                 return this.raw.setHeader(key, value);
             };
-            reply.end = function () {
+            (reply as unknown as ReplyWithPolyfill).end = function (this: { raw: RawResponse }) {
                 this.raw.end();
             };
-            request.res = reply;
+            (request as unknown as RequestWithRes).res = reply;
             done();
         });
 
@@ -86,7 +100,7 @@ async function bootstrap(): Promise<void> {
     SwaggerModule.setup('api_doc', app, document);
 
     // Register the compression middleware to enable gzip and deflate encoding
-    await app.register(compression, {
+    await app.register(compression as Parameters<typeof app.register>[0], {
         encodings: ['gzip', 'deflate']
     });
 

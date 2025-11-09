@@ -200,3 +200,22 @@ export class ScheduleUpdateBody {
     })
     is_active!: boolean;
 }
+
+/********************************************/
+/*        Analysis Execution History        */
+/********************************************/
+
+/**
+ * Represents a single execution run of an analysis
+ * Used for displaying historical timeline of when analysis executed
+ */
+export interface AnalysisRun {
+    /** When this analysis run was executed */
+    run_date: Date;
+    /** Number of results generated in this run */
+    result_count: number;
+    /** List of plugins that executed in this run */
+    plugins: string[];
+    /** Number of unique plugins that executed */
+    plugin_count: number;
+}

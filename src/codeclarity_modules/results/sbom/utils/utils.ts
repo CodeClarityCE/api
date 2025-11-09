@@ -312,14 +312,14 @@ export class SbomUtilsService {
 
         const dependency_details: DependencyDetails = {
             name: dependency_name,
-            version: version?.version || dependency_version,
-            latest_version: package_version?.latest_version || dependency_version,
-            dependencies: version?.dependencies || {},
-            dev_dependencies: version?.dev_dependencies || {},
-            transitive: dependency.Transitive || (dependency as any).transitive || false,
+            version: version?.version ?? dependency_version,
+            latest_version: package_version?.latest_version ?? dependency_version,
+            dependencies: version?.dependencies ?? {},
+            dev_dependencies: version?.dev_dependencies ?? {},
+            transitive: dependency.Transitive ?? (dependency as any).transitive ?? false,
             package_manager: sbom.analysis_info.package_manager,
-            license: package_version?.license || '',
-            engines: version?.extra?.['Engines'] || {},
+            license: package_version?.license ?? '',
+            engines: version?.extra?.['Engines'] ?? {},
             release_date: version?.extra?.['Time'] ? new Date(version.extra?.['Time']) : new Date(),
             lastest_release_date: package_version?.time
                 ? new Date(package_version.time)

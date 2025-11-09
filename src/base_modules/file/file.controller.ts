@@ -104,7 +104,7 @@ export class FileController {
         const cleanedProjectId = escapeString(project_id);
         const cleanedOrgId = escapeString(org_id);
 
-        const downloadPath = process.env['DOWNLOAD_PATH'] || '/private';
+        const downloadPath = process.env['DOWNLOAD_PATH'] ?? '/private';
         const filePath = join(downloadPath, cleanedOrgId, cleanedProjectId, cleanedFileName);
         return new Promise((resolve, reject) => {
             return readFile(filePath, 'utf8', (err, data) => {

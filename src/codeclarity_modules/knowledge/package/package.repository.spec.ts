@@ -717,7 +717,7 @@ describe('PackageRepository', () => {
 
             mockQueryBuilder.getOne.mockImplementation(() => {
                 // Get the version from the closure of leftJoinAndSelect
-                const version = versions.shift() || '4.18.0';
+                const version = versions.shift() ?? '4.18.0';
                 return Promise.resolve({
                     ...mockPackageWithVersion,
                     versions: [

@@ -234,9 +234,9 @@ describe('Main.ts Bootstrap Configuration and Testing', () => {
             const mainContent = readFileSync(join(__dirname, 'main.ts'), 'utf8');
 
             expect(mainContent).toContain("addHook('onRequest'");
-            expect(mainContent).toContain('reply.setHeader = function');
-            expect(mainContent).toContain('reply.end = function');
-            expect(mainContent).toContain('request.res = reply');
+            expect(mainContent).toContain('.setHeader = function');
+            expect(mainContent).toContain('.end = function');
+            expect(mainContent).toContain('.res = reply');
         });
     });
 

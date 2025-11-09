@@ -66,8 +66,8 @@ export class DashboardService {
         dateRangeEnd?: Date,
         _integrationIds?: string[]
     ): Promise<SeverityInfoByWeek[]> {
-        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 1);
-        if (!dateRangeEnd) dateRangeEnd = new Date();
+        dateRangeStart ??= subtractMonths(new Date(), 1);
+        dateRangeEnd ??= new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
@@ -160,8 +160,8 @@ export class DashboardService {
         dateRangeEnd?: Date,
         _integrationIds?: string[]
     ): Promise<AttackVectorDist[]> {
-        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
-        if (!dateRangeEnd) dateRangeEnd = new Date();
+        dateRangeStart ??= subtractMonths(new Date(), 2);
+        dateRangeEnd ??= new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
@@ -231,8 +231,8 @@ export class DashboardService {
         dateRangeEnd?: Date,
         _integrationIds?: string[]
     ): Promise<CIAImpact[]> {
-        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
-        if (!dateRangeEnd) dateRangeEnd = new Date();
+        dateRangeStart ??= subtractMonths(new Date(), 2);
+        dateRangeEnd ??= new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
@@ -301,8 +301,8 @@ export class DashboardService {
         dateRangeEnd?: Date,
         _integrationIds?: string[]
     ): Promise<LicenseDist> {
-        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
-        if (!dateRangeEnd) dateRangeEnd = new Date();
+        dateRangeStart ??= subtractMonths(new Date(), 2);
+        dateRangeEnd ??= new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
@@ -359,8 +359,8 @@ export class DashboardService {
         dateRangeEnd?: Date,
         _integrationIds?: string[]
     ): Promise<LatestVulns> {
-        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
-        if (!dateRangeEnd) dateRangeEnd = new Date();
+        dateRangeStart ??= subtractMonths(new Date(), 2);
+        dateRangeEnd ??= new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
@@ -441,8 +441,8 @@ export class DashboardService {
         dateRangeEnd?: Date,
         _integrationIds?: string[]
     ): Promise<QuickStats> {
-        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
-        if (!dateRangeEnd) dateRangeEnd = new Date();
+        dateRangeStart ??= subtractMonths(new Date(), 2);
+        dateRangeEnd ??= new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
@@ -523,8 +523,8 @@ export class DashboardService {
         _sortBy?: string,
         _sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<ProjectQuickStats>> {
-        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
-        if (!dateRangeEnd) dateRangeEnd = new Date();
+        dateRangeStart ??= subtractMonths(new Date(), 2);
+        dateRangeEnd ??= new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // enum AllowedOrderBy {
