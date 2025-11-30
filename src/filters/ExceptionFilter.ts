@@ -84,7 +84,7 @@ function snakeCase(fields: Record<string, unknown>): Record<string, unknown> {
 
         // Handle arrays - recursively process each item
         if (Array.isArray(value)) {
-            fields[key] = value.map((item) => {
+            fields[key] = value.map((item: unknown) => {
                 if (item !== null && typeof item === 'object' && !Array.isArray(item)) {
                     return snakeCase(item as Record<string, unknown>);
                 }
