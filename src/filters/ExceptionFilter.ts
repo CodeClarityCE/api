@@ -28,8 +28,8 @@ export class ErrorFilter implements ExceptionFilter {
         if (exception instanceof PublicAPIError) {
             const error: PublicAPIError = exception;
             status = error.getHttpStatusCode();
-            const rawError: any = error;
-            delete rawError.errorCause;
+            const rawError = error as unknown as Record<string, unknown>;
+            delete rawError['errorCause'];
             const object = snakeCase(rawError);
             response.status(status).send(JSON.stringify(object));
             return;
@@ -50,7 +50,10 @@ export class ErrorFilter implements ExceptionFilter {
             console.error('[UnhandledException]', exception);
             // Catch any other unexpected exceptions and return a generic InternalError response
             if ('name' in exception && exception.name === 'FastifyError') {
-                const fastifyException: any = exception;
+                const fastifyException = exception as unknown as {
+                    statusCode: number;
+                    message: string;
+                };
                 if (fastifyException.statusCode >= 400 && fastifyException.statusCode < 500) {
                     errorCode = 'BadRequest';
                     status = 400;
@@ -75,15 +78,26 @@ export class ErrorFilter implements ExceptionFilter {
  *
  * This function is used to convert the error objects returned in API responses from NestJS's default camel case format to snake case, which is what our API clients expect.
  */
-function snakeCase(fields: any): any {
+function snakeCase(fields: Record<string, unknown>): Record<string, unknown> {
     for (const key in fields) {
-        if (fields[key] instanceof Object) {
-            // Recursively call this function on nested objects
-            fields[key] = snakeCase(fields[key]);
+        const value = fields[key];
+
+        // Handle arrays - recursively process each item
+        if (Array.isArray(value)) {
+            fields[key] = value.map((item) => {
+                if (item !== null && typeof item === 'object' && !Array.isArray(item)) {
+                    return snakeCase(item as Record<string, unknown>);
+                }
+                return item;
+            });
+        }
+        // Handle nested objects
+        else if (value !== null && typeof value === 'object') {
+            fields[key] = snakeCase(value as Record<string, unknown>);
         }
 
         const snakeKey = key
-            .replace(/\.?([A-Z]+)/g, function (_x, y) {
+            .replace(/\.?([A-Z]+)/g, function (_x, y: string) {
                 return `_${y.toLowerCase()}`;
             })
             .replace(/^_/, '');

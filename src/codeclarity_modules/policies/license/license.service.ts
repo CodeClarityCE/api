@@ -82,7 +82,7 @@ export class LicensePolicyService {
             where: {
                 id: licensePolicyId,
                 policy_type: PolicyType.LICENSE_POLICY,
-                organizations: { id: orgId } as any
+                organizations: { id: orgId }
             },
             relations: ['created_by']
         });
