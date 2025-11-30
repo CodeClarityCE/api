@@ -32,17 +32,13 @@ export function filter(
 
         for (const patch of patches) {
             if (
-                patch.affected_dep_name !== null &&
-                patch.affected_dep_name !== undefined &&
-                patch.affected_dep_name.toLowerCase().includes(searchKeyLower)
+                patch.affected_dep_name?.toLowerCase().includes(searchKeyLower)
             ) {
                 toReturn.push(patch);
                 continue;
             }
             if (
-                patch.vulnerability_id !== null &&
-                patch.vulnerability_id !== undefined &&
-                patch.vulnerability_id.toLowerCase().includes(searchKeyLower)
+                patch.vulnerability_id?.toLowerCase().includes(searchKeyLower)
             ) {
                 toReturn.push(patch);
                 continue;

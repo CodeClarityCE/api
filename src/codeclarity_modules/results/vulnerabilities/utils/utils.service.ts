@@ -127,7 +127,7 @@ export class VulnerabilitiesUtilsService {
         parentsSet = new Set<string>()
     ): Promise<string[]> {
         const currentDependency = dependenciesMap[dependency];
-        console.log(currentDependency);
+        console.warn(currentDependency);
 
         // If the dependency is already in the path, we stop the recursion
         if (parentsSet.has(dependency) || currentPath.includes(dependency)) {

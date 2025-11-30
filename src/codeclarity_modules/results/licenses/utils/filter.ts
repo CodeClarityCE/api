@@ -37,17 +37,13 @@ function filter(
 
         for (const licenseInfo of licenseInfos) {
             if (
-                licenseInfo.id !== null &&
-                licenseInfo.id !== undefined &&
-                licenseInfo.id.toLocaleLowerCase().includes(searchKey)
+                licenseInfo.id?.toLocaleLowerCase().includes(searchKey)
             ) {
                 toReturn.push(licenseInfo);
                 continue;
             }
             if (
-                licenseInfo.name !== null &&
-                licenseInfo.name !== undefined &&
-                licenseInfo.name.toLocaleLowerCase().includes(searchKey)
+                licenseInfo.name?.toLocaleLowerCase().includes(searchKey)
             ) {
                 toReturn.push(licenseInfo);
                 continue;

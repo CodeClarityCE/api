@@ -109,7 +109,7 @@ export class SBOMService {
                         dep_key,
                         language
                     );
-                    if (pack && pack.latest_version && pack.latest_version !== version_key) {
+                    if (pack?.latest_version && pack.latest_version !== version_key) {
                         wStats.number_of_outdated_dependencies += 1;
                     }
 
@@ -169,7 +169,7 @@ export class SBOMService {
                         dep_key,
                         language
                     );
-                    if (pack && pack.latest_version && pack.latest_version !== version_key) {
+                    if (pack?.latest_version && pack.latest_version !== version_key) {
                         wPrevStats.number_of_outdated_dependencies += 1;
                     }
 

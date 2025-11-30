@@ -212,6 +212,9 @@ export class VulnerabilitiesService {
                                 case '1356':
                                     wStats.number_of_owasp_top_10_2021_a10 += 1;
                                     break;
+                                default:
+                                    // Unknown OWASP category, ignore
+                                    break;
                             }
                         }
                     }
@@ -326,6 +329,9 @@ export class VulnerabilitiesService {
                                 break;
                             case '1356':
                                 wBeforeStats.number_of_owasp_top_10_2021_a10 += 1;
+                                break;
+                            default:
+                                // Unknown OWASP category, ignore
                                 break;
                         }
                     }
@@ -802,10 +808,16 @@ export class VulnerabilitiesService {
             for (const policyId of policyIds) {
                 try {
                     // Get policy directly from the unified policy table
-                    const policy = await this.vulnerabilityPolicyService.get(orgId, policyId, {
-                        userId: 'system'
-                    } as any);
-                    if (policy && policy.content && Array.isArray(policy.content)) {
+                    const policy = await this.vulnerabilityPolicyService.get(
+                        orgId,
+                        policyId,
+                        {
+                            userId: 'system',
+                            roles: [],
+                            activated: true
+                        } as unknown as AuthenticatedUser
+                    );
+                    if (policy?.content && Array.isArray(policy.content)) {
                         for (const vuln of policy.content) {
                             blacklistedVulns.add(vuln);
                             policyNames.set(vuln, policy.name);
