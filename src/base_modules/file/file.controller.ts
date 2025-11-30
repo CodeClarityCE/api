@@ -1,5 +1,4 @@
 import { readFile } from 'fs';
-import { join } from 'path';
 import {
     Body,
     Controller,
@@ -22,7 +21,7 @@ import {
     NotAuthenticated,
     NotAuthorized
 } from 'src/types/error.types';
-import { escapeString } from 'src/utils/cleaner';
+import { validateAndJoinPath } from 'src/utils/path-validator';
 import { FileService } from './file.service';
 
 export interface UploadData {
@@ -99,14 +98,12 @@ export class FileController {
         @Param('org_id') org_id: string,
         @Param('file_name') file_name: string
     ): Promise<TypedResponse<string>> {
-        // Clean the file name to avoid directory traversal
-        const cleanedFileName = escapeString(file_name);
-        const cleanedProjectId = escapeString(project_id);
-        const cleanedOrgId = escapeString(org_id);
-
         const downloadPath = process.env['DOWNLOAD_PATH'] ?? '/private';
-        const filePath = join(downloadPath, cleanedOrgId, cleanedProjectId, cleanedFileName);
+        const filePath = validateAndJoinPath(downloadPath, org_id, project_id, file_name);
+
         return new Promise((resolve, reject) => {
+            // Path is validated using validateAndJoinPath to prevent traversal attacks
+            // eslint-disable-next-line security/detect-non-literal-fs-filename
             return readFile(filePath, 'utf8', (err, data) => {
                 if (err) {
                     reject(err);

@@ -1,6 +1,5 @@
 import { existsSync } from 'fs';
 import { mkdir, rm } from 'fs/promises';
-import { join } from 'path';
 import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { IntegrationProvider as IntegrationProviderEntity } from 'src/base_modules/integrations/integrations.entity';
@@ -22,6 +21,7 @@ import {
     TypedPaginatedData
 } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
+import { validateAndJoinPath } from 'src/utils/path-validator';
 import { AnalysesRepository } from '../analyses/analyses.repository';
 import { FileRepository } from '../file/file.repository';
 import { GithubRepositoriesService } from '../integrations/github/githubRepos.service';
@@ -191,7 +191,14 @@ export class ProjectService {
         const added_project = await this.projectsRepository.saveProject(project);
 
         const downloadPath = process.env['DOWNLOAD_PATH'] ?? '/private';
-        const folderPath = join(downloadPath, organization.id, 'projects', added_project.id);
+        const folderPath = validateAndJoinPath(
+            downloadPath,
+            organization.id,
+            'projects',
+            added_project.id
+        );
+        // Path is validated using validateAndJoinPath to prevent traversal attacks
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
         await mkdir(folderPath, { recursive: true });
 
         await this.organizationLoggerService.addAuditLog(
@@ -336,7 +343,9 @@ export class ProjectService {
 
         // Remove project folder
         const downloadPath = process.env['DOWNLOAD_PATH'] ?? '/private';
-        const filePath = join(downloadPath, organization.id, 'projects', project.id);
+        const filePath = validateAndJoinPath(downloadPath, organization.id, 'projects', project.id);
+        // Path is validated using validateAndJoinPath to prevent traversal attacks
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
         if (existsSync(filePath)) {
             await rm(filePath, { recursive: true, force: true });
         }

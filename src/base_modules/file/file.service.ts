@@ -1,11 +1,10 @@
 import * as fs from 'fs';
-import { join } from 'path';
 import { Injectable } from '@nestjs/common';
 import { MulterFile } from '@webundsoehne/nest-fastify-file-upload';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { File as FileEntity } from 'src/base_modules/file/file.entity';
 import { MemberRole } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
-import { escapeString } from 'src/utils/cleaner';
+import { validateAndJoinPath } from 'src/utils/path-validator';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { ProjectsRepository } from '../projects/projects.repository';
 import { UsersRepository } from '../users/users.repository';
@@ -50,33 +49,34 @@ export class FileService {
             organization_id
         );
 
-        // Escape the project ID to prevent any potential issues with file paths
-        const escapeProjectId = escapeString(project_id);
-
         // Retrieve the user who added the file
         const added_by = await this.usersRepository.getUserById(user.userId);
 
         // Define the folder path where the file will be saved
         const downloadPath = process.env['DOWNLOAD_PATH'] ?? '/private';
-        const folderPath = join(downloadPath, project.added_by.id, escapeProjectId);
+        const folderPath = validateAndJoinPath(downloadPath, project.added_by.id, project_id);
 
         // Create the folder path if it doesn't exist
+        // Path is validated using validateAndJoinPath to prevent traversal attacks
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
         if (!fs.existsSync(folderPath)) {
+            // Path is validated using validateAndJoinPath to prevent traversal attacks
+            // eslint-disable-next-line security/detect-non-literal-fs-filename
             fs.mkdirSync(folderPath, { recursive: true });
         }
 
-        // Escape the file name to prevent any potential issues with file paths
-        const escapedFileName = escapeString(queryParams.file_name);
-        const baseName = escapedFileName.split('.', 1)[0];
+        // Sanitize filename - extract base name without extension
+        const baseName = queryParams.file_name.split('.', 1)[0];
         // Pad the id with zeros until it is 5 characters long
         const paddedId = queryParams.id.toString().padStart(5, '0');
         const fileNameWithSuffix = `${baseName}.part${paddedId}`;
 
         // If this is not the last chunk of the file
         if (queryParams.last === 'false') {
-            const filePath = join(folderPath, fileNameWithSuffix); // Define the file path
+            const filePath = validateAndJoinPath(folderPath, fileNameWithSuffix);
 
-            // Create a write stream for appending to the file
+            // Path is validated using validateAndJoinPath to prevent traversal attacks
+            // eslint-disable-next-line security/detect-non-literal-fs-filename
             const fileStream = fs.createWriteStream(filePath, { flags: 'a+' });
 
             // Handle errors during writing or opening the file
@@ -110,9 +110,10 @@ export class FileService {
                 fileStream.on('error', reject);
             });
         } else {
-            const filePath = join(folderPath, fileNameWithSuffix); // Define the file path
+            const filePath = validateAndJoinPath(folderPath, fileNameWithSuffix);
 
-            // Create a write stream for appending to the file
+            // Path is validated using validateAndJoinPath to prevent traversal attacks
+            // eslint-disable-next-line security/detect-non-literal-fs-filename
             const fileStream = fs.createWriteStream(filePath, { flags: 'a+' });
 
             // Write the file buffer to the file stream
@@ -126,6 +127,8 @@ export class FileService {
             });
 
             // Get all files in folderPath and sort them alphabetically by name
+            // Path is validated using validateAndJoinPath to prevent traversal attacks
+            // eslint-disable-next-line security/detect-non-literal-fs-filename
             const files = fs.readdirSync(folderPath).sort();
 
             // Remove any files that don't match the expected pattern (e.g., .part01)
@@ -151,9 +154,10 @@ export class FileService {
 
             // Concatenate their content to finalFileStream
             for (let i = 0; i < validFiles.length; i++) {
-                const finalFilePath = join(folderPath, escapedFileName); // Define the final file path
+                const finalFilePath = validateAndJoinPath(folderPath, queryParams.file_name);
 
-                // Create a write stream for appending to the final file
+                // Path is validated using validateAndJoinPath to prevent traversal attacks
+                // eslint-disable-next-line security/detect-non-literal-fs-filename
                 const finalFileStream = fs.createWriteStream(finalFilePath, { flags: 'a+' });
 
                 // Handle errors during writing or opening the file
@@ -162,16 +166,22 @@ export class FileService {
                 });
 
                 try {
-                    const fileContent = fs.readFileSync(join(folderPath, validFiles[i]!));
+                    const chunkPath = validateAndJoinPath(folderPath, validFiles[i]!);
+                    // Path is validated using validateAndJoinPath to prevent traversal attacks
+                    // eslint-disable-next-line security/detect-non-literal-fs-filename
+                    const fileContent = fs.readFileSync(chunkPath);
                     finalFileStream.write(fileContent);
                 } catch {
                     console.error(`Error reading file ${validFiles[i]}`);
                 }
 
                 // Remove the temp file after its content has been written to the final file
-                if (validFiles[i] !== escapedFileName) {
+                if (validFiles[i] !== queryParams.file_name) {
                     try {
-                        fs.unlinkSync(join(folderPath, validFiles[i]!));
+                        const tempFilePath = validateAndJoinPath(folderPath, validFiles[i]!);
+                        // Path is validated using validateAndJoinPath to prevent traversal attacks
+                        // eslint-disable-next-line security/detect-non-literal-fs-filename
+                        fs.unlinkSync(tempFilePath);
                     } catch {
                         console.error(`Error deleting temp file ${validFiles[i]}`);
                     }
@@ -193,7 +203,7 @@ export class FileService {
             file_entity.added_on = new Date();
             file_entity.project = project;
             file_entity.type = queryParams.type;
-            file_entity.name = escapedFileName;
+            file_entity.name = queryParams.file_name;
 
             await this.fileRepository.saveFile(file_entity);
         }
@@ -226,9 +236,6 @@ export class FileService {
             organization_id
         );
 
-        // Escape the project ID to prevent any potential issues with file paths
-        const escapeProjectId = escapeString(project_id);
-
         // Retrieve the user who added the file
         const added_by = await this.usersRepository.getUserById(user.userId);
 
@@ -237,10 +244,19 @@ export class FileService {
 
         // Define the file path
         const downloadPath = process.env['DOWNLOAD_PATH'] ?? '/private';
-        const filePath = join(downloadPath, project.added_by.id, escapeProjectId, file.name);
+        const filePath = validateAndJoinPath(
+            downloadPath,
+            project.added_by.id,
+            project_id,
+            file.name
+        );
 
         // Delete the file from the file system if it exists
+        // Path is validated using validateAndJoinPath to prevent traversal attacks
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
         if (fs.existsSync(filePath)) {
+            // Path is validated using validateAndJoinPath to prevent traversal attacks
+            // eslint-disable-next-line security/detect-non-literal-fs-filename
             fs.unlinkSync(filePath);
         }
 
