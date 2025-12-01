@@ -263,17 +263,17 @@ describe('filter', () => {
             const patches = [
                 {
                     affected_deps: [],
-                    affected_dep_name: undefined as any,
+                    affected_dep_name: undefined as unknown as string,
                     occurance_count: 0,
                     patchable_occurances_count: 0,
                     unpatchable_occurances_count: 0,
-                    vulnerability_id: undefined as any,
-                    introduction_type: undefined,
-                    patch_type: undefined,
+                    vulnerability_id: undefined as unknown as string,
+                    introduction_type: undefined as unknown as string,
+                    patch_type: undefined as unknown as string,
                     vulnerability_info: createMockVulnerabilitySummary(),
                     patches: {}
                 }
-            ];
+            ] as PatchInfo[];
 
             const [filteredPatches] = filter(patches, 'test', undefined);
 

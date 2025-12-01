@@ -63,40 +63,40 @@ export class OSV {
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    aliases!: any;
+    aliases!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    related!: any;
+    related!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    severity!: any;
+    severity!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    affected!: any;
+    affected!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    references!: any;
+    references!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    credits!: any;
+    credits!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    database_specific!: any;
+    database_specific!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    cwes!: any;
+    cwes!: unknown;
 }

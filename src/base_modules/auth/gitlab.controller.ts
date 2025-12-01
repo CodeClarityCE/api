@@ -131,7 +131,7 @@ export class GitlabAuthController {
                 }
             });
 
-            const token: TokenResGitlabResponse = response.data;
+            const token = response.data as TokenResGitlabResponse;
             return token;
         } catch (err) {
             if (err instanceof AxiosError) {
@@ -158,7 +158,7 @@ export class GitlabAuthController {
                 }
             });
 
-            const user: GitlabUserResponse = response.data;
+            const user = response.data as GitlabUserResponse;
             return user;
         } catch (err) {
             if (err instanceof AxiosError) {

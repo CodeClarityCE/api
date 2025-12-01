@@ -123,9 +123,11 @@ export class LanguagesController {
         const templates = this.__analyzerTemplatesService.getTemplates();
         const languages = new Set<string>();
 
-        templates.forEach((template: any) => {
-            template.supported_languages.forEach((lang: any) => languages.add(lang));
-        });
+        for (const template of templates) {
+            for (const lang of template.supported_languages) {
+                languages.add(lang);
+            }
+        }
 
         return { data: Array.from(languages).sort() };
     }

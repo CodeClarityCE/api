@@ -2,7 +2,7 @@ import { Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Query } from '@
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import { Response } from 'src/types/apiResponses.types';
-import { PatchingService } from './patching.service';
+import { PatchingQueryOptions, PatchingService } from './patching.service';
 
 @Controller('/org/:org_id/projects/:project_id/analysis')
 export class PatchingController {
@@ -22,19 +22,22 @@ export class PatchingController {
         @Query('active_filters') active_filters?: string,
         @Query('search_key') search_key?: string
     ): Promise<Response> {
+        const queryOptions: PatchingQueryOptions = {
+            workspace,
+            page: page ? parseInt(`${page}`) : -1,
+            entriesPerPage: entries_per_page ? parseInt(`${entries_per_page}`) : -1,
+            sortBy: sort_by,
+            sortDirection: sort_direction,
+            activeFilters: active_filters,
+            searchKey: search_key
+        };
         return {
             data: await this.patchingService.getPatches(
                 org_id,
                 project_id,
                 analysis_id,
                 user,
-                workspace,
-                page ? parseInt(`${page}`) : -1,
-                entries_per_page ? parseInt(`${entries_per_page}`) : -1,
-                sort_by,
-                sort_direction,
-                active_filters,
-                search_key
+                queryOptions
             )
         };
     }

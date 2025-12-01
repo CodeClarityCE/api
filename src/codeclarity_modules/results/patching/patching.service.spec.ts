@@ -104,13 +104,15 @@ describe('PatchingService', () => {
                 'project-123',
                 'analysis-123',
                 mockUser,
-                'default',
-                0,
-                20,
-                'name',
-                'asc',
-                undefined,
-                undefined
+                {
+                    workspace: 'default',
+                    page: 0,
+                    entriesPerPage: 20,
+                    sortBy: 'name',
+                    sortDirection: 'asc',
+                    activeFilters: undefined,
+                    searchKey: undefined
+                }
             );
 
             expect(result).toEqual(mockPatchesOutput.workspaces.default);
@@ -128,19 +130,15 @@ describe('PatchingService', () => {
             mockPatchingUtilsService.getPatchingResult.mockResolvedValue(mockPatchesOutput);
 
             await expect(
-                service.getPatches(
-                    'org-123',
-                    'project-123',
-                    'analysis-123',
-                    mockUser,
-                    'invalid-workspace',
-                    0,
-                    20,
-                    'name',
-                    'asc',
-                    undefined,
-                    undefined
-                )
+                service.getPatches('org-123', 'project-123', 'analysis-123', mockUser, {
+                    workspace: 'invalid-workspace',
+                    page: 0,
+                    entriesPerPage: 20,
+                    sortBy: 'name',
+                    sortDirection: 'asc',
+                    activeFilters: undefined,
+                    searchKey: undefined
+                })
             ).rejects.toThrow(UnknownWorkspace);
         });
 
@@ -149,19 +147,15 @@ describe('PatchingService', () => {
             mockAnalysisResultsService.checkAccess.mockRejectedValue(accessError);
 
             await expect(
-                service.getPatches(
-                    'org-123',
-                    'project-123',
-                    'analysis-123',
-                    mockUser,
-                    'default',
-                    0,
-                    20,
-                    'name',
-                    'asc',
-                    undefined,
-                    undefined
-                )
+                service.getPatches('org-123', 'project-123', 'analysis-123', mockUser, {
+                    workspace: 'default',
+                    page: 0,
+                    entriesPerPage: 20,
+                    sortBy: 'name',
+                    sortDirection: 'asc',
+                    activeFilters: undefined,
+                    searchKey: undefined
+                })
             ).rejects.toThrow('Access denied');
         });
     });

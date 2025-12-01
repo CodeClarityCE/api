@@ -16,7 +16,7 @@ export class AnalysisCreateBody {
         example: { license_policy_id: '72305504' }
     })
     @IsNotEmpty()
-    config!: Record<string, Record<string, any>>;
+    config!: Record<string, Record<string, unknown>>;
 
     @ApiProperty({ description: 'Which branch of the repository to analyze', example: 'main' })
     @IsNotEmpty()
@@ -103,7 +103,7 @@ export interface AnalysisCreate {
     created_on: Date;
     analyzer_id: string;
     created_by: string;
-    config: Record<string, Record<string, any>>;
+    config: Record<string, Record<string, unknown>>;
     stage: number;
     status: AnalysisStatus;
     steps: AnalysisStage[][];

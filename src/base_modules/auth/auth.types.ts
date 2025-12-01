@@ -1,19 +1,29 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsNotEmpty } from 'class-validator';
 
+/** JWT payload structure for tokens */
+export interface JwtPayload {
+    userId: string;
+    roles: ROLE[];
+}
+
+/** User object returned from JWT validation */
+export interface JwtValidationResult {
+    userId: string;
+    roles: ROLE[];
+}
+
 export class AuthenticatedUser {
     userId!: string;
     roles!: ROLE[];
     activated!: boolean;
-    apiKey?: string;
+    apiKey?: string | undefined;
 
     constructor(userId: string, roles: ROLE[], activated: boolean, apiKey?: string) {
         this.userId = userId;
         this.roles = roles;
         this.activated = activated;
-        if (apiKey !== undefined) {
-            this.apiKey = apiKey;
-        }
+        this.apiKey = apiKey;
     }
 
     hasRole(role: ROLE): boolean {

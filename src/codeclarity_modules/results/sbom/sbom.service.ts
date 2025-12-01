@@ -24,6 +24,18 @@ import { GraphDependency, GraphTraversalUtils } from './sbom_graph.types';
 import { filter } from './utils/filter';
 import { sort } from './utils/sort';
 
+/** Query options for SBOM list endpoint */
+export interface SbomQueryOptions {
+    workspace: string;
+    page?: number | undefined;
+    entriesPerPage?: number | undefined;
+    sortBy?: string | undefined;
+    sortDirection?: string | undefined;
+    activeFilters?: string | undefined;
+    searchKey?: string | undefined;
+    ecosystemFilter?: string | undefined;
+}
+
 /**
  * Extended dependency with multi-language support fields.
  * Different plugins (js-sbom, php-sbom) may use different casing.
@@ -131,22 +143,25 @@ export class SBOMService {
         return wStats;
     }
 
-    // eslint-disable-next-line max-params
     async getSbom(
         orgId: string,
         projectId: string,
         analysisId: string,
         user: AuthenticatedUser,
-        workspace: string,
-        page: number | undefined,
-        entries_per_page: number | undefined,
-        sort_by: string | undefined,
-        sort_direction: string | undefined,
-        active_filters_string: string | undefined,
-        search_key: string | undefined,
-        ecosystem_filter?: string
+        options: SbomQueryOptions
     ): Promise<PaginatedResponse> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
+
+        const {
+            workspace,
+            page,
+            entriesPerPage: entries_per_page,
+            sortBy: sort_by,
+            sortDirection: sort_direction,
+            activeFilters: active_filters_string,
+            searchKey: search_key,
+            ecosystemFilter: ecosystem_filter
+        } = options;
 
         let active_filters: string[] = [];
         if (active_filters_string !== null && active_filters_string !== undefined)
@@ -590,7 +605,7 @@ export class SBOMService {
                 language
             );
             const specificVersion = versionInfo.versions?.[0];
-            const extra = specificVersion?.extra as Record<string, unknown> | undefined;
+            const extra = specificVersion?.extra;
             const deprecatedValue = extra?.['Deprecated'];
 
             if (deprecatedValue) {
@@ -670,7 +685,7 @@ export class SBOMService {
                 language
             );
             const specificVersion = versionInfo.versions?.[0];
-            const extra = specificVersion?.extra as Record<string, unknown> | undefined;
+            const extra = specificVersion?.extra;
             if (extra?.['Deprecated']) {
                 stats.number_of_deprecated_dependencies += 1;
             }

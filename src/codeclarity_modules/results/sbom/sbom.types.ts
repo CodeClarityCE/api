@@ -116,7 +116,7 @@ export interface AnalysisInfo {
     self_managed_workspace_name: string;
     work_spaces_used: boolean;
     work_space_package_file_paths: Record<string, string>;
-    stats: Record<string, any>;
+    stats: Record<string, unknown>;
 }
 
 export type LicenseDist = Record<string, number>;

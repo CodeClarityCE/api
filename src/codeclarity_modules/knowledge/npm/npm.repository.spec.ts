@@ -525,8 +525,9 @@ describe('NPMPackageRepository', () => {
             expect(typeof result.source).toBe('object');
             expect(Array.isArray(result.licenses)).toBe(true);
             expect(typeof result.extra).toBe('object');
-            expect(result.extra['nested'].data).toBe('value');
-            expect(result.extra['nested'].array).toEqual([1, 2, 3]);
+            const extra = result.extra as Record<string, Record<string, unknown>>;
+            expect(extra['nested']!['data']).toBe('value');
+            expect(extra['nested']!['array']).toEqual([1, 2, 3]);
         });
     });
 

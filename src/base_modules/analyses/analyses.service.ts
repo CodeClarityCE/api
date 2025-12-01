@@ -61,7 +61,6 @@ interface AnalysisConfigInput {
 
 @Injectable()
 export class AnalysesService {
-    // eslint-disable-next-line max-params
     constructor(
         private readonly projectMemberService: ProjectMemberService,
         private readonly configService: ConfigService,

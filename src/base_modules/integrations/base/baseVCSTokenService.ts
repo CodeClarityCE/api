@@ -101,7 +101,7 @@ export abstract class BaseVCSTokenService {
         options?: { additionalScopes?: string[]; [key: string]: unknown }
     ): Promise<void> {
         try {
-            const { additionalScopes = [], ...otherOptions } = options || {};
+            const { additionalScopes = [], ...otherOptions } = options ?? {};
             const requiredScopes = [...this.getDefaultScopes(), ...additionalScopes];
 
             await this.validateTokenScopes(token, requiredScopes, otherOptions);

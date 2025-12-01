@@ -8,12 +8,26 @@ import {
     AnalysisStats,
     newAnalysisStats
 } from 'src/codeclarity_modules/results/patching/patching2.types';
-import { Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
-import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
+import {
+    Output as SbomOutput,
+    AnalysisInfo as SbomAnalysisInfo
+} from 'src/codeclarity_modules/results/sbom/sbom.types';
+import { StatusError, StatusResponse } from 'src/codeclarity_modules/results/status.types';
 import { UnknownWorkspace } from 'src/types/error.types';
 import { AnalysisResultsService } from '../results.service';
 import { SbomUtilsService } from '../sbom/utils/utils';
 import { PatchingUtilsService } from './utils/utils';
+
+/** Query options for patching list endpoint */
+export interface PatchingQueryOptions {
+    workspace: string;
+    page?: number | undefined;
+    entriesPerPage?: number | undefined;
+    sortBy?: string | undefined;
+    sortDirection?: string | undefined;
+    activeFilters?: string | undefined;
+    searchKey?: string | undefined;
+}
 
 @Injectable()
 export class PatchingService {
@@ -28,19 +42,14 @@ export class PatchingService {
         projectId: string,
         analysisId: string,
         user: AuthenticatedUser,
-        workspace: string,
-        _page: number | undefined,
-        _entries_per_page: number | undefined,
-        _sort_by: string | undefined,
-        _sort_direction: string | undefined,
-        _active_filters_string: string | undefined,
-        _search_key: string | undefined
+        options: PatchingQueryOptions
     ): Promise<Workspace> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
-        // let active_filters: string[] = [];
-        // if (active_filters_string !== null)
-        //     active_filters = active_filters_string.replace('[', '').replace(']', '').split(',');
+        const { workspace } = options;
+
+        // Query options (page, entriesPerPage, sortBy, sortDirection, activeFilters, searchKey)
+        // are available in options but currently unused - kept for future pagination support
 
         const patchesOutput: PatchesOutput =
             await this.patchingUtilsService.getPatchingResult(analysisId);
@@ -61,7 +70,7 @@ export class PatchingService {
         analysisId: string,
         user: AuthenticatedUser,
         workspace: string
-    ): Promise<any> {
+    ): Promise<SbomAnalysisInfo | Record<string, never>> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
         const patchesOutput: PatchesOutput =
@@ -200,8 +209,8 @@ export class PatchingService {
 
         if (patchesOutput.analysis_info.private_errors.length) {
             return {
-                public_errors: patchesOutput.analysis_info.public_errors,
-                private_errors: patchesOutput.analysis_info.private_errors,
+                public_errors: patchesOutput.analysis_info.public_errors as StatusError[],
+                private_errors: patchesOutput.analysis_info.private_errors as StatusError[],
                 stage_start: patchesOutput.analysis_info.analysis_start_time,
                 stage_end: patchesOutput.analysis_info.analysis_end_time
             };

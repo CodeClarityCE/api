@@ -262,7 +262,7 @@ export default [
       "max-depth": ["warn", { "max": 4 }],
 
       // Max parameters in function
-      "max-params": ["warn", { "max": 9 }],
+      "max-params": ["warn", { "max": 12 }],
 
       // ==========================================
       // Import Rules

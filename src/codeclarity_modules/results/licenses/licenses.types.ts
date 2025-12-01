@@ -79,8 +79,8 @@ export enum Status {
 
 export interface AnalysisInfo {
     status: Status;
-    private_errors: any[];
-    public_errors: any[];
+    private_errors: unknown[];
+    public_errors: unknown[];
     analysis_start_time: string;
     analysis_end_time: string;
     analysis_delta_time: number;

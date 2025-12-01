@@ -121,13 +121,15 @@ describe('LicensesService', () => {
                 'project-123',
                 'analysis-123',
                 mockUser,
-                'default',
-                0,
-                20,
-                'name',
-                'asc',
-                undefined,
-                undefined
+                {
+                    workspace: 'default',
+                    page: 0,
+                    entriesPerPage: 20,
+                    sortBy: 'name',
+                    sortDirection: 'asc',
+                    activeFilters: undefined,
+                    searchKey: undefined
+                }
             );
 
             expect(result).toBeDefined();
@@ -151,13 +153,15 @@ describe('LicensesService', () => {
                 'project-123',
                 'analysis-123',
                 mockUser,
-                'default',
-                0,
-                20,
-                'name',
-                'asc',
-                '[MIT,Apache-2.0]',
-                'test'
+                {
+                    workspace: 'default',
+                    page: 0,
+                    entriesPerPage: 20,
+                    sortBy: 'name',
+                    sortDirection: 'asc',
+                    activeFilters: '[MIT,Apache-2.0]',
+                    searchKey: 'test'
+                }
             );
 
             expect(result).toBeDefined();
@@ -174,19 +178,15 @@ describe('LicensesService', () => {
             mockAnalysisResultsService.checkAccess.mockRejectedValue(accessError);
 
             await expect(
-                service.getLicensesUsed(
-                    'org-123',
-                    'project-123',
-                    'analysis-123',
-                    mockUser,
-                    'default',
-                    0,
-                    20,
-                    'name',
-                    'asc',
-                    undefined,
-                    undefined
-                )
+                service.getLicensesUsed('org-123', 'project-123', 'analysis-123', mockUser, {
+                    workspace: 'default',
+                    page: 0,
+                    entriesPerPage: 20,
+                    sortBy: 'name',
+                    sortDirection: 'asc',
+                    activeFilters: undefined,
+                    searchKey: undefined
+                })
             ).rejects.toThrow('Access denied');
         });
     });

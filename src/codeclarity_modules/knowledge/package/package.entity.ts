@@ -97,7 +97,7 @@ export class Package {
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    extra!: Record<string, any>;
+    extra!: Record<string, unknown>;
 
     @OneToMany(() => Version, (version) => version.package)
     versions!: Relation<Version[]>;
@@ -131,7 +131,7 @@ export class Version {
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    extra!: Record<string, any>;
+    extra!: Record<string, unknown>;
 
     @ManyToOne(() => Package, (pack) => pack.versions)
     @JoinColumn({ name: 'package_id' })

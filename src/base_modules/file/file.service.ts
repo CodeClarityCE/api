@@ -146,14 +146,14 @@ export class FileService {
                 if (match) {
                     const currentIdx = parseInt(match[1]!, 10);
                     if (currentIdx !== index) {
-                        console.log(`Missing chunk at index ${index} in file: ${file}`);
+                        console.warn(`Missing chunk at index ${index} in file: ${file}`);
                     }
                     index++;
                 }
             }
 
             // Concatenate their content to finalFileStream
-            for (let i = 0; i < validFiles.length; i++) {
+            for (const chunkFileName of validFiles) {
                 const finalFilePath = validateAndJoinPath(folderPath, queryParams.file_name);
 
                 // Path is validated using validateAndJoinPath to prevent traversal attacks
@@ -166,24 +166,24 @@ export class FileService {
                 });
 
                 try {
-                    const chunkPath = validateAndJoinPath(folderPath, validFiles[i]!);
+                    const chunkPath = validateAndJoinPath(folderPath, chunkFileName);
                     // Path is validated using validateAndJoinPath to prevent traversal attacks
                     // eslint-disable-next-line security/detect-non-literal-fs-filename
                     const fileContent = fs.readFileSync(chunkPath);
                     finalFileStream.write(fileContent);
                 } catch {
-                    console.error(`Error reading file ${validFiles[i]}`);
+                    console.error(`Error reading file ${chunkFileName}`);
                 }
 
                 // Remove the temp file after its content has been written to the final file
-                if (validFiles[i] !== queryParams.file_name) {
+                if (chunkFileName !== queryParams.file_name) {
                     try {
-                        const tempFilePath = validateAndJoinPath(folderPath, validFiles[i]!);
+                        const tempFilePath = validateAndJoinPath(folderPath, chunkFileName);
                         // Path is validated using validateAndJoinPath to prevent traversal attacks
                         // eslint-disable-next-line security/detect-non-literal-fs-filename
                         fs.unlinkSync(tempFilePath);
                     } catch {
-                        console.error(`Error deleting temp file ${validFiles[i]}`);
+                        console.error(`Error deleting temp file ${chunkFileName}`);
                     }
                 }
 
@@ -270,7 +270,7 @@ export class FileService {
      * @param filename - The name of the final file to be created.
      * @param totalChunks - The total number of chunks that make up the file.
      */
-    async assembleChunks(_filename: string, _totalChunks: number) {
+    async assembleChunks(_filename: string, _totalChunks: number): Promise<void> {
         // Create a write stream for the final file
         // const writer = fs.createWriteStream(`./uploads/${_filename}`);
         // Iterate over each chunk and append its content to the final file

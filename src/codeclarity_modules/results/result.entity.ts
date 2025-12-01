@@ -35,12 +35,12 @@ export interface ResultByAnalysisId {
 
 export interface ResultObject {
     workspaces: object;
-    analysis_info: any;
+    analysis_info: unknown;
 }
 
 export interface AnalysisInfo {
-    extra: any;
-    errors: any[];
+    extra: unknown;
+    errors: unknown[];
     status: string;
-    time: any;
+    time: unknown;
 }

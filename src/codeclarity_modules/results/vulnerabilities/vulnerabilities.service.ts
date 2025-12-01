@@ -89,7 +89,6 @@ function isNoConflict(flag: ConflictFlag | string): boolean {
 
 @Injectable()
 export class VulnerabilitiesService {
-    // eslint-disable-next-line max-params
     constructor(
         private readonly analysisResultsService: AnalysisResultsService,
         private readonly findingsUtilsService: VulnerabilitiesUtilsService,

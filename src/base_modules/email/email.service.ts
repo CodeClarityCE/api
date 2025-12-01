@@ -56,9 +56,7 @@ export class EmailService {
                 platform_name: this.platformName,
                 web_host: this.webHost.split('//')[1]
             }
-        })
-            .then(() => console.log('Mail successfully sent'))
-            .catch((error) => console.error(error));
+        }).catch((error: unknown) => console.error(error));
     }
 
     /**
@@ -209,7 +207,7 @@ export class EmailService {
         to: string;
         subject: string;
         template: string;
-        templateData: any;
+        templateData: Record<string, unknown>;
     }): Promise<void> {
         if (this.env === 'dev') {
             to = this.testEmail!;

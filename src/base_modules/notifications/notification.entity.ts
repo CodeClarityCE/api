@@ -35,7 +35,7 @@ export class Notification {
     @ApiProperty()
     @Expose()
     @Column('jsonb')
-    content!: Record<string, any>;
+    content!: Record<string, unknown>;
 
     @ApiProperty()
     @Expose()

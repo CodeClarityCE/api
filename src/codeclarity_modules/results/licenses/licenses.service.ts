@@ -10,13 +10,25 @@ import {
 import { filter } from 'src/codeclarity_modules/results/licenses/utils/filter';
 import { sort } from 'src/codeclarity_modules/results/licenses/utils/sort';
 import { Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
-import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
+import { StatusError, StatusResponse } from 'src/codeclarity_modules/results/status.types';
 import { paginate } from 'src/codeclarity_modules/results/utils/utils';
 import { PaginatedResponse } from 'src/types/apiResponses.types';
 import { UnknownWorkspace } from 'src/types/error.types';
 import { AnalysisResultsService } from '../results.service';
 import { SbomUtilsService } from '../sbom/utils/utils';
 import { LicensesUtilsService } from './utils/utils';
+
+/** Query options for licenses list endpoint */
+export interface LicensesQueryOptions {
+    workspace: string;
+    page?: number | undefined;
+    entriesPerPage?: number | undefined;
+    sortBy?: string | undefined;
+    sortDirection?: string | undefined;
+    activeFilters?: string | undefined;
+    searchKey?: string | undefined;
+    ecosystemFilter?: string | undefined;
+}
 
 @Injectable()
 export class LicensesService {
@@ -32,17 +44,21 @@ export class LicensesService {
         projectId: string,
         analysisId: string,
         user: AuthenticatedUser,
-        workspace: string,
-        page: number | undefined,
-        entries_per_page: number | undefined,
-        sort_by: string | undefined,
-        sort_direction: string | undefined,
-        active_filters_string: string | undefined,
-        search_key: string | undefined,
-        ecosystem_filter?: string
+        options: LicensesQueryOptions
     ): Promise<PaginatedResponse> {
         // Check if the user is allowed to view this analysis result
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
+
+        const {
+            workspace,
+            page,
+            entriesPerPage: entries_per_page,
+            sortBy: sort_by,
+            sortDirection: sort_direction,
+            activeFilters: active_filters_string,
+            searchKey: search_key,
+            ecosystemFilter: ecosystem_filter
+        } = options;
 
         let active_filters: string[] = [];
         if (active_filters_string !== null && active_filters_string !== undefined)
@@ -231,8 +247,8 @@ export class LicensesService {
 
         if (licensesOutput.analysis_info.private_errors.length) {
             return {
-                public_errors: licensesOutput.analysis_info.public_errors,
-                private_errors: licensesOutput.analysis_info.private_errors,
+                public_errors: licensesOutput.analysis_info.public_errors as StatusError[],
+                private_errors: licensesOutput.analysis_info.private_errors as StatusError[],
                 stage_start: licensesOutput.analysis_info.analysis_start_time,
                 stage_end: licensesOutput.analysis_info.analysis_end_time
             };

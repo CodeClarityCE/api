@@ -48,7 +48,7 @@ export class FriendsOfPhp {
     @Column('jsonb', { default: {} })
     @ApiProperty()
     @Expose()
-    branches!: any;
+    branches!: unknown;
 
     @Column()
     @ApiProperty()

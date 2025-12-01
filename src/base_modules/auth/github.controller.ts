@@ -119,7 +119,7 @@ export class GithubAuthController {
                 }
             );
 
-            const token: GithubOAuthAccessTokenResponse = response.data;
+            const token = response.data as GithubOAuthAccessTokenResponse;
             return token;
         } catch (err) {
             if (err instanceof AxiosError) {
@@ -146,7 +146,7 @@ export class GithubAuthController {
                 }
             });
 
-            const user: GithubUserResponse = response.data;
+            const user = response.data as GithubUserResponse;
             return user;
         } catch (err) {
             if (err instanceof AxiosError) {
@@ -173,7 +173,7 @@ export class GithubAuthController {
                 }
             });
 
-            const emails: GithubEmail[] = response.data;
+            const emails = response.data as GithubEmail[];
 
             for (const email of emails) {
                 if (email.primary) {

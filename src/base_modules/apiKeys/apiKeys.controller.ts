@@ -22,7 +22,7 @@ export class ApiKeysController {
     @Post('')
     async createApiKey() // @AuthUser() user: AuthenticatedUser
     // @Body() apiKeyCreateBody: ApiKeyCreateBody
-    : Promise<any> {
+    : Promise<unknown> {
         throw new Error('Not implemented');
     }
 
@@ -32,7 +32,7 @@ export class ApiKeysController {
     // @Param('api_key_id') api_key_id: string,
     // @Query('page', new DefaultValuePipe(0), ParseIntPipe) page?: number,
     // @Query('entries_per_page', new DefaultValuePipe(0), ParseIntPipe) entries_per_page?: number
-    : Promise<TypedPaginatedResponse<any>> {
+    : Promise<TypedPaginatedResponse<unknown>> {
         throw new Error('Not implemented');
     }
 

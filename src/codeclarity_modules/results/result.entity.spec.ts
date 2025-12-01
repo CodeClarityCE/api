@@ -218,9 +218,14 @@ describe('Result Entity', () => {
         };
 
         result.result = failedResult;
-        expect(result.result.analysis_info.status).toBe('FAILURE');
-        expect(result.result.analysis_info.public_errors).toHaveLength(1);
-        expect(result.result.analysis_info.private_errors).toHaveLength(1);
+        const analysisInfo = failedResult.analysis_info as {
+            status: string;
+            public_errors: string[];
+            private_errors: string[];
+        };
+        expect(analysisInfo.status).toBe('FAILURE');
+        expect(analysisInfo.public_errors).toHaveLength(1);
+        expect(analysisInfo.private_errors).toHaveLength(1);
     });
 });
 

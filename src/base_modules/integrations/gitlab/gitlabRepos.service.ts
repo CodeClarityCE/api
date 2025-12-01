@@ -14,6 +14,16 @@ import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from '../github/cons
 import { IntegrationsRepository } from '../integrations.repository';
 import { GitlabIntegrationService } from './gitlab.service';
 
+/** GitLab API project response structure */
+interface GitLabProject {
+    name_with_namespace: string;
+    http_url_to_repo: string;
+    default_branch: string;
+    visibility?: string;
+    description?: string;
+    created_at?: string;
+}
+
 @Injectable()
 export class GitlabRepositoriesService {
     constructor(
@@ -65,7 +75,7 @@ export class GitlabRepositoriesService {
                 );
             }
 
-            const projects = (await response.json()) as any[];
+            const projects = (await response.json()) as GitLabProject[];
 
             // Process the projects and save them to the repository cache
             for (const project of projects) {
@@ -81,7 +91,9 @@ export class GitlabRepositoriesService {
                 repository.visibility = project.visibility ?? 'public';
                 repository.fully_qualified_name = project.name_with_namespace;
                 repository.description = project.description ?? '';
-                repository.created_at = project.created_at ?? new Date();
+                repository.created_at = project.created_at
+                    ? new Date(project.created_at)
+                    : new Date();
                 repository.integration = integration;
 
                 await this.repositoryCacheRepository.save(repository);

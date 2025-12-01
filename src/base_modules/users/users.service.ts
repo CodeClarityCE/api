@@ -404,7 +404,8 @@ export class UsersService {
         const user = await this.usersRepository.getUserById(userId);
 
         if (!user.social) {
-            if (password === undefined) {
+            // Require password for non-social users
+            if (!password) {
                 throw new NotAuthorized();
             }
 

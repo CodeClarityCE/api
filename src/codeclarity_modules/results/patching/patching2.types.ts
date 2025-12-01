@@ -5,14 +5,14 @@ export interface PatchInfo {
     patchable_occurances_count: number;
     unpatchable_occurances_count: number;
     vulnerability_id: string;
-    introduction_type: any;
-    patch_type: any;
+    introduction_type: string;
+    patch_type: string;
     vulnerability_info: VulnerabilitySummary;
-    patches: Record<string, any>;
+    patches: Record<string, unknown>;
 }
 
 export interface VulnerabilitySummary {
-    Severity: any;
+    Severity: string;
     Weaknesses?: string[];
 }
 

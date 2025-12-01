@@ -243,13 +243,15 @@ describe('SBOMService', () => {
                 'project-123',
                 'analysis-123',
                 mockUser,
-                'default',
-                0,
-                20,
-                'name',
-                'asc',
-                undefined,
-                undefined
+                {
+                    workspace: 'default',
+                    page: 0,
+                    entriesPerPage: 20,
+                    sortBy: 'name',
+                    sortDirection: 'asc',
+                    activeFilters: undefined,
+                    searchKey: undefined
+                }
             );
 
             expect(result).toBeDefined();
@@ -272,13 +274,15 @@ describe('SBOMService', () => {
                 'project-123',
                 'analysis-123',
                 mockUser,
-                'default',
-                0,
-                20,
-                'name',
-                'asc',
-                '[direct,transitive]',
-                'package'
+                {
+                    workspace: 'default',
+                    page: 0,
+                    entriesPerPage: 20,
+                    sortBy: 'name',
+                    sortDirection: 'asc',
+                    activeFilters: '[direct,transitive]',
+                    searchKey: 'package'
+                }
             );
 
             expect(result).toBeDefined();
@@ -295,19 +299,15 @@ describe('SBOMService', () => {
             mockAnalysisResultsService.checkAccess.mockRejectedValue(accessError);
 
             await expect(
-                service.getSbom(
-                    'org-123',
-                    'project-123',
-                    'analysis-123',
-                    mockUser,
-                    'default',
-                    0,
-                    20,
-                    'name',
-                    'asc',
-                    undefined,
-                    undefined
-                )
+                service.getSbom('org-123', 'project-123', 'analysis-123', mockUser, {
+                    workspace: 'default',
+                    page: 0,
+                    entriesPerPage: 20,
+                    sortBy: 'name',
+                    sortDirection: 'asc',
+                    activeFilters: undefined,
+                    searchKey: undefined
+                })
             ).rejects.toThrow('Access denied');
 
             expect(sbomUtilsService.getSbomResult).not.toHaveBeenCalled();

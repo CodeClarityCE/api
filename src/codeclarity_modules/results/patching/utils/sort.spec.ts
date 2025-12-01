@@ -194,9 +194,9 @@ describe('sort', () => {
 
         it('should handle null patch_type values', () => {
             const patches = [
-                createMockPatchInfo({ patch_type: null }),
+                createMockPatchInfo({ patch_type: null as unknown as string }),
                 createMockPatchInfo({ patch_type: 'full_patch' }),
-                createMockPatchInfo({ patch_type: undefined })
+                createMockPatchInfo({ patch_type: undefined as unknown as string })
             ];
 
             const result = sort(patches, 'patch_type', undefined);
@@ -250,7 +250,7 @@ describe('sort', () => {
                     patch_type: undefined,
                     vulnerability_info: createMockVulnerabilitySummary(),
                     patches: {}
-                } as PatchInfo
+                } as unknown as PatchInfo
             ];
 
             const result = sort(patches, 'patch_type', undefined);

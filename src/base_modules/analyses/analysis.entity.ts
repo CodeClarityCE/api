@@ -53,7 +53,7 @@ export class Analysis {
     created_on!: Date;
 
     @Column('jsonb')
-    config!: Record<string, Record<string, any>>;
+    config!: Record<string, Record<string, unknown>>;
 
     @Column({
         nullable: true

@@ -63,8 +63,9 @@ describe('Plugin Entity', () => {
             plugin.config = complexConfig;
 
             expect(plugin.config).toEqual(complexConfig);
-            expect(plugin.config['settings'].timeout).toBe(30000);
-            expect(plugin.config['features'].logging.level).toBe('debug');
+            const typedConfig = plugin.config as typeof complexConfig;
+            expect(typedConfig.settings.timeout).toBe(30000);
+            expect(typedConfig.features.logging.level).toBe('debug');
         });
 
         it('should handle empty config objects', () => {
@@ -171,7 +172,8 @@ describe('Plugin Entity', () => {
             };
             plugin.config = deepConfig;
 
-            expect(plugin.config['level1'].level2.level3.level4.level5.value).toBe('deep value');
+            const config = plugin.config as typeof deepConfig;
+            expect(config.level1.level2.level3.level4.level5.value).toBe('deep value');
         });
 
         it('should handle config with various data types', () => {

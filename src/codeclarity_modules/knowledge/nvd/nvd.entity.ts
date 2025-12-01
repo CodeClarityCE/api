@@ -38,7 +38,7 @@ export class NVD {
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    descriptions!: any;
+    descriptions!: unknown;
 
     @Column({ nullable: true })
     @ApiProperty()
@@ -53,30 +53,30 @@ export class NVD {
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    metrics!: any;
+    metrics!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    weaknesses!: any;
+    weaknesses!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    configurations!: any;
+    configurations!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    affectedFlattened!: any;
+    affectedFlattened!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    affected!: any;
+    affected!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    references!: any;
+    references!: unknown;
 }

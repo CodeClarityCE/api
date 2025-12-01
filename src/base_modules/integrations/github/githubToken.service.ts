@@ -24,7 +24,9 @@ export class GithubIntegrationTokenService extends BaseVCSTokenService {
             }
         });
 
-        const headersString: string | undefined = response.headers['x-oauth-scopes'];
+        const headersString: string | undefined = response.headers['x-oauth-scopes'] as
+            | string
+            | undefined;
 
         if (!headersString) {
             throw new IntegrationTokenMissingPermissions();
@@ -54,9 +56,11 @@ export class GithubIntegrationTokenService extends BaseVCSTokenService {
             }
         });
 
-        const tokenExpiry = response.headers['github-authentication-token-expiration'];
+        const tokenExpiry = response.headers['github-authentication-token-expiration'] as
+            | string
+            | undefined;
 
-        const date = parseTokenExpiry(tokenExpiry);
+        const date = parseTokenExpiry(tokenExpiry ?? undefined);
         if (date) {
             validateNotExpired(date);
             return [true, date];

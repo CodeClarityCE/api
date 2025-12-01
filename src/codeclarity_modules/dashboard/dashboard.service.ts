@@ -327,12 +327,16 @@ export class DashboardService {
             project.analyses.forEach((analysis) => {
                 analysis.results.forEach((result) => {
                     const res = result.result as unknown as SbomOutput;
+                    const licenseDist = res.analysis_info.stats['license_dist'] as Record<
+                        string,
+                        number
+                    >;
 
-                    for (const key of Object.keys(res.analysis_info.stats['license_dist'])) {
+                    for (const key of Object.keys(licenseDist)) {
                         if (licenses[key]) {
-                            licenses[key] += res.analysis_info.stats['license_dist'][key];
+                            licenses[key] += licenseDist[key]!;
                         } else {
-                            licenses[key] = res.analysis_info.stats['license_dist'][key];
+                            licenses[key] = licenseDist[key]!;
                         }
                     }
                 });

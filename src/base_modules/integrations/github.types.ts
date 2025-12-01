@@ -178,7 +178,7 @@ export interface GitlabUserResponse {
     web_url: string;
     created_at: string;
     bio: string;
-    location: any;
+    location: string | null;
     public_email: string;
     skype: string;
     linkedin: string;
@@ -189,7 +189,7 @@ export interface GitlabUserResponse {
     job_title: string;
     pronouns: string;
     bot: boolean;
-    work_information: any;
+    work_information: string | null;
     followers: number;
     following: number;
     local_time: string;

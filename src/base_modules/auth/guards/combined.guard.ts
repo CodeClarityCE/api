@@ -71,7 +71,7 @@ export class CombinedAuthGuard implements CanActivate {
                 if (request) {
                     request.user = userJWT;
                 } else if (socket) {
-                    socket.data.user = userJWT;
+                    (socket.data as { user?: AuthenticatedUser }).user = userJWT;
                 }
                 return true;
             }

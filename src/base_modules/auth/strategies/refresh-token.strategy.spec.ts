@@ -8,6 +8,7 @@ jest.mock('fs', () => ({
 
 import * as fs from 'fs';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { type JwtPayload, ROLE } from '../auth.types';
 import { RefreshJWTStrategy } from './refresh-token.strategy';
 
 describe('RefreshJWTStrategy', () => {
@@ -67,11 +68,9 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
     describe('validate', () => {
         it('should return user object with userId and roles from payload', async () => {
             // Arrange
-            const payload = {
+            const payload: JwtPayload = {
                 userId: 'test-user-id',
-                roles: ['USER', 'ADMIN'],
-                iat: 1234567890,
-                exp: 1234567890
+                roles: [ROLE.USER, ROLE.ADMIN]
             };
 
             // Act
@@ -80,20 +79,18 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
             // Assert
             expect(result).toEqual({
                 userId: 'test-user-id',
-                roles: ['USER', 'ADMIN']
+                roles: [ROLE.USER, ROLE.ADMIN]
             });
         });
 
         it('should handle refresh token specific payload structure', async () => {
-            // Arrange
+            // Arrange - testing extra properties are ignored
             const payload = {
                 userId: 'test-user-id',
-                roles: ['USER'],
+                roles: [ROLE.USER],
                 tokenType: 'refresh',
-                sessionId: 'session-123',
-                iat: 1234567890,
-                exp: 1234567890
-            };
+                sessionId: 'session-123'
+            } as unknown as JwtPayload;
 
             // Act
             const result = await strategy.validate(payload);
@@ -101,17 +98,15 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
             // Assert
             expect(result).toEqual({
                 userId: 'test-user-id',
-                roles: ['USER']
+                roles: [ROLE.USER]
             });
         });
 
         it('should handle payload with missing roles', async () => {
-            // Arrange
+            // Arrange - testing edge case with missing required property
             const payload = {
-                userId: 'test-user-id',
-                iat: 1234567890,
-                exp: 1234567890
-            };
+                userId: 'test-user-id'
+            } as unknown as JwtPayload;
 
             // Act
             const result = await strategy.validate(payload);
@@ -125,11 +120,9 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
 
         it('should handle payload with empty roles array', async () => {
             // Arrange
-            const payload = {
+            const payload: JwtPayload = {
                 userId: 'test-user-id',
-                roles: [],
-                iat: 1234567890,
-                exp: 1234567890
+                roles: []
             };
 
             // Act
@@ -143,16 +136,14 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
         });
 
         it('should handle payload with additional refresh token metadata', async () => {
-            // Arrange
+            // Arrange - testing extra properties are ignored
             const payload = {
                 userId: 'test-user-id',
-                roles: ['USER'],
+                roles: [ROLE.USER],
                 deviceId: 'device-123',
                 issuedAt: new Date().toISOString(),
-                lastUsed: new Date().toISOString(),
-                iat: 1234567890,
-                exp: 1234567890
-            };
+                lastUsed: new Date().toISOString()
+            } as unknown as JwtPayload;
 
             // Act
             const result = await strategy.validate(payload);
@@ -160,18 +151,16 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
             // Assert
             expect(result).toEqual({
                 userId: 'test-user-id',
-                roles: ['USER']
+                roles: [ROLE.USER]
             });
         });
 
         it('should handle numeric userId', async () => {
-            // Arrange
+            // Arrange - testing edge case with wrong type
             const payload = {
                 userId: 12345,
-                roles: ['USER'],
-                iat: 1234567890,
-                exp: 1234567890
-            };
+                roles: [ROLE.USER]
+            } as unknown as JwtPayload;
 
             // Act
             const result = await strategy.validate(payload);
@@ -179,13 +168,13 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
             // Assert
             expect(result).toEqual({
                 userId: 12345,
-                roles: ['USER']
+                roles: [ROLE.USER]
             });
         });
 
         it('should handle null payload gracefully', async () => {
             // Arrange
-            const payload = null as any;
+            const payload = null as unknown as JwtPayload;
 
             // Act & Assert
             await expect(() => strategy.validate(payload)).rejects.toThrow();
@@ -193,15 +182,15 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
 
         it('should handle undefined payload gracefully', async () => {
             // Arrange
-            const payload = undefined as any;
+            const payload = undefined as unknown as JwtPayload;
 
             // Act & Assert
             await expect(() => strategy.validate(payload)).rejects.toThrow();
         });
 
         it('should handle empty object payload', async () => {
-            // Arrange
-            const payload = {};
+            // Arrange - testing edge case with empty object
+            const payload = {} as unknown as JwtPayload;
 
             // Act
             const result = await strategy.validate(payload);
@@ -216,16 +205,14 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
 
     describe('security and edge cases', () => {
         it('should not expose sensitive data from payload', async () => {
-            // Arrange
+            // Arrange - testing that extra properties are stripped
             const payload = {
                 userId: 'test-user-id',
-                roles: ['USER'],
+                roles: [ROLE.USER],
                 password: 'secret-password',
                 apiKey: 'secret-api-key',
-                secretToken: 'secret-token',
-                iat: 1234567890,
-                exp: 1234567890
-            };
+                secretToken: 'secret-token'
+            } as unknown as JwtPayload;
 
             // Act
             const result = await strategy.validate(payload);
@@ -233,7 +220,7 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
             // Assert
             expect(result).toEqual({
                 userId: 'test-user-id',
-                roles: ['USER']
+                roles: [ROLE.USER]
             });
             expect(result).not.toHaveProperty('password');
             expect(result).not.toHaveProperty('apiKey');
@@ -241,13 +228,11 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
         });
 
         it('should handle malformed roles data', async () => {
-            // Arrange
+            // Arrange - testing edge case with wrong type for roles
             const payload = {
                 userId: 'test-user-id',
-                roles: 'USER' as any, // Should be array but is string
-                iat: 1234567890,
-                exp: 1234567890
-            };
+                roles: 'USER' as unknown as ROLE[] // Should be array but is string
+            } as unknown as JwtPayload;
 
             // Act
             const result = await strategy.validate(payload);
@@ -260,13 +245,11 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
         });
 
         it('should handle nested object in roles', async () => {
-            // Arrange
+            // Arrange - testing edge case with wrong type for roles
             const payload = {
                 userId: 'test-user-id',
-                roles: { role: 'USER', permissions: ['READ', 'WRITE'] } as any,
-                iat: 1234567890,
-                exp: 1234567890
-            };
+                roles: { role: 'USER', permissions: ['READ', 'WRITE'] } as unknown as ROLE[]
+            } as unknown as JwtPayload;
 
             // Act
             const result = await strategy.validate(payload);
@@ -279,14 +262,12 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
         });
 
         it('should handle very large payload', async () => {
-            // Arrange
-            const largeArray = new Array(1000).fill('ROLE');
+            // Arrange - testing with large array
+            const largeArray = new Array(1000).fill(ROLE.USER);
             const payload = {
                 userId: 'test-user-id',
-                roles: largeArray,
-                iat: 1234567890,
-                exp: 1234567890
-            };
+                roles: largeArray
+            } as unknown as JwtPayload;
 
             // Act
             const result = await strategy.validate(payload);
@@ -300,11 +281,9 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
 
         it('should be idempotent', async () => {
             // Arrange
-            const payload = {
+            const payload: JwtPayload = {
                 userId: 'test-user-id',
-                roles: ['USER'],
-                iat: 1234567890,
-                exp: 1234567890
+                roles: [ROLE.USER]
             };
 
             // Act
@@ -316,13 +295,11 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
         });
 
         it('should handle special characters in userId', async () => {
-            // Arrange
+            // Arrange - testing edge case with special characters
             const payload = {
                 userId: 'user-with-special-chars!@#$%^&*()',
-                roles: ['USER'],
-                iat: 1234567890,
-                exp: 1234567890
-            };
+                roles: [ROLE.USER]
+            } as unknown as JwtPayload;
 
             // Act
             const result = await strategy.validate(payload);
@@ -330,17 +307,15 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
             // Assert
             expect(result).toEqual({
                 userId: 'user-with-special-chars!@#$%^&*()',
-                roles: ['USER']
+                roles: [ROLE.USER]
             });
         });
 
         it('should handle UUID format userId', async () => {
             // Arrange
-            const payload = {
+            const payload: JwtPayload = {
                 userId: '550e8400-e29b-41d4-a716-446655440000',
-                roles: ['USER'],
-                iat: 1234567890,
-                exp: 1234567890
+                roles: [ROLE.USER]
             };
 
             // Act
@@ -349,7 +324,7 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
             // Assert
             expect(result).toEqual({
                 userId: '550e8400-e29b-41d4-a716-446655440000',
-                roles: ['USER']
+                roles: [ROLE.USER]
             });
         });
     });

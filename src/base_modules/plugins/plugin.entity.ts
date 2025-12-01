@@ -32,5 +32,5 @@ export class Plugin {
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    config?: Record<string, any>;
+    config?: Record<string, unknown>;
 }
