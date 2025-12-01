@@ -43,7 +43,11 @@ async function bootstrap(): Promise<void> {
                 res?: unknown;
             }
 
-            (reply as unknown as ReplyWithPolyfill).setHeader = function (this: { raw: RawResponse }, key: string, value: string) {
+            (reply as unknown as ReplyWithPolyfill).setHeader = function (
+                this: { raw: RawResponse },
+                key: string,
+                value: string
+            ) {
                 return this.raw.setHeader(key, value);
             };
             (reply as unknown as ReplyWithPolyfill).end = function (this: { raw: RawResponse }) {
