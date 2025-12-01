@@ -20,6 +20,20 @@ import { IntegrationsRepository } from '../integrations.repository';
 import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from './constants';
 import { GithubIntegrationService } from './github.service';
 
+/** GitHub API error with status code */
+interface GithubApiError {
+    status?: number;
+    message?: string;
+}
+
+/** Response from Octokit repos.listForAuthenticatedUser */
+interface OctokitReposResponse {
+    headers: {
+        link?: string;
+    };
+    data: GithubRepositorySchema[];
+}
+
 @Injectable()
 export class GithubRepositoriesService {
     constructor(
@@ -353,33 +367,35 @@ export class GithubRepositoriesService {
         token: string
     ): Promise<[GithubRepositorySchema[], number]> {
         try {
-            const { Octokit } = await import('octokit');
-            const octokit = new Octokit({
+            // Dynamic import has limited type inference - types are validated via OctokitReposResponse cast
+            const octokit = await import('octokit');
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+            const client = new octokit.Octokit({
                 auth: token
             });
-            const response = await octokit.rest.repos.listForAuthenticatedUser({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+            const response = (await client.rest.repos.listForAuthenticatedUser({
                 per_page: entriesPerPage,
                 page: page,
                 sort: 'updated',
                 since: lastUpdated !== undefined ? lastUpdated.toISOString() : undefined
-            });
+            })) as OctokitReposResponse;
 
             const linkHeader = response.headers.link;
-            const data: any = response.data;
 
             let lastPage = 1;
 
             // Just why github, just why...
             if (linkHeader) {
                 const links = linkHeader.split(',');
-                let lastLink = links.find((link: string) => link.includes('rel="last"'));
-                if (lastLink) {
-                    lastLink = lastLink
+                const lastLinkEntry = links.find((link: string) => link.includes('rel="last"'));
+                if (lastLinkEntry) {
+                    const cleanedLink = lastLinkEntry
                         .replace('; rel="last"', '')
                         .replace('<', '')
                         .replace('>', '')
                         .trim();
-                    const urlParams = new URLSearchParams(lastLink);
+                    const urlParams = new URLSearchParams(cleanedLink);
                     const lastPageQuery = urlParams.get('page');
                     if (lastPageQuery) {
                         lastPage = parseInt(lastPageQuery);
@@ -387,11 +403,11 @@ export class GithubRepositoriesService {
                 }
             }
 
-            const repos: GithubRepositorySchema[] = data;
-            return [repos, lastPage];
+            return [response.data, lastPage];
         } catch (err) {
-            if ((err as any).status) {
-                if ((err as any).status === 401) {
+            const apiError = err as GithubApiError;
+            if (apiError.status) {
+                if (apiError.status === 401) {
                     throw new IntegrationInvalidToken();
                 } else {
                     throw new FailedToRetrieveReposFromProvider();
