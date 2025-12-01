@@ -1,5 +1,5 @@
+import type { LicenseInfo } from '../licenses.types';
 import { sort } from './sort';
-import { LicenseInfo } from '../licenses2.types';
 
 describe('sort', () => {
     const createMockLicenseInfo = (overrides: Partial<LicenseInfo> = {}): LicenseInfo => ({
@@ -183,9 +183,9 @@ describe('sort', () => {
             const result = sort(licenses, 'dep_count', 'DESC');
 
             expect(result).toHaveLength(3);
-            expect(result[0].id).toBe('Apache-2.0');
-            expect(result[1].id).toBe('GPL-2.0');
-            expect(result[2].id).toBe('MIT');
+            expect(result[0]!.id).toBe('Apache-2.0');
+            expect(result[1]!.id).toBe('GPL-2.0');
+            expect(result[2]!.id).toBe('MIT');
         });
 
         it('should sort by dependency count in ASC order', () => {
@@ -207,9 +207,9 @@ describe('sort', () => {
             const result = sort(licenses, 'dep_count', 'ASC');
 
             expect(result).toHaveLength(3);
-            expect(result[0].id).toBe('MIT');
-            expect(result[1].id).toBe('GPL-2.0');
-            expect(result[2].id).toBe('Apache-2.0');
+            expect(result[0]!.id).toBe('MIT');
+            expect(result[1]!.id).toBe('GPL-2.0');
+            expect(result[2]!.id).toBe('Apache-2.0');
         });
 
         it('should handle empty deps_using_license array', () => {
@@ -227,8 +227,8 @@ describe('sort', () => {
             const result = sort(licenses, 'dep_count', 'DESC');
 
             expect(result).toHaveLength(2);
-            expect(result[0].id).toBe('Apache-2.0');
-            expect(result[1].id).toBe('MIT');
+            expect(result[0]!.id).toBe('Apache-2.0');
+            expect(result[1]!.id).toBe('MIT');
         });
 
         it('should handle null deps_using_license array', () => {
@@ -303,9 +303,9 @@ describe('sort', () => {
 
             expect(result).toHaveLength(3);
             // The sort function sorts by name in reverse order for DESC
-            expect(result[0].name).toBe('Apache License 2.0');
-            expect(result[1].name).toBe('GNU General Public License v2.0');
-            expect(result[2].name).toBe('MIT License');
+            expect(result[0]!.name).toBe('Apache License 2.0');
+            expect(result[1]!.name).toBe('GNU General Public License v2.0');
+            expect(result[2]!.name).toBe('MIT License');
         });
 
         it('should sort by license name in ASC order', () => {
@@ -328,9 +328,9 @@ describe('sort', () => {
 
             expect(result).toHaveLength(3);
             // The sort function sorts by name in normal order for ASC
-            expect(result[0].name).toBe('MIT License');
-            expect(result[1].name).toBe('GNU General Public License v2.0');
-            expect(result[2].name).toBe('Apache License 2.0');
+            expect(result[0]!.name).toBe('MIT License');
+            expect(result[1]!.name).toBe('GNU General Public License v2.0');
+            expect(result[2]!.name).toBe('Apache License 2.0');
         });
 
         it('should handle null license name', () => {
@@ -349,8 +349,8 @@ describe('sort', () => {
 
             expect(result).toHaveLength(2);
             // null is treated as empty string, so it comes last in DESC order
-            expect(result[0].name).toBe(null);
-            expect(result[1].name).toBe('Apache License 2.0');
+            expect(result[0]!.name).toBe(null);
+            expect(result[1]!.name).toBe('Apache License 2.0');
         });
 
         it('should handle undefined license name', () => {
@@ -369,8 +369,8 @@ describe('sort', () => {
 
             expect(result).toHaveLength(2);
             // undefined is treated as empty string, so it comes last in DESC order
-            expect(result[0].name).toBe(undefined);
-            expect(result[1].name).toBe('Apache License 2.0');
+            expect(result[0]!.name).toBe(undefined);
+            expect(result[1]!.name).toBe('Apache License 2.0');
         });
 
         it('should handle equal license names', () => {
@@ -407,8 +407,8 @@ describe('sort', () => {
 
             expect(result).toHaveLength(2);
             // empty string comes last in DESC order
-            expect(result[0].name).toBe('');
-            expect(result[1].name).toBe('Apache License 2.0');
+            expect(result[0]!.name).toBe('');
+            expect(result[1]!.name).toBe('Apache License 2.0');
         });
     });
 
@@ -435,9 +435,9 @@ describe('sort', () => {
             const result = sort(licenses, 'type', 'DESC');
 
             expect(result).toHaveLength(3);
-            expect(result[0].id).toBe('MIT');
-            expect(result[1].id).toBe('Apache-2.0');
-            expect(result[2].id).toBe('GPL-2.0');
+            expect(result[0]!.id).toBe('MIT');
+            expect(result[1]!.id).toBe('Apache-2.0');
+            expect(result[2]!.id).toBe('GPL-2.0');
         });
 
         it('should sort by compliance violations first (ASC)', () => {
@@ -462,9 +462,9 @@ describe('sort', () => {
             const result = sort(licenses, 'type', 'ASC');
 
             expect(result).toHaveLength(3);
-            expect(result[0].id).toBe('GPL-2.0');
-            expect(result[1].id).toBe('MIT');
-            expect(result[2].id).toBe('Apache-2.0');
+            expect(result[0]!.id).toBe('GPL-2.0');
+            expect(result[1]!.id).toBe('MIT');
+            expect(result[2]!.id).toBe('Apache-2.0');
         });
 
         it('should sort by unable_to_infer second (DESC)', () => {
@@ -489,9 +489,9 @@ describe('sort', () => {
             const result = sort(licenses, 'type', 'DESC');
 
             expect(result).toHaveLength(3);
-            expect(result[0].id).toBe('MIT');
-            expect(result[1].id).toBe('Apache-2.0');
-            expect(result[2].id).toBe('Unknown');
+            expect(result[0]!.id).toBe('MIT');
+            expect(result[1]!.id).toBe('Apache-2.0');
+            expect(result[2]!.id).toBe('Unknown');
         });
 
         it('should sort by unable_to_infer second (ASC)', () => {
@@ -516,9 +516,9 @@ describe('sort', () => {
             const result = sort(licenses, 'type', 'ASC');
 
             expect(result).toHaveLength(3);
-            expect(result[0].id).toBe('Unknown');
-            expect(result[1].id).toBe('MIT');
-            expect(result[2].id).toBe('Apache-2.0');
+            expect(result[0]!.id).toBe('Unknown');
+            expect(result[1]!.id).toBe('MIT');
+            expect(result[2]!.id).toBe('Apache-2.0');
         });
 
         it('should handle complex type sorting with both criteria', () => {
@@ -548,10 +548,10 @@ describe('sort', () => {
             const result = sort(licenses, 'type', 'DESC');
 
             expect(result).toHaveLength(4);
-            expect(result[0].id).toBe('MIT');
-            expect(result[1].id).toBe('Unknown');
-            expect(result[2].id).toBe('GPL-Violation');
-            expect(result[3].id).toBe('GPL-Unknown');
+            expect(result[0]!.id).toBe('MIT');
+            expect(result[1]!.id).toBe('Unknown');
+            expect(result[2]!.id).toBe('GPL-Violation');
+            expect(result[3]!.id).toBe('GPL-Unknown');
         });
 
         it('should handle licenses with same type properties', () => {
@@ -631,7 +631,7 @@ describe('sort', () => {
                     license_properties: undefined,
                     description: undefined,
                     references: undefined
-                } as LicenseInfo
+                } as unknown as LicenseInfo
             ];
 
             const result = sort(licenses, 'dep_count', undefined);

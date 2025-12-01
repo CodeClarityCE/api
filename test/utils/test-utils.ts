@@ -1,13 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
-import { JwtService } from '@nestjs/jwt';
+import type { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { Test, type TestingModule } from '@nestjs/testing';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
-import { User } from 'src/base_modules/users/users.entity';
-import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
+import type { Organization } from 'src/base_modules/organizations/organization.entity';
+import type { User } from 'src/base_modules/users/users.entity';
+import type { Repository, DataSource } from 'typeorm';
 
 /**
  * Test utilities for setting up NestJS applications and modules
@@ -19,11 +19,11 @@ export class TestUtils {
     static getTestDatabaseConfig() {
         return {
             type: 'postgres' as const,
-            host: process.env.DB_HOST || 'localhost',
-            port: parseInt(process.env.DB_PORT || '5432'),
-            username: process.env.DB_USERNAME || 'testuser',
-            password: process.env.DB_PASSWORD || 'testpass',
-            database: process.env.DB_NAME || 'codeclarity_test',
+            host: process.env['DB_HOST'] ?? 'localhost',
+            port: parseInt(process.env['DB_PORT'] ?? '5432'),
+            username: process.env['DB_USERNAME'] ?? 'testuser',
+            password: process.env['DB_PASSWORD'] ?? 'testpass',
+            database: process.env['DB_NAME'] ?? 'codeclarity_test',
             entities: ['src/**/*.entity.ts'],
             synchronize: true,
             dropSchema: true,

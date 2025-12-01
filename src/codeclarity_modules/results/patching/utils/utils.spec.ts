@@ -1,11 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { PatchingUtilsService } from './utils';
-import { Result } from '../../result.entity';
-import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
-import { Output as PatchesOutput } from '../patching.types';
 import { Status } from 'src/types/apiResponses.types';
+import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
+import type { Repository } from 'typeorm';
+import { Result } from '../../result.entity';
+import type { Output as PatchesOutput } from '../patching.types';
+import { PatchingUtilsService } from './utils';
 
 describe('PatchingUtilsService', () => {
     let service: PatchingUtilsService;
@@ -192,7 +192,7 @@ describe('PatchingUtilsService', () => {
 
             await service.getPatchingResult(analysisId);
 
-            const callArgs = resultRepository.findOne.mock.calls[0][0];
+            const callArgs = resultRepository.findOne.mock.calls[0]![0];
             expect((callArgs.where as any).plugin).toBe('js-patching');
         });
 
@@ -204,7 +204,7 @@ describe('PatchingUtilsService', () => {
 
             await service.getPatchingResult(analysisId);
 
-            const callArgs = resultRepository.findOne.mock.calls[0][0];
+            const callArgs = resultRepository.findOne.mock.calls[0]![0];
             expect((callArgs.order as any).analysis.created_on).toBe('DESC');
         });
 
@@ -216,7 +216,7 @@ describe('PatchingUtilsService', () => {
 
             await service.getPatchingResult(analysisId);
 
-            const callArgs = resultRepository.findOne.mock.calls[0][0];
+            const callArgs = resultRepository.findOne.mock.calls[0]![0];
             expect(callArgs.cache).toBe(true);
         });
 
@@ -228,7 +228,7 @@ describe('PatchingUtilsService', () => {
 
             await service.getPatchingResult(analysisId);
 
-            const callArgs = resultRepository.findOne.mock.calls[0][0];
+            const callArgs = resultRepository.findOne.mock.calls[0]![0];
             expect((callArgs.relations as any).analysis).toBe(true);
         });
 

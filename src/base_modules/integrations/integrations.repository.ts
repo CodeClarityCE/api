@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
-import { Integration } from 'src/base_modules/integrations/integrations.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Integration } from 'src/base_modules/integrations/integrations.entity';
 import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
+import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class IntegrationsRepository {
@@ -18,11 +18,17 @@ export class IntegrationsRepository {
      * @returns The Integration object if found.
      * @throws EntityNotFound - If no integration is found with the given ID.
      */
-    async getIntegrationById(integrationId: string, relations?: any): Promise<Integration> {
-        const integration = await this.integrationRepository.findOne({
-            where: { id: integrationId },
-            relations: relations
-        });
+    async getIntegrationById(
+        integrationId: string,
+        relations?: string[] | Record<string, boolean>
+    ): Promise<Integration> {
+        const findOptions: { where: { id: string }; relations?: string[] } = {
+            where: { id: integrationId }
+        };
+        if (relations) {
+            findOptions.relations = relations as string[];
+        }
+        const integration = await this.integrationRepository.findOne(findOptions);
 
         if (!integration) {
             throw new EntityNotFound();
@@ -132,7 +138,7 @@ export class IntegrationsRepository {
      * Deletes an integration by its ID.
      * @param integrationId - The ID of the integration to delete.
      */
-    async deleteIntegration(integrationId: string) {
+    async deleteIntegration(integrationId: string): Promise<void> {
         const integration = await this.integrationRepository.findOne({
             where: { id: integrationId },
             relations: { users: true, owner: true, organizations: true }
@@ -143,9 +149,12 @@ export class IntegrationsRepository {
         integration.organizations = [];
         integration.users = [];
 
-        integration.owner.integrations = integration.owner.integrations?.filter(
+        const filtered = integration.owner.integrations?.filter(
             (integration) => integration.id !== integrationId
         );
+        if (filtered !== undefined) {
+            integration.owner.integrations = filtered;
+        }
 
         await this.integrationRepository.save(integration);
 

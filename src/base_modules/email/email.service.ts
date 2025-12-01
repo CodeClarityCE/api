@@ -24,8 +24,10 @@ export class EmailService {
     ) {
         this.webHost = this.configService.getOrThrow<string>('WEB_HOST');
         this.platformName = this.configService.getOrThrow<string>('PLATFORM_NAME');
-        this.env = process.env.ENV ?? 'dev';
-        this.testEmail = process.env.TEST_EMAIL;
+        this.env = process.env['ENV'] ?? 'dev';
+        if (process.env['TEST_EMAIL'] !== undefined) {
+            this.testEmail = process.env['TEST_EMAIL'];
+        }
     }
     /**
      * Sends a registration confirmation email to a newly signed-up user.
@@ -43,7 +45,7 @@ export class EmailService {
         email: string;
         token: string;
         userIdDigest: string;
-    }) {
+    }): Promise<void> {
         const url = `${this.webHost}/email_action/confirm_registration?token=${token}&userid=${userIdDigest}`;
         await this.sendEmail({
             to: email,
@@ -54,9 +56,7 @@ export class EmailService {
                 platform_name: this.platformName,
                 web_host: this.webHost.split('//')[1]
             }
-        })
-            .then(() => console.log('Mail successfully sent'))
-            .catch((error) => console.error(error));
+        }).catch((error: unknown) => console.error(error));
     }
 
     /**
@@ -75,7 +75,7 @@ export class EmailService {
         email: string;
         token: string;
         userIdDigest: string;
-    }) {
+    }): Promise<void> {
         const url = `${this.webHost}/email_action/reset_password?token=${token}&userid=${userIdDigest}`;
         await this.sendEmail({
             to: email,
@@ -120,7 +120,7 @@ export class EmailService {
         organizationName: string;
         inviter: User;
         orgId: string;
-    }) {
+    }): Promise<void> {
         const url = `${this.webHost}/email_action/join_org?token=${inviteToken}&useremail=${userEmailDigest}&orgId=${orgId}`;
         const orgInvitesBlockUrl = `${this.webHost}/email_action/unsubscribe/block_org_invites?token=${blockOrgInvitesToken}&useremail=${userEmailDigest}&orgId=${orgId}`;
         const allOrgInvitesBlockUrl = `${this.webHost}/email_action/unsubscribe/block_all_org_invites?token=${blockAllOrgInvitesToken}&useremail=${userEmailDigest}`;
@@ -170,7 +170,7 @@ export class EmailService {
         organizationName: string;
         inviter: User;
         orgId: string;
-    }) {
+    }): Promise<void> {
         const url = `${this.webHost}/email_action/join_org?token=${inviteToken}&useremail=${userEmailDigest}&orgId=${orgId}`;
         const unsubscribeUrl = `${this.webHost}/email_action/unsubscribe/block_all_emails?token=${blockEmailsToken}&useremail=${userEmailDigest}`;
         await this.sendEmail({
@@ -207,9 +207,9 @@ export class EmailService {
         to: string;
         subject: string;
         template: string;
-        templateData: any;
-    }) {
-        if (this.env == 'dev') {
+        templateData: Record<string, unknown>;
+    }): Promise<void> {
+        if (this.env === 'dev') {
             to = this.testEmail!;
         }
 

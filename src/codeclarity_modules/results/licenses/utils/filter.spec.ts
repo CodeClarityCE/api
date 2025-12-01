@@ -1,5 +1,5 @@
+import type { LicenseInfo } from '../licenses.types';
 import { filter } from './filter';
-import { LicenseInfo } from '../licenses2.types';
 
 describe('filter', () => {
     const createMockLicenseInfo = (overrides: Partial<LicenseInfo> = {}): LicenseInfo => ({
@@ -71,28 +71,28 @@ describe('filter', () => {
             const [filteredLicenses] = filter(licenses, 'mit', undefined);
 
             expect(filteredLicenses).toHaveLength(1);
-            expect(filteredLicenses[0].id).toBe('MIT');
+            expect(filteredLicenses[0]!.id).toBe('MIT');
         });
 
         it('should filter by partial license ID match', () => {
             const [filteredLicenses] = filter(licenses, 'GPL', undefined);
 
             expect(filteredLicenses).toHaveLength(1);
-            expect(filteredLicenses[0].id).toBe('GPL-3.0');
+            expect(filteredLicenses[0]!.id).toBe('GPL-3.0');
         });
 
         it('should filter by license name (case insensitive)', () => {
             const [filteredLicenses] = filter(licenses, 'apache', undefined);
 
             expect(filteredLicenses).toHaveLength(1);
-            expect(filteredLicenses[0].name).toBe('Apache License 2.0');
+            expect(filteredLicenses[0]!.name).toBe('Apache License 2.0');
         });
 
         it('should filter by partial license name match', () => {
             const [filteredLicenses] = filter(licenses, 'GNU', undefined);
 
             expect(filteredLicenses).toHaveLength(1);
-            expect(filteredLicenses[0].name).toBe('GNU General Public License v3.0');
+            expect(filteredLicenses[0]!.name).toBe('GNU General Public License v3.0');
         });
 
         it('should return multiple matches when search key matches multiple licenses', () => {
@@ -118,8 +118,8 @@ describe('filter', () => {
             const [filteredLicenses] = filter(licenses, 'MIT', undefined);
 
             expect(filteredLicenses).toHaveLength(1);
-            expect(filteredLicenses[0].id).toBe('MIT');
-            expect(filteredLicenses[0].name).toBe('MIT License');
+            expect(filteredLicenses[0]!.id).toBe('MIT');
+            expect(filteredLicenses[0]!.name).toBe('MIT License');
         });
 
         it('should not duplicate licenses when search matches both ID and name', () => {
@@ -131,7 +131,7 @@ describe('filter', () => {
             const [filteredLicenses] = filter([licenseWithMatchingIdAndName], 'GPL-3.0', undefined);
 
             expect(filteredLicenses).toHaveLength(1);
-            expect(filteredLicenses[0].id).toBe('GPL-3.0');
+            expect(filteredLicenses[0]!.id).toBe('GPL-3.0');
         });
     });
 
@@ -153,7 +153,7 @@ describe('filter', () => {
             const [filteredLicenses] = filter(licenses, 'MIT', undefined);
 
             expect(filteredLicenses).toHaveLength(1);
-            expect(filteredLicenses[0].id).toBe('MIT');
+            expect(filteredLicenses[0]!.id).toBe('MIT');
         });
 
         it('should handle null license name', () => {
@@ -165,7 +165,7 @@ describe('filter', () => {
             const [filteredLicenses] = filter(licenses, 'MIT', undefined);
 
             expect(filteredLicenses).toHaveLength(1);
-            expect(filteredLicenses[0].name).toBe('MIT License');
+            expect(filteredLicenses[0]!.name).toBe('MIT License');
         });
 
         it('should handle null searchKey', () => {
@@ -203,7 +203,7 @@ describe('filter', () => {
             const [filteredLicenses] = filter(licenses, 'MIT', undefined);
 
             expect(filteredLicenses).toHaveLength(1);
-            expect(filteredLicenses[0].id).toBe('MIT');
+            expect(filteredLicenses[0]!.id).toBe('MIT');
         });
 
         it('should handle undefined license name', () => {
@@ -215,7 +215,7 @@ describe('filter', () => {
             const [filteredLicenses] = filter(licenses, 'MIT', undefined);
 
             expect(filteredLicenses).toHaveLength(1);
-            expect(filteredLicenses[0].name).toBe('MIT License');
+            expect(filteredLicenses[0]!.name).toBe('MIT License');
         });
     });
 
@@ -236,8 +236,8 @@ describe('filter', () => {
                 const [filteredLicenses] = filter(licenses, undefined, ['compliance_violation']);
 
                 expect(filteredLicenses).toHaveLength(1);
-                expect(filteredLicenses[0].id).toBe('GPL-2.0');
-                expect(filteredLicenses[0].license_compliance_violation).toBe(true);
+                expect(filteredLicenses[0]!.id).toBe('GPL-2.0');
+                expect(filteredLicenses[0]!.license_compliance_violation).toBe(true);
             });
 
             it('should filter out licenses without compliance violations', () => {
@@ -274,8 +274,8 @@ describe('filter', () => {
                 const [filteredLicenses] = filter(licenses, undefined, ['unrecognized']);
 
                 expect(filteredLicenses).toHaveLength(1);
-                expect(filteredLicenses[0].id).toBe('Unknown');
-                expect(filteredLicenses[0].unable_to_infer).toBe(true);
+                expect(filteredLicenses[0]!.id).toBe('Unknown');
+                expect(filteredLicenses[0]!.unable_to_infer).toBe(true);
             });
 
             it('should filter out licenses that are recognized', () => {
@@ -312,8 +312,8 @@ describe('filter', () => {
                 const [filteredLicenses] = filter(licenses, undefined, ['permissive']);
 
                 expect(filteredLicenses).toHaveLength(1);
-                expect(filteredLicenses[0].id).toBe('MIT');
-                expect(filteredLicenses[0].license_category).toBe('permissive');
+                expect(filteredLicenses[0]!.id).toBe('MIT');
+                expect(filteredLicenses[0]!.license_category).toBe('permissive');
             });
 
             it('should filter out non-permissive licenses', () => {
@@ -348,15 +348,15 @@ describe('filter', () => {
                 const [filteredLicenses] = filter(licenses, undefined, ['permissive']);
 
                 expect(filteredLicenses).toHaveLength(1);
-                expect(filteredLicenses[0].id).toBe('Apache-2.0');
+                expect(filteredLicenses[0]!.id).toBe('Apache-2.0');
             });
 
             it('should filter out licenses with undefined license_category', () => {
+                const { license_category: _removed, ...mitWithoutCategory } = createMockLicenseInfo(
+                    { id: 'MIT' }
+                );
                 const licenses = [
-                    createMockLicenseInfo({
-                        id: 'MIT',
-                        license_category: undefined
-                    }),
+                    mitWithoutCategory as LicenseInfo,
                     createMockLicenseInfo({
                         id: 'Apache-2.0',
                         license_category: 'permissive'
@@ -366,7 +366,7 @@ describe('filter', () => {
                 const [filteredLicenses] = filter(licenses, undefined, ['permissive']);
 
                 expect(filteredLicenses).toHaveLength(1);
-                expect(filteredLicenses[0].id).toBe('Apache-2.0');
+                expect(filteredLicenses[0]!.id).toBe('Apache-2.0');
             });
         });
 
@@ -386,8 +386,8 @@ describe('filter', () => {
                 const [filteredLicenses] = filter(licenses, undefined, ['copy_left']);
 
                 expect(filteredLicenses).toHaveLength(1);
-                expect(filteredLicenses[0].id).toBe('GPL-2.0');
-                expect(filteredLicenses[0].license_category).toBe('copy_left');
+                expect(filteredLicenses[0]!.id).toBe('GPL-2.0');
+                expect(filteredLicenses[0]!.license_category).toBe('copy_left');
             });
 
             it('should filter out non-copy-left licenses', () => {
@@ -422,14 +422,14 @@ describe('filter', () => {
                 const [filteredLicenses] = filter(licenses, undefined, ['copy_left']);
 
                 expect(filteredLicenses).toHaveLength(1);
-                expect(filteredLicenses[0].id).toBe('AGPL-3.0');
+                expect(filteredLicenses[0]!.id).toBe('AGPL-3.0');
             });
 
             it('should filter out licenses with undefined license_category', () => {
                 const licenses = [
                     createMockLicenseInfo({
-                        id: 'GPL-2.0',
-                        license_category: undefined
+                        id: 'GPL-2.0'
+                        // license_category intentionally omitted to test undefined
                     }),
                     createMockLicenseInfo({
                         id: 'AGPL-3.0',
@@ -440,7 +440,7 @@ describe('filter', () => {
                 const [filteredLicenses] = filter(licenses, undefined, ['copy_left']);
 
                 expect(filteredLicenses).toHaveLength(1);
-                expect(filteredLicenses[0].id).toBe('AGPL-3.0');
+                expect(filteredLicenses[0]!.id).toBe('AGPL-3.0');
             });
         });
 
@@ -470,9 +470,9 @@ describe('filter', () => {
                 ]);
 
                 expect(filteredLicenses).toHaveLength(1);
-                expect(filteredLicenses[0].id).toBe('Apache-2.0');
-                expect(filteredLicenses[0].license_category).toBe('permissive');
-                expect(filteredLicenses[0].license_compliance_violation).toBe(true);
+                expect(filteredLicenses[0]!.id).toBe('Apache-2.0');
+                expect(filteredLicenses[0]!.license_category).toBe('permissive');
+                expect(filteredLicenses[0]!.license_compliance_violation).toBe(true);
             });
 
             it('should handle empty active filters array', () => {
@@ -587,17 +587,19 @@ describe('filter', () => {
         });
 
         it('should handle licenses with mixed null/undefined categories', () => {
+            const { license_category: _removed, ...licenseWithoutCategory } = createMockLicenseInfo(
+                {
+                    license_compliance_violation: false,
+                    unable_to_infer: true
+                }
+            );
             const licenses = [
                 createMockLicenseInfo({
                     license_category: null as any,
                     license_compliance_violation: true,
                     unable_to_infer: false
                 }),
-                createMockLicenseInfo({
-                    license_category: undefined,
-                    license_compliance_violation: false,
-                    unable_to_infer: true
-                })
+                licenseWithoutCategory as LicenseInfo
             ];
 
             const [, counts] = filter(licenses, undefined, undefined);
@@ -637,10 +639,10 @@ describe('filter', () => {
             const [filteredLicenses] = filter(licenses, 'MIT', ['permissive']);
 
             expect(filteredLicenses).toHaveLength(2);
-            expect(filteredLicenses[0].id).toBe('MIT');
-            expect(filteredLicenses[0].license_category).toBe('permissive');
-            expect(filteredLicenses[1].id).toBe('Apache-2.0');
-            expect(filteredLicenses[1].license_category).toBe('permissive');
+            expect(filteredLicenses[0]!.id).toBe('MIT');
+            expect(filteredLicenses[0]!.license_category).toBe('permissive');
+            expect(filteredLicenses[1]!.id).toBe('Apache-2.0');
+            expect(filteredLicenses[1]!.license_category).toBe('permissive');
         });
 
         it('should combine search and multiple active filters', () => {
@@ -671,9 +673,9 @@ describe('filter', () => {
             ]);
 
             expect(filteredLicenses).toHaveLength(1);
-            expect(filteredLicenses[0].id).toBe('MIT-style');
-            expect(filteredLicenses[0].license_category).toBe('permissive');
-            expect(filteredLicenses[0].license_compliance_violation).toBe(true);
+            expect(filteredLicenses[0]!.id).toBe('MIT-style');
+            expect(filteredLicenses[0]!.license_category).toBe('permissive');
+            expect(filteredLicenses[0]!.license_compliance_violation).toBe(true);
         });
     });
 
@@ -685,11 +687,7 @@ describe('filter', () => {
                     name: undefined as any,
                     unable_to_infer: false,
                     license_compliance_violation: false,
-                    deps_using_license: [],
-                    license_category: undefined,
-                    license_properties: undefined,
-                    description: undefined,
-                    references: undefined
+                    deps_using_license: []
                 }
             ];
 
@@ -709,7 +707,7 @@ describe('filter', () => {
             const [filteredLicenses] = filter(licenses, 'GPL-2.0+', undefined);
 
             expect(filteredLicenses).toHaveLength(1);
-            expect(filteredLicenses[0].id).toBe('GPL-2.0+');
+            expect(filteredLicenses[0]!.id).toBe('GPL-2.0+');
         });
 
         it('should handle very long search keys', () => {
@@ -731,7 +729,7 @@ describe('filter', () => {
             const [filteredLicenses] = filter(licenses, undefined, undefined);
 
             expect(filteredLicenses).toHaveLength(1);
-            expect(filteredLicenses[0].deps_using_license).toEqual([]);
+            expect(filteredLicenses[0]!.deps_using_license).toEqual([]);
         });
 
         it('should handle unknown filter types gracefully', () => {

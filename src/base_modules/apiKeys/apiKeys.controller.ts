@@ -1,9 +1,9 @@
 import { Controller, Delete, Get, Param, Post } from '@nestjs/common';
-import { ApiKeysService } from './apiKeys.service';
-import { AuthUser } from 'src/decorators/UserDecorator';
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { NoDataResponse, TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import { ApiTags } from '@nestjs/swagger';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { AuthUser } from 'src/decorators/UserDecorator';
+import { NoDataResponse, TypedPaginatedResponse } from 'src/types/apiResponses.types';
+import { ApiKeysService } from './apiKeys.service';
 
 @Controller('api_keys')
 export class ApiKeysController {
@@ -22,7 +22,7 @@ export class ApiKeysController {
     @Post('')
     async createApiKey() // @AuthUser() user: AuthenticatedUser
     // @Body() apiKeyCreateBody: ApiKeyCreateBody
-    : Promise<any> {
+    : Promise<unknown> {
         throw new Error('Not implemented');
     }
 
@@ -32,7 +32,7 @@ export class ApiKeysController {
     // @Param('api_key_id') api_key_id: string,
     // @Query('page', new DefaultValuePipe(0), ParseIntPipe) page?: number,
     // @Query('entries_per_page', new DefaultValuePipe(0), ParseIntPipe) entries_per_page?: number
-    : Promise<TypedPaginatedResponse<any>> {
+    : Promise<TypedPaginatedResponse<unknown>> {
         throw new Error('Not implemented');
     }
 

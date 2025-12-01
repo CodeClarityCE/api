@@ -1,27 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { EntityNotFound } from 'src/types/error.types';
-import { TypedPaginatedData } from 'src/types/pagination.types';
-import { PaginationUserSuppliedConf } from 'src/types/pagination.types';
-import { SortDirection } from 'src/types/sort.types';
-import { TeamMember } from 'src/base_modules/users/teamMember.types';
-import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
+import { Email, EmailType } from 'src/base_modules/email/email.entity';
+import { Invitation } from 'src/base_modules/organizations/invitations/invitation.entity';
 import { InviteCreateBody } from 'src/base_modules/organizations/invitations/orgInvitation.types';
+import { OrganizationMemberships } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import {
     OrganizationCreateBody,
     OrganizationInfoForInvitee
 } from 'src/base_modules/organizations/org.types';
-import { OrganizationMemberships } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
-import { Email, EmailType } from 'src/base_modules/email/email.entity';
-import { Invitation } from 'src/base_modules/organizations/invitations/invitation.entity';
-import { genRandomString } from 'src/utils/crypto';
-import { hash } from 'src/utils/crypto';
+import { TeamMember } from 'src/base_modules/users/teamMember.types';
+import { EntityNotFound } from 'src/types/error.types';
+import { TypedPaginatedData, PaginationUserSuppliedConf } from 'src/types/pagination.types';
+import { SortDirection } from 'src/types/sort.types';
+import { genRandomString, hash } from 'src/utils/crypto';
+import { EmailRepository } from '../email/email.repository';
 import { EmailService } from '../email/email.service';
 import { UsersRepository } from '../users/users.repository';
-import { OrganizationsRepository } from './organizations.repository';
-import { EmailRepository } from '../email/email.repository';
 import { InvitationsRepository } from './invitations/invitations.repository';
+import { OrganizationsRepository } from './organizations.repository';
 
 @Injectable()
 export class OrganizationsService {

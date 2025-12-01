@@ -1,102 +1,102 @@
-import { Entity, Column, PrimaryGeneratedColumn, Index } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
+import { Entity, Column, PrimaryGeneratedColumn, Index } from 'typeorm';
 
 @Entity('osv')
 export class OSV {
     @PrimaryGeneratedColumn('uuid')
     @ApiProperty()
     @Expose()
-    id: string;
+    id!: string;
 
     @Column()
     @Index({ unique: true })
     @ApiProperty()
     @Expose()
-    osv_id: string;
+    osv_id!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    schema_version: string;
+    schema_version!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    vlai_score: string;
+    vlai_score!: string;
 
     @Column('float', { nullable: true })
     @ApiProperty()
     @Expose()
-    vlai_confidence: number;
+    vlai_confidence!: number;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    modified: string;
+    modified!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    published: string;
+    published!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    withdrawn: string;
+    withdrawn!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    summary: string;
+    summary!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    details: string;
+    details!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    cve: string;
+    cve!: string;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    aliases: any;
+    aliases!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    related: any;
+    related!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    severity: any;
+    severity!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    affected: any;
+    affected!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    references: any;
+    references!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    credits: any;
+    credits!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    database_specific: any;
+    database_specific!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    cwes: any;
+    cwes!: unknown;
 }

@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { Result } from 'src/codeclarity_modules/results/result.entity';
-import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { EntityNotFound } from 'src/types/error.types';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class AnalysisResultsRepository {
@@ -11,15 +11,15 @@ export class AnalysisResultsRepository {
         private resultRepository: Repository<Result>
     ) {}
 
-    async delete(resultId: string) {
+    async delete(resultId: string): Promise<void> {
         await this.resultRepository.delete(resultId);
     }
 
-    async remove(result: Result) {
+    async remove(result: Result): Promise<void> {
         await this.resultRepository.remove(result);
     }
 
-    async removeResults(result: Result[]) {
+    async removeResults(result: Result[]): Promise<void> {
         await this.resultRepository.remove(result);
     }
 
@@ -28,7 +28,7 @@ export class AnalysisResultsRepository {
             where: {
                 analysis: { id: analysisId }
             },
-            relations: relations
+            ...(relations ? { relations: relations } : {})
         });
 
         if (!analysis) {
@@ -38,13 +38,17 @@ export class AnalysisResultsRepository {
         return analysis;
     }
 
-    async getByAnalysisIdAndPluginType(analysisId: string, plugin: string, relations?: object) {
+    async getByAnalysisIdAndPluginType(
+        analysisId: string,
+        plugin: string,
+        relations?: object
+    ): Promise<Result | null> {
         const analysis = await this.resultRepository.findOne({
             where: {
                 analysis: { id: analysisId },
                 plugin: plugin
             },
-            relations: relations
+            ...(relations ? { relations: relations } : {})
         });
 
         return analysis;

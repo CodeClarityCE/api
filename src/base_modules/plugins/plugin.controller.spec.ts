@@ -1,8 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { PluginController } from './plugin.controller';
-import { PluginService } from './plugin.service';
-import { Plugin } from './plugin.entity';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
+import { PluginController } from './plugin.controller';
+import type { Plugin } from './plugin.entity';
+import { PluginService } from './plugin.service';
 
 describe('PluginController', () => {
     let pluginController: PluginController;
@@ -56,7 +56,7 @@ describe('PluginController', () => {
         }).compile();
 
         pluginController = module.get<PluginController>(PluginController);
-        pluginService = module.get(PluginService) as jest.Mocked<PluginService>;
+        pluginService = module.get(PluginService);
     });
 
     afterEach(() => {
@@ -103,7 +103,7 @@ describe('PluginController', () => {
                 description: undefined,
                 depends_on: undefined,
                 config: undefined
-            } as Plugin;
+            } as unknown as Plugin;
             pluginService.get.mockResolvedValue(emptyPlugin);
 
             const result = await pluginController.get(mockUser, '');
@@ -124,12 +124,7 @@ describe('PluginController', () => {
 
         it('should handle plugin with undefined fields', async () => {
             const pluginWithUndefined: Plugin = {
-                id: 'test-uuid',
-                name: undefined,
-                version: undefined,
-                description: undefined,
-                depends_on: undefined,
-                config: undefined
+                id: 'test-uuid'
             };
             pluginService.get.mockResolvedValue(pluginWithUndefined);
 
@@ -147,7 +142,7 @@ describe('PluginController', () => {
                 description: undefined,
                 depends_on: undefined,
                 config: undefined
-            } as Plugin;
+            } as unknown as Plugin;
             pluginService.get.mockImplementation(async (id) => {
                 await new Promise((resolve) => setTimeout(resolve, 10));
                 return id === 'test-uuid-123' ? mockPlugin : emptyPlugin;
@@ -222,8 +217,8 @@ describe('PluginController', () => {
 
             const result = await pluginController.getAll(mockUser);
 
-            expect(result.data[0].id).toBe('test-uuid-789');
-            expect(result.data[2].id).toBe('test-uuid-123');
+            expect(result.data[0]!.id).toBe('test-uuid-789');
+            expect(result.data[2]!.id).toBe('test-uuid-123');
         });
 
         it('should handle plugins with various configurations', async () => {
@@ -259,7 +254,7 @@ describe('PluginController', () => {
 
             expect(result).toEqual({ data: variedPlugins });
             expect(result.data).toHaveLength(2);
-            expect(result.data[1].depends_on).toHaveLength(50);
+            expect(result.data[1]!.depends_on).toHaveLength(50);
         });
     });
 

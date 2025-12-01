@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import {
     MemberRole,
     OrganizationMemberships
 } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
-import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
 import { isMemberRoleLessThan } from 'src/base_modules/organizations/memberships/orgMembership.types';
+import { Organization } from 'src/base_modules/organizations/organization.entity';
+import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
 import { TypedPaginatedData } from 'src/types/pagination.types';
+import { Repository } from 'typeorm';
 
 /**
  * Injectable service for handling organizations and their memberships.
@@ -38,7 +38,7 @@ export class OrganizationsRepository {
     async getOrganizationById(orgId: string, relations?: object): Promise<Organization> {
         const organization = await this.organizationRepository.findOne({
             where: { id: orgId },
-            relations: relations
+            ...(relations ? { relations: relations } : {})
         });
 
         if (!organization) {
@@ -66,7 +66,7 @@ export class OrganizationsRepository {
                     id: organizationId
                 }
             },
-            relations: relations
+            ...(relations ? { relations: relations } : {})
         });
 
         if (!memberships) {
@@ -230,7 +230,7 @@ export class OrganizationsRepository {
                     id: userId
                 }
             },
-            relations: relations
+            ...(relations ? { relations: relations } : {})
         });
 
         if (!membership) {

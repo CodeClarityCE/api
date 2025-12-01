@@ -1,10 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { FileRepository } from './file.repository';
-import { File } from './file.entity';
-import { User } from '../users/users.entity';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Project } from '../projects/project.entity';
+import type { Repository } from 'typeorm';
+import type { Project } from '../projects/project.entity';
+import type { User } from '../users/users.entity';
+import { File } from './file.entity';
+import { FileRepository } from './file.repository';
 
 describe('FileRepository', () => {
     let fileRepository: FileRepository;

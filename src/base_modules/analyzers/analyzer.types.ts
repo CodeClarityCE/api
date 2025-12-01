@@ -6,15 +6,15 @@ import { IsNotEmpty, Length } from 'class-validator';
 
 export class AnalyzerCreateBody {
     @IsNotEmpty()
-    steps: Stage[][];
+    steps!: Stage[][];
 
     @IsNotEmpty()
     @Length(5, 50)
-    name: string;
+    name!: string;
 
     @IsNotEmpty()
     @Length(10, 250)
-    description: string;
+    description!: string;
 
     supported_languages?: string[];
 
@@ -37,6 +37,6 @@ export interface StageBase {
 }
 
 export interface Stage extends StageBase {
-    config: { [key: string]: any };
-    persistant_config: { [key: string]: any };
+    config: Record<string, unknown>;
+    persistant_config: Record<string, unknown>;
 }

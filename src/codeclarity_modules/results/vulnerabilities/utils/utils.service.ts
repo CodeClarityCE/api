@@ -1,14 +1,14 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
+import { Dependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import {
     Output as VulnsOutput,
     Vulnerability,
     Status
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
-import { Dependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { PluginFailed, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/error.types';
-import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class VulnerabilitiesUtilsService {
@@ -36,30 +36,28 @@ export class VulnerabilitiesUtilsService {
         });
 
         // Fall back to js-vuln-finder for backward compatibility
-        if (!result) {
-            result = await this.resultRepository.findOne({
-                relations: { analysis: true },
-                where: {
-                    analysis: {
-                        id: analysis_id
-                    },
-                    plugin: 'js-vuln-finder'
+        result ??= await this.resultRepository.findOne({
+            relations: { analysis: true },
+            where: {
+                analysis: {
+                    id: analysis_id
                 },
-                order: {
-                    analysis: {
-                        created_on: 'DESC'
-                    }
-                },
-                cache: true
-            });
-        }
+                plugin: 'js-vuln-finder'
+            },
+            order: {
+                analysis: {
+                    created_on: 'DESC'
+                }
+            },
+            cache: true
+        });
 
         if (!result) {
             throw new PluginResultNotAvailable();
         }
 
         const vulns: VulnsOutput = result.result as unknown as VulnsOutput;
-        if (vulns.analysis_info.status == Status.Failure) {
+        if (vulns.analysis_info.status === Status.Failure) {
             throw new PluginFailed();
         }
         return vulns;
@@ -77,7 +75,7 @@ export class VulnerabilitiesUtilsService {
             throw new UnknownWorkspace();
         }
 
-        let vulnerabilities = findings.workspaces[workspace].Vulnerabilities ?? [];
+        let vulnerabilities = findings.workspaces[workspace]!.Vulnerabilities ?? [];
 
         // Apply ecosystem filter if specified
         if (ecosystem_filter) {
@@ -122,16 +120,14 @@ export class VulnerabilitiesUtilsService {
     }
 
     async getImportPaths(
-        dependenciesMap: {
-            [key: string]: Dependency;
-        },
+        dependenciesMap: Record<string, Dependency>,
         dependency: string,
         currentPath: string,
-        paths: Array<string> = new Array<string>(),
-        parentsSet: Set<string> = new Set()
+        paths: string[] = new Array<string>(),
+        parentsSet = new Set<string>()
     ): Promise<string[]> {
         const currentDependency = dependenciesMap[dependency];
-        console.log(currentDependency);
+        console.warn(currentDependency);
 
         // If the dependency is already in the path, we stop the recursion
         if (parentsSet.has(dependency) || currentPath.includes(dependency)) {
@@ -141,7 +137,7 @@ export class VulnerabilitiesUtilsService {
 
         // currentPath = `${currentDependency.key} -> ${currentPath}`;
 
-        // if (currentDependency.parents.length == 0) {
+        // if (currentDependency.parents.length === 0) {
         //     if (currentPath.endsWith(' -> ')) currentPath = currentPath.slice(0, -4);
         //     paths.push(currentPath);
         //     parentsSet.clear();

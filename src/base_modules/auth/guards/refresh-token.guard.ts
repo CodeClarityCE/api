@@ -1,26 +1,22 @@
 import { ExecutionContext, Injectable } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { NotAuthenticated } from 'src/types/error.types';
+import { JwtValidationResult } from '../auth.types';
 
 /**
  * This guard enables refreshing jwt tokens with the provided refresh token
  */
 @Injectable()
 export class RefreshJwtAuthGuard extends AuthGuard('jwt-refresh') {
-    constructor(private reflector: Reflector) {
-        super();
-    }
-
-    canActivate(context: ExecutionContext) {
+    canActivate(context: ExecutionContext): boolean | Promise<boolean> {
         // Othwerwise check the jwt with the defined jwt strategy
-        return super.canActivate(context);
+        return super.canActivate(context) as boolean | Promise<boolean>;
     }
 
-    handleRequest(err: any, user: any) {
+    handleRequest<TUser = JwtValidationResult>(err: Error | null, user: TUser | false): TUser {
         // You can throw an exception based on either "info" or "err" arguments
         if (err || !user) {
-            throw err || new NotAuthenticated();
+            throw err ?? new NotAuthenticated();
         }
         return user;
     }

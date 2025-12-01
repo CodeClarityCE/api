@@ -1,14 +1,73 @@
 import { Injectable } from '@nestjs/common';
-import {
-    IntegrationInvalidToken,
-    IntegrationTokenExpired,
-    IntegrationTokenMissingPermissions,
-    IntegrationTokenRetrievalFailed
-} from 'src/types/error.types';
+import axios from 'axios';
+import { IntegrationTokenMissingPermissions } from 'src/types/error.types';
+import { BaseVCSTokenService } from '../base/baseVCSTokenService';
+import { parseTokenExpiry, validateNotExpired } from '../utils/tokenValidation.utils';
 
 @Injectable()
-export class GithubIntegrationTokenService {
-    constructor() {}
+export class GithubIntegrationTokenService extends BaseVCSTokenService {
+    private readonly GITHUB_API_URL = 'https://api.github.com';
+
+    protected getDefaultScopes(): string[] {
+        return ['public_repo'];
+    }
+
+    protected async validateTokenScopes(
+        token: string,
+        requiredScopes: string[],
+        _options?: Record<string, unknown>
+    ): Promise<void> {
+        const response = await axios.head(this.GITHUB_API_URL, {
+            headers: {
+                Authorization: `token ${token}`,
+                Accept: 'application/vnd.github.v3+json'
+            }
+        });
+
+        const headersString: string | undefined = response.headers['x-oauth-scopes'] as
+            | string
+            | undefined;
+
+        if (!headersString) {
+            throw new IntegrationTokenMissingPermissions();
+        }
+
+        const scopes = new Set(headersString.split(',').map((s) => s.trim()));
+
+        // GitHub-specific: check scope hierarchy
+        for (const required of requiredScopes) {
+            if (required === 'public_repo' && scopes.has('repo')) {
+                continue; // 'repo' supersedes 'public_repo'
+            }
+            if (!scopes.has(required)) {
+                throw new IntegrationTokenMissingPermissions();
+            }
+        }
+    }
+
+    protected async fetchTokenExpiry(
+        token: string,
+        _options?: Record<string, unknown>
+    ): Promise<[boolean, Date | undefined]> {
+        const response = await axios.head(this.GITHUB_API_URL, {
+            headers: {
+                Authorization: `token ${token}`,
+                Accept: 'application/vnd.github.v3+json'
+            }
+        });
+
+        const tokenExpiry = response.headers['github-authentication-token-expiration'] as
+            | string
+            | undefined;
+
+        const date = parseTokenExpiry(tokenExpiry ?? undefined);
+        if (date) {
+            validateNotExpired(date);
+            return [true, date];
+        }
+
+        return [false, undefined];
+    }
 
     /**
      * Validates that a given github oauth token has the necessary scopes/permissions to perform the necessary actions withing the API
@@ -23,7 +82,7 @@ export class GithubIntegrationTokenService {
         token: string,
         { additionalScopes = [] }: { additionalScopes?: string[] }
     ): Promise<void> {
-        return await this.validateTokenPermissions(token, { additionalScopes: additionalScopes });
+        return this.validatePermissions(token, { additionalScopes });
     }
 
     /**
@@ -39,67 +98,7 @@ export class GithubIntegrationTokenService {
         token: string,
         { additionalScopes = [] }: { additionalScopes?: string[] }
     ): Promise<void> {
-        return await this.validateTokenPermissions(token, { additionalScopes: additionalScopes });
-    }
-
-    /**
-     * Validates that a given github token has the necessary scopes/permissions to perform the necessary actions withing the API
-     * @throws {IntegrationTokenMissingPermissions} In case any scopes/permissions are not granted
-     * @throws {IntegrationInvalidToken} In case the token is not valid (revoked or non-existant)
-     * @throws {IntegrationTokenRetrievalFailed} In case the token could not be fetched from the provider
-     * @param token The personal access token
-     * @param additionalScopes We check the basic scopes needed for common actions. Any additional scopes can be defined here.
-     * @returns
-     */
-    private async validateTokenPermissions(
-        token: string,
-        { additionalScopes = [] }: { additionalScopes?: string[] }
-    ): Promise<void> {
-        try {
-            const { Octokit } = await import('octokit');
-            const octokit = new Octokit({
-                auth: token
-            });
-
-            const { headers } = await octokit.request('HEAD /');
-            const headersString: string | undefined = headers['x-oauth-scopes'];
-
-            if (!headersString) {
-                throw new IntegrationTokenMissingPermissions();
-            }
-
-            const scopes = new Set(headersString.split(',').map((scope) => scope.trim()));
-            // const necessaryScopes = new Set(['repo', 'write:org']);
-            const necessaryScopes = new Set(['public_repo']);
-            for (const additionalScope of additionalScopes) {
-                necessaryScopes.add(additionalScope);
-            }
-
-            for (const necessaryScope of necessaryScopes) {
-                if (necessaryScope == 'public_repo') {
-                    if (scopes.has('repo')) {
-                        continue;
-                    }
-                }
-                if (!scopes.has(necessaryScope)) {
-                    throw new IntegrationTokenMissingPermissions();
-                }
-            }
-
-            return;
-        } catch (err) {
-            if (err instanceof IntegrationTokenMissingPermissions) {
-                throw err;
-            }
-
-            if (err.status) {
-                if (err.status == 401) {
-                    throw new IntegrationInvalidToken();
-                }
-            }
-
-            throw new IntegrationTokenRetrievalFailed();
-        }
+        return this.validatePermissions(token, { additionalScopes });
     }
 
     /**
@@ -111,55 +110,6 @@ export class GithubIntegrationTokenService {
      * @returns (1) a boolean indicating whether it has an expiry data at all (2) the expiry date (if any)
      */
     async getClassicTokenExpiryRemote(token: string): Promise<[boolean, Date | undefined]> {
-        try {
-            const { Octokit } = await import('octokit');
-            const octokit = new Octokit({
-                auth: token
-            });
-
-            const { headers } = await octokit.request('HEAD /');
-            const tokenExpiry: string | number | undefined =
-                headers['github-authentication-token-expiration'];
-
-            if (tokenExpiry) {
-                let date: Date | undefined = undefined;
-                if (typeof tokenExpiry == 'string') {
-                    date = new Date(Date.parse(tokenExpiry));
-                } else if (typeof tokenExpiry == 'number') {
-                    date = new Date(tokenExpiry);
-                }
-
-                if (date) {
-                    const timeServer = new Date().getTime();
-                    const timeGitlab = date.getTime();
-
-                    const alreadyExpired = timeServer >= timeGitlab;
-                    if (alreadyExpired) {
-                        throw new IntegrationTokenExpired();
-                    }
-                    return [true, date];
-                }
-            }
-
-            return [false, undefined];
-        } catch (err) {
-            if (err instanceof IntegrationTokenExpired) {
-                throw err;
-            }
-
-            if (err.message) {
-                if (err.message.toLowerCase().includes('bad credentials')) {
-                    throw new IntegrationInvalidToken();
-                }
-            }
-
-            if (err.status) {
-                if (err.status == 401) {
-                    throw new IntegrationInvalidToken();
-                }
-            }
-
-            throw new IntegrationTokenRetrievalFailed();
-        }
+        return this.getTokenExpiry(token);
     }
 }

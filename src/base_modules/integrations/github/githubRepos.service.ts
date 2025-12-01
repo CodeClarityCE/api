@@ -1,24 +1,38 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import ms from 'ms';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { GithubRepositorySchema } from 'src/base_modules/integrations/github/github.types';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
+import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import { RepositoryCache, RepositoryType } from 'src/base_modules/projects/repositoryCache.entity';
+import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import {
     EntityNotFound,
     FailedToRetrieveReposFromProvider,
     IntegrationInvalidToken,
     NotAuthorized
 } from 'src/types/error.types';
-import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
-import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from './constants';
-import { GithubRepositorySchema } from 'src/base_modules/integrations/github/github.types';
 import { SortDirection } from 'src/types/sort.types';
-import ms from 'ms';
-import { GithubIntegrationService } from './github.service';
-import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { RepositoryCache, RepositoryType } from 'src/base_modules/projects/repositoryCache.entity';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 import { IntegrationsRepository } from '../integrations.repository';
+import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from './constants';
+import { GithubIntegrationService } from './github.service';
+
+/** GitHub API error with status code */
+interface GithubApiError {
+    status?: number;
+    message?: string;
+}
+
+/** Response from Octokit repos.listForAuthenticatedUser */
+interface OctokitReposResponse {
+    headers: {
+        link?: string;
+    };
+    data: GithubRepositorySchema[];
+}
 
 @Injectable()
 export class GithubRepositoriesService {
@@ -110,6 +124,9 @@ export class GithubRepositoriesService {
             IMPORTED = 'imported'
         }
 
+        // Type-safe comparison by casting sortBy to AllowedOrderBy
+        const typedSortBy = sortBy as AllowedOrderBy | undefined;
+
         // (1) Check that the user has the right to access the org
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
@@ -138,7 +155,7 @@ export class GithubRepositoriesService {
             currentPage = Math.max(0, paginationUserSuppliedConf.currentPage);
 
         // If the user specifically request to re-sync the repos (for example in case a newly create repo does not show up)
-        if (forceRefresh != undefined && forceRefresh == true) {
+        if (forceRefresh !== undefined && forceRefresh === true) {
             await this.forceSyncGithubRepos(integrationId);
         } else {
             // Check if the github repo cache is synced
@@ -155,14 +172,14 @@ export class GithubRepositoriesService {
             .createQueryBuilder('repo')
             .where('repo.integration = :integrationId', { integrationId });
 
-        if (sortBy) {
-            if (sortBy == AllowedOrderBy.FULLY_QUALIFIED_NAME)
+        if (typedSortBy) {
+            if (typedSortBy === AllowedOrderBy.FULLY_QUALIFIED_NAME)
                 repositoryQB = repositoryQB.orderBy('fully_qualified_name', sortDirection ?? 'ASC');
-            else if (sortBy == AllowedOrderBy.DESCRIPTION)
+            else if (typedSortBy === AllowedOrderBy.DESCRIPTION)
                 repositoryQB = repositoryQB.orderBy('description', sortDirection ?? 'ASC');
-            else if (sortBy == AllowedOrderBy.CREATED)
+            else if (typedSortBy === AllowedOrderBy.CREATED)
                 repositoryQB = repositoryQB.orderBy('created_at', sortDirection ?? 'ASC');
-            else if (sortBy == AllowedOrderBy.IMPORTED)
+            else if (typedSortBy === AllowedOrderBy.IMPORTED)
                 repositoryQB = repositoryQB.orderBy('imported_already', sortDirection ?? 'ASC');
         }
 
@@ -235,7 +252,7 @@ export class GithubRepositoriesService {
 
         const isSynced = await this.areGithubReposSynced(integrationId);
 
-        if (forceRefresh != undefined && forceRefresh == true) {
+        if (forceRefresh !== undefined && forceRefresh === true) {
             await this.forceSyncGithubRepos(integrationId);
         } else {
             if (!isSynced) {
@@ -350,33 +367,35 @@ export class GithubRepositoriesService {
         token: string
     ): Promise<[GithubRepositorySchema[], number]> {
         try {
-            const { Octokit } = await import('octokit');
-            const octokit = new Octokit({
+            // Dynamic import has limited type inference - types are validated via OctokitReposResponse cast
+            const octokit = await import('octokit');
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+            const client = new octokit.Octokit({
                 auth: token
             });
-            const response = await octokit.rest.repos.listForAuthenticatedUser({
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+            const response = (await client.rest.repos.listForAuthenticatedUser({
                 per_page: entriesPerPage,
                 page: page,
                 sort: 'updated',
-                since: lastUpdated != undefined ? lastUpdated.toISOString() : undefined
-            });
+                since: lastUpdated !== undefined ? lastUpdated.toISOString() : undefined
+            })) as OctokitReposResponse;
 
             const linkHeader = response.headers.link;
-            const data: any = response.data;
 
             let lastPage = 1;
 
             // Just why github, just why...
             if (linkHeader) {
                 const links = linkHeader.split(',');
-                let lastLink = links.find((link: string) => link.includes('rel="last"'));
-                if (lastLink) {
-                    lastLink = lastLink
+                const lastLinkEntry = links.find((link: string) => link.includes('rel="last"'));
+                if (lastLinkEntry) {
+                    const cleanedLink = lastLinkEntry
                         .replace('; rel="last"', '')
                         .replace('<', '')
                         .replace('>', '')
                         .trim();
-                    const urlParams = new URLSearchParams(lastLink);
+                    const urlParams = new URLSearchParams(cleanedLink);
                     const lastPageQuery = urlParams.get('page');
                     if (lastPageQuery) {
                         lastPage = parseInt(lastPageQuery);
@@ -384,11 +403,11 @@ export class GithubRepositoriesService {
                 }
             }
 
-            const repos: GithubRepositorySchema[] = data;
-            return [repos, lastPage];
+            return [response.data, lastPage];
         } catch (err) {
-            if (err.status) {
-                if (err.status == 401) {
+            const apiError = err as GithubApiError;
+            if (apiError.status) {
+                if (apiError.status === 401) {
                     throw new IntegrationInvalidToken();
                 } else {
                     throw new FailedToRetrieveReposFromProvider();

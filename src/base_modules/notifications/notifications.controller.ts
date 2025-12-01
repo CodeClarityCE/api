@@ -9,21 +9,18 @@ import {
     HttpException,
     HttpStatus
 } from '@nestjs/common';
-import { NoDataResponse, TypedPaginatedResponse } from 'src/types/apiResponses.types';
-import { AuthUser } from 'src/decorators/UserDecorator';
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { InjectRepository } from '@nestjs/typeorm';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { AuthUser } from 'src/decorators/UserDecorator';
+import { NoDataResponse, TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import { Repository } from 'typeorm';
 import { Notification } from './notification.entity';
-import { User } from '../users/users.entity';
 
 @Controller('/notifications')
 export class NotificationsController {
     constructor(
         @InjectRepository(Notification, 'codeclarity')
-        private readonly notificationsRepo: Repository<Notification>,
-        @InjectRepository(User, 'codeclarity')
-        private readonly usersRepo: Repository<User>
+        private readonly notificationsRepo: Repository<Notification>
     ) {}
 
     @Get('')

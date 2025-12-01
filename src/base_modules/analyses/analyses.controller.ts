@@ -10,28 +10,32 @@ import {
     ParseIntPipe,
     DefaultValuePipe
 } from '@nestjs/common';
-import { AnalysesService } from './analyses.service';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Analysis } from 'src/base_modules/analyses/analysis.entity';
+import {
+    AnalysisCreateBody,
+    AnalysisRun,
+    ScheduleUpdateBody
+} from 'src/base_modules/analyses/analysis.types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { ApiErrorDecorator } from 'src/decorators/ApiException';
+import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
+import { APIDocNoDataResponseDecorator } from 'src/decorators/NoDataResponse';
+import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
+import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
+import { AuthUser } from 'src/decorators/UserDecorator';
 import {
     CreatedResponse,
     NoDataResponse,
     TypedPaginatedResponse,
     TypedResponse
 } from 'src/types/apiResponses.types';
-import { AnalysisCreateBody, ScheduleUpdateBody } from 'src/base_modules/analyses/analysis.types';
-import { AuthUser } from 'src/decorators/UserDecorator';
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
-import { APIDocTypedPaginatedResponseDecorator } from 'src/decorators/TypedPaginatedResponse';
-import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
-import { APIDocNoDataResponseDecorator } from 'src/decorators/NoDataResponse';
 import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
-import { ApiErrorDecorator } from 'src/decorators/ApiException';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Analysis } from 'src/base_modules/analyses/analysis.entity';
 import {
     AnalyzerDoesNotExist,
     AnaylzerMissingConfigAttribute
 } from '../analyzers/analyzers.errors';
+import { AnalysesService } from './analyses.service';
 
 @ApiBearerAuth()
 @Controller('/org/:org_id/projects/:project_id/analyses')
@@ -65,8 +69,8 @@ export class AnalysesController {
         @AuthUser() user: AuthenticatedUser,
         @Param('org_id') org_id: string,
         @Param('project_id') project_id: string,
-        @Query('page', new DefaultValuePipe(0), ParseIntPipe) page?: number,
-        @Query('entries_per_page', new DefaultValuePipe(0), ParseIntPipe) entries_per_page?: number
+        @Query('page', new DefaultValuePipe(0), ParseIntPipe) page = 0,
+        @Query('entries_per_page', new DefaultValuePipe(0), ParseIntPipe) entries_per_page = 0
     ): Promise<TypedPaginatedResponse<Analysis>> {
         return await this.analysesService.getMany(
             org_id,
@@ -102,7 +106,7 @@ export class AnalysesController {
         @Param('analysis_id') analysis_id: string,
         @Param('org_id') org_id: string,
         @Param('project_id') project_id: string
-    ): Promise<TypedResponse<Array<object>>> {
+    ): Promise<TypedResponse<object[]>> {
         return { data: await this.analysesService.getChart(org_id, project_id, analysis_id, user) };
     }
 
@@ -260,7 +264,7 @@ export class AnalysesController {
         @Param('project_id') project_id: string,
         @Param('analysis_id') analysis_id: string,
         @AuthUser() user: AuthenticatedUser
-    ): Promise<TypedResponse<any[]>> {
+    ): Promise<TypedResponse<AnalysisRun[]>> {
         const runs = await this.analysesService.getAnalysisRuns(
             org_id,
             project_id,

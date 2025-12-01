@@ -129,7 +129,7 @@ export class GraphTraversalUtils {
         visited: Set<string>,
         children: GraphDependency[]
     ): void {
-        const directChildren = childrenMap.get(node.id) || [];
+        const directChildren = childrenMap.get(node.id) ?? [];
 
         for (const child of directChildren) {
             if (visited.has(child.id)) {
@@ -178,7 +178,7 @@ export class GraphTraversalUtils {
         }
 
         // Find direct children
-        const children = graph.filter((node) => node.parentIds && node.parentIds.includes(nodeId));
+        const children = graph.filter((node) => node.parentIds?.includes(nodeId));
         result.children.push(...children);
 
         return result;
@@ -208,8 +208,6 @@ export class GraphTraversalUtils {
             return result; // Target not found
         }
 
-        console.log(`Finding paths for target dependency: ${nodeId}`);
-
         // Mark the target node as part of a relevant path
         nodesInPaths.add(targetNode.id);
 
@@ -226,12 +224,6 @@ export class GraphTraversalUtils {
                 result.push(node);
             }
         }
-
-        console.log(`Total nodes in paths containing ${nodeId}:`, result.length);
-        console.log(
-            `Node IDs in result:`,
-            result.map((n) => n.id)
-        );
 
         return result;
     }
@@ -314,15 +306,11 @@ export class GraphTraversalUtils {
             return result; // Target not found
         }
 
-        console.log(`Finding minimal paths to target dependency: ${nodeId}`);
-
         // Always include the target
         result.push(targetNode);
 
         // Find all minimal paths from roots to target
         const pathsToTarget = this.findAllPathsToTarget(targetNode, nodeMap, []);
-
-        console.log(`Found ${pathsToTarget.length} paths to target`);
 
         // Collect all unique nodes from these paths
         const uniqueNodes = new Set<string>();
@@ -342,10 +330,6 @@ export class GraphTraversalUtils {
             }
         }
 
-        console.log(
-            `Minimal paths contain ${result.length} nodes:`,
-            result.map((n) => n.id)
-        );
         return result;
     }
 

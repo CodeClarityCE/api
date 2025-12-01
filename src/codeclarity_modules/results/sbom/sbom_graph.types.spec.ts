@@ -1,4 +1,8 @@
-import { GraphDependency, NodeTraversalResult, GraphTraversalUtils } from './sbom_graph.types';
+import {
+    GraphTraversalUtils,
+    type GraphDependency,
+    type NodeTraversalResult
+} from './sbom_graph.types';
 
 describe('SBOM Graph Types', () => {
     describe('GraphDependency interface', () => {
@@ -163,7 +167,7 @@ describe('SBOM Graph Types', () => {
                 expect(result.node).toBeDefined();
                 expect(result.node?.id).toBe('levelA@1.0.0');
                 expect(result.parents).toHaveLength(1);
-                expect(result.parents[0].id).toBe('root@1.0.0');
+                expect(result.parents[0]!.id).toBe('root@1.0.0');
                 expect(result.children).toHaveLength(2);
                 expect(result.children.map((c) => c.id)).toContain('levelA-child@1.0.0');
                 expect(result.children.map((c) => c.id)).toContain('shared-grandchild@1.0.0');
@@ -250,9 +254,9 @@ describe('SBOM Graph Types', () => {
 
                 expect(result.node?.id).toBe('levelA@1.0.0');
                 expect(result.parents).toHaveLength(1);
-                expect(result.parents[0].id).toBe('root@1.0.0');
+                expect(result.parents[0]!.id).toBe('root@1.0.0');
                 expect(result.children).toHaveLength(1);
-                expect(result.children[0].id).toBe('levelA-child@1.0.0');
+                expect(result.children[0]!.id).toBe('levelA-child@1.0.0');
             });
 
             it('should handle multiple direct parents', () => {
@@ -281,16 +285,6 @@ describe('SBOM Graph Types', () => {
         });
 
         describe('findPathsContaining', () => {
-            let consoleSpy: jest.SpyInstance;
-
-            beforeEach(() => {
-                consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-            });
-
-            afterEach(() => {
-                consoleSpy.mockRestore();
-            });
-
             it('should find all nodes in paths containing the target', () => {
                 const result = GraphTraversalUtils.findPathsContaining('levelA@1.0.0', mockGraph);
 
@@ -312,32 +306,9 @@ describe('SBOM Graph Types', () => {
 
                 expect(result).toEqual([]);
             });
-
-            it('should log debug information', () => {
-                GraphTraversalUtils.findPathsContaining('levelA@1.0.0', mockGraph);
-
-                expect(consoleSpy).toHaveBeenCalledWith(
-                    'Finding paths for target dependency: levelA@1.0.0'
-                );
-                expect(consoleSpy).toHaveBeenCalledWith(
-                    'Total nodes in paths containing levelA@1.0.0:',
-                    expect.any(Number)
-                );
-                expect(consoleSpy).toHaveBeenCalledWith('Node IDs in result:', expect.any(Array));
-            });
         });
 
         describe('findMinimalPathsToTarget', () => {
-            let consoleSpy: jest.SpyInstance;
-
-            beforeEach(() => {
-                consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-            });
-
-            afterEach(() => {
-                consoleSpy.mockRestore();
-            });
-
             it('should find minimal paths to target', () => {
                 const result = GraphTraversalUtils.findMinimalPathsToTarget(
                     'shared-grandchild@1.0.0',
@@ -368,20 +339,7 @@ describe('SBOM Graph Types', () => {
                 );
 
                 expect(result).toHaveLength(1);
-                expect(result[0].id).toBe('root@1.0.0');
-            });
-
-            it('should log debug information', () => {
-                GraphTraversalUtils.findMinimalPathsToTarget('levelA@1.0.0', mockGraph);
-
-                expect(consoleSpy).toHaveBeenCalledWith(
-                    'Finding minimal paths to target dependency: levelA@1.0.0'
-                );
-                expect(consoleSpy).toHaveBeenCalledWith('Found 1 paths to target');
-                expect(consoleSpy).toHaveBeenCalledWith(
-                    'Minimal paths contain 2 nodes:',
-                    expect.any(Array)
-                );
+                expect(result[0]!.id).toBe('root@1.0.0');
             });
 
             it('should handle multiple paths to target', () => {
@@ -422,7 +380,7 @@ describe('SBOM Graph Types', () => {
                 expect(result.node?.id).toBe('nodeA@1.0.0');
                 expect(result.parents).toEqual([]);
                 expect(result.children).toHaveLength(1);
-                expect(result.children[0].id).toBe('nodeB@1.0.0');
+                expect(result.children[0]!.id).toBe('nodeB@1.0.0');
             });
 
             it('should handle nodes with undefined childrenIds', () => {

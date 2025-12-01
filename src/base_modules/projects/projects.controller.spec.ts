@@ -1,11 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
+import { EntityNotFound, NotAuthorized, AlreadyExists } from '../../types/error.types';
+import { SortDirection } from '../../types/sort.types';
+import { AuthenticatedUser, ROLE } from '../auth/auth.types';
+import type { Project } from './project.entity';
+import type { ProjectImportBody } from './project.types';
 import { ProjectController } from './projects.controller';
 import { ProjectService, AllowedOrderByGetProjects } from './projects.service';
-import { AuthenticatedUser, ROLE } from '../auth/auth.types';
-import { Project } from './project.entity';
-import { ProjectImportBody } from './project.types';
-import { SortDirection } from '../../types/sort.types';
-import { EntityNotFound, NotAuthorized, AlreadyExists } from '../../types/error.types';
 
 describe('ProjectController', () => {
     let controller: ProjectController;

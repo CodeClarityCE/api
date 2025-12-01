@@ -10,6 +10,13 @@ import {
     Post,
     Query
 } from '@nestjs/common';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import {
+    DependencyPatchPolicy,
+    DependencyPatchPolicyCreateBody,
+    DependencyPatchPolicyPatchBody
+} from 'src/codeclarity_modules/policies/dependencyPatch/dependencyPatchPolicy.types';
+import { AuthUser } from 'src/decorators/UserDecorator';
 import {
     CreatedResponse,
     NoDataResponse,
@@ -17,13 +24,6 @@ import {
     TypedResponse
 } from 'src/types/apiResponses.types';
 import { DependencyPatchPolicyService } from './dependencyPatch.service';
-import { AuthUser } from 'src/decorators/UserDecorator';
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import {
-    DependencyPatchPolicy,
-    DependencyPatchPolicyCreateBody,
-    DependencyPatchPolicyPatchBody
-} from 'src/codeclarity_modules/policies/dependencyPatch/dependencyPatchPolicy.types';
 
 @Controller('org/:org_id/policies/dependency_patch')
 export class DependencyPatchPolicyController {

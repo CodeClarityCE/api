@@ -1,6 +1,6 @@
-import { defaultOptions, AppModule } from './app.module';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { defaultOptions, AppModule } from './app.module';
 
 describe('AppModule', () => {
     beforeEach(() => {
@@ -26,16 +26,16 @@ describe('AppModule', () => {
         it('should read environment variables for database connection', () => {
             const moduleContent = readFileSync(join(__dirname, 'app.module.ts'), 'utf8');
 
-            expect(moduleContent).toContain('process.env.PG_DB_PASSWORD');
-            expect(moduleContent).toContain('process.env.PG_DB_HOST');
-            expect(moduleContent).toContain('process.env.PG_DB_USER');
-            expect(moduleContent).toContain('process.env.PG_DB_PORT');
+            expect(moduleContent).toContain("process.env['PG_DB_PASSWORD']");
+            expect(moduleContent).toContain("process.env['PG_DB_HOST']");
+            expect(moduleContent).toContain("process.env['PG_DB_USER']");
+            expect(moduleContent).toContain("process.env['PG_DB_PORT']");
         });
 
         it('should use default port fallback', () => {
             const moduleContent = readFileSync(join(__dirname, 'app.module.ts'), 'utf8');
 
-            expect(moduleContent).toContain("parseInt(process.env.PG_DB_PORT || '6432', 10)");
+            expect(moduleContent).toContain("parseInt(process.env['PG_DB_PORT'] ?? '6432', 10)");
         });
 
         it('should disable logging by default', () => {

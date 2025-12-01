@@ -1,31 +1,34 @@
 import { satisfies } from 'semver';
-import {
+import type {
     PaginationConfig,
     PaginationUserSuppliedConf,
     TypedPaginatedData
 } from 'src/types/pagination.types';
 
-export function isNoneSeverity(severity: number) {
-    return severity == 0.0 || severity == null;
+export function isNoneSeverity(severity: number): boolean {
+    return severity === 0.0 || severity === null;
 }
 
-export function isLowSeverity(severity: number) {
+export function isLowSeverity(severity: number): boolean {
     return severity < 4.0 && severity > 0.0;
 }
 
-export function isMediumSeverity(severity: number) {
+export function isMediumSeverity(severity: number): boolean {
     return severity >= 4.0 && severity < 7.0;
 }
 
-export function isHighSeverity(severity: number) {
+export function isHighSeverity(severity: number): boolean {
     return severity >= 7.0 && severity < 9.0;
 }
 
-export function isCriticalSeverity(severity: number) {
+export function isCriticalSeverity(severity: number): boolean {
     return severity >= 9.0;
 }
 
-export function getVersionsSatisfyingConstraint(allVersions: string[], constraint: string) {
+export function getVersionsSatisfyingConstraint(
+    allVersions: string[],
+    constraint: string
+): string[] {
     const versionToReturn: string[] = [];
 
     for (const version of allVersions) {
@@ -43,19 +46,19 @@ export function getVersionsSatisfying(
     upper: string | null,
     lowerIncluded: boolean,
     upperIncluded: boolean
-) {
+): string[] {
     const versionToReturn: string[] = [];
     let constraint = '';
 
-    if (lower != null && upper != null) {
+    if (lower !== null && upper !== null) {
         if (upperIncluded) constraint = `>= ${lower}`;
         else constraint = `> ${lower}`;
         if (lowerIncluded) constraint += `<= ${upper}`;
         else constraint += `< ${upper}`;
-    } else if (lower == null && upper != null) {
+    } else if (lower === null && upper !== null) {
         if (lowerIncluded) constraint = `<= ${upper}`;
         else constraint = `< ${upper}`;
-    } else if (upper == null && lower != null) {
+    } else if (upper === null && lower !== null) {
         if (upperIncluded) constraint = `>= ${lower}`;
         else constraint = `> ${lower}`;
     } else {
@@ -75,7 +78,7 @@ export class NoPreviousAnalysis extends Error {}
 export class NoProjectAssociatedWithAnalysis extends Error {}
 
 export function paginate<Type>(
-    elements: Array<Type>,
+    elements: Type[],
     totalEntries: number,
     paginationUserSuppliedConf: PaginationUserSuppliedConf,
     paginationConfig: PaginationConfig
@@ -90,7 +93,8 @@ export function paginate<Type>(
     let maxEntriesPerPageSafe: number;
 
     if (
-        paginationUserSuppliedConf.currentPage == null ||
+        paginationUserSuppliedConf.currentPage === null ||
+        paginationUserSuppliedConf.currentPage === undefined ||
         paginationUserSuppliedConf.currentPage < 0
     ) {
         currentPageSafe = DEFAULT_PAGE;
@@ -99,7 +103,8 @@ export function paginate<Type>(
     }
 
     if (
-        paginationUserSuppliedConf.entriesPerPage == null ||
+        paginationUserSuppliedConf.entriesPerPage === null ||
+        paginationUserSuppliedConf.entriesPerPage === undefined ||
         paginationUserSuppliedConf.entriesPerPage < 0 ||
         paginationUserSuppliedConf.entriesPerPage > MAX_ENTRIES_PER_PAGE
     ) {

@@ -1,17 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { TypedPaginatedData } from 'src/types/pagination.types';
-import { PaginationUserSuppliedConf } from 'src/types/pagination.types';
-import { SortDirection } from 'src/types/sort.types';
 import {
     ActionType,
     getSeverityOfAction,
     getTypeClassOfAction
 } from 'src/base_modules/organizations/log/orgAuditLog.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { Log } from './log.entity';
+import { TypedPaginatedData, PaginationUserSuppliedConf } from 'src/types/pagination.types';
+import { SortDirection } from 'src/types/sort.types';
 import { UsersRepository } from '../../users/users.repository';
 import { OrganizationsRepository } from '../organizations.repository';
+import { Log } from './log.entity';
 import { LogsRepository } from './logs.repository';
 
 /**
@@ -66,7 +65,7 @@ export class OrganizationLoggerService {
      */
     async getAuditLogs(
         organizationId: string,
-        paginationUserSuppliedConf: PaginationUserSuppliedConf,
+        _paginationUserSuppliedConf: PaginationUserSuppliedConf,
         user: AuthenticatedUser,
         _searchKey?: string,
         _sortBy?: string,
@@ -108,11 +107,11 @@ export class OrganizationLoggerService {
         // let searchCriteria: ComplexSearchCriteria<OrganizationAuditLog> | undefined = undefined;
 
         // if (sortBy) {
-        //     if (sortBy == AllowedOrderBy.SEVERITY) sortByKey = 'action_severity';
-        //     else if (sortBy == AllowedOrderBy.CLASS) sortByKey = 'action_class';
-        //     else if (sortBy == AllowedOrderBy.TYPE) sortByKey = 'action';
-        //     else if (sortBy == AllowedOrderBy.BLAME) sortByKey = 'blame_on_email';
-        //     else if (sortBy == AllowedOrderBy.CREATED_ON) sortByKey = 'created_on';
+        //     if (sortBy === AllowedOrderBy.SEVERITY) sortByKey = 'action_severity';
+        //     else if (sortBy === AllowedOrderBy.CLASS) sortByKey = 'action_class';
+        //     else if (sortBy === AllowedOrderBy.TYPE) sortByKey = 'action';
+        //     else if (sortBy === AllowedOrderBy.BLAME) sortByKey = 'blame_on_email';
+        //     else if (sortBy === AllowedOrderBy.CREATED_ON) sortByKey = 'created_on';
         // }
 
         // if (searchKey) {

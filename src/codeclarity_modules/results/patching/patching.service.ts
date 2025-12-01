@@ -1,34 +1,38 @@
 import { Injectable } from '@nestjs/common';
-import { AnalysisResultsService } from '../results.service';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
     Output as PatchesOutput,
-    Workspace
+    Workspace,
+    PatchingAnalysisStats,
+    newPatchingAnalysisStats
 } from 'src/codeclarity_modules/results/patching/patching.types';
-// import { Output as VulnsOuptut } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
-import { Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
-import { UnknownWorkspace } from 'src/types/error.types';
-import { PatchingUtilsService } from './utils/utils';
-import { SbomUtilsService } from '../sbom/utils/utils';
-import { VulnerabilitiesUtilsService } from '../vulnerabilities/utils/utils.service';
 import {
-    AnalysisStats,
-    newAnalysisStats
-} from 'src/codeclarity_modules/results/patching/patching2.types';
-import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Result } from 'src/codeclarity_modules/results/result.entity';
+    Output as SbomOutput,
+    AnalysisInfo as SbomAnalysisInfo
+} from 'src/codeclarity_modules/results/sbom/sbom.types';
+import { StatusError, StatusResponse } from 'src/codeclarity_modules/results/status.types';
+import { UnknownWorkspace } from 'src/types/error.types';
+import { AnalysisResultsService } from '../results.service';
+import { SbomUtilsService } from '../sbom/utils/utils';
+import { PatchingUtilsService } from './utils/utils';
+
+/** Query options for patching list endpoint */
+export interface PatchingQueryOptions {
+    workspace: string;
+    page?: number | undefined;
+    entriesPerPage?: number | undefined;
+    sortBy?: string | undefined;
+    sortDirection?: string | undefined;
+    activeFilters?: string | undefined;
+    searchKey?: string | undefined;
+}
 
 @Injectable()
 export class PatchingService {
     constructor(
         private readonly analysisResultsService: AnalysisResultsService,
         private readonly patchingUtilsService: PatchingUtilsService,
-        private readonly sbomUtilsService: SbomUtilsService,
-        private readonly vulnerabilitiesUtilsService: VulnerabilitiesUtilsService,
-        @InjectRepository(Result, 'codeclarity')
-        private resultRepository: Repository<Result>
+        private readonly sbomUtilsService: SbomUtilsService
     ) {}
 
     async getPatches(
@@ -36,19 +40,14 @@ export class PatchingService {
         projectId: string,
         analysisId: string,
         user: AuthenticatedUser,
-        workspace: string,
-        _page: number | undefined,
-        _entries_per_page: number | undefined,
-        _sort_by: string | undefined,
-        _sort_direction: string | undefined,
-        _active_filters_string: string | undefined,
-        _search_key: string | undefined
+        options: PatchingQueryOptions
     ): Promise<Workspace> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
-        // let active_filters: string[] = [];
-        // if (active_filters_string != null)
-        //     active_filters = active_filters_string.replace('[', '').replace(']', '').split(',');
+        const { workspace } = options;
+
+        // Query options (page, entriesPerPage, sortBy, sortDirection, activeFilters, searchKey)
+        // are available in options but currently unused - kept for future pagination support
 
         const patchesOutput: PatchesOutput =
             await this.patchingUtilsService.getPatchingResult(analysisId);
@@ -60,7 +59,7 @@ export class PatchingService {
             throw new UnknownWorkspace();
         }
 
-        return patchesOutput.workspaces[workspace];
+        return patchesOutput.workspaces[workspace]!;
     }
 
     async getPatchedManifest(
@@ -69,7 +68,7 @@ export class PatchingService {
         analysisId: string,
         user: AuthenticatedUser,
         workspace: string
-    ): Promise<any> {
+    ): Promise<SbomAnalysisInfo | Record<string, never>> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
         const patchesOutput: PatchesOutput =
@@ -81,9 +80,9 @@ export class PatchingService {
         }
 
         if (
-            sbomOutput.analysis_info.package_manager == 'NPM' ||
-            sbomOutput.analysis_info.package_manager == 'YARN' ||
-            sbomOutput.analysis_info.package_manager == 'PNPM'
+            sbomOutput.analysis_info.package_manager === 'NPM' ||
+            sbomOutput.analysis_info.package_manager === 'YARN' ||
+            sbomOutput.analysis_info.package_manager === 'PNPM'
         ) {
             return sbomOutput.analysis_info;
         }
@@ -99,14 +98,14 @@ export class PatchingService {
         analysisId: string,
         user: AuthenticatedUser,
         workspace: string
-    ): Promise<AnalysisStats> {
+    ): Promise<PatchingAnalysisStats> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
         // function getContinuousFromDiscreteCIA(metric: string): number {
-        //     if (metric == 'COMPLETE') return 1.0; // CVSS 2
-        //     if (metric == 'PARTIAL') return 0.5; // CVSS 2
-        //     if (metric == 'HIGH') return 1.0; // CVSS 3
-        //     if (metric == 'LOW') return 0.5; // CVSS 3
+        //     if (metric === 'COMPLETE') return 1.0; // CVSS 2
+        //     if (metric === 'PARTIAL') return 0.5; // CVSS 2
+        //     if (metric === 'HIGH') return 1.0; // CVSS 3
+        //     if (metric === 'LOW') return 0.5; // CVSS 3
         //     return 0.0;
         // }
 
@@ -120,7 +119,7 @@ export class PatchingService {
             throw new UnknownWorkspace();
         }
 
-        const stats: AnalysisStats = newAnalysisStats();
+        const stats: PatchingAnalysisStats = newPatchingAnalysisStats();
 
         return stats;
     }
@@ -142,9 +141,9 @@ export class PatchingService {
     //     }
 
     //     if (
-    //         sbomOutput.analysis_info.package_manager == 'NPM' ||
-    //         sbomOutput.analysis_info.package_manager == 'YARN' ||
-    //         sbomOutput.analysis_info.package_manager == 'PNPM'
+    //         sbomOutput.analysis_info.package_manager === 'NPM' ||
+    //         sbomOutput.analysis_info.package_manager === 'YARN' ||
+    //         sbomOutput.analysis_info.package_manager === 'PNPM'
     //     ) {
     //         return this.getPatchTreeJSEcosystem(_patchesOutput, workspace);
     //     }
@@ -208,8 +207,8 @@ export class PatchingService {
 
         if (patchesOutput.analysis_info.private_errors.length) {
             return {
-                public_errors: patchesOutput.analysis_info.public_errors,
-                private_errors: patchesOutput.analysis_info.private_errors,
+                public_errors: patchesOutput.analysis_info.public_errors as StatusError[],
+                private_errors: patchesOutput.analysis_info.private_errors as StatusError[],
                 stage_start: patchesOutput.analysis_info.analysis_start_time,
                 stage_end: patchesOutput.analysis_info.analysis_end_time
             };

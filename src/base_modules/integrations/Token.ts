@@ -1,12 +1,12 @@
+import { GithubTokenType } from 'src/base_modules/integrations/github/githubIntegration.types';
 import { GitlabTokenType } from 'src/base_modules/integrations/gitlab/gitlabIntegration.types';
-import { GithubIntegrationTokenService } from './github/githubToken.service';
-import { GitlabIntegrationTokenService } from './gitlab/gitlabToken.service';
 import {
     IntegrationTokenExpired,
     IntegrationTokenRefreshFailed,
     IntegrationWrongTokenType
 } from 'src/types/error.types';
-import { GithubTokenType } from 'src/base_modules/integrations/github/githubIntegration.types';
+import type { GithubIntegrationTokenService } from './github/githubToken.service';
+import type { GitlabIntegrationTokenService } from './gitlab/gitlabToken.service';
 
 export class UnkownTokenType extends Error {}
 
@@ -18,8 +18,12 @@ export abstract class IntegrationToken {
 
     constructor(integrationId: string, token: string, refreshToken?: string, expiresOn?: Date) {
         this.token = token;
-        this.refreshToken = refreshToken;
-        this.expiresOn = expiresOn;
+        if (refreshToken !== undefined) {
+            this.refreshToken = refreshToken;
+        }
+        if (expiresOn !== undefined) {
+            this.expiresOn = expiresOn;
+        }
         this.integrationId = integrationId;
     }
 
@@ -110,12 +114,12 @@ export class GitlabIntegrationToken extends IntegrationToken {
      * @throws {IntegrationWrongTokenType} In case the token type is not supported
      */
     async validatePermissions(): Promise<void> {
-        if (this.gitlabTokenType == GitlabTokenType.OAUTH_TOKEN) {
+        if (this.gitlabTokenType === GitlabTokenType.OAUTH_TOKEN) {
             await this.gitlabIntegrationTokenService.validateOAuthAccessTokenPermissions(
                 this.token,
                 {}
             );
-        } else if (this.gitlabTokenType == GitlabTokenType.PERSONAL_ACCESS_TOKEN) {
+        } else if (this.gitlabTokenType === GitlabTokenType.PERSONAL_ACCESS_TOKEN) {
             await this.gitlabIntegrationTokenService.validatePersonalAccessTokenPermissions(
                 this.token,
                 this.gitlabInstanceUrl,
@@ -132,7 +136,7 @@ export class GitlabIntegrationToken extends IntegrationToken {
      */
     async refreshIfNecessary(): Promise<void> {
         // Gitlab Oauth tokens expire and Gitlab personal access tokens cannot be refreshed
-        if (this.gitlabTokenType != GitlabTokenType.OAUTH_TOKEN) return;
+        if (this.gitlabTokenType !== GitlabTokenType.OAUTH_TOKEN) return;
 
         const expired = await this.isExpired();
         if (expired) {
@@ -143,8 +147,12 @@ export class GitlabIntegrationToken extends IntegrationToken {
                 );
 
                 this.token = newIntegration.access_token;
-                this.refreshToken = newIntegration.refresh_token;
-                this.expiresOn = newIntegration.expiry_date;
+                if (newIntegration.refresh_token !== undefined) {
+                    this.refreshToken = newIntegration.refresh_token;
+                }
+                if (newIntegration.expiry_date !== undefined) {
+                    this.expiresOn = newIntegration.expiry_date;
+                }
             } else {
                 throw new IntegrationTokenRefreshFailed();
             }
@@ -221,9 +229,9 @@ export class GithubIntegrationToken extends IntegrationToken {
      * @throws {IntegrationWrongTokenType} In case the token type is not supported
      */
     async validatePermissions(): Promise<void> {
-        if (this.githubTokenType == GithubTokenType.OAUTH_TOKEN) {
+        if (this.githubTokenType === GithubTokenType.OAUTH_TOKEN) {
             await this.githubIntegrationTokenService.validateOauthTokenPermissions(this.token, {});
-        } else if (this.githubTokenType == GithubTokenType.CLASSIC_TOKEN) {
+        } else if (this.githubTokenType === GithubTokenType.CLASSIC_TOKEN) {
             await this.githubIntegrationTokenService.validateClassicTokenPermissions(
                 this.token,
                 {}

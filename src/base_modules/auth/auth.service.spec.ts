@@ -1,17 +1,21 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
-import { AuthService } from './auth.service';
-import { UsersService } from '../users/users.service';
-import { UsersRepository } from '../users/users.repository';
-import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
-import { WrongCredentials, RegistrationNotVerified } from './auth.errors';
-import { CannotPerformActionOnSocialAccount } from '../users/users.errors';
-import { FailedToAuthenticateSocialAccount, EntityNotFound } from 'src/types/error.types';
-import { SocialType } from '../users/user.types';
-import { ROLE } from './auth.types';
-import { User } from '../users/users.entity';
-import { GithubAuthenticatedUser, GitlabAuthenticatedUser, AuthenticatedUser } from './auth.types';
+import { Test, type TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
+import { FailedToAuthenticateSocialAccount, EntityNotFound } from 'src/types/error.types';
+import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToken.service';
+import { SocialType } from '../users/user.types';
+import type { User } from '../users/users.entity';
+import { CannotPerformActionOnSocialAccount } from '../users/users.errors';
+import { UsersRepository } from '../users/users.repository';
+import { UsersService } from '../users/users.service';
+import { WrongCredentials, RegistrationNotVerified } from './auth.errors';
+import { AuthService } from './auth.service';
+import {
+    ROLE,
+    AuthenticatedUser,
+    type GithubAuthenticatedUser,
+    type GitlabAuthenticatedUser
+} from './auth.types';
 
 // Mock the ms module before importing the service
 jest.mock('ms', () => ({
@@ -28,7 +32,6 @@ describe('AuthService', () => {
     let jwtService: JwtService;
     let usersService: UsersService;
     let usersRepository: UsersRepository;
-    let _gitlabTokenService: GitlabIntegrationTokenService;
 
     // Test data fixtures
     const mockUser = {
@@ -81,38 +84,60 @@ describe('AuthService', () => {
     );
 
     beforeEach(async () => {
+        const mockUsersService = {
+            sendUserRegistrationVerificationEmail: jest.fn(),
+            existsSocialUser: jest.fn(),
+            registerSocial: jest.fn()
+        };
+
+        const mockUsersRepository = {
+            getUserByEmail: jest.fn(),
+            getUserById: jest.fn(),
+            save: jest.fn()
+        };
+
+        const mockJwtService = {
+            sign: jest.fn(),
+            signAsync: jest.fn(),
+            verify: jest.fn()
+        };
+
+        const mockGitlabIntegrationTokenService = {
+            createGitlabIntegrationToken: jest.fn()
+        };
+
         const module: TestingModule = await Test.createTestingModule({
             providers: [
-                AuthService,
+                {
+                    provide: AuthService,
+                    useFactory: (
+                        jwt: JwtService,
+                        gitlab: GitlabIntegrationTokenService,
+                        users: UsersService,
+                        usersRepo: UsersRepository
+                    ) => new AuthService(jwt, gitlab, users, usersRepo),
+                    inject: [
+                        JwtService,
+                        GitlabIntegrationTokenService,
+                        UsersService,
+                        UsersRepository
+                    ]
+                },
                 {
                     provide: JwtService,
-                    useValue: {
-                        sign: jest.fn(),
-                        signAsync: jest.fn(),
-                        verify: jest.fn()
-                    }
-                },
-                {
-                    provide: UsersService,
-                    useValue: {
-                        sendUserRegistrationVerificationEmail: jest.fn(),
-                        existsSocialUser: jest.fn(),
-                        registerSocial: jest.fn()
-                    }
-                },
-                {
-                    provide: UsersRepository,
-                    useValue: {
-                        getUserByEmail: jest.fn(),
-                        getUserById: jest.fn(),
-                        save: jest.fn()
-                    }
+                    useValue: mockJwtService
                 },
                 {
                     provide: GitlabIntegrationTokenService,
-                    useValue: {
-                        createGitlabIntegrationToken: jest.fn()
-                    }
+                    useValue: mockGitlabIntegrationTokenService
+                },
+                {
+                    provide: UsersService,
+                    useValue: mockUsersService
+                },
+                {
+                    provide: UsersRepository,
+                    useValue: mockUsersRepository
                 }
             ]
         }).compile();
@@ -121,9 +146,6 @@ describe('AuthService', () => {
         jwtService = module.get<JwtService>(JwtService);
         usersService = module.get<UsersService>(UsersService);
         usersRepository = module.get<UsersRepository>(UsersRepository);
-        _gitlabTokenService = module.get<GitlabIntegrationTokenService>(
-            GitlabIntegrationTokenService
-        );
     });
 
     afterEach(() => {

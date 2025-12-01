@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { OSVRepository } from './osv.repository';
-import { OSV } from './osv.entity';
 import { EntityNotFound } from 'src/types/error.types';
+import type { Repository } from 'typeorm';
+import { OSV } from './osv.entity';
+import { OSVRepository } from './osv.repository';
 
 describe('OSVRepository', () => {
     let osvRepository: OSVRepository;
@@ -333,7 +333,9 @@ describe('OSVRepository', () => {
             expect(result.vlai_score).toBe('HIGH');
             expect(result.vlai_confidence).toBe(0.95);
             expect(result.summary).toContain('Remote code execution');
-            expect(result.affected[0].package.name).toBe('org.apache.logging.log4j:log4j-core');
+            expect((result.affected as { package: { name: string } }[])[0]!.package.name).toBe(
+                'org.apache.logging.log4j:log4j-core'
+            );
         });
 
         it('should handle Python vulnerability (PYSEC)', async () => {
@@ -362,7 +364,9 @@ describe('OSVRepository', () => {
             const result = await osvRepository.getVulnByOSVIDWithoutFailing('PYSEC-2021-852');
 
             expect(result?.osv_id).toBe('PYSEC-2021-852');
-            expect(result?.affected[0].package.ecosystem).toBe('PyPI');
+            expect(
+                (result?.affected as { package: { ecosystem: string } }[])[0]!.package.ecosystem
+            ).toBe('PyPI');
         });
 
         it('should handle Rust vulnerability (RUSTSEC)', async () => {
@@ -391,7 +395,9 @@ describe('OSVRepository', () => {
             const result = await osvRepository.getVulnByOSVIDWithoutFailing('RUSTSEC-2021-0145');
 
             expect(result?.osv_id).toBe('RUSTSEC-2021-0145');
-            expect(result?.affected[0].package.ecosystem).toBe('crates.io');
+            expect(
+                (result?.affected as { package: { ecosystem: string } }[])[0]!.package.ecosystem
+            ).toBe('crates.io');
             expect(result?.cve).toBeNull();
         });
 
@@ -430,9 +436,10 @@ describe('OSVRepository', () => {
 
             const result = await osvRepository.getVulnGHSA('GHSA-jfh8-c2jp-5v3q');
 
-            expect(result.affected).toHaveLength(2);
-            expect(result.affected[0].package.name).toBe('org.apache.logging.log4j:log4j-core');
-            expect(result.affected[1].package.name).toBe('org.apache.logging.log4j:log4j-api');
+            const affected = result.affected as { package: { name: string } }[];
+            expect(affected).toHaveLength(2);
+            expect(affected[0]!.package.name).toBe('org.apache.logging.log4j:log4j-core');
+            expect(affected[1]!.package.name).toBe('org.apache.logging.log4j:log4j-api');
         });
 
         it('should handle withdrawn vulnerability', async () => {
@@ -535,7 +542,7 @@ describe('OSVRepository', () => {
         });
 
         it('should handle very long IDs', async () => {
-            const longId = 'GHSA-' + 'x'.repeat(1000);
+            const longId = `GHSA-${'x'.repeat(1000)}`;
             mockRepository.findOne.mockResolvedValue(null);
 
             const result = await osvRepository.getVulnByOSVIDWithoutFailing(longId);

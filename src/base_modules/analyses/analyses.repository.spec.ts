@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
+import type { Repository } from 'typeorm';
 import { AnalysesRepository } from './analyses.repository';
 import { Analysis, AnalysisStatus } from './analysis.entity';
-import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
 
 describe('AnalysesRepository', () => {
     let analysesRepository: AnalysesRepository;
@@ -225,8 +225,8 @@ describe('AnalysesRepository', () => {
 
             expect(result).toEqual(mockAnalysis);
             expect(mockAnalysisRepository.findOne).toHaveBeenCalledWith({
-                where: { id: 'analysis-123' },
-                relations: null
+                where: { id: 'analysis-123' }
+                // relations is omitted when null due to exactOptionalPropertyTypes
             });
         });
     });

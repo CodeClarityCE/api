@@ -1,3 +1,5 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { Expose } from 'class-transformer';
 import {
     Entity,
     Column,
@@ -8,14 +10,12 @@ import {
     OneToMany
 } from 'typeorm';
 import { Policy } from '../../codeclarity_modules/policies/policy.entity';
-import { Project } from '../projects/project.entity';
 import { Result } from '../../codeclarity_modules/results/result.entity';
 import { Analyzer } from '../analyzers/analyzer.entity';
-import { Organization } from '../organizations/organization.entity';
 import { Integration } from '../integrations/integrations.entity';
+import { Organization } from '../organizations/organization.entity';
+import { Project } from '../projects/project.entity';
 import { User } from '../users/users.entity';
-import { ApiProperty } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
 
 export enum AnalysisStatus {
     REQUESTED = 'requested',
@@ -45,30 +45,30 @@ export class Analysis {
     @ApiProperty()
     @Expose()
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @ApiProperty()
     @Expose()
     @Column('timestamptz')
-    created_on: Date;
+    created_on!: Date;
 
     @Column('jsonb')
-    config: { [key: string]: { [key: string]: any } };
+    config!: Record<string, Record<string, unknown>>;
 
     @Column({
         nullable: true
     })
-    stage: number;
+    stage!: number;
 
     @ApiProperty()
     @Expose()
     @Column()
-    status: AnalysisStatus;
+    status!: AnalysisStatus;
 
     @ApiProperty()
     @Expose()
     @Column('jsonb')
-    steps: AnalysisStage[][];
+    steps!: AnalysisStage[][];
 
     @Column('timestamptz', { nullable: true })
     started_on?: Date;
@@ -81,15 +81,17 @@ export class Analysis {
     @Column({
         length: 25
     })
-    branch: string;
+    branch!: string;
 
     @Column({
+        type: 'varchar',
         length: 25,
         nullable: true
     })
     tag?: string;
 
     @Column({
+        type: 'varchar',
         length: 25,
         nullable: true
     })
@@ -97,27 +99,27 @@ export class Analysis {
 
     // Foreign keys
     @ManyToMany(() => Policy, (policy) => policy.analyses)
-    policies: Relation<Policy[]>;
+    policies!: Relation<Policy[]>;
 
     @ManyToOne(() => Project, (project) => project.analyses)
-    project: Relation<Project>;
+    project!: Relation<Project>;
 
     @ApiProperty()
     @Expose()
     @ManyToOne(() => Analyzer, (analyzer) => analyzer.analyses)
-    analyzer: Relation<Analyzer>;
+    analyzer!: Relation<Analyzer>;
 
     @OneToMany(() => Result, (result) => result.analysis, { cascade: true })
-    results: Relation<Result[]>;
+    results!: Relation<Result[]>;
 
     @ManyToOne(() => Organization, (organization) => organization.analyses)
-    organization: Relation<Organization>;
+    organization!: Relation<Organization>;
 
     @ManyToOne(() => Integration, (integration) => integration.analyses)
-    integration: Relation<Integration>;
+    integration!: Relation<Integration>;
 
     @ManyToOne(() => User, (user) => user.analyses)
-    created_by: Relation<User>;
+    created_by!: Relation<User>;
 
     // ===== ANALYSIS SCHEDULING FIELDS =====
     // Added to support recurring analysis execution
@@ -156,7 +158,7 @@ export class Analysis {
     })
     @Expose()
     @Column('timestamptz', { nullable: true })
-    next_scheduled_run?: Date;
+    next_scheduled_run?: Date | undefined;
 
     /**
      * Whether this scheduled analysis is currently active
@@ -170,7 +172,7 @@ export class Analysis {
     })
     @Expose()
     @Column({ default: true })
-    is_active: boolean;
+    is_active!: boolean;
 
     /**
      * When this analysis was last executed by the scheduler
@@ -185,5 +187,5 @@ export class Analysis {
     })
     @Expose()
     @Column('timestamptz', { nullable: true })
-    last_scheduled_run?: Date;
+    last_scheduled_run?: Date | undefined;
 }

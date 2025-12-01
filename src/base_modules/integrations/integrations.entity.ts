@@ -1,3 +1,5 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { Expose } from 'class-transformer';
 import {
     Entity,
     Column,
@@ -7,13 +9,11 @@ import {
     ManyToOne,
     OneToMany
 } from 'typeorm';
-import { ApiProperty } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
-import type { Organization } from '../organizations/organization.entity';
-import type { User } from '../users/users.entity';
-import type { RepositoryCache } from '../projects/repositoryCache.entity';
-import type { Project } from '../projects/project.entity';
 import type { Analysis } from '../analyses/analysis.entity';
+import type { Organization } from '../organizations/organization.entity';
+import type { Project } from '../projects/project.entity';
+import type { RepositoryCache } from '../projects/repositoryCache.entity';
+import type { User } from '../users/users.entity';
 
 export enum IntegrationType {
     VCS = 'VCS'
@@ -30,26 +30,26 @@ export class Integration {
     @ApiProperty()
     @Expose()
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @ApiProperty()
     @Expose()
     @Column({
         length: 25
     })
-    integration_type: IntegrationType;
+    integration_type!: IntegrationType;
 
     @ApiProperty()
     @Expose()
     @Column({
         length: 25
     })
-    integration_provider: IntegrationProvider;
+    integration_provider!: IntegrationProvider;
 
     @Column({
         length: 100
     })
-    access_token: string;
+    access_token!: string;
 
     @ApiProperty()
     @Expose()
@@ -73,39 +73,39 @@ export class Integration {
     @ApiProperty()
     @Expose()
     @Column()
-    invalid: boolean;
+    invalid!: boolean;
 
     @ApiProperty()
     @Expose()
     @Column({
         length: 25
     })
-    service_domain: string;
+    service_domain!: string;
 
     @ApiProperty()
     @Expose()
     @Column('timestamptz')
-    added_on: Date;
+    added_on!: Date;
 
     @Column('timestamptz', { nullable: true })
-    last_repository_sync: Date;
+    last_repository_sync!: Date;
 
     // Foreign keys
     @ManyToMany('Organization', 'integrations')
-    organizations: Relation<Organization[]>;
+    organizations!: Relation<Organization[]>;
 
     @ManyToMany('User', 'integrations')
-    users: Relation<User[]>;
+    users!: Relation<User[]>;
 
     @ManyToOne('RepositoryCache', 'integration')
-    repository_cache: Relation<RepositoryCache>;
+    repository_cache!: Relation<RepositoryCache>;
 
     @OneToMany('Project', 'integration')
-    projects: Relation<Project[]>;
+    projects!: Relation<Project[]>;
 
     @OneToMany('Analysis', 'integration')
-    analyses: Relation<Analysis[]>;
+    analyses!: Relation<Analysis[]>;
 
     @ManyToOne('User', 'integrations_owned')
-    owner: Relation<User>;
+    owner!: Relation<User>;
 }

@@ -1,4 +1,4 @@
-import { AnalysisStats, newAnalysisStats } from './sbom_stats.types';
+import { newAnalysisStats, type AnalysisStats } from './sbom_stats.types';
 
 describe('SBOM Stats Types', () => {
     describe('AnalysisStats interface', () => {

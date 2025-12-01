@@ -1,22 +1,22 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { GithubRepositoriesService } from './githubRepos.service';
-import { GithubIntegrationService } from './github.service';
-import { OrganizationsRepository } from '../../organizations/organizations.repository';
-import { IntegrationsRepository } from '../integrations.repository';
-import { Repository } from 'typeorm';
-import { RepositoryCache, RepositoryType } from '../../projects/repositoryCache.entity';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
-import { SortDirection } from '../../../types/sort.types';
+import type { Repository } from 'typeorm';
 import {
     EntityNotFound,
     FailedToRetrieveReposFromProvider,
     IntegrationInvalidToken,
     NotAuthorized
 } from '../../../types/error.types';
+import { SortDirection } from '../../../types/sort.types';
+import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
 import { MemberRole } from '../../organizations/memberships/orgMembership.types';
-import { GithubIntegrationToken } from '../Token';
-import { GithubRepositorySchema } from './github.types';
+import { OrganizationsRepository } from '../../organizations/organizations.repository';
+import { RepositoryCache, RepositoryType } from '../../projects/repositoryCache.entity';
+import { IntegrationsRepository } from '../integrations.repository';
+import type { GithubIntegrationToken } from '../Token';
+import { GithubIntegrationService } from './github.service';
+import type { GithubRepositorySchema } from './github.types';
+import { GithubRepositoriesService } from './githubRepos.service';
 // Mock ms module
 jest.mock('ms', () => ({
     __esModule: true,

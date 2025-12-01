@@ -1,7 +1,7 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, Relation } from 'typeorm';
-import type { Organization } from '../organization.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, Relation } from 'typeorm';
+import type { Organization } from '../organization.entity';
 
 export enum ActionSeverity {
     Critical = 3,
@@ -43,50 +43,50 @@ export class Log {
     @PrimaryGeneratedColumn('uuid')
     @ApiProperty()
     @Expose()
-    id: string;
+    id!: string;
 
     @Column()
     @ApiProperty()
     @Expose()
-    action_severity: ActionSeverity;
+    action_severity!: ActionSeverity;
 
     @Column({
         length: 25
     })
     @ApiProperty()
     @Expose()
-    action_class: ActionClassType;
+    action_class!: ActionClassType;
 
     @Column({
         length: 50
     })
     @ApiProperty()
     @Expose()
-    action: ActionType;
+    action!: ActionType;
 
     @Column('text')
     @ApiProperty()
     @Expose()
-    description: string;
+    description!: string;
 
     @Column({
         length: 100
     })
     @ApiProperty()
     @Expose()
-    blame_on_email: string;
+    blame_on_email!: string;
 
     @Column('timestamptz')
     @ApiProperty()
     @Expose()
-    created_on: Date;
+    created_on!: Date;
 
     // Foreign keys
     @ManyToOne('Organization', 'logs')
-    organization: Relation<Organization>;
+    organization!: Relation<Organization>;
 
     @Column()
-    organization_id: string;
+    organization_id!: string;
 
     @Column({ nullable: true })
     blame_on?: string;

@@ -1,7 +1,7 @@
 import { Controller, Get, Res } from '@nestjs/common';
 import { FastifyReply } from 'fastify';
-import { MetricsService } from './metrics.service';
 import { NonAuthEndpoint } from '../decorators/SkipAuthDecorator';
+import { MetricsService } from './metrics.service';
 
 @Controller('metrics')
 export class MetricsController {
@@ -9,7 +9,7 @@ export class MetricsController {
 
     @Get()
     @NonAuthEndpoint()
-    async getMetrics(@Res() res: FastifyReply) {
+    async getMetrics(@Res() res: FastifyReply): Promise<void> {
         const metrics = await this.metricsService.getMetrics();
         res.type('text/plain');
         res.send(metrics);

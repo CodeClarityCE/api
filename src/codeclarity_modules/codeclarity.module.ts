@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
-
-import { ResultsModule } from './results/results.module';
-import { PolicyModule } from './policies/policy.module';
-import { KnowledgeModule } from './knowledge/knowledge.module';
-import { DashboardModule } from './dashboard/dashboard.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { defaultOptions } from 'src/app.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { KnowledgeModule } from './knowledge/knowledge.module';
+import { PolicyModule } from './policies/policy.module';
+import { ResultsModule } from './results/results.module';
 
 @Module({
     imports: [

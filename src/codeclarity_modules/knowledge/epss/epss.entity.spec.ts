@@ -153,7 +153,7 @@ describe('EPSS Entity', () => {
     describe('Edge cases and validation', () => {
         it('should handle very long CVE identifiers', () => {
             const epss = new EPSS();
-            const longCve = 'CVE-2023-' + '1'.repeat(100);
+            const longCve = `CVE-2023-${'1'.repeat(100)}`;
 
             epss.cve = longCve;
             expect(epss.cve).toBe(longCve);

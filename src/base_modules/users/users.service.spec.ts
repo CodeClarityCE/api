@@ -1,29 +1,29 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { UsersService } from './users.service';
-import { EmailService } from '../email/email.service';
-import { AuthService } from '../auth/auth.service';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
-import { EmailRepository } from '../email/email.repository';
-import { UsersRepository } from './users.repository';
-import { User } from './users.entity';
-import { Organization } from '../organizations/organization.entity';
-import {
-    OrganizationMemberships,
-    MemberRole
-} from '../organizations/memberships/organization.memberships.entity';
-import { Email, EmailType } from '../email/email.entity';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { NotAuthorized } from 'src/types/error.types';
-import {
-    CannotPerformActionOnSocialAccount,
-    FailedToSendAccountRegistrationVerificationEmail
-} from './users.errors';
+import * as crypto from 'src/utils/crypto';
 import {
     AccountRegistrationVerificationTokenInvalidOrExpired,
     PasswordsDoNotMatch
 } from '../auth/auth.errors';
+import { AuthService } from '../auth/auth.service';
 import { AuthenticatedUser, ROLE } from '../auth/auth.types';
-import { UserCreateBody, UserPasswordPatchBody, UserPatchBody } from './user.types';
-import * as crypto from 'src/utils/crypto';
+import { EmailType, type Email } from '../email/email.entity';
+import { EmailRepository } from '../email/email.repository';
+import { EmailService } from '../email/email.service';
+import {
+    type OrganizationMemberships,
+    MemberRole
+} from '../organizations/memberships/organization.memberships.entity';
+import type { Organization } from '../organizations/organization.entity';
+import { OrganizationsRepository } from '../organizations/organizations.repository';
+import type { UserCreateBody, UserPasswordPatchBody, UserPatchBody } from './user.types';
+import type { User } from './users.entity';
+import {
+    CannotPerformActionOnSocialAccount,
+    FailedToSendAccountRegistrationVerificationEmail
+} from './users.errors';
+import { UsersRepository } from './users.repository';
+import { UsersService } from './users.service';
 
 describe('UsersService', () => {
     let service: UsersService;

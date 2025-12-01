@@ -1,42 +1,130 @@
+// import { getVersionsSatisfyingConstraint } from 'src/codeclarity_modules/results/utils/utils';
 import { Injectable } from '@nestjs/common';
+import { satisfies } from 'semver';
+import { CVSS2, CVSS3, CVSS31 } from 'src/codeclarity_modules/knowledge/cvss.types';
+import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
+import { FriendsOfPhp } from 'src/codeclarity_modules/knowledge/friendsofphp/friendsofphp.entity';
+import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
+import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
+import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
+import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.repository';
+import { OWASPRepository } from 'src/codeclarity_modules/knowledge/owasp/owasp.repository';
+import { OwaspTop10Info } from 'src/codeclarity_modules/knowledge/owasp/owasp.types';
+import { Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
+import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
+import { VersionsRepository } from 'src/codeclarity_modules/knowledge/package/packageVersions.repository';
+import { PatchInfo } from 'src/codeclarity_modules/results/patching/patching.types';
+import { Dependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import {
-    VulnerabilityDetails,
-    VulnerabilityInfo,
-    VulnerableVersionInfo,
-    DependencyInfo,
+    Vulnerability,
+    AffectedInfo,
+    AffectedRange,
+    VulnerabilityDetailsReport,
+    VulnerabilityInfoReport,
+    VulnerableVersionInfoReport,
+    DependencyInfoReport,
     CommonConsequencesInfo,
-    WeaknessInfo,
+    WeaknessInfoReport,
     ReferenceInfo,
     SeverityInfo,
     OtherInfo
-} from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities2.types';
-import {
-    Vulnerability,
-    AffectedInfo
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
-// import { getVersionsSatisfyingConstraint } from 'src/codeclarity_modules/results/utils/utils';
-import { satisfies } from 'semver';
-import { VersionsRepository } from 'src/codeclarity_modules/knowledge/package/packageVersions.repository';
-import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.repository';
-import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
-import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
-import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
-import { OWASPRepository } from 'src/codeclarity_modules/knowledge/owasp/owasp.repository';
-import { Dependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
-import { CVSS2, CVSS3, CVSS31 } from 'src/codeclarity_modules/knowledge/cvss.types';
-import { PatchInfo } from 'src/codeclarity_modules/results/patching/patching.types';
-import { OwaspTop10Info } from 'src/codeclarity_modules/knowledge/owasp/owasp.types';
-import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
-import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
-import { FriendsOfPhp } from 'src/codeclarity_modules/knowledge/friendsofphp/friendsofphp.entity';
-import { Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
+
+// Type definitions for NVD affected data structure
+interface NVDAffectedSource {
+    versionEndExcluding?: string;
+    versionStartIncluding?: string;
+    versionStartExcluding?: string;
+    versionEndIncluding?: string;
+    criteriaDict?: {
+        version?: string;
+        product?: string;
+        vendor?: string;
+        [key: string]: unknown;
+    };
+}
+
+interface NVDAffectedEntry {
+    sources?: NVDAffectedSource[];
+    [key: string]: unknown;
+}
+
+// Type definitions for OSV affected data structure
+interface OSVEvent {
+    introduced?: string;
+    fixed?: string;
+    last_affected?: string;
+    [key: string]: unknown;
+}
+
+interface OSVRange {
+    events?: OSVEvent[];
+    [key: string]: unknown;
+}
+
+interface OSVAffectedEntry {
+    versions?: unknown[];
+    ranges?: OSVRange[];
+    package?: {
+        name?: string;
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+}
+
+// Type definitions for NVD metrics structure
+interface NVDCVSSData {
+    vectorString: string;
+    [key: string]: unknown;
+}
+
+interface NVDCVSSMetric {
+    source: string;
+    cvssData: NVDCVSSData;
+    userInteractionRequired?: boolean;
+    [key: string]: unknown;
+}
+
+interface NVDMetrics {
+    cvssMetricV2?: NVDCVSSMetric[];
+    cvssMetricV30?: NVDCVSSMetric[];
+    cvssMetricV31?: NVDCVSSMetric[];
+    [key: string]: unknown;
+}
+
+// Type definitions for OSV severity structure
+interface OSVSeverity {
+    type: 'CVSS_V2' | 'CVSS_V3';
+    score: string;
+    [key: string]: unknown;
+}
+
+// Type definitions for OSV reference structure
+interface OSVReference {
+    url: string;
+    type: string;
+    [key: string]: unknown;
+}
+
+// Type definitions for NVD description structure
+interface NVDDescription {
+    lang: string;
+    value: string;
+    [key: string]: unknown;
+}
+
+// Type definitions for NVD reference structure
+interface NVDReference {
+    url: string;
+    [key: string]: unknown;
+}
 
 abstract class BaseReportGenerator {
-    patchesData: PatchInfo;
-    vulnsData: Vulnerability;
+    patchesData!: PatchInfo;
+    vulnsData!: Vulnerability;
     dependencyData?: Dependency;
-    versions: Version[];
-    packageManager: string;
+    versions!: Version[];
+    packageManager!: string;
     osvItem?: OSV;
     nvdItem?: NVD;
 
@@ -63,159 +151,78 @@ abstract class BaseReportGenerator {
         this.owaspRepository = owaspRepository;
     }
 
-    // async getPatchedVersionsString(source: string): Promise<string> {
-    //     // const affectedData: AffectedInfo = this.vulnsData.Affected[source];
-    //     const affectedData: AffectedInfo = { Ranges: [], Exact: [], Universal: false };
-    //     const patchedStringParts: string[] = [];
-    //     const versions = await this.#getVersions();
-    //     const versionsStrings = versions.map((a) => a.version);
-
-    //     if (affectedData.Ranges.length > 0) {
-    //         for (let i = 0; i < affectedData.Ranges.length; i++) {
-    //             let patchedStringPart = '';
-    //             const currentPart = affectedData.Ranges[i];
-    //             let previousPart = null;
-    //             let nextPart = null;
-
-    //             if (i - 1 >= 0) {
-    //                 previousPart = affectedData.Ranges[i - 1];
-    //             }
-
-    //             if (i + 1 < affectedData.Ranges.length - 1) {
-    //                 nextPart = affectedData.Ranges[i + 1];
-    //             }
-
-    //             if (previousPart) {
-    //                 if (previousPart.FixedString == null) {
-    //                     continue;
-    //                 } else {
-    //                     const versionsBetween = getVersionsSatisfyingConstraint(
-    //                         versionsStrings,
-    //                         `>= ${previousPart.FixedString} < ${currentPart.IntroducedString}`
-    //                     );
-    //                     if (versionsBetween.length > 1) {
-    //                         patchedStringPart += `>= ${previousPart.FixedString} < ${currentPart.IntroducedString}`;
-    //                     } else {
-    //                         patchedStringPart += `${previousPart.FixedString}`;
-    //                     }
-    //                 }
-    //             } else {
-    //                 if (currentPart.FixedString && nextPart == null) {
-    //                     const versionsBetween = getVersionsSatisfyingConstraint(
-    //                         versionsStrings,
-    //                         `>= ${currentPart.FixedString}`
-    //                     );
-    //                     if (versionsBetween.length > 1) {
-    //                         patchedStringPart += `>= ${currentPart.FixedString}`;
-    //                     } else {
-    //                         if (versionsBetween.length > 0) {
-    //                             patchedStringPart += versionsBetween[0];
-    //                         }
-    //                     }
-    //                 } else if (currentPart.FixedString && nextPart != null) {
-    //                     const versionsBetween = getVersionsSatisfyingConstraint(
-    //                         versionsStrings,
-    //                         `>= ${currentPart.FixedString} < ${nextPart.IntroducedString}`
-    //                     );
-    //                     if (versionsBetween.length > 1) {
-    //                         patchedStringPart += `>= ${currentPart.FixedString}`;
-    //                     } else {
-    //                         if (versionsBetween.length > 0) {
-    //                             patchedStringPart += versionsBetween[0];
-    //                         }
-    //                     }
-    //                 }
-    //             }
-
-    //             if (!patchedStringParts.includes(patchedStringPart))
-    //                 patchedStringParts.push(patchedStringPart);
-
-    //             if (i == affectedData.Ranges.length - 1) {
-    //                 if (currentPart.FixedString) {
-    //                     if (!patchedStringParts.includes(`>= ${currentPart.FixedString}`))
-    //                         patchedStringParts.push(`>= ${currentPart.FixedString}`);
-    //                 }
-    //             }
-    //         }
-    //     } else if (affectedData.Exact.length > 0) {
-    //         // get all version other than those listed in exact
-    //         for (const version of versions) {
-    //             if (!affectedData.Exact.includes(version.version)) {
-    //                 patchedStringParts.push(version.version);
-    //             }
-    //         }
-    //     } else if (affectedData.Universal) {
-    //         // no pached version exists
-    //     }
-
-    //     return patchedStringParts.join(' || ');
-    // }
-
     async getVulnerableVersionsString(source: string): Promise<string> {
-        let affectedData: AffectedInfo = { Ranges: [], Exact: [], Universal: false };
-
         // Debug logging to understand data structure
-        console.log('🔍 getVulnerableVersionsString debug:', {
+        console.warn('🔍 getVulnerableVersionsString debug:', {
             source,
             vulnId: this.vulnsData.VulnerabilityId,
             affectedDep: this.vulnsData.AffectedDependency,
             affectedVer: this.vulnsData.AffectedVersion,
             hasOSVMatch: !!this.vulnsData.OSVMatch,
             hasNVDMatch: !!this.vulnsData.NVDMatch,
-            osvAffectedInfo: this.vulnsData.OSVMatch?.AffectedInfo?.length || 0,
-            nvdAffectedInfo: this.vulnsData.NVDMatch?.AffectedInfo?.length || 0
+            osvAffectedInfo: this.vulnsData.OSVMatch?.AffectedInfo?.length ?? 0,
+            nvdAffectedInfo: this.vulnsData.NVDMatch?.AffectedInfo?.length ?? 0
         });
 
-        // Check if this is a framework vulnerability (starts with 'framework-')
-        const isFramework = this.vulnsData.AffectedDependency?.startsWith('framework-');
+        // First try to get affected versions from the actual vulnerability data
+        const directVersions = await this.getDirectAffectedVersions(source);
+        if (directVersions) {
+            return directVersions;
+        }
 
-        // Handle null safety for framework vulnerabilities
-        if (source == 'NVD') {
+        // Fallback to using AffectedInfo from vulnerability analysis results
+        const affectedData = this.getAffectedDataBySource(source);
+        const affectedStringParts = this.buildAffectedStringParts(affectedData);
+
+        // Final fallback for framework vulnerabilities without proper AffectedInfo
+        const isFramework = this.vulnsData.AffectedDependency?.startsWith('framework-');
+        if (affectedStringParts.length === 0 && isFramework && this.vulnsData.AffectedVersion) {
+            return `${this.vulnsData.AffectedVersion} (check advisory for details)`;
+        }
+
+        return affectedStringParts.join(' || ');
+    }
+
+    private getAffectedDataBySource(source: string): AffectedInfo {
+        if (source === 'NVD') {
             if (
-                this.vulnsData.NVDMatch &&
-                this.vulnsData.NVDMatch.AffectedInfo &&
+                this.vulnsData.NVDMatch?.AffectedInfo &&
                 this.vulnsData.NVDMatch.AffectedInfo.length > 0
             ) {
-                affectedData = this.vulnsData.NVDMatch.AffectedInfo[0];
+                return this.vulnsData.NVDMatch.AffectedInfo[0]!;
             }
         } else {
             if (
-                this.vulnsData.OSVMatch &&
-                this.vulnsData.OSVMatch.AffectedInfo &&
+                this.vulnsData.OSVMatch?.AffectedInfo &&
                 this.vulnsData.OSVMatch.AffectedInfo.length > 0
             ) {
-                affectedData = this.vulnsData.OSVMatch.AffectedInfo[0];
+                return this.vulnsData.OSVMatch.AffectedInfo[0]!;
             }
         }
+        return { Ranges: [], Exact: [], Universal: false };
+    }
 
-        const affectedStringParts: string[] = [];
-
-        // First try to get affected versions from the actual vulnerability data
-        // This ensures we show the real CVE data regardless of whether it's a false positive
-        if (source == 'NVD' && this.nvdItem) {
+    private async getDirectAffectedVersions(source: string): Promise<string | null> {
+        if (source === 'NVD' && this.nvdItem) {
             const nvdAffectedVersions = await this.extractNVDAffectedVersions();
             if (nvdAffectedVersions.length > 0) {
                 return nvdAffectedVersions.join(', ');
             }
-        } else if (source == 'OSV' && this.osvItem) {
+        } else if (source === 'OSV' && this.osvItem) {
             const osvAffectedVersions = await this.extractOSVAffectedVersions();
             if (osvAffectedVersions.length > 0) {
                 return osvAffectedVersions.join(', ');
             }
         }
+        return null;
+    }
 
-        // Fallback to using AffectedInfo from vulnerability analysis results
+    private buildAffectedStringParts(affectedData: AffectedInfo): string[] {
+        const affectedStringParts: string[] = [];
+
         if (affectedData.Ranges && affectedData.Ranges.length > 0) {
             for (const range of affectedData.Ranges) {
-                let affectedStringPart = '';
-                affectedStringPart += `>= ${range.IntroducedSemver.Major}.${range.IntroducedSemver.Minor}.${range.IntroducedSemver.Patch}`;
-                if (range.IntroducedSemver.PreReleaseTag != '')
-                    affectedStringPart += `-${range.IntroducedSemver.PreReleaseTag}`;
-
-                affectedStringPart += ` < ${range.FixedSemver.Major}.${range.FixedSemver.Minor}.${range.FixedSemver.Patch}`;
-                if (range.FixedSemver.PreReleaseTag != '')
-                    affectedStringPart += `-${range.FixedSemver.PreReleaseTag}`;
-                affectedStringParts.push(affectedStringPart);
+                affectedStringParts.push(this.formatVersionRange(range));
             }
         } else if (affectedData.Exact && affectedData.Exact.length > 0) {
             for (const exact of affectedData.Exact) {
@@ -225,12 +232,20 @@ abstract class BaseReportGenerator {
             affectedStringParts.push('*');
         }
 
-        // Final fallback for framework vulnerabilities without proper AffectedInfo
-        if (affectedStringParts.length === 0 && isFramework && this.vulnsData.AffectedVersion) {
-            return this.vulnsData.AffectedVersion + ' (check advisory for details)';
-        }
+        return affectedStringParts;
+    }
 
-        return affectedStringParts.join(' || ');
+    private formatVersionRange(range: AffectedRange): string {
+        let affectedStringPart = '';
+        affectedStringPart += `>= ${range.IntroducedSemver.Major}.${range.IntroducedSemver.Minor}.${range.IntroducedSemver.Patch}`;
+        if (range.IntroducedSemver.PreReleaseTag !== '')
+            affectedStringPart += `-${range.IntroducedSemver.PreReleaseTag}`;
+
+        affectedStringPart += ` < ${range.FixedSemver.Major}.${range.FixedSemver.Minor}.${range.FixedSemver.Patch}`;
+        if (range.FixedSemver.PreReleaseTag !== '')
+            affectedStringPart += `-${range.FixedSemver.PreReleaseTag}`;
+
+        return affectedStringPart;
     }
 
     // Get affected versions from both sources for comparison - focus on why current version is flagged
@@ -269,7 +284,7 @@ abstract class BaseReportGenerator {
         }
 
         // Debug logging
-        console.log('🔍 Source comparison debug (reasoning):', {
+        console.warn('🔍 Source comparison debug (reasoning):', {
             vulnId: this.vulnsData.VulnerabilityId,
             currentVersion,
             nvdReason,
@@ -297,65 +312,113 @@ abstract class BaseReportGenerator {
         const cleanVersion = version.startsWith('v') ? version.slice(1) : version;
 
         if (source === 'NVD' && this.nvdItem?.affected) {
-            for (const affectedEntry of this.nvdItem.affected) {
-                if (affectedEntry.sources) {
-                    for (const src of affectedEntry.sources) {
-                        // Check if version falls in any range
-                        if (
-                            src.versionEndExcluding &&
-                            !src.versionStartIncluding &&
-                            !src.versionStartExcluding
-                        ) {
-                            // All versions before X
-                            return `All versions before ${src.versionEndExcluding} are affected (your v${cleanVersion} < ${src.versionEndExcluding})`;
-                        } else if (src.versionStartIncluding && src.versionEndExcluding) {
-                            // Range from X to Y
-                            return `Versions ${src.versionStartIncluding} to ${src.versionEndExcluding} are affected`;
-                        } else if (src.criteriaDict?.version === '*') {
-                            return 'All versions are affected';
-                        }
-                    }
-                }
+            const nvdExplanation = this.explainNVDVulnerability(cleanVersion);
+            if (nvdExplanation) {
+                return nvdExplanation;
             }
         }
 
         if (source === 'OSV' && this.osvItem?.affected) {
-            const specificVersions: string[] = [];
-
-            for (const affectedEntry of this.osvItem.affected) {
-                if (affectedEntry.versions && Array.isArray(affectedEntry.versions)) {
-                    for (const v of affectedEntry.versions) {
-                        const cleanV = v.startsWith('v') ? v.slice(1) : v;
-                        // Remove duplicates
-                        if (!specificVersions.includes(cleanV)) {
-                            specificVersions.push(cleanV);
-                        }
-                    }
-                }
-            }
-
-            if (specificVersions.length > 0) {
-                // Sort versions for consistent display
-                specificVersions.sort();
-
-                if (specificVersions.includes(cleanVersion)) {
-                    return `Your version ${cleanVersion} is in the list of affected versions: ${specificVersions.join(', ')}`;
-                } else {
-                    return `Only specific versions are affected: ${specificVersions.join(', ')} (your v${cleanVersion} is NOT in this list)`;
-                }
+            const osvExplanation = this.explainOSVVulnerability(cleanVersion);
+            if (osvExplanation) {
+                return osvExplanation;
             }
         }
 
         return 'Unable to determine vulnerability reason';
     }
 
+    private explainNVDVulnerability(cleanVersion: string): string | null {
+        if (!this.nvdItem?.affected) {
+            return null;
+        }
+
+        const affectedEntries = this.nvdItem.affected as NVDAffectedEntry[];
+        for (const affectedEntry of affectedEntries) {
+            if (!affectedEntry.sources) {
+                continue;
+            }
+
+            for (const src of affectedEntry.sources) {
+                const explanation = this.getNVDSourceExplanation(src, cleanVersion);
+                if (explanation) {
+                    return explanation;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private getNVDSourceExplanation(src: NVDAffectedSource, cleanVersion: string): string | null {
+        if (src.versionEndExcluding && !src.versionStartIncluding && !src.versionStartExcluding) {
+            return `All versions before ${src.versionEndExcluding} are affected (your v${cleanVersion} < ${src.versionEndExcluding})`;
+        }
+
+        if (src.versionStartIncluding && src.versionEndExcluding) {
+            return `Versions ${src.versionStartIncluding} to ${src.versionEndExcluding} are affected`;
+        }
+
+        if (src.criteriaDict?.version === '*') {
+            return 'All versions are affected';
+        }
+
+        return null;
+    }
+
+    private explainOSVVulnerability(cleanVersion: string): string | null {
+        if (!this.osvItem?.affected) {
+            return null;
+        }
+
+        const specificVersions = this.collectOSVVulnerableVersions();
+
+        if (specificVersions.length > 0) {
+            // Sort versions for consistent display
+            specificVersions.sort();
+
+            if (specificVersions.includes(cleanVersion)) {
+                return `Your version ${cleanVersion} is in the list of affected versions: ${specificVersions.join(', ')}`;
+            } else {
+                return `Only specific versions are affected: ${specificVersions.join(', ')} (your v${cleanVersion} is NOT in this list)`;
+            }
+        }
+
+        return null;
+    }
+
+    private collectOSVVulnerableVersions(): string[] {
+        const versions: string[] = [];
+
+        if (!this.osvItem?.affected) {
+            return versions;
+        }
+
+        const affectedEntries = this.osvItem.affected as OSVAffectedEntry[];
+        for (const affectedEntry of affectedEntries) {
+            if (affectedEntry.versions && Array.isArray(affectedEntry.versions)) {
+                for (const version of affectedEntry.versions) {
+                    const versionString = String(version);
+                    const cleanVersion = versionString.startsWith('v')
+                        ? versionString.slice(1)
+                        : versionString;
+                    if (!versions.includes(cleanVersion)) {
+                        versions.push(cleanVersion);
+                    }
+                }
+            }
+        }
+
+        return versions;
+    }
+
     async getVersionsStatusArray(
         affectedVersionsString: string,
         _affectedDependencyName: string
-    ): Promise<VulnerableVersionInfo[]> {
+    ): Promise<VulnerableVersionInfoReport[]> {
         // const versions = await this.#getVersions();
         const versions: Version[] = [];
-        const versionsStatusArray: VulnerableVersionInfo[] = [];
+        const versionsStatusArray: VulnerableVersionInfoReport[] = [];
         for (const version of versions) {
             if (satisfies(version.version, affectedVersionsString)) {
                 versionsStatusArray.push({
@@ -383,12 +446,13 @@ abstract class BaseReportGenerator {
     }
 
     async getWeaknessData(): Promise<
-        [WeaknessInfo[], { [key: string]: CommonConsequencesInfo[] }]
+        [WeaknessInfoReport[], Record<string, CommonConsequencesInfo[]>]
     > {
-        const common_consequences: { [key: string]: CommonConsequencesInfo[] } = {};
-        const weakenessses: WeaknessInfo[] = [];
+        const common_consequences: Record<string, CommonConsequencesInfo[]> = {};
+        const weakenessses: WeaknessInfoReport[] = [];
 
-        if (this.vulnsData.Weaknesses == null) return [weakenessses, common_consequences];
+        if (this.vulnsData.Weaknesses === null || this.vulnsData.Weaknesses === undefined)
+            return [weakenessses, common_consequences];
 
         for (const _weakeness of this.vulnsData.Weaknesses) {
             try {
@@ -424,8 +488,8 @@ abstract class BaseReportGenerator {
         return [weakenessses, common_consequences];
     }
 
-    async getDependencyData(): Promise<DependencyInfo> {
-        const dependencyInfo: DependencyInfo = {
+    async getDependencyData(): Promise<DependencyInfoReport> {
+        const dependencyInfo: DependencyInfoReport = {
             name: '',
             published: '',
             description: '',
@@ -451,19 +515,19 @@ abstract class BaseReportGenerator {
             // if (packageInfo.Keywords) dependencyInfo.keywords = packageInfo.Keywords;
             // dependencyInfo.published = versionInfo.Time;
 
-            // if (packageInfo.Homepage && packageInfo.Homepage != '') {
+            // if (packageInfo.Homepage && packageInfo.Homepage !== '') {
             //     dependencyInfo.homepage = packageInfo.Homepage;
             // }
 
-            // if (this.dependencyData.git_url != null) {
-            //     if (this.dependencyData.git_url.host_type == 'GITHUB') {
+            // if (this.dependencyData.git_url !== null) {
+            //     if (this.dependencyData.git_url.host_type === 'GITHUB') {
             //         dependencyInfo.github_link = this.dependencyData.git_url;
             //         dependencyInfo.issues_link =
             //             this.dependencyData.git_url.repo_full_path + '/issues';
             //     }
             // }
 
-            // if (this.packageManager == 'NPM' || this.packageManager == 'YARN') {
+            // if (this.packageManager === 'NPM' || this.packageManager === 'YARN') {
             //     dependencyInfo.package_manager_links.push({
             //         package_manager: 'NPM',
             //         url: `https://www.npmjs.com/package/${this.dependencyData.name}`
@@ -482,10 +546,11 @@ abstract class BaseReportGenerator {
     }
 
     getOwaspTop10Info(): OwaspTop10Info | null {
-        if (this.vulnsData.Weaknesses == null) return null;
+        if (this.vulnsData.Weaknesses === null || this.vulnsData.Weaknesses === undefined)
+            return null;
 
         for (const weakeness of this.vulnsData.Weaknesses) {
-            if (weakeness.OWASPTop10Id != '') {
+            if (weakeness.OWASPTop10Id !== '') {
                 try {
                     return this.owaspRepository.getOwaspTop10CategoryInfo(weakeness.OWASPTop10Id);
                 } catch (err) {
@@ -501,38 +566,39 @@ abstract class BaseReportGenerator {
     async extractNVDAffectedVersions(): Promise<string[]> {
         const ranges: string[] = [];
 
-        if (!this.nvdItem || !this.nvdItem.affected) {
+        if (!this.nvdItem?.affected) {
             return ranges;
         }
 
         // Parse the NVD affected field which contains CPE criteria
-        for (const affectedEntry of this.nvdItem.affected) {
+        const affectedEntries = this.nvdItem.affected as NVDAffectedEntry[];
+        for (const affectedEntry of affectedEntries) {
             if (affectedEntry.sources) {
                 for (const source of affectedEntry.sources) {
                     let rangeDescription = '';
 
                     // Handle version ranges in a user-friendly way
-                    const hasStart = source.versionStartIncluding || source.versionStartExcluding;
-                    const hasEnd = source.versionEndIncluding || source.versionEndExcluding;
+                    const hasStart = source.versionStartIncluding ?? source.versionStartExcluding;
+                    const hasEnd = source.versionEndIncluding ?? source.versionEndExcluding;
 
                     if (hasStart && hasEnd) {
                         // Range: e.g., "5.4.0 to 5.4.3"
                         const startVer =
-                            source.versionStartIncluding || source.versionStartExcluding;
-                        const endVer = source.versionEndIncluding || source.versionEndExcluding;
+                            source.versionStartIncluding ?? source.versionStartExcluding;
+                        const endVer = source.versionEndIncluding ?? source.versionEndExcluding;
                         const startSymbol = source.versionStartIncluding ? '' : ' (exclusive)';
                         const endSymbol = source.versionEndIncluding ? ' (inclusive)' : '';
                         rangeDescription = `${startVer}${startSymbol} to ${endVer}${endSymbol}`;
                     } else if (hasEnd && !hasStart) {
                         // Upper bound only: e.g., "before 5.3.15"
-                        const endVer = source.versionEndIncluding || source.versionEndExcluding;
+                        const endVer = source.versionEndIncluding ?? source.versionEndExcluding;
                         rangeDescription = source.versionEndExcluding
                             ? `before ${endVer}`
                             : `up to ${endVer} (inclusive)`;
                     } else if (hasStart && !hasEnd) {
                         // Lower bound only: e.g., "5.4.0 and later"
                         const startVer =
-                            source.versionStartIncluding || source.versionStartExcluding;
+                            source.versionStartIncluding ?? source.versionStartExcluding;
                         rangeDescription = source.versionStartIncluding
                             ? `${startVer} and later`
                             : `after ${startVer}`;
@@ -564,68 +630,15 @@ abstract class BaseReportGenerator {
         const allSpecificVersions: string[] = [];
         const allRanges: string[] = [];
 
-        if (!this.osvItem || !this.osvItem.affected) {
+        if (!this.osvItem?.affected) {
             return descriptions;
         }
 
         // Parse OSV affected field - collect all data first to avoid duplicates
-        for (const affectedEntry of this.osvItem.affected) {
-            // Collect specific versions
-            if (affectedEntry.versions && Array.isArray(affectedEntry.versions)) {
-                for (const version of affectedEntry.versions) {
-                    const cleanVersion = version.startsWith('v') ? version.slice(1) : version;
-                    if (!allSpecificVersions.includes(cleanVersion)) {
-                        allSpecificVersions.push(cleanVersion);
-                    }
-                }
-            }
-
-            // Collect ranges and convert to readable format
-            if (affectedEntry.ranges && Array.isArray(affectedEntry.ranges)) {
-                for (const range of affectedEntry.ranges) {
-                    if (range.events && Array.isArray(range.events)) {
-                        let introduced = '';
-                        let fixed = '';
-                        let lastAffected = '';
-
-                        // Extract event details
-                        for (const event of range.events) {
-                            if (event.introduced && event.introduced !== '0') {
-                                introduced = event.introduced;
-                            }
-                            if (event.fixed) {
-                                fixed = event.fixed;
-                            }
-                            if (event.last_affected) {
-                                lastAffected = event.last_affected;
-                            }
-                        }
-
-                        // Create readable range description with clear exclusion/inclusion
-                        if (introduced && fixed) {
-                            const rangeDesc = `${introduced} up to (but not including) ${fixed}`;
-                            if (!allRanges.includes(rangeDesc)) {
-                                allRanges.push(rangeDesc);
-                            }
-                        } else if (introduced && lastAffected) {
-                            const rangeDesc = `${introduced} to ${lastAffected} (inclusive)`;
-                            if (!allRanges.includes(rangeDesc)) {
-                                allRanges.push(rangeDesc);
-                            }
-                        } else if (introduced) {
-                            const rangeDesc = `${introduced} and later`;
-                            if (!allRanges.includes(rangeDesc)) {
-                                allRanges.push(rangeDesc);
-                            }
-                        } else if (fixed) {
-                            const rangeDesc = `before ${fixed} (excluding ${fixed})`;
-                            if (!allRanges.includes(rangeDesc)) {
-                                allRanges.push(rangeDesc);
-                            }
-                        }
-                    }
-                }
-            }
+        const affectedEntries = this.osvItem.affected as OSVAffectedEntry[];
+        for (const affectedEntry of affectedEntries) {
+            this.collectOSVSpecificVersions(affectedEntry, allSpecificVersions);
+            this.collectOSVRanges(affectedEntry, allRanges);
         }
 
         // Combine all unique versions and ranges, removing duplicates
@@ -647,6 +660,130 @@ abstract class BaseReportGenerator {
         }
 
         return uniqueDescriptions;
+    }
+
+    private collectOSVSpecificVersions(
+        affectedEntry: OSVAffectedEntry,
+        allSpecificVersions: string[]
+    ): void {
+        if (!affectedEntry.versions || !Array.isArray(affectedEntry.versions)) {
+            return;
+        }
+
+        for (const version of affectedEntry.versions) {
+            const versionString = String(version);
+            const cleanVersion = versionString.startsWith('v')
+                ? versionString.slice(1)
+                : versionString;
+            if (!allSpecificVersions.includes(cleanVersion)) {
+                allSpecificVersions.push(cleanVersion);
+            }
+        }
+    }
+
+    private collectOSVRanges(affectedEntry: OSVAffectedEntry, allRanges: string[]): void {
+        if (!affectedEntry.ranges || !Array.isArray(affectedEntry.ranges)) {
+            return;
+        }
+
+        for (const range of affectedEntry.ranges) {
+            if (!range.events || !Array.isArray(range.events)) {
+                continue;
+            }
+
+            const eventDetails = this.extractOSVEventDetails(range.events);
+            const rangeDesc = this.createOSVRangeDescription(eventDetails);
+
+            if (rangeDesc && !allRanges.includes(rangeDesc)) {
+                allRanges.push(rangeDesc);
+            }
+        }
+    }
+
+    private extractOSVEventDetails(events: OSVEvent[]): {
+        introduced: string;
+        fixed: string;
+        lastAffected: string;
+    } {
+        let introduced = '';
+        let fixed = '';
+        let lastAffected = '';
+
+        for (const event of events) {
+            if (event.introduced && event.introduced !== '0') {
+                introduced = event.introduced;
+            }
+            if (event.fixed) {
+                fixed = event.fixed;
+            }
+            if (event.last_affected) {
+                lastAffected = event.last_affected;
+            }
+        }
+
+        return { introduced, fixed, lastAffected };
+    }
+
+    private createOSVRangeDescription(details: {
+        introduced: string;
+        fixed: string;
+        lastAffected: string;
+    }): string | null {
+        const { introduced, fixed, lastAffected } = details;
+
+        if (introduced && fixed) {
+            return `${introduced} up to (but not including) ${fixed}`;
+        }
+        if (introduced && lastAffected) {
+            return `${introduced} to ${lastAffected} (inclusive)`;
+        }
+        if (introduced) {
+            return `${introduced} and later`;
+        }
+        if (fixed) {
+            return `before ${fixed} (excluding ${fixed})`;
+        }
+
+        return null;
+    }
+
+    protected extractFrameworkPackageName(fallbackName: string): string {
+        // Try OSV data first
+        if (this.osvItem?.affected) {
+            const osvAffectedEntries = this.osvItem.affected as OSVAffectedEntry[];
+            for (const affected of osvAffectedEntries) {
+                if (affected.package?.name) {
+                    return affected.package.name;
+                }
+            }
+        }
+
+        // If no OSV data, try to extract from NVD CPE criteria
+        if (this.nvdItem?.affected) {
+            const nvdAffectedEntries = this.nvdItem.affected as NVDAffectedEntry[];
+            for (const affected of nvdAffectedEntries) {
+                const nvdName = this.extractNVDPackageName(affected);
+                if (nvdName) {
+                    return nvdName;
+                }
+            }
+        }
+
+        return fallbackName;
+    }
+
+    protected extractNVDPackageName(affected: NVDAffectedEntry): string | null {
+        if (!affected.sources) {
+            return null;
+        }
+
+        for (const source of affected.sources) {
+            if (source.criteriaDict?.product && source.criteriaDict?.vendor) {
+                return `${source.criteriaDict.vendor}/${source.criteriaDict.product}`;
+            }
+        }
+
+        return null;
     }
 
     async parseCVSS31Vector(vector: string): Promise<CVSS3> {
@@ -731,76 +868,110 @@ abstract class BaseReportGenerator {
     async getCVSSNVDInfo(nvdItem: NVD): Promise<SeverityInfo> {
         const severityInfo: SeverityInfo = {};
 
-        if (nvdItem.metrics) {
-            if (nvdItem.metrics.cvssMetricV2) {
-                if (nvdItem.metrics.cvssMetricV2.length > 1) {
-                    for (const cvss2 of nvdItem.metrics.cvssMetricV2) {
-                        if (cvss2.source == 'nvd@nist.gov') {
-                            severityInfo.cvss_2 = await this.parseCVSS2Vector(
-                                cvss2.cvssData.vectorString
-                            );
-                            break;
-                        }
-                    }
-                } else if (nvdItem.metrics.cvssMetricV2.length == 1) {
-                    const cvss2 = nvdItem.metrics.cvssMetricV2[0];
-                    severityInfo.cvss_2 = await this.parseCVSS2Vector(cvss2.cvssData.vectorString);
-                }
-            }
+        if (!nvdItem.metrics) {
+            return severityInfo;
+        }
 
-            if (nvdItem.metrics.cvssMetricV30) {
-                if (nvdItem.metrics.cvssMetricV30.length > 1) {
-                    for (const cvss3 of nvdItem.metrics.cvssMetricV30) {
-                        if (cvss3.source == 'nvd@nist.gov') {
-                            severityInfo.cvss_3 = await this.parseCVSS3Vector(
-                                cvss3.cvssData.vectorString
-                            );
-                            break;
-                        }
-                    }
-                } else if (nvdItem.metrics.cvssMetricV30.length == 1) {
-                    const cvss3 = nvdItem.metrics.cvssMetricV30[0];
-                    severityInfo.cvss_3 = await this.parseCVSS3Vector(cvss3.cvssData.vectorString);
-                }
-            }
+        // Cast metrics to typed structure for safe access
+        const metrics = nvdItem.metrics as NVDMetrics;
 
-            if (nvdItem.metrics.cvssMetricV31) {
-                if (nvdItem.metrics.cvssMetricV31.length > 1) {
-                    for (const cvss31 of nvdItem.metrics.cvssMetricV31) {
-                        if (cvss31.source == 'nvd@nist.gov') {
-                            severityInfo.cvss_3 = await this.parseCVSS3Vector(
-                                cvss31.cvssData.vectorString
-                            );
-                            break;
-                        }
-                    }
-                } else if (nvdItem.metrics.cvssMetricV31.length == 1) {
-                    const cvss31 = nvdItem.metrics.cvssMetricV31[0];
-                    severityInfo.cvss_31 = await this.parseCVSS31Vector(
-                        cvss31.cvssData.vectorString
-                    );
-                }
+        // Process CVSS v2 metrics
+        if (metrics.cvssMetricV2) {
+            const cvss2 = await this.extractCVSS2Metric(metrics.cvssMetricV2);
+            if (cvss2) {
+                severityInfo.cvss_2 = cvss2;
             }
         }
 
-        if (severityInfo.cvss_2 != undefined) {
+        // Process CVSS v3.0 metrics
+        if (metrics.cvssMetricV30) {
+            const cvss3 = await this.extractCVSS3Metric(metrics.cvssMetricV30);
+            if (cvss3) {
+                severityInfo.cvss_3 = cvss3;
+            }
+        }
+
+        // Process CVSS v3.1 metrics
+        if (metrics.cvssMetricV31) {
+            const cvss31 = await this.extractCVSS31Metric(metrics.cvssMetricV31);
+            if (cvss31) {
+                severityInfo.cvss_31 = cvss31;
+            }
+        }
+
+        // Add user interaction required flag for CVSS v2
+        if (
+            severityInfo.cvss_2 !== undefined &&
+            metrics.cvssMetricV2?.[0]?.userInteractionRequired !== undefined
+        ) {
             severityInfo.cvss_2.user_interaction_required =
-                nvdItem.metrics.cvssMetricV2[0].userInteractionRequired;
+                metrics.cvssMetricV2[0].userInteractionRequired;
         }
 
         return severityInfo;
     }
 
+    private async extractCVSS2Metric(cvssMetricV2: NVDCVSSMetric[]): Promise<CVSS2 | undefined> {
+        if (cvssMetricV2.length > 1) {
+            // Find the official NIST entry
+            for (const cvss2 of cvssMetricV2) {
+                if (cvss2.source === 'nvd@nist.gov') {
+                    return await this.parseCVSS2Vector(cvss2.cvssData.vectorString);
+                }
+            }
+        } else if (cvssMetricV2.length === 1 && cvssMetricV2[0]) {
+            return await this.parseCVSS2Vector(cvssMetricV2[0].cvssData.vectorString);
+        }
+        return undefined;
+    }
+
+    private async extractCVSS3Metric(cvssMetricV3: NVDCVSSMetric[]): Promise<CVSS3 | undefined> {
+        if (cvssMetricV3.length > 1) {
+            // Find the official NIST entry
+            for (const cvss3 of cvssMetricV3) {
+                if (cvss3.source === 'nvd@nist.gov') {
+                    return await this.parseCVSS3Vector(cvss3.cvssData.vectorString);
+                }
+            }
+        } else if (cvssMetricV3.length === 1 && cvssMetricV3[0]) {
+            return await this.parseCVSS3Vector(cvssMetricV3[0].cvssData.vectorString);
+        }
+        return undefined;
+    }
+
+    private async extractCVSS31Metric(cvssMetricV31: NVDCVSSMetric[]): Promise<CVSS31 | undefined> {
+        if (cvssMetricV31.length > 1) {
+            // Find the official NIST entry
+            for (const cvss31 of cvssMetricV31) {
+                if (cvss31.source === 'nvd@nist.gov') {
+                    return await this.parseCVSS31Vector(cvss31.cvssData.vectorString);
+                }
+            }
+        } else if (cvssMetricV31.length === 1 && cvssMetricV31[0]) {
+            return await this.parseCVSS31Vector(cvssMetricV31[0].cvssData.vectorString);
+        }
+        return undefined;
+    }
+
     async getCVSSOSVInfo(osvItem: OSV): Promise<SeverityInfo> {
         const severityInfo: SeverityInfo = {};
 
-        if (osvItem.severity && osvItem.severity.length > 0) {
-            for (const severity of osvItem.severity) {
-                if (severity.type == 'CVSS_V3') {
-                    severityInfo.cvss_3 = await this.parseCVSS3Vector(severity.score);
-                } else if (severity.type == 'CVSS_V2') {
-                    severityInfo.cvss_2 = await this.parseCVSS2Vector(severity.score);
-                }
+        if (!osvItem.severity) {
+            return severityInfo;
+        }
+
+        // Cast severity to typed structure for safe access
+        const severities = osvItem.severity as OSVSeverity[];
+
+        if (severities.length === 0) {
+            return severityInfo;
+        }
+
+        for (const severity of severities) {
+            if (severity.type === 'CVSS_V3') {
+                severityInfo.cvss_3 = await this.parseCVSS3Vector(severity.score);
+            } else if (severity.type === 'CVSS_V2') {
+                severityInfo.cvss_2 = await this.parseCVSS2Vector(severity.score);
             }
         }
 
@@ -840,21 +1011,27 @@ export class OSVReportGenerator extends BaseReportGenerator {
         osvItem?: OSV,
         nvdItem?: NVD,
         friendsOfPhpItem?: FriendsOfPhp
-    ): Promise<VulnerabilityDetails> {
+    ): Promise<VulnerabilityDetailsReport> {
         // this.patchesData = patchesData;
         this.vulnsData = vulnsData;
         this.packageManager = packageManager;
-        this.dependencyData = dependencyData;
-        this.osvItem = osvItem;
-        this.nvdItem = nvdItem;
+        if (dependencyData !== undefined) {
+            this.dependencyData = dependencyData;
+        }
+        if (osvItem !== undefined) {
+            this.osvItem = osvItem;
+        }
+        if (nvdItem !== undefined) {
+            this.nvdItem = nvdItem;
+        }
 
         if (!this.osvItem) {
             throw new Error('Failed to generate report from undefined nvd entry');
         }
 
         /** Vulnerability Info */
-        const vulnInfo: VulnerabilityInfo = {
-            vulnerability_id: this.osvItem.cve == null ? this.osvItem.osv_id : this.osvItem.cve,
+        const vulnInfo: VulnerabilityInfoReport = {
+            vulnerability_id: this.osvItem.cve ?? this.osvItem.osv_id,
             description: this.#cleanOsvDescription(this.osvItem.details),
             version_info: {
                 affected_versions_string: '',
@@ -906,19 +1083,14 @@ export class OSVReportGenerator extends BaseReportGenerator {
         vulnInfo.version_info.source_comparison = sourceComparison;
 
         /** Dependency Info */
-        let dependencyInfo: DependencyInfo | undefined;
+        let dependencyInfo: DependencyInfoReport | undefined;
         try {
             dependencyInfo = await this.getDependencyData();
 
             // For framework vulnerabilities, try to extract the actual package name from OSV data
             let displayName = vulnsData.AffectedDependency || '';
-            if (displayName.startsWith('framework-') && this.osvItem?.affected) {
-                for (const affected of this.osvItem.affected) {
-                    if (affected.package?.name) {
-                        displayName = affected.package.name;
-                        break;
-                    }
-                }
+            if (displayName.startsWith('framework-')) {
+                displayName = this.extractFrameworkPackageName(displayName);
             }
 
             dependencyInfo.name = displayName;
@@ -945,11 +1117,7 @@ export class OSVReportGenerator extends BaseReportGenerator {
         /** Severities */
         let severityInfo: SeverityInfo = await this.getCVSSOSVInfo(this.osvItem);
 
-        if (
-            severityInfo.cvss_2 == null &&
-            severityInfo.cvss_31 == null &&
-            severityInfo.cvss_3 == null
-        ) {
+        if (!severityInfo.cvss_2 && !severityInfo.cvss_31 && !severityInfo.cvss_3) {
             if (this.nvdItem) {
                 severityInfo = await this.getCVSSNVDInfo(this.nvdItem);
             }
@@ -959,7 +1127,8 @@ export class OSVReportGenerator extends BaseReportGenerator {
         const references: ReferenceInfo[] = [];
 
         if (this.osvItem.references) {
-            for (const ref of this.osvItem.references) {
+            const osvReferences = this.osvItem.references as OSVReference[];
+            for (const ref of osvReferences) {
                 references.push({ url: ref.url, tags: [ref.type] });
             }
         }
@@ -968,9 +1137,8 @@ export class OSVReportGenerator extends BaseReportGenerator {
         const owaspTop10Info = this.getOwaspTop10Info();
 
         /** Vulnerability Details */
-        const vulnDetails: VulnerabilityDetails = {
+        const vulnDetails: VulnerabilityDetailsReport = {
             vulnerability_info: vulnInfo,
-            dependency_info: dependencyInfo,
             weaknesses: weakenessses,
             severities: severityInfo,
             common_consequences: common_consequences,
@@ -980,6 +1148,9 @@ export class OSVReportGenerator extends BaseReportGenerator {
             location: [],
             other: this.getOtherInfo()
         };
+        if (dependencyInfo) {
+            vulnDetails.dependency_info = dependencyInfo;
+        }
 
         return vulnDetails;
     }
@@ -990,19 +1161,19 @@ export class OSVReportGenerator extends BaseReportGenerator {
         let text = '';
 
         for (const char of description) {
-            if (char == '#' && parsingHeader == false) {
-                if (text != '') sections.push(text);
+            if (char === '#' && parsingHeader === false) {
+                if (text !== '') sections.push(text);
                 parsingHeader = true;
                 text = '';
                 continue;
             }
 
-            if (char != '#') parsingHeader = false;
+            if (char !== '#') parsingHeader = false;
 
-            if (char != '#') text += char;
+            if (char !== '#') text += char;
         }
 
-        if (text != '') {
+        if (text !== '') {
             sections.push(text);
         }
 
@@ -1011,7 +1182,7 @@ export class OSVReportGenerator extends BaseReportGenerator {
         let index = -1;
         for (const section of sections) {
             index += 1;
-            if (index == 0) {
+            if (index === 0) {
                 selectedSections.push(section);
                 continue;
             }
@@ -1023,14 +1194,14 @@ export class OSVReportGenerator extends BaseReportGenerator {
 
         if (selectedSections.length > 0) {
             let newSection = '';
-            const section = selectedSections[selectedSections.length - 1];
+            const section = selectedSections[selectedSections.length - 1]!;
             let trimEndNewLines = true;
             for (let i = section.length - 1; i >= 0; i--) {
-                if (section[i] != '\n') {
+                if (section[i] !== '\n') {
                     trimEndNewLines = false;
                 }
                 if (!trimEndNewLines) {
-                    newSection += section[i];
+                    newSection += section[i]!;
                 }
             }
             selectedSections[selectedSections.length - 1] = newSection.split('').reverse().join('');
@@ -1068,20 +1239,26 @@ export class NVDReportGenerator extends BaseReportGenerator {
         osvItem?: OSV,
         nvdItem?: NVD,
         friendsOfPhpItem?: FriendsOfPhp
-    ): Promise<VulnerabilityDetails> {
+    ): Promise<VulnerabilityDetailsReport> {
         // this.patchesData = patchesData;
         this.vulnsData = vulnsData;
         this.packageManager = packageManager;
-        this.dependencyData = dependencyData;
-        this.osvItem = osvItem;
-        this.nvdItem = nvdItem;
+        if (dependencyData !== undefined) {
+            this.dependencyData = dependencyData;
+        }
+        if (osvItem !== undefined) {
+            this.osvItem = osvItem;
+        }
+        if (nvdItem !== undefined) {
+            this.nvdItem = nvdItem;
+        }
 
         if (!this.nvdItem) {
             throw new Error('Failed to generate report from undefined nvd entry');
         }
 
         /** Vulnerability Info */
-        const vulnInfo: VulnerabilityInfo = {
+        const vulnInfo: VulnerabilityInfoReport = {
             vulnerability_id: this.nvdItem.nvd_id,
             description: '',
             version_info: {
@@ -1115,8 +1292,9 @@ export class NVDReportGenerator extends BaseReportGenerator {
             });
         }
 
-        for (const description of this.nvdItem.descriptions) {
-            if (description.lang == 'en') {
+        const descriptions = this.nvdItem.descriptions as NVDDescription[];
+        for (const description of descriptions) {
+            if (description.lang === 'en') {
                 vulnInfo.description = description.value;
                 break;
             }
@@ -1138,36 +1316,14 @@ export class NVDReportGenerator extends BaseReportGenerator {
         vulnInfo.version_info.source_comparison = sourceComparison;
 
         /** Dependency Info */
-        let dependencyInfo: DependencyInfo | undefined;
+        let dependencyInfo: DependencyInfoReport | undefined;
         try {
             dependencyInfo = await this.getDependencyData();
 
             // For framework vulnerabilities, try to extract the actual package name from OSV or NVD data
             let displayName = vulnsData.AffectedDependency || '';
             if (displayName.startsWith('framework-')) {
-                // Try OSV data first
-                if (this.osvItem?.affected) {
-                    for (const affected of this.osvItem.affected) {
-                        if (affected.package?.name) {
-                            displayName = affected.package.name;
-                            break;
-                        }
-                    }
-                }
-                // If no OSV data, try to extract from NVD CPE criteria
-                else if (this.nvdItem?.affected) {
-                    for (const affected of this.nvdItem.affected) {
-                        if (affected.sources) {
-                            for (const source of affected.sources) {
-                                if (source.criteriaDict?.product && source.criteriaDict?.vendor) {
-                                    displayName = `${source.criteriaDict.vendor}/${source.criteriaDict.product}`;
-                                    break;
-                                }
-                            }
-                        }
-                        if (!displayName.startsWith('framework-')) break;
-                    }
-                }
+                displayName = this.extractFrameworkPackageName(displayName);
             }
 
             dependencyInfo.name = displayName;
@@ -1194,11 +1350,7 @@ export class NVDReportGenerator extends BaseReportGenerator {
         /** Severities */
         let severityInfo: SeverityInfo = await this.getCVSSNVDInfo(this.nvdItem);
 
-        if (
-            severityInfo.cvss_2 == null &&
-            severityInfo.cvss_31 == null &&
-            severityInfo.cvss_3 == null
-        ) {
+        if (!severityInfo.cvss_2 && !severityInfo.cvss_31 && !severityInfo.cvss_3) {
             if (this.osvItem) {
                 severityInfo = await this.getCVSSOSVInfo(this.osvItem);
             }
@@ -1207,7 +1359,9 @@ export class NVDReportGenerator extends BaseReportGenerator {
         /** References */
         const references: ReferenceInfo[] = [];
 
-        for (const ref of this.nvdItem.references) {
+        // Cast references to typed structure for safe access
+        const nvdReferences = this.nvdItem.references as NVDReference[];
+        for (const ref of nvdReferences) {
             references.push({ url: ref.url, tags: [] });
         }
 
@@ -1215,9 +1369,8 @@ export class NVDReportGenerator extends BaseReportGenerator {
         const owaspTop10Info = this.getOwaspTop10Info();
 
         /** Vulnerability Details */
-        const vulnDetails: VulnerabilityDetails = {
+        const vulnDetails: VulnerabilityDetailsReport = {
             vulnerability_info: vulnInfo,
-            dependency_info: dependencyInfo,
             weaknesses: weakenessses,
             severities: severityInfo,
             common_consequences: common_consequences,
@@ -1227,6 +1380,9 @@ export class NVDReportGenerator extends BaseReportGenerator {
             location: [],
             other: this.getOtherInfo()
         };
+        if (dependencyInfo) {
+            vulnDetails.dependency_info = dependencyInfo;
+        }
 
         return vulnDetails;
     }

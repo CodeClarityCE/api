@@ -19,7 +19,7 @@ export class LicenseService {
      * Get a license policy
      * @returns the license policy
      */
-    async getAll(): Promise<Array<License>> {
+    async getAll(): Promise<License[]> {
         return await this.licenceRepo.getAllLicenseData();
     }
 }

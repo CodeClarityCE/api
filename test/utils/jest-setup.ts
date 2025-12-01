@@ -11,8 +11,8 @@ config({ path: 'env/.env.test' });
 console.log = originalLog;
 
 // Set test environment
-process.env.ENV = 'test';
-process.env.NODE_ENV = 'test';
+process.env['ENV'] = 'test';
+process.env['NODE_ENV'] = 'test';
 
 // Mock external dependencies globally
 jest.mock('amqplib');

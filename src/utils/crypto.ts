@@ -28,7 +28,7 @@ export async function hash(
  */
 export async function genRandomString(size: number): Promise<string> {
     return new Promise((resolve, reject) => {
-        crypto.randomBytes(size, (err: Error, bytes: Buffer) => {
+        crypto.randomBytes(size, (err: Error | null, bytes: Buffer) => {
             if (err) {
                 reject(err);
             }

@@ -1,3 +1,4 @@
+import { readFile } from 'fs';
 import {
     Body,
     Controller,
@@ -9,21 +10,19 @@ import {
     UseInterceptors
 } from '@nestjs/common';
 import { ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor, MulterFile } from '@webundsoehne/nest-fastify-file-upload';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import { AuthUser } from 'src/decorators/UserDecorator';
+import { NoDataResponse, TypedResponse } from 'src/types/apiResponses.types';
 import {
     EntityNotFound,
     InternalError,
     NotAuthenticated,
     NotAuthorized
 } from 'src/types/error.types';
-import { ApiErrorDecorator } from 'src/decorators/ApiException';
+import { validateAndJoinPath } from 'src/utils/path-validator';
 import { FileService } from './file.service';
-import { NoDataResponse, TypedResponse } from 'src/types/apiResponses.types';
-import { join } from 'path';
-import { readFile } from 'fs';
-import { escapeString } from 'src/utils/cleaner';
-import { FileInterceptor, MulterFile } from '@webundsoehne/nest-fastify-file-upload';
 
 export interface UploadData {
     type: string;
@@ -72,7 +71,7 @@ export class FileController {
             throw new InternalError('500', 'No file provided');
         }
 
-        this.fileService.uploadFile(user, file, project_id, organization_id, queryParams);
+        await this.fileService.uploadFile(user, file, project_id, organization_id, queryParams);
         return;
     }
 
@@ -94,19 +93,17 @@ export class FileController {
     @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
     @Get(':project_id')
     async getFileByName(
-        @AuthUser() user: AuthenticatedUser,
+        @AuthUser() _user: AuthenticatedUser,
         @Param('project_id') project_id: string,
         @Param('org_id') org_id: string,
         @Param('file_name') file_name: string
     ): Promise<TypedResponse<string>> {
-        // Clean the file name to avoid directory traversal
-        const cleanedFileName = escapeString(file_name);
-        const cleanedProjectId = escapeString(project_id);
-        const cleanedOrgId = escapeString(org_id);
+        const downloadPath = process.env['DOWNLOAD_PATH'] ?? '/private';
+        const filePath = validateAndJoinPath(downloadPath, org_id, project_id, file_name);
 
-        const downloadPath = process.env.DOWNLOAD_PATH || '/private';
-        const filePath = join(downloadPath, cleanedOrgId, cleanedProjectId, cleanedFileName);
         return new Promise((resolve, reject) => {
+            // Path is validated using validateAndJoinPath to prevent traversal attacks
+            // eslint-disable-next-line security/detect-non-literal-fs-filename
             return readFile(filePath, 'utf8', (err, data) => {
                 if (err) {
                     reject(err);

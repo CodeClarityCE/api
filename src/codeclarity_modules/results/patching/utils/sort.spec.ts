@@ -1,5 +1,5 @@
+import type { PatchSummary, VulnerabilitySummary } from '../patching.types';
 import { sort } from './sort';
-import { PatchInfo, VulnerabilitySummary } from '../patching2.types';
 
 describe('sort', () => {
     const createMockVulnerabilitySummary = (): VulnerabilitySummary => ({
@@ -7,7 +7,7 @@ describe('sort', () => {
         Weaknesses: ['CWE-79']
     });
 
-    const createMockPatchInfo = (overrides: Partial<PatchInfo> = {}): PatchInfo => ({
+    const createMockPatchSummary = (overrides: Partial<PatchSummary> = {}): PatchSummary => ({
         affected_deps: ['dep1'],
         affected_dep_name: 'test-package',
         occurance_count: 1,
@@ -29,7 +29,7 @@ describe('sort', () => {
         });
 
         it('should return original array for single patch', () => {
-            const patches = [createMockPatchInfo()];
+            const patches = [createMockPatchSummary()];
 
             const result = sort(patches, undefined, undefined);
 
@@ -39,9 +39,9 @@ describe('sort', () => {
 
         it('should return array with same patches', () => {
             const patches = [
-                createMockPatchInfo({ affected_dep_name: 'package-a' }),
-                createMockPatchInfo({ affected_dep_name: 'package-b' }),
-                createMockPatchInfo({ affected_dep_name: 'package-c' })
+                createMockPatchSummary({ affected_dep_name: 'package-a' }),
+                createMockPatchSummary({ affected_dep_name: 'package-b' }),
+                createMockPatchSummary({ affected_dep_name: 'package-c' })
             ];
 
             const result = sort(patches, undefined, undefined);
@@ -53,8 +53,8 @@ describe('sort', () => {
 
     describe('sortBy parameter validation', () => {
         const patches = [
-            createMockPatchInfo({ patch_type: 'full_patch' }),
-            createMockPatchInfo({ patch_type: 'partial_patch' })
+            createMockPatchSummary({ patch_type: 'full_patch' }),
+            createMockPatchSummary({ patch_type: 'partial_patch' })
         ];
 
         it('should use default sort when sortBy is undefined', () => {
@@ -87,7 +87,7 @@ describe('sort', () => {
     });
 
     describe('allowed sort parameters', () => {
-        const patches = [createMockPatchInfo(), createMockPatchInfo()];
+        const patches = [createMockPatchSummary(), createMockPatchSummary()];
 
         it('should accept patch_type as valid sortBy', () => {
             const result = sort(patches, 'patch_type', undefined);
@@ -113,8 +113,8 @@ describe('sort', () => {
 
     describe('sortDirection parameter handling', () => {
         const patches = [
-            createMockPatchInfo({ patch_type: 'full_patch' }),
-            createMockPatchInfo({ patch_type: 'partial_patch' })
+            createMockPatchSummary({ patch_type: 'full_patch' }),
+            createMockPatchSummary({ patch_type: 'partial_patch' })
         ];
 
         it('should handle undefined sortDirection', () => {
@@ -156,15 +156,15 @@ describe('sort', () => {
     describe('patch_type sorting (current implementation)', () => {
         it('should maintain original order since sorting returns 0', () => {
             const patches = [
-                createMockPatchInfo({
+                createMockPatchSummary({
                     affected_dep_name: 'first',
                     patch_type: 'partial_patch'
                 }),
-                createMockPatchInfo({
+                createMockPatchSummary({
                     affected_dep_name: 'second',
                     patch_type: 'full_patch'
                 }),
-                createMockPatchInfo({
+                createMockPatchSummary({
                     affected_dep_name: 'third',
                     patch_type: 'none_patch'
                 })
@@ -173,17 +173,17 @@ describe('sort', () => {
             const result = sort(patches, 'patch_type', 'DESC');
 
             expect(result).toHaveLength(3);
-            expect(result[0].affected_dep_name).toBe('first');
-            expect(result[1].affected_dep_name).toBe('second');
-            expect(result[2].affected_dep_name).toBe('third');
+            expect(result[0]!.affected_dep_name).toBe('first');
+            expect(result[1]!.affected_dep_name).toBe('second');
+            expect(result[2]!.affected_dep_name).toBe('third');
         });
 
         it('should handle mixed patch types', () => {
             const patches = [
-                createMockPatchInfo({ patch_type: 'full_patch' }),
-                createMockPatchInfo({ patch_type: 'partial_patch' }),
-                createMockPatchInfo({ patch_type: 'none_patch' }),
-                createMockPatchInfo({ patch_type: 'full_patch' })
+                createMockPatchSummary({ patch_type: 'full_patch' }),
+                createMockPatchSummary({ patch_type: 'partial_patch' }),
+                createMockPatchSummary({ patch_type: 'none_patch' }),
+                createMockPatchSummary({ patch_type: 'full_patch' })
             ];
 
             const result = sort(patches, 'patch_type', undefined);
@@ -194,9 +194,9 @@ describe('sort', () => {
 
         it('should handle null patch_type values', () => {
             const patches = [
-                createMockPatchInfo({ patch_type: null }),
-                createMockPatchInfo({ patch_type: 'full_patch' }),
-                createMockPatchInfo({ patch_type: undefined })
+                createMockPatchSummary({ patch_type: null as unknown as string }),
+                createMockPatchSummary({ patch_type: 'full_patch' }),
+                createMockPatchSummary({ patch_type: undefined as unknown as string })
             ];
 
             const result = sort(patches, 'patch_type', undefined);
@@ -208,7 +208,7 @@ describe('sort', () => {
 
     describe('mapping functionality', () => {
         it('should apply mapping if sortBy exists in mapping object', () => {
-            const patches = [createMockPatchInfo(), createMockPatchInfo()];
+            const patches = [createMockPatchSummary(), createMockPatchSummary()];
 
             const result = sort(patches, 'patch_type', undefined);
 
@@ -218,7 +218,7 @@ describe('sort', () => {
 
     describe('edge cases', () => {
         it('should handle empty string as sortBy', () => {
-            const patches = [createMockPatchInfo()];
+            const patches = [createMockPatchSummary()];
 
             const result = sort(patches, '', undefined);
 
@@ -228,7 +228,7 @@ describe('sort', () => {
 
         it('should handle very large arrays', () => {
             const patches = Array.from({ length: 1000 }, (_, i) =>
-                createMockPatchInfo({ affected_dep_name: `package-${i}` })
+                createMockPatchSummary({ affected_dep_name: `package-${i}` })
             );
 
             const result = sort(patches, 'patch_type', undefined);
@@ -250,7 +250,7 @@ describe('sort', () => {
                     patch_type: undefined,
                     vulnerability_info: createMockVulnerabilitySummary(),
                     patches: {}
-                } as PatchInfo
+                } as unknown as PatchSummary
             ];
 
             const result = sort(patches, 'patch_type', undefined);
@@ -261,8 +261,8 @@ describe('sort', () => {
 
         it('should modify original array (Array.sort behavior)', () => {
             const patches = [
-                createMockPatchInfo({ affected_dep_name: 'original-1' }),
-                createMockPatchInfo({ affected_dep_name: 'original-2' })
+                createMockPatchSummary({ affected_dep_name: 'original-1' }),
+                createMockPatchSummary({ affected_dep_name: 'original-2' })
             ];
             const originalLength = patches.length;
 
@@ -276,15 +276,15 @@ describe('sort', () => {
 
     describe('return value validation', () => {
         it('should always return an array', () => {
-            const patches = [createMockPatchInfo()];
+            const patches = [createMockPatchSummary()];
 
             const result = sort(patches, 'patch_type', undefined);
 
             expect(Array.isArray(result)).toBe(true);
         });
 
-        it('should return array of PatchInfo objects', () => {
-            const patches = [createMockPatchInfo(), createMockPatchInfo()];
+        it('should return array of PatchSummary objects', () => {
+            const patches = [createMockPatchSummary(), createMockPatchSummary()];
 
             const result = sort(patches, 'patch_type', undefined);
 

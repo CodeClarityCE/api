@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { Analyzer } from 'src/base_modules/analyzers/analyzer.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Analyzer } from 'src/base_modules/analyzers/analyzer.entity';
 import { NotAuthorized } from 'src/types/error.types';
 import { TypedPaginatedData } from 'src/types/pagination.types';
+import { Repository } from 'typeorm';
 import { AnalyzerDoesNotExist } from './analyzers.errors';
 
 /**
@@ -49,7 +49,7 @@ export class AnalyzersRepository {
      *
      * @param analyzerId - The ID of the Analyzer to delete.
      */
-    async deleteAnalyzer(analyzerId: string) {
+    async deleteAnalyzer(analyzerId: string): Promise<void> {
         await this.analyzerRepository.delete(analyzerId);
     }
 
@@ -60,7 +60,7 @@ export class AnalyzersRepository {
      * @param analyzerId - The ID of the Analyzer.
      * @param orgId - The ID of the Organization.
      */
-    async doesAnalyzerBelongToOrg(analyzerId: string, orgId: string) {
+    async doesAnalyzerBelongToOrg(analyzerId: string, orgId: string): Promise<void> {
         // Check if analyzer is global
         let analyzer = await this.analyzerRepository.findOne({
             where: {

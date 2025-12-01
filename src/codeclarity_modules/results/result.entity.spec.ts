@@ -1,5 +1,10 @@
-import { Result, ResultObject, ResultByAnalysisId, AnalysisInfo } from './result.entity';
 import { Analysis } from '../../base_modules/analyses/analysis.entity';
+import {
+    Result,
+    type ResultObject,
+    type ResultByAnalysisId,
+    type AnalysisInfo
+} from './result.entity';
 
 describe('Result Entity', () => {
     let result: Result;
@@ -152,8 +157,8 @@ describe('Result Entity', () => {
         result.result = vulnResult;
 
         expect(result.plugin).toBe('js-vuln-finder');
-        expect((result.result.workspaces as any)['default'].affected_vulnerabilities).toBeDefined();
-        expect((result.result.workspaces as any)['default'].Vulnerabilities).toHaveLength(1);
+        expect((result.result.workspaces as any).default.affected_vulnerabilities).toBeDefined();
+        expect((result.result.workspaces as any).default.Vulnerabilities).toHaveLength(1);
     });
 
     it('should handle license scan results', () => {
@@ -181,8 +186,8 @@ describe('Result Entity', () => {
         result.result = licenseResult;
 
         expect(result.plugin).toBe('js-license');
-        expect((result.result.workspaces as any)['default'].LicensesDepMap).toBeDefined();
-        expect((result.result.workspaces as any)['default'].LicensesDepMap['MIT']).toHaveLength(2);
+        expect((result.result.workspaces as any).default.LicensesDepMap).toBeDefined();
+        expect((result.result.workspaces as any).default.LicensesDepMap.MIT).toHaveLength(2);
     });
 
     it('should handle empty result objects', () => {
@@ -213,9 +218,14 @@ describe('Result Entity', () => {
         };
 
         result.result = failedResult;
-        expect(result.result.analysis_info.status).toBe('FAILURE');
-        expect(result.result.analysis_info.public_errors).toHaveLength(1);
-        expect(result.result.analysis_info.private_errors).toHaveLength(1);
+        const analysisInfo = failedResult.analysis_info as {
+            status: string;
+            public_errors: string[];
+            private_errors: string[];
+        };
+        expect(analysisInfo.status).toBe('FAILURE');
+        expect(analysisInfo.public_errors).toHaveLength(1);
+        expect(analysisInfo.private_errors).toHaveLength(1);
     });
 });
 
@@ -283,9 +293,9 @@ describe('ResultObject Interface', () => {
         };
 
         expect(Object.keys(resultObject.workspaces)).toHaveLength(3);
-        expect((resultObject.workspaces as any)['frontend']).toBeDefined();
-        expect((resultObject.workspaces as any)['backend']).toBeDefined();
-        expect((resultObject.workspaces as any)['shared']).toBeDefined();
+        expect((resultObject.workspaces as any).frontend).toBeDefined();
+        expect((resultObject.workspaces as any).backend).toBeDefined();
+        expect((resultObject.workspaces as any).shared).toBeDefined();
     });
 });
 

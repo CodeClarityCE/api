@@ -23,7 +23,7 @@ export class LicenseRepository {
         return license;
     }
 
-    async getAllLicenseData(): Promise<Array<License>> {
+    async getAllLicenseData(): Promise<License[]> {
         const licenses = await this.licenseRepository.find({});
         return licenses;
     }

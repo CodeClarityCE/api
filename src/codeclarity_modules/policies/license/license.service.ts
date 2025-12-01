@@ -1,19 +1,22 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { PaginationConfig, TypedPaginatedData } from 'src/types/pagination.types';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
+import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import { UsersRepository } from 'src/base_modules/users/users.repository';
 import {
     LicensePolicyCreateBody,
     LicensePolicyPatchBody
 } from 'src/codeclarity_modules/policies/license/licensePolicy.types';
-import { PaginationUserSuppliedConf } from 'src/types/pagination.types';
-import { SortDirection } from 'src/types/sort.types';
-import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { PolicyType } from 'src/codeclarity_modules/policies/policy.types';
 import { Policy, PolicyFrontend } from 'src/codeclarity_modules/policies/policy.entity';
+import { PolicyType } from 'src/codeclarity_modules/policies/policy.types';
+import {
+    PaginationConfig,
+    TypedPaginatedData,
+    PaginationUserSuppliedConf
+} from 'src/types/pagination.types';
+import { SortDirection } from 'src/types/sort.types';
 import { Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
-import { UsersRepository } from 'src/base_modules/users/users.repository';
 
 @Injectable()
 export class LicensePolicyService {
@@ -79,7 +82,7 @@ export class LicensePolicyService {
             where: {
                 id: licensePolicyId,
                 policy_type: PolicyType.LICENSE_POLICY,
-                organizations: { id: orgId } as any
+                organizations: { id: orgId }
             },
             relations: ['created_by']
         });
@@ -144,7 +147,7 @@ export class LicensePolicyService {
             .take(entriesPerPage)
             .getMany();
 
-        const res: Array<PolicyFrontend> = [];
+        const res: PolicyFrontend[] = [];
         res.push(
             ...policies.map((policy) => ({
                 id: policy.id,

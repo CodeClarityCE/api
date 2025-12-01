@@ -1,5 +1,5 @@
-import { IsNotEmpty, IsOptional, IsEnum, IsBoolean, IsDateString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional, IsEnum, IsBoolean, IsDateString } from 'class-validator';
 import { StageBase } from '../analyzers/analyzer.types';
 
 /********************************************/
@@ -9,18 +9,18 @@ import { StageBase } from '../analyzers/analyzer.types';
 export class AnalysisCreateBody {
     @ApiProperty({ description: 'The anaylzer id', example: '72305504' })
     @IsNotEmpty()
-    analyzer_id: string;
+    analyzer_id!: string;
 
     @ApiProperty({
         description: 'The anaylzer configuration',
         example: { license_policy_id: '72305504' }
     })
     @IsNotEmpty()
-    config: { [key: string]: { [key: string]: any } };
+    config!: Record<string, Record<string, unknown>>;
 
     @ApiProperty({ description: 'Which branch of the repository to analyze', example: 'main' })
     @IsNotEmpty()
-    branch: string;
+    branch!: string;
 
     @ApiProperty({ description: 'Which tag of the repository to analyze', example: 'v1.0.0' })
     @IsOptional()
@@ -103,7 +103,7 @@ export interface AnalysisCreate {
     created_on: Date;
     analyzer_id: string;
     created_by: string;
-    config: { [key: string]: { [key: string]: any } };
+    config: Record<string, Record<string, unknown>>;
     stage: number;
     status: AnalysisStatus;
     steps: AnalysisStage[][];
@@ -175,7 +175,7 @@ export class ScheduleUpdateBody {
     @IsEnum(['once', 'daily', 'weekly'], {
         message: 'schedule_type must be one of: once, daily, weekly'
     })
-    schedule_type: 'once' | 'daily' | 'weekly';
+    schedule_type!: 'once' | 'daily' | 'weekly';
 
     @ApiProperty({
         description: 'When the analysis should next be executed (ISO 8601 format)',
@@ -188,7 +188,7 @@ export class ScheduleUpdateBody {
             message: 'next_scheduled_run must be a valid ISO 8601 date string'
         }
     )
-    next_scheduled_run: string;
+    next_scheduled_run!: string;
 
     @ApiProperty({
         description: 'Whether the analysis schedule is active (enabled/disabled)',
@@ -198,5 +198,24 @@ export class ScheduleUpdateBody {
     @IsBoolean({
         message: 'is_active must be a boolean value'
     })
-    is_active: boolean;
+    is_active!: boolean;
+}
+
+/********************************************/
+/*        Analysis Execution History        */
+/********************************************/
+
+/**
+ * Represents a single execution run of an analysis
+ * Used for displaying historical timeline of when analysis executed
+ */
+export interface AnalysisRun {
+    /** When this analysis run was executed */
+    run_date: Date;
+    /** Number of results generated in this run */
+    result_count: number;
+    /** List of plugins that executed in this run */
+    plugins: string[];
+    /** Number of unique plugins that executed */
+    plugin_count: number;
 }

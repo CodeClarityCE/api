@@ -1,15 +1,15 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { VulnerabilitiesUtilsService } from './utils.service';
-import { Result } from '../../result.entity';
+import type { Repository } from 'typeorm';
 import {
     PluginResultNotAvailable,
     PluginFailed,
     UnknownWorkspace
 } from '../../../../types/error.types';
+import { Result } from '../../result.entity';
+import type { Dependency } from '../../sbom/sbom.types';
 import { Status } from '../vulnerabilities.types';
-import { Dependency } from '../../sbom/sbom.types';
+import { VulnerabilitiesUtilsService } from './utils.service';
 
 describe('VulnerabilitiesUtilsService', () => {
     let service: VulnerabilitiesUtilsService;
@@ -261,7 +261,7 @@ describe('VulnerabilitiesUtilsService', () => {
             const parentsSet = new Set(['test-dep']);
 
             const result = await service.getImportPaths(
-                dependenciesMap as { [key: string]: Dependency },
+                dependenciesMap as Record<string, Dependency>,
                 'test-dep',
                 'current-path',
                 [],
@@ -280,7 +280,7 @@ describe('VulnerabilitiesUtilsService', () => {
             };
 
             const result = await service.getImportPaths(
-                dependenciesMap as { [key: string]: Dependency },
+                dependenciesMap as Record<string, Dependency>,
                 'test-dep',
                 'current-path test-dep',
                 []
@@ -321,7 +321,7 @@ describe('VulnerabilitiesUtilsService', () => {
             };
 
             const result = await service.getImportPaths(
-                dependenciesMap as { [key: string]: Dependency },
+                dependenciesMap as Record<string, Dependency>,
                 'dep-a',
                 'current-path dep-a',
                 []

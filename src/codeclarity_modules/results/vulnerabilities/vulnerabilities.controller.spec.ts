@@ -1,14 +1,18 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
-import { FindingsController } from './vulnerabilities.controller';
-import { VulnerabilitiesService } from './vulnerabilities.service';
-import { VulnerabilityService } from './vulnerability.service';
-import { PaginatedResponse } from 'src/types/apiResponses.types';
+import { JwtService } from '@nestjs/jwt';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { CombinedAuthGuard } from 'src/base_modules/auth/guards/combined.guard';
+import type { PaginatedResponse } from 'src/types/apiResponses.types';
 import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
-import { AnalysisStats, VulnerabilityDetails, newAnalysisStats } from './vulnerabilities2.types';
+import { FindingsController } from './vulnerabilities.controller';
+import { VulnerabilitiesService } from './vulnerabilities.service';
+import {
+    newVulnerabilityAnalysisStats,
+    type VulnerabilityAnalysisStats,
+    type VulnerabilityDetailsReport
+} from './vulnerabilities.types';
+import { VulnerabilityService } from './vulnerability.service';
 
 describe('FindingsController', () => {
     let controller: FindingsController;
@@ -60,7 +64,7 @@ describe('FindingsController', () => {
         }
     };
 
-    const mockStatsResponse: AnalysisStats = {
+    const mockStatsResponse: VulnerabilityAnalysisStats = {
         number_of_issues: 50,
         number_of_vulnerabilities: 50,
         number_of_vulnerable_dependencies: 25,
@@ -112,7 +116,7 @@ describe('FindingsController', () => {
         mean_availability_impact_diff: 0.3
     };
 
-    const mockVulnerabilityResponse: VulnerabilityDetails = {
+    const mockVulnerabilityResponse: VulnerabilityDetailsReport = {
         vulnerability_info: {
             vulnerability_id: 'CVE-2023-1234',
             description: 'Detailed vulnerability description',
@@ -494,7 +498,7 @@ describe('FindingsController', () => {
 
         it('should handle empty statistics response', async () => {
             // Arrange
-            const emptyStats: AnalysisStats = newAnalysisStats();
+            const emptyStats: VulnerabilityAnalysisStats = newVulnerabilityAnalysisStats();
             vulnerabilitiesService.getStats.mockResolvedValue(emptyStats);
 
             // Act
@@ -604,7 +608,7 @@ describe('FindingsController', () => {
 
         it('should handle vulnerability with minimal fields', async () => {
             // Arrange
-            const vulnerabilityWithMinimalFields: VulnerabilityDetails = {
+            const vulnerabilityWithMinimalFields: VulnerabilityDetailsReport = {
                 vulnerability_info: {
                     vulnerability_id: 'vuln-123',
                     description: 'Vulnerability with minimal fields',

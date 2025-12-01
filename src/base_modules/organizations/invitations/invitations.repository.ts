@@ -1,8 +1,8 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { EntityNotFound } from 'src/types/error.types';
 import { Repository } from 'typeorm';
 import { Invitation } from './invitation.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Injectable } from '@nestjs/common';
-import { EntityNotFound } from 'src/types/error.types';
 
 /**
  * Injectable service for handling invitations.
@@ -70,7 +70,7 @@ export class InvitationsRepository {
     async getInvitationBy(where: object, relations?: object): Promise<Invitation> {
         const invitation = await this.invitationRepository.findOne({
             where: where,
-            relations: relations
+            ...(relations ? { relations: relations } : {})
         });
 
         if (!invitation) {

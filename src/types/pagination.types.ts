@@ -5,7 +5,7 @@ export interface TypedPaginatedData<Type> {
     /**
      * The array of typed data.
      */
-    data: Array<Type>;
+    data: Type[];
 
     /**
      * The current page number.
@@ -40,7 +40,7 @@ export interface TypedPaginatedData<Type> {
     /**
      * A map of filter counts keyed by filter name.
      */
-    filter_count: { [key: string]: number };
+    filter_count: Record<string, number>;
 }
 
 /**
@@ -65,10 +65,10 @@ export interface PaginationUserSuppliedConf {
     /**
      * The current page number (optional).
      */
-    currentPage?: number;
+    currentPage?: number | undefined;
 
     /**
      * The number of entries per page (optional).
      */
-    entriesPerPage?: number;
+    entriesPerPage?: number | undefined;
 }

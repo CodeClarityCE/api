@@ -29,7 +29,7 @@ pipeline {
         stage('Test lint and format') {
             steps {
                 sh 'yarn lint'
-                sh 'yarn typecheck'
+                sh 'yarn type-check'
                 sh 'yarn test'
                 sh 'yarn test:e2e test/integration/*contract*.e2e-spec.ts'
                 sh 'yarn run prettier src --check'

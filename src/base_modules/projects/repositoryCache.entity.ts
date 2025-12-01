@@ -1,7 +1,7 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
-import { Integration } from '../integrations/integrations.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import { Integration } from '../integrations/integrations.entity';
 
 export enum RepositoryType {
     GITHUB = 'GITHUB',
@@ -13,46 +13,46 @@ export class RepositoryCache {
     @PrimaryGeneratedColumn('uuid')
     @ApiProperty()
     @Expose()
-    id: string;
+    id!: string;
 
     @Column()
-    repository_type: RepositoryType;
-
-    @Column()
-    @ApiProperty()
-    @Expose()
-    url: string;
+    repository_type!: RepositoryType;
 
     @Column()
     @ApiProperty()
     @Expose()
-    default_branch: string;
+    url!: string;
 
     @Column()
     @ApiProperty()
     @Expose()
-    visibility: string;
+    default_branch!: string;
 
     @Column()
     @ApiProperty()
     @Expose()
-    fully_qualified_name: string;
+    visibility!: string;
+
+    @Column()
+    @ApiProperty()
+    @Expose()
+    fully_qualified_name!: string;
 
     @Column({
         nullable: true
     })
-    service_domain: string;
+    service_domain!: string;
 
     @Column()
     @ApiProperty()
     @Expose()
-    description: string;
+    description!: string;
 
     @Column('timestamptz')
     @ApiProperty()
     @Expose()
-    created_at: Date;
+    created_at!: Date;
 
     @ManyToOne(() => Integration, (integration) => integration.repository_cache)
-    integration: Integration;
+    integration!: Integration;
 }

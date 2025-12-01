@@ -1,18 +1,17 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { LicensesService } from './licenses.service';
-import { AnalysisResultsService } from '../results.service';
-import { LicenseRepository } from 'src/codeclarity_modules/knowledge/license/license.repository';
-import { LicensesUtilsService } from './utils/utils';
-import { SbomUtilsService } from '../sbom/utils/utils';
-import { Result } from '../result.entity';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
+import { LicenseRepository } from 'src/codeclarity_modules/knowledge/license/license.repository';
 import { UnknownWorkspace } from 'src/types/error.types';
+import { Result } from '../result.entity';
+import { AnalysisResultsService } from '../results.service';
+import { SbomUtilsService } from '../sbom/utils/utils';
+import { LicensesService } from './licenses.service';
+import { LicensesUtilsService } from './utils/utils';
 
 describe('LicensesService', () => {
     let service: LicensesService;
     let analysisResultsService: AnalysisResultsService;
-    let _licenseRepository: LicenseRepository;
     let licensesUtilsService: LicensesUtilsService;
     let sbomUtilsService: SbomUtilsService;
 
@@ -105,7 +104,6 @@ describe('LicensesService', () => {
 
         service = module.get<LicensesService>(LicensesService);
         analysisResultsService = module.get<AnalysisResultsService>(AnalysisResultsService);
-        _licenseRepository = module.get<LicenseRepository>(LicenseRepository);
         licensesUtilsService = module.get<LicensesUtilsService>(LicensesUtilsService);
         sbomUtilsService = module.get<SbomUtilsService>(SbomUtilsService);
 
@@ -123,13 +121,15 @@ describe('LicensesService', () => {
                 'project-123',
                 'analysis-123',
                 mockUser,
-                'default',
-                0,
-                20,
-                'name',
-                'asc',
-                undefined,
-                undefined
+                {
+                    workspace: 'default',
+                    page: 0,
+                    entriesPerPage: 20,
+                    sortBy: 'name',
+                    sortDirection: 'asc',
+                    activeFilters: undefined,
+                    searchKey: undefined
+                }
             );
 
             expect(result).toBeDefined();
@@ -153,13 +153,15 @@ describe('LicensesService', () => {
                 'project-123',
                 'analysis-123',
                 mockUser,
-                'default',
-                0,
-                20,
-                'name',
-                'asc',
-                '[MIT,Apache-2.0]',
-                'test'
+                {
+                    workspace: 'default',
+                    page: 0,
+                    entriesPerPage: 20,
+                    sortBy: 'name',
+                    sortDirection: 'asc',
+                    activeFilters: '[MIT,Apache-2.0]',
+                    searchKey: 'test'
+                }
             );
 
             expect(result).toBeDefined();
@@ -176,19 +178,15 @@ describe('LicensesService', () => {
             mockAnalysisResultsService.checkAccess.mockRejectedValue(accessError);
 
             await expect(
-                service.getLicensesUsed(
-                    'org-123',
-                    'project-123',
-                    'analysis-123',
-                    mockUser,
-                    'default',
-                    0,
-                    20,
-                    'name',
-                    'asc',
-                    undefined,
-                    undefined
-                )
+                service.getLicensesUsed('org-123', 'project-123', 'analysis-123', mockUser, {
+                    workspace: 'default',
+                    page: 0,
+                    entriesPerPage: 20,
+                    sortBy: 'name',
+                    sortDirection: 'asc',
+                    activeFilters: undefined,
+                    searchKey: undefined
+                })
             ).rejects.toThrow('Access denied');
         });
     });

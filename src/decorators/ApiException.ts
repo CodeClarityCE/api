@@ -1,7 +1,25 @@
-import { Type, applyDecorators } from '@nestjs/common';
-import { ApiExtraModels, ApiResponse, ApiResponseOptions, getSchemaPath } from '@nestjs/swagger';
+import { applyDecorators, type Type } from '@nestjs/common';
+import {
+    ApiExtraModels,
+    ApiResponse,
+    getSchemaPath,
+    type ApiResponseOptions
+} from '@nestjs/swagger';
 import { Status } from 'src/types/apiResponses.types';
-import { APIError, PublicAPIError, errorMessages } from 'src/types/error.types';
+import { PublicAPIError, errorMessages, type APIError } from 'src/types/error.types';
+
+/** Structure for API error response examples in OpenAPI documentation */
+interface ErrorResponseExample {
+    status_code: number;
+    status_message: Status;
+    error_code: string;
+    error_message: string;
+}
+
+/** OpenAPI example wrapper with value property */
+interface SwaggerExample {
+    value: ErrorResponseExample;
+}
 
 export function ApiErrorDecorator({
     statusCode,
@@ -11,11 +29,11 @@ export function ApiErrorDecorator({
     statusCode: number;
     errors: Type<APIError>[];
     options?: ApiResponseOptions;
-}) {
-    const descriptions = [];
+}): ReturnType<typeof applyDecorators> {
+    const descriptions: string[] = [];
     let description = '';
-    let example: any = {};
-    const examples: { [key: string]: any } = {};
+    let example: ErrorResponseExample | Record<string, never> = {};
+    const examples: Record<string, SwaggerExample> = {};
 
     if (errors.length > 1) {
         description = 'Throws errors: ';
@@ -26,20 +44,20 @@ export function ApiErrorDecorator({
                     status_code: statusCode,
                     status_message: Status.Failure,
                     error_code: err.name,
-                    error_message: errorMessages[err.name]
+                    error_message: errorMessages[err.name] ?? err.name
                 }
             };
         }
         description += descriptions.join(' or ');
         description += '.';
     } else {
-        const err = errors[0];
+        const err = errors[0]!;
         description = `Throws error: ${err.name}`;
         example = {
             status_code: statusCode,
             status_message: Status.Failure,
             error_code: err.name,
-            error_message: errorMessages[err.name]
+            error_message: errorMessages[err.name] ?? err.name
         };
     }
 

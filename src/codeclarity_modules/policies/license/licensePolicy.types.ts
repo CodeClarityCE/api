@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 import {
     IsArray,
@@ -8,6 +9,7 @@ import {
     IsString,
     Length
 } from 'class-validator';
+import { TeamMember } from '../../../base_modules/users/teamMember.types';
 import {
     DefaultablePolicyCreate,
     DefaultablePolicyUpdate,
@@ -15,9 +17,7 @@ import {
     PolicyType,
     PolicyUpdate
 } from '../policy.types';
-import { ApiProperty } from '@nestjs/swagger';
 // import { OptionalTransform } from 'src/transformers/transformer';
-import { TeamMember } from '../../../base_modules/users/teamMember.types';
 
 /********************************************/
 /*                   Enums                  */
@@ -35,19 +35,19 @@ export enum LicensePolicyType {
 export class LicensePolicy {
     @ApiProperty()
     @Expose()
-    name: string;
+    name!: string;
 
     @ApiProperty()
     @Expose()
-    description: string;
+    description!: string;
 
     @ApiProperty()
     @Expose()
-    type: LicensePolicyType;
+    type!: LicensePolicyType;
 
     @ApiProperty()
     @Expose()
-    default: boolean;
+    default!: boolean;
 
     @ApiProperty()
     @Expose()
@@ -56,19 +56,19 @@ export class LicensePolicy {
     @ApiProperty()
     @Expose()
     @Type(() => Date)
-    created_on: Date;
+    created_on!: Date;
 
     @ApiProperty()
     @Expose()
-    licenses: string[];
+    licenses!: string[];
 
     @ApiProperty()
     @Expose()
-    organization_id: string;
+    organization_id!: string;
 
     @ApiProperty()
     @Expose()
-    policy_type: PolicyType;
+    policy_type!: PolicyType;
 }
 
 /********************************************/
@@ -78,21 +78,21 @@ export class LicensePolicy {
 export class LicensePolicyCreateBody {
     @IsNotEmpty()
     @Length(5, 50)
-    name: string;
+    name!: string;
 
     @IsString()
     @Length(0, 250)
-    description: string;
+    description!: string;
 
     @IsNotEmpty()
     @IsEnum(LicensePolicyType)
-    type: LicensePolicyType;
+    type!: LicensePolicyType;
 
     @IsArray()
-    licenses: string[];
+    licenses!: string[];
 
     @IsBoolean()
-    default: boolean;
+    default!: boolean;
 }
 
 /********************************************/

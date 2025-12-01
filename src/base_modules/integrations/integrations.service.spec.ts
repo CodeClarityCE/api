@@ -1,11 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { IntegrationsService } from './integrations.service';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
-import { IntegrationsRepository } from './integrations.repository';
-import { Integration, IntegrationType, IntegrationProvider } from './integrations.entity';
+import { Test, type TestingModule } from '@nestjs/testing';
+import { NotAuthorized, NotAMember } from 'src/types/error.types';
 import { AuthenticatedUser, ROLE } from '../auth/auth.types';
 import { MemberRole } from '../organizations/memberships/orgMembership.types';
-import { NotAuthorized, NotAMember } from 'src/types/error.types';
+import { OrganizationsRepository } from '../organizations/organizations.repository';
+import { IntegrationType, IntegrationProvider, type Integration } from './integrations.entity';
+import { IntegrationsRepository } from './integrations.repository';
+import { IntegrationsService } from './integrations.service';
 
 describe('IntegrationsService', () => {
     let service: IntegrationsService;

@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { LicensesRepository } from './licenses.repository';
-import { Result } from '../result.entity';
-import { Status } from './licenses.types';
 import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
+import { Result } from '../result.entity';
+import { LicensesRepository } from './licenses.repository';
+import { Status } from './licenses.types';
 
 describe('LicensesRepository', () => {
     let repository: LicensesRepository;
@@ -202,8 +202,8 @@ describe('LicensesRepository', () => {
 
             expect(result).toEqual(complexLicensesOutput);
             expect(Object.keys(result.workspaces)).toEqual(['frontend', 'backend']);
-            expect(result.workspaces.frontend.LicensesDepMap['MIT']).toContain('react@18.0.0');
-            expect(result.workspaces.backend.LicenseComplianceViolations).toHaveLength(0);
+            expect(result.workspaces['frontend']!.LicensesDepMap['MIT']).toContain('react@18.0.0');
+            expect(result.workspaces['backend']!.LicenseComplianceViolations).toHaveLength(0);
         });
 
         it('should handle database errors', async () => {

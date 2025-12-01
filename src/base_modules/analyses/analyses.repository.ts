@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Analysis } from 'src/base_modules/analyses/analysis.entity';
 import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
 import { TypedPaginatedData } from 'src/types/pagination.types';
-import { Analysis } from 'src/base_modules/analyses/analysis.entity';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 
 /**
@@ -32,7 +32,7 @@ export class AnalysesRepository {
      * Deletes an analysis from the database by its ID.
      * @param analysisId The ID of the analysis to be deleted.
      */
-    async deleteAnalysis(analysisId: string) {
+    async deleteAnalysis(analysisId: string): Promise<void> {
         await this.analysisRepository.delete(analysisId);
     }
 
@@ -40,7 +40,7 @@ export class AnalysesRepository {
      * Deletes an analysis from the database by its ID.
      * @param analysisId The ID of the analysis to be deleted.
      */
-    async removeAnalyses(analyses: Analysis[]) {
+    async removeAnalyses(analyses: Analysis[]): Promise<void> {
         await this.analysisRepository.remove(analyses);
     }
 
@@ -55,7 +55,7 @@ export class AnalysesRepository {
             where: {
                 id: analysisId
             },
-            relations: relation
+            ...(relation ? { relations: relation } : {})
         });
         if (!analysis) {
             throw new EntityNotFound();
@@ -105,7 +105,7 @@ export class AnalysesRepository {
             where: {
                 project: { id: projectId }
             },
-            relations: relations
+            ...(relations ? { relations: relations } : {})
         });
     }
 
@@ -115,7 +115,7 @@ export class AnalysesRepository {
      * @param projectId The ID of the project to check against.
      * @throws NotAuthorized if the analysis does not belong to the project.
      */
-    async doesAnalysesBelongToProject(analysisId: string, projectId: string) {
+    async doesAnalysesBelongToProject(analysisId: string, projectId: string): Promise<void> {
         const belongs = await this.analysisRepository.findOne({
             relations: ['project'],
             where: {

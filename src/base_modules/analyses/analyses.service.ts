@@ -1,32 +1,63 @@
 import { Injectable } from '@nestjs/common';
-import { AnalysisCreateBody } from 'src/base_modules/analyses/analysis.types';
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { RabbitMQError } from 'src/types/error.types';
-import { ProjectMemberService } from '../projects/projectMember.service';
-import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
-import { TypedPaginatedData } from 'src/types/pagination.types';
-import * as amqp from 'amqplib';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import * as amqp from 'amqplib';
+import {
+    Analysis,
+    AnalysisStage,
+    AnalysisStatus,
+    StageBase
+} from 'src/base_modules/analyses/analysis.entity';
+import { AnalysisCreateBody, AnalysisRun } from 'src/base_modules/analyses/analysis.types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { AnalysisStartMessageCreate } from 'src/types/rabbitMqMessages.types';
-import { Output as VulnsOuptut } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
-import { Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
+import { Policy } from 'src/codeclarity_modules/policies/policy.entity';
+import { LicensesRepository } from 'src/codeclarity_modules/results/licenses/licenses.repository';
 import { Output as LicensesOutput } from 'src/codeclarity_modules/results/licenses/licenses.types';
-import { Analysis, AnalysisStage, AnalysisStatus } from 'src/base_modules/analyses/analysis.entity';
-import { UsersRepository } from '../users/users.repository';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
-import { ProjectsRepository } from '../projects/projects.repository';
-import { AnalyzersRepository } from '../analyzers/analyzers.repository';
 import { AnalysisResultsRepository } from 'src/codeclarity_modules/results/results.repository';
 import { SBOMRepository } from 'src/codeclarity_modules/results/sbom/sbom.repository';
+import { Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import { VulnerabilitiesRepository } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.repository';
-import { LicensesRepository } from 'src/codeclarity_modules/results/licenses/licenses.repository';
-import { AnalysesRepository } from './analyses.repository';
-import { AnaylzerMissingConfigAttribute } from '../analyzers/analyzers.errors';
-import { LanguageDetectionService } from './language-detection.service';
+import { Output as VulnsOuptut } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
+import { RabbitMQError } from 'src/types/error.types';
+import {
+    PaginationConfig,
+    PaginationUserSuppliedConf,
+    TypedPaginatedData
+} from 'src/types/pagination.types';
+import { AnalysisStartMessageCreate } from 'src/types/rabbitMqMessages.types';
 import { Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Policy } from 'src/codeclarity_modules/policies/policy.entity';
+import { AnaylzerMissingConfigAttribute } from '../analyzers/analyzers.errors';
+import { AnalyzersRepository } from '../analyzers/analyzers.repository';
+import { OrganizationsRepository } from '../organizations/organizations.repository';
+import { ProjectMemberService } from '../projects/projectMember.service';
+import { ProjectsRepository } from '../projects/projects.repository';
+import { UsersRepository } from '../users/users.repository';
+import { AnalysesRepository } from './analyses.repository';
+
+/** Configuration option for an analyzer step */
+interface AnalyzerStepConfigOption {
+    required?: boolean;
+    [key: string]: unknown;
+}
+
+/** Result record from analysis results table */
+interface AnalysisResultRecord {
+    created_on?: Date;
+    plugin: string;
+}
+
+/** Configuration input for vuln-finder plugin */
+interface VulnFinderConfigInput {
+    vulnerabilityPolicy?: string[];
+    [key: string]: unknown;
+}
+
+/** Analysis configuration input passed from the user */
+interface AnalysisConfigInput {
+    'vuln-finder'?: VulnFinderConfigInput;
+    [key: string]: Record<string, unknown> | undefined;
+}
 
 @Injectable()
 export class AnalysesService {
@@ -42,7 +73,6 @@ export class AnalysesService {
         private readonly vulnerabilitiesRepository: VulnerabilitiesRepository,
         private readonly licensesRepository: LicensesRepository,
         private readonly analysesRepository: AnalysesRepository,
-        private readonly languageDetectionService: LanguageDetectionService,
         @InjectRepository(Policy, 'codeclarity')
         private policyRepository: Repository<Policy>
     ) {}
@@ -105,10 +135,10 @@ export class AnalysesService {
         }
 
         // Initialize an object to hold the configuration structure for the analyzer steps
-        const config_structure: { [key: string]: any } = {};
+        const config_structure: Record<string, Record<string, AnalyzerStepConfigOption>> = {};
 
         // Initialize an object to hold the final configuration provided by the user
-        const config: { [key: string]: any } = {};
+        const config: Record<string, Record<string, unknown>> = {};
 
         // Array to store stages of the analysis process
         const stages: AnalysisStage[][] = [];
@@ -139,8 +169,8 @@ export class AnalysesService {
                 // If the step requires configuration, add it to the config_structure object
                 if (step.config) {
                     for (const [key, value] of Object.entries(step.config)) {
-                        if (!config_structure[step.name]) config_structure[step.name] = {};
-                        config_structure[step.name][key] = value;
+                        config_structure[step.name] ??= {};
+                        config_structure[step.name]![key] = value as AnalyzerStepConfigOption;
                     }
                 }
             }
@@ -152,7 +182,7 @@ export class AnalysesService {
         // Merge user-provided configuration with default or existing configuration
         for (const [pluginName, pluginConfig] of Object.entries(analysisData.config)) {
             for (const [key, value] of Object.entries(pluginConfig)) {
-                if (!config[pluginName]) config[pluginName] = {};
+                config[pluginName] ??= {};
                 config[pluginName][key] = value;
             }
         }
@@ -160,8 +190,8 @@ export class AnalysesService {
         // Validate the configuration provided by the user against the required attributes
         for (const [pluginName, plugin_config] of Object.entries(config_structure)) {
             for (const [key] of Object.entries(plugin_config)) {
-                const config_element = config_structure[pluginName][key];
-                if (config_element.required && (!config[pluginName] || !config[pluginName][key])) {
+                const config_element = config_structure[pluginName]?.[key];
+                if (config_element?.required && !config[pluginName]?.[key]) {
                     throw new AnaylzerMissingConfigAttribute();
                 }
             }
@@ -173,9 +203,13 @@ export class AnalysesService {
         analysis.stage = 0;
         analysis.config = analysisData.config;
         analysis.steps = stages;
-        analysis.tag = analysisData.tag;
+        if (analysisData.tag !== undefined) {
+            analysis.tag = analysisData.tag;
+        }
         analysis.branch = analysisData.branch;
-        analysis.commit_hash = analysisData.commit_hash;
+        if (analysisData.commit_hash !== undefined) {
+            analysis.commit_hash = analysisData.commit_hash;
+        }
         analysis.created_on = new Date();
         analysis.created_by = creator;
         analysis.analyzer = analyzer;
@@ -187,10 +221,10 @@ export class AnalysesService {
         // Set scheduling fields using simplified approach for better maintainability
 
         // Default to 'once' (immediate execution) if no schedule type specified
-        analysis.schedule_type = analysisData.schedule_type || 'once';
+        analysis.schedule_type = analysisData.schedule_type ?? 'once';
 
         // Set active status - defaults to true for all analyses
-        analysis.is_active = analysisData.is_active !== undefined ? analysisData.is_active : true;
+        analysis.is_active = analysisData.is_active ?? true;
 
         // Configure when the analysis should next run
         // For 'once': this field is ignored, analysis runs immediately
@@ -212,7 +246,7 @@ export class AnalysesService {
             const amqpHost = `${this.configService.getOrThrow<string>(
                 'AMQP_PROTOCOL'
             )}://${this.configService.getOrThrow<string>('AMQP_USER')}:${
-                process.env.AMQP_PASSWORD
+                process.env['AMQP_PASSWORD']
             }@${this.configService.getOrThrow<string>(
                 'AMQP_HOST'
             )}:${this.configService.getOrThrow<string>('AMQP_PORT')}`;
@@ -313,7 +347,7 @@ export class AnalysesService {
         projectId: string,
         id: string,
         user: AuthenticatedUser
-    ): Promise<Array<object>> {
+    ): Promise<object[]> {
         // (1) Check if user has access to org
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
@@ -337,15 +371,16 @@ export class AnalysesService {
             {
                 x: 'Latest',
                 y: 'Vulnerabilities',
-                v: vulnOutput.workspaces[vulnOutput.analysis_info.default_workspace_name]
-                    .Vulnerabilities.length
+                v:
+                    vulnOutput.workspaces[vulnOutput.analysis_info.default_workspace_name]
+                        ?.Vulnerabilities?.length ?? 0
             },
             {
                 x: 'Latest',
                 y: 'Dependencies',
                 v: Object.keys(
                     sbomOutput.workspaces[vulnOutput.analysis_info.default_workspace_name]
-                        .dependencies
+                        ?.dependencies ?? {}
                 ).length
             },
             {
@@ -527,7 +562,8 @@ export class AnalysesService {
         // Get the analysis and update scheduling fields
         const analysis = await this.analysesRepository.getAnalysisById(analysisId);
 
-        analysis.schedule_type = scheduleData.schedule_type as any;
+        analysis.schedule_type =
+            (scheduleData.schedule_type as Analysis['schedule_type']) ?? 'once';
         analysis.next_scheduled_run = new Date(scheduleData.next_scheduled_run);
         analysis.is_active = scheduleData.is_active;
 
@@ -591,9 +627,13 @@ export class AnalysesService {
         newAnalysis.stage = 0;
         newAnalysis.config = originalAnalysis.config;
         newAnalysis.steps = originalAnalysis.steps;
-        newAnalysis.tag = originalAnalysis.tag;
+        if (originalAnalysis.tag !== undefined) {
+            newAnalysis.tag = originalAnalysis.tag;
+        }
         newAnalysis.branch = originalAnalysis.branch;
-        newAnalysis.commit_hash = originalAnalysis.commit_hash;
+        if (originalAnalysis.commit_hash !== undefined) {
+            newAnalysis.commit_hash = originalAnalysis.commit_hash;
+        }
         newAnalysis.created_on = new Date();
 
         // Copy relationships
@@ -638,7 +678,7 @@ export class AnalysesService {
         projectId: string,
         analysisId: string,
         user: AuthenticatedUser
-    ): Promise<any[]> {
+    ): Promise<AnalysisRun[]> {
         // Verify permissions
         await this.projectsRepository.doesProjectBelongToOrg(projectId, orgId);
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
@@ -658,10 +698,10 @@ export class AnalysesService {
      * This ensures only relevant plugins are executed for each language
      */
     private filterStepsByLanguage(
-        analyzerSteps: any[][],
+        analyzerSteps: StageBase[][],
         detectedLanguages: string[],
-        languageConfig?: { [key: string]: { plugins: string[] } | undefined }
-    ): any[][] {
+        languageConfig?: Record<string, { plugins: string[] } | undefined>
+    ): StageBase[][] {
         if (!languageConfig) {
             // If no language configuration, return all steps for backward compatibility
             return analyzerSteps;
@@ -679,14 +719,14 @@ export class AnalysesService {
 
         // If no applicable plugins found, fallback to JavaScript plugins
         if (applicablePlugins.size === 0) {
-            const jsConfig = languageConfig.javascript;
+            const jsConfig = languageConfig['javascript'];
             if (jsConfig) {
                 jsConfig.plugins.forEach((plugin) => applicablePlugins.add(plugin));
             }
         }
 
         // Filter steps to only include applicable plugins
-        const filteredSteps: any[][] = [];
+        const filteredSteps: StageBase[][] = [];
 
         for (const stage of analyzerSteps) {
             const filteredStage = stage.filter((step) => applicablePlugins.has(step.name));
@@ -709,30 +749,25 @@ export class AnalysesService {
      * @returns Array of run summary objects, sorted by date (newest first)
      * @private
      */
-    private groupResultsByDay(results: any[]): any[] {
-        if (!results || results.length === 0) return [];
+    private groupResultsByDay(results: AnalysisResultRecord[]): AnalysisRun[] {
+        if (results?.length === 0) return [];
 
         // Group results by the day they were created
-        const grouped = results.reduce(
-            (acc, result) => {
-                // Use creation date or fallback to plugin name as key
-                const day = new Date(result.created_on || result.plugin).toDateString();
-                if (!acc[day]) {
-                    acc[day] = [];
-                }
-                acc[day].push(result);
-                return acc;
-            },
-            {} as Record<string, any[]>
-        );
+        const grouped = results.reduce<Record<string, AnalysisResultRecord[]>>((acc, result) => {
+            // Use creation date or fallback to plugin name as key
+            const day = new Date(result.created_on ?? result.plugin).toDateString();
+            acc[day] ??= [];
+            acc[day].push(result);
+            return acc;
+        }, {});
 
         // Convert grouped data to frontend-expected format
         return Object.entries(grouped)
             .map(([_day, dayResults]) => ({
-                run_date: (dayResults as any[])[0].created_on || new Date(),
-                result_count: (dayResults as any[]).length,
-                plugins: [...new Set((dayResults as any[]).map((r) => r.plugin))], // Unique plugin names
-                plugin_count: [...new Set((dayResults as any[]).map((r) => r.plugin))].length
+                run_date: dayResults[0]?.created_on ?? new Date(),
+                result_count: dayResults.length,
+                plugins: [...new Set(dayResults.map((r) => r.plugin))], // Unique plugin names
+                plugin_count: [...new Set(dayResults.map((r) => r.plugin))].length
             }))
             .sort((a, b) => new Date(b.run_date).getTime() - new Date(a.run_date).getTime()); // Newest first
     }
@@ -742,7 +777,7 @@ export class AnalysesService {
      */
     private async linkPoliciesToAnalysis(
         analysisId: string,
-        config: any,
+        config: AnalysisConfigInput,
         orgId: string
     ): Promise<void> {
         try {
@@ -751,38 +786,47 @@ export class AnalysesService {
                 return; // No vulnerability policy configuration
             }
 
-            const policyIds = Array.isArray(vulnFinderConfig.vulnerabilityPolicy)
-                ? vulnFinderConfig.vulnerabilityPolicy
-                : [];
+            const policyIds = vulnFinderConfig.vulnerabilityPolicy;
 
             for (const policyId of policyIds) {
-                if (typeof policyId === 'string' && policyId.trim()) {
-                    try {
-                        // Verify the policy exists and belongs to the organization
-                        const policy = await this.policyRepository.findOne({
-                            where: { id: policyId },
-                            relations: ['organizations']
-                        });
-
-                        if (policy && policy.organizations.some((org) => org.id === orgId)) {
-                            // Create the policy-analysis relationship directly
-                            await this.policyRepository.manager.query(
-                                'INSERT INTO policy_analyses_analysis ("policyId", "analysisId") VALUES ($1, $2)',
-                                [policyId, analysisId]
-                            );
-                        }
-                    } catch (err) {
-                        console.warn(
-                            `Failed to link policy ${policyId} to analysis ${analysisId}:`,
-                            err.message
-                        );
-                    }
+                if (policyId.trim()) {
+                    await this.linkSinglePolicyToAnalysis(policyId, analysisId, orgId);
                 }
             }
         } catch (err) {
             console.warn(
                 `Failed to process policy linking for analysis ${analysisId}:`,
-                err.message
+                (err as Error).message
+            );
+        }
+    }
+
+    /**
+     * Link a single policy to an analysis
+     */
+    private async linkSinglePolicyToAnalysis(
+        policyId: string,
+        analysisId: string,
+        orgId: string
+    ): Promise<void> {
+        try {
+            // Verify the policy exists and belongs to the organization
+            const policy = await this.policyRepository.findOne({
+                where: { id: policyId },
+                relations: ['organizations']
+            });
+
+            if (policy?.organizations.some((org) => org.id === orgId)) {
+                // Create the policy-analysis relationship directly
+                await this.policyRepository.manager.query(
+                    'INSERT INTO policy_analyses_analysis ("policyId", "analysisId") VALUES ($1, $2)',
+                    [policyId, analysisId]
+                );
+            }
+        } catch (err) {
+            console.warn(
+                `Failed to link policy ${policyId} to analysis ${analysisId}:`,
+                (err as Error).message
             );
         }
     }

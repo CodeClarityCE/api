@@ -10,20 +10,20 @@ import {
     Post,
     Query
 } from '@nestjs/common';
-import { AuthUser } from 'src/decorators/UserDecorator';
-import { LicensePolicyService } from './license.service';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import {
+    LicensePolicyCreateBody,
+    LicensePolicyPatchBody
+} from 'src/codeclarity_modules/policies/license/licensePolicy.types';
+import { Policy, PolicyFrontend } from 'src/codeclarity_modules/policies/policy.entity';
+import { AuthUser } from 'src/decorators/UserDecorator';
 import {
     CreatedResponse,
     NoDataResponse,
     TypedPaginatedResponse,
     TypedResponse
 } from 'src/types/apiResponses.types';
-import {
-    LicensePolicyCreateBody,
-    LicensePolicyPatchBody
-} from 'src/codeclarity_modules/policies/license/licensePolicy.types';
-import { Policy, PolicyFrontend } from 'src/codeclarity_modules/policies/policy.entity';
+import { LicensePolicyService } from './license.service';
 
 @Controller('org/:org_id/policies/license_policy')
 export class LicensePolicyController {

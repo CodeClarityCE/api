@@ -1,14 +1,14 @@
+import { join } from 'path';
+import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
-import { Module } from '@nestjs/common';
+import { Email } from 'src/base_modules/email/email.entity';
+import { EmailRepository } from './email.repository';
 import { EmailService } from './email.service';
-import { join } from 'path';
-import { ConfigService } from '@nestjs/config';
 import { EmailUnsubscriptionController } from './emailUnsubscriptions/emailUnsubscriptions.controller';
 import { EmailUnsubscriptionService } from './emailUnsubscriptions/emailUnsubscriptions.service';
-import { EmailRepository } from './email.repository';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Email } from 'src/base_modules/email/email.entity';
 
 @Module({
     imports: [
@@ -21,7 +21,7 @@ import { Email } from 'src/base_modules/email/email.entity';
                     requireTLS: true,
                     auth: {
                         user: config.getOrThrow<string>('MAIL_AUTH_USER'),
-                        pass: process.env.MAIL_AUTH_PASSWORD
+                        pass: process.env['MAIL_AUTH_PASSWORD']
                     }
                 },
                 preview: false,

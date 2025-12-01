@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { LicenseRepository } from './license.repository';
-import { License } from './license.entity';
 import { EntityNotFound } from 'src/types/error.types';
+import type { Repository } from 'typeorm';
+import { License } from './license.entity';
+import { LicenseRepository } from './license.repository';
 
 describe('LicenseRepository', () => {
     let licenseRepository: LicenseRepository;
@@ -156,7 +156,7 @@ describe('LicenseRepository', () => {
         });
 
         it('should handle very long license IDs', async () => {
-            const longLicenseId = 'VERY-LONG-' + 'LICENSE-'.repeat(50) + '1.0';
+            const longLicenseId = `VERY-LONG-${'LICENSE-'.repeat(50)}1.0`;
             mockRepository.findOne.mockResolvedValue(null);
 
             await expect(licenseRepository.getLicenseData(longLicenseId)).rejects.toThrow(
@@ -229,8 +229,8 @@ describe('LicenseRepository', () => {
             const result = await licenseRepository.getAllLicenseData();
 
             expect(result).toHaveLength(1000);
-            expect(result[0].licenseId).toBe('LICENSE-0');
-            expect(result[999].licenseId).toBe('LICENSE-999');
+            expect(result[0]!.licenseId).toBe('LICENSE-0');
+            expect(result[999]!.licenseId).toBe('LICENSE-999');
         });
     });
 

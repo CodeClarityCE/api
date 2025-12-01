@@ -1,42 +1,41 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany, Relation, ManyToOne } from 'typeorm';
-import { StageBase } from '../analyses/analysis.entity';
-import type { Analysis } from '../analyses/analysis.entity';
-import type { Organization } from '../organizations/organization.entity';
-import type { User } from '../users/users.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany, Relation, ManyToOne } from 'typeorm';
+import { StageBase, type Analysis } from '../analyses/analysis.entity';
+import type { Organization } from '../organizations/organization.entity';
+import type { User } from '../users/users.entity';
 
 @Entity()
 export class Analyzer {
     @PrimaryGeneratedColumn('uuid')
     @ApiProperty()
     @Expose()
-    id: string;
+    id!: string;
 
     @Column({
         length: 25
     })
     @ApiProperty()
     @Expose()
-    name: string;
+    name!: string;
 
     @Column()
-    global: boolean;
+    global!: boolean;
 
     @Column('text')
     @ApiProperty()
     @Expose()
-    description: string;
+    description!: string;
 
     @Column('timestamptz')
     @ApiProperty()
     @Expose()
-    created_on: Date;
+    created_on!: Date;
 
     @Column('jsonb')
     @ApiProperty()
     @Expose()
-    steps: StageBase[][];
+    steps!: StageBase[][];
 
     @Column({
         type: 'varchar',
@@ -50,7 +49,7 @@ export class Analyzer {
         type: [String]
     })
     @Expose()
-    supported_languages: string[];
+    supported_languages!: string[];
 
     @Column({
         type: 'jsonb',
@@ -82,15 +81,15 @@ export class Analyzer {
         default: 'js'
     })
     @Expose()
-    logo: string;
+    logo!: string;
 
     // Foreign keys
     @OneToMany('Analysis', 'analyzer')
-    analyses: Relation<Analysis[]>;
+    analyses!: Relation<Analysis[]>;
 
     @ManyToOne('Organization', 'analyzers')
-    organization: Relation<Organization>;
+    organization!: Relation<Organization>;
 
     @ManyToOne('User', 'analyzers_created')
-    created_by: Relation<User>;
+    created_by!: Relation<User>;
 }

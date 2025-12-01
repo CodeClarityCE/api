@@ -1,8 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { PackageRepository } from './package.repository';
-import { Package } from './package.entity';
 import { EntityNotFound } from 'src/types/error.types';
+import { Package } from './package.entity';
+import { PackageRepository } from './package.repository';
 
 describe('PackageRepository', () => {
     let packageRepository: PackageRepository;
@@ -257,7 +257,7 @@ describe('PackageRepository', () => {
         });
 
         it('should handle very long package names', async () => {
-            const longPackageName = 'very-long-' + 'package-name-'.repeat(20) + 'final';
+            const longPackageName = `very-long-${'package-name-'.repeat(20)}final`;
             mockRepository.findOne.mockResolvedValue(null);
 
             const result = await packageRepository.getPackageInfoWithoutFailing(longPackageName);
@@ -333,7 +333,7 @@ describe('PackageRepository', () => {
 
                 const result = await packageRepository.getVersionInfo('test-package', version);
 
-                expect(result.versions[0].version).toBe(version);
+                expect(result.versions[0]!.version).toBe(version);
                 expect(mockRepository.createQueryBuilder).toHaveBeenCalled();
             }
         });
@@ -487,8 +487,8 @@ describe('PackageRepository', () => {
 
             expect(result.license).toBe('SEE LICENSE IN LICENSE.txt');
             expect(result.licenses).toHaveLength(2);
-            expect(result.licenses[0].type).toBe('Apache-2.0');
-            expect(result.licenses[1].type).toBe('MIT');
+            expect(result.licenses[0]!.type).toBe('Apache-2.0');
+            expect(result.licenses[1]!.type).toBe('MIT');
         });
 
         it('should handle package with no homepage', async () => {
@@ -636,9 +636,9 @@ describe('PackageRepository', () => {
 
             const result = await packageRepository.getVersionInfo('express', '1.0.0');
 
-            expect(result.versions[0].dependencies).toBeNull();
-            expect(result.versions[0].dev_dependencies).toBeNull();
-            expect(result.versions[0].extra).toBeNull();
+            expect(result.versions[0]!.dependencies).toBeNull();
+            expect(result.versions[0]!.dev_dependencies).toBeNull();
+            expect(result.versions[0]!.extra).toBeNull();
         });
     });
 
@@ -717,7 +717,7 @@ describe('PackageRepository', () => {
 
             mockQueryBuilder.getOne.mockImplementation(() => {
                 // Get the version from the closure of leftJoinAndSelect
-                const version = versions.shift() || '4.18.0';
+                const version = versions.shift() ?? '4.18.0';
                 return Promise.resolve({
                     ...mockPackageWithVersion,
                     versions: [

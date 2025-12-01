@@ -1,21 +1,29 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
+import { Organization } from 'src/base_modules/organizations/organization.entity';
+import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 import {
     AttackVectorDist,
     CIAImpact,
     LatestVulns,
-    ProjectQuickStats,
     ProjectGradeClass,
+    ProjectQuickStats,
     QuickStats,
     SeverityInfoByWeek,
     Trend
 } from 'src/codeclarity_modules/dashboard/dashboard.types';
-import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
+import { LicenseDist, Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
+import { Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import {
     PaginationConfig,
     PaginationUserSuppliedConf,
     TypedPaginatedData
 } from 'src/types/pagination.types';
+import { SortDirection } from 'src/types/sort.types';
+import { Repository } from 'typeorm';
+
 // Native Date API utility functions
 function subtractMonths(date: Date, months: number): Date {
     const result = new Date(date);
@@ -31,13 +39,6 @@ function getWeekNumber(date: Date): number {
     const dayDiff = (target.getTime() - jan4.getTime()) / 86400000;
     return 1 + Math.ceil(dayDiff / 7);
 }
-import { SortDirection } from 'src/types/sort.types';
-import { Organization } from 'src/base_modules/organizations/organization.entity';
-import { LicenseDist, Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
-import { Output as VulnsOutput } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
 
 @Injectable()
 export class DashboardService {
@@ -65,8 +66,8 @@ export class DashboardService {
         dateRangeEnd?: Date,
         _integrationIds?: string[]
     ): Promise<SeverityInfoByWeek[]> {
-        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 1);
-        if (!dateRangeEnd) dateRangeEnd = new Date();
+        dateRangeStart ??= subtractMonths(new Date(), 1);
+        dateRangeEnd ??= new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
@@ -93,7 +94,8 @@ export class DashboardService {
                 const week_number = getWeekNumber(analysis.created_on);
                 const year = analysis.created_on.getFullYear();
                 let weekInfo = severityInfoByWeek.find(
-                    (info) => info.week_number.week == week_number && info.week_number.year == year
+                    (info) =>
+                        info.week_number.week === week_number && info.week_number.year === year
                 );
 
                 if (!weekInfo) {
@@ -119,7 +121,7 @@ export class DashboardService {
                     // We only retrieve one result per project per week
                     if (!weekInfo.projects.find((p) => p === project.id.toString())) {
                         for (const workspace_name of Object.keys(res.workspaces)) {
-                            const workspace = res.workspaces[workspace_name];
+                            const workspace = res.workspaces[workspace_name]!;
                             workspace.Vulnerabilities.forEach((vuln) => {
                                 const severity = vuln.Severity.Severity;
 
@@ -158,8 +160,8 @@ export class DashboardService {
         dateRangeEnd?: Date,
         _integrationIds?: string[]
     ): Promise<AttackVectorDist[]> {
-        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
-        if (!dateRangeEnd) dateRangeEnd = new Date();
+        dateRangeStart ??= subtractMonths(new Date(), 2);
+        dateRangeEnd ??= new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
@@ -186,12 +188,12 @@ export class DashboardService {
                     const res = result.result as unknown as VulnsOutput;
 
                     for (const workspace_name of Object.keys(res.workspaces)) {
-                        const workspace = res.workspaces[workspace_name];
+                        const workspace = res.workspaces[workspace_name]!;
                         workspace.Vulnerabilities.forEach((vuln) => {
                             const attack_vector = vuln.Severity.Vector;
 
                             let attackVector = attackVectorDist.find(
-                                (vector) => vector.attack_vector == attack_vector
+                                (vector) => vector.attack_vector === attack_vector
                             );
 
                             if (!attackVector) {
@@ -229,8 +231,8 @@ export class DashboardService {
         dateRangeEnd?: Date,
         _integrationIds?: string[]
     ): Promise<CIAImpact[]> {
-        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
-        if (!dateRangeEnd) dateRangeEnd = new Date();
+        dateRangeStart ??= subtractMonths(new Date(), 2);
+        dateRangeEnd ??= new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
@@ -257,7 +259,7 @@ export class DashboardService {
                     const res = result.result as unknown as VulnsOutput;
 
                     for (const workspace_name of Object.keys(res.workspaces)) {
-                        const workspace = res.workspaces[workspace_name];
+                        const workspace = res.workspaces[workspace_name]!;
                         workspace.Vulnerabilities.forEach((vuln) => {
                             ciaImpacts.push({
                                 cia: 'Confidentiality',
@@ -299,8 +301,8 @@ export class DashboardService {
         dateRangeEnd?: Date,
         _integrationIds?: string[]
     ): Promise<LicenseDist> {
-        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
-        if (!dateRangeEnd) dateRangeEnd = new Date();
+        dateRangeStart ??= subtractMonths(new Date(), 2);
+        dateRangeEnd ??= new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
@@ -325,12 +327,16 @@ export class DashboardService {
             project.analyses.forEach((analysis) => {
                 analysis.results.forEach((result) => {
                     const res = result.result as unknown as SbomOutput;
+                    const licenseDist = res.analysis_info.stats['license_dist'] as Record<
+                        string,
+                        number
+                    >;
 
-                    for (const key of Object.keys(res.analysis_info.stats.license_dist)) {
+                    for (const key of Object.keys(licenseDist)) {
                         if (licenses[key]) {
-                            licenses[key] += res.analysis_info.stats.license_dist[key];
+                            licenses[key] += licenseDist[key]!;
                         } else {
-                            licenses[key] = res.analysis_info.stats.license_dist[key];
+                            licenses[key] = licenseDist[key]!;
                         }
                     }
                 });
@@ -357,8 +363,8 @@ export class DashboardService {
         dateRangeEnd?: Date,
         _integrationIds?: string[]
     ): Promise<LatestVulns> {
-        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
-        if (!dateRangeEnd) dateRangeEnd = new Date();
+        dateRangeStart ??= subtractMonths(new Date(), 2);
+        dateRangeEnd ??= new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
@@ -392,7 +398,7 @@ export class DashboardService {
                     const res = result.result as unknown as VulnsOutput;
 
                     for (const workspace_name of Object.keys(res.workspaces)) {
-                        const workspace = res.workspaces[workspace_name];
+                        const workspace = res.workspaces[workspace_name]!;
                         workspace.Vulnerabilities.forEach((vuln) => {
                             vulns.vulns[vuln.VulnerabilityId] = {
                                 severity: vuln.Severity.Severity,
@@ -409,13 +415,13 @@ export class DashboardService {
         for (const vuln of Object.values(vulns.vulns)) {
             if (vuln.severity >= 7) {
                 vuln.severity_class = 'CRITICAL';
-                vulns.severity_count[0].count++;
+                vulns.severity_count[0]!.count++;
             } else if (vuln.severity >= 4) {
                 vuln.severity_class = 'HIGH';
-                vulns.severity_count[1].count++;
+                vulns.severity_count[1]!.count++;
             } else if (vuln.severity >= 2) {
                 vuln.severity_class = 'MEDIUM';
-                vulns.severity_count[2].count++;
+                vulns.severity_count[2]!.count++;
             }
         }
 
@@ -439,8 +445,8 @@ export class DashboardService {
         dateRangeEnd?: Date,
         _integrationIds?: string[]
     ): Promise<QuickStats> {
-        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
-        if (!dateRangeEnd) dateRangeEnd = new Date();
+        dateRangeStart ??= subtractMonths(new Date(), 2);
+        dateRangeEnd ??= new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
@@ -481,16 +487,17 @@ export class DashboardService {
                     const res = result.result as unknown as VulnsOutput;
 
                     for (const workspace_name of Object.keys(res.workspaces)) {
-                        const workspace = res.workspaces[workspace_name];
-                        workspace.Vulnerabilities.forEach((vuln) => {
+                        const workspace = res.workspaces[workspace_name]!;
+                        workspace.Vulnerabilities.forEach((_vuln) => {
                             // const _severity = vuln.Severity.Severity;
                             // const _cia = vuln.Severity.ConfidentialityImpact;
                             // const _impact = vuln.Severity.Impact;
-                            const _cwe = vuln.VulnerabilityId;
+                            // const _cwe = vuln.VulnerabilityId;
 
                             throw new Error('Not implemented');
 
-                            if (_cwe == 'DEPRECATED') quickStats.nmb_deprecated++;
+                            // TODO: implement this feature
+                            // if (_cwe === 'DEPRECATED') quickStats.nmb_deprecated++;
                         });
                     }
                 });
@@ -520,8 +527,8 @@ export class DashboardService {
         _sortBy?: string,
         _sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<ProjectQuickStats>> {
-        if (!dateRangeStart) dateRangeStart = subtractMonths(new Date(), 2);
-        if (!dateRangeEnd) dateRangeEnd = new Date();
+        dateRangeStart ??= subtractMonths(new Date(), 2);
+        dateRangeEnd ??= new Date();
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // enum AllowedOrderBy {
@@ -554,14 +561,14 @@ export class DashboardService {
         // let sortByKey: SortField<ProjectQuickStatsInternal> | undefined = undefined;
 
         // if (sortBy) {
-        //     if (sortBy == AllowedOrderBy.GRADE) sortByKey = 'grade';
-        //     else if (sortBy == AllowedOrderBy.PROJECT) sortByKey = 'project.name';
-        //     else if (sortBy == AllowedOrderBy.NMB_VULNS) sortByKey = 'nmb_vulnerabilities';
-        //     else if (sortBy == AllowedOrderBy.AVG_SEVERITY) sortByKey = 'avg_severity';
-        //     else if (sortBy == AllowedOrderBy.SUM_SEVERITY) sortByKey = 'sum_severity';
-        //     else if (sortBy == AllowedOrderBy.NMB_DEPRECATED_DEPS) sortByKey = 'nmb_deprecated';
-        //     else if (sortBy == AllowedOrderBy.NMB_OUTDATED_DEPS) sortByKey = 'nmb_outdated';
-        //     else if (sortBy == AllowedOrderBy.NMB_LICENSE_CONFLICTS)
+        //     if (sortBy === AllowedOrderBy.GRADE) sortByKey = 'grade';
+        //     else if (sortBy === AllowedOrderBy.PROJECT) sortByKey = 'project.name';
+        //     else if (sortBy === AllowedOrderBy.NMB_VULNS) sortByKey = 'nmb_vulnerabilities';
+        //     else if (sortBy === AllowedOrderBy.AVG_SEVERITY) sortByKey = 'avg_severity';
+        //     else if (sortBy === AllowedOrderBy.SUM_SEVERITY) sortByKey = 'sum_severity';
+        //     else if (sortBy === AllowedOrderBy.NMB_DEPRECATED_DEPS) sortByKey = 'nmb_deprecated';
+        //     else if (sortBy === AllowedOrderBy.NMB_OUTDATED_DEPS) sortByKey = 'nmb_outdated';
+        //     else if (sortBy === AllowedOrderBy.NMB_LICENSE_CONFLICTS)
         //         sortByKey = 'nmb_license_compliance_violations';
         // }
 
@@ -608,31 +615,5 @@ export class DashboardService {
             matching_count: 2,
             filter_count: {}
         };
-    }
-
-    /**
-     * Returns the class of a project's grade
-     * @param score The project's numerical grade score
-     * @returns The discrete score class (A+,A,B+,B,C+,C,D+,D)
-     */
-    private getProjectScoreClassFromScore(_score: number): ProjectGradeClass {
-        if (_score <= 1.0 && _score >= 0.85) {
-            return ProjectGradeClass.D;
-        } else if (_score < 0.85 && _score >= 0.7) {
-            return ProjectGradeClass.D_PLUS;
-        } else if (_score < 0.7 && _score >= 0.55) {
-            return ProjectGradeClass.C;
-        } else if (_score < 0.55 && _score >= 0.4) {
-            return ProjectGradeClass.C_PLUS;
-        } else if (_score < 0.4 && _score >= 0.25) {
-            return ProjectGradeClass.B;
-        } else if (_score < 0.25 && _score >= 0.1) {
-            return ProjectGradeClass.B_PLUS;
-        } else if (_score < 0.1 && _score > 0) {
-            return ProjectGradeClass.A;
-        } else if (_score == 0) {
-            return ProjectGradeClass.A_PLUS;
-        }
-        return ProjectGradeClass.D;
     }
 }

@@ -1,27 +1,27 @@
 import 'reflect-metadata';
 import * as dotenv from 'dotenv';
-
-const ENV = process.env.ENV || 'dev';
-try {
-    dotenv.config({ path: `env/.env.${ENV}` });
-} catch (err) {
-    // Intentionally ignore missing env file; defaults will be used.
-    if (process.env.DEBUG_MIGRATIONS) {
-        console.warn('Env load failed:', err);
-    }
-}
-
+import { type DataSource } from 'typeorm';
 import { CodeClarityDataSource } from '../datasources/codeclarity.datasource';
 import { KnowledgeDataSource } from '../datasources/knowledge.datasource';
 import { PluginsDataSource } from '../datasources/plugins.datasource';
 
-const map: Record<string, any> = {
+const ENV = process.env['ENV'] ?? 'dev';
+try {
+    dotenv.config({ path: `env/.env.${ENV}` });
+} catch (err) {
+    // Intentionally ignore missing env file; defaults will be used.
+    if (process.env['DEBUG_MIGRATIONS']) {
+        console.warn('Env load failed:', err);
+    }
+}
+
+const map: Record<string, DataSource> = {
     codeclarity: CodeClarityDataSource,
     knowledge: KnowledgeDataSource,
     plugins: PluginsDataSource
 };
 
-async function run(connection: string) {
+async function run(connection: string): Promise<void> {
     const ds = map[connection];
     if (!ds) {
         console.error(`Unknown datasource ${connection}`);
@@ -33,7 +33,7 @@ async function run(connection: string) {
         }
         await ds.runMigrations();
         await ds.destroy();
-        console.log(`Migrations run for ${connection}`);
+        console.warn(`Migrations run for ${connection}`);
     } catch (e) {
         console.error(e);
         process.exit(1);
@@ -41,4 +41,8 @@ async function run(connection: string) {
 }
 
 const arg = process.argv[2];
-run(arg);
+if (!arg) {
+    console.error('Missing argument');
+    process.exit(1);
+}
+void run(arg);

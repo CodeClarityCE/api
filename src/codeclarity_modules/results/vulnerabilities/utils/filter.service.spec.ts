@@ -1,5 +1,5 @@
+import { ConflictFlag, type VulnerabilityMerged } from '../vulnerabilities.types';
 import { VulnerabilitiesFilterService } from './filter.service';
-import { VulnerabilityMerged, ConflictFlag } from '../vulnerabilities.types';
 
 // Use any type to avoid complex type conflicts between different WeaknessInfo interfaces
 
@@ -13,7 +13,7 @@ describe('VulnerabilitiesFilterService', () => {
     const createMockVulnerability = (
         overrides: Partial<VulnerabilityMerged> = {}
     ): VulnerabilityMerged => ({
-        Id: overrides.Id || `test-id-${Math.random()}`,
+        Id: overrides.Id ?? `test-id-${Math.random()}`,
         Sources: [],
         Affected: [
             {
@@ -96,7 +96,7 @@ describe('VulnerabilitiesFilterService', () => {
             const [filtered] = service.filter(vulnerabilities, '1234', undefined);
 
             expect(filtered).toHaveLength(1);
-            expect(filtered[0].Vulnerability).toBe('CVE-2023-1234');
+            expect(filtered[0]!.Vulnerability).toBe('CVE-2023-1234');
         });
 
         it('should filter by search key in affected dependency', () => {
@@ -106,7 +106,7 @@ describe('VulnerabilitiesFilterService', () => {
                         {
                             ...createMockVulnerability().Affected[0],
                             AffectedDependency: 'lodash'
-                        }
+                        } as any
                     ]
                 }),
                 createMockVulnerability({
@@ -114,7 +114,7 @@ describe('VulnerabilitiesFilterService', () => {
                         {
                             ...createMockVulnerability().Affected[0],
                             AffectedDependency: 'express'
-                        }
+                        } as any
                     ]
                 })
             ];
@@ -122,7 +122,7 @@ describe('VulnerabilitiesFilterService', () => {
             const [filtered] = service.filter(vulnerabilities, 'lodash', undefined);
 
             expect(filtered).toHaveLength(1);
-            expect(filtered[0].Affected[0].AffectedDependency).toBe('lodash');
+            expect(filtered[0]!.Affected[0]!.AffectedDependency).toBe('lodash');
         });
 
         it('should be case insensitive when searching', () => {
@@ -146,7 +146,7 @@ describe('VulnerabilitiesFilterService', () => {
             const [filtered] = service.filter(vulnerabilities, '', ['severity_critical']);
 
             expect(filtered).toHaveLength(1);
-            expect(filtered[0].Severity.Severity).toBe(9.5);
+            expect(filtered[0]!.Severity.Severity).toBe(9.5);
         });
 
         it('should filter by severity_high', () => {
@@ -162,7 +162,7 @@ describe('VulnerabilitiesFilterService', () => {
             const [filtered] = service.filter(vulnerabilities, '', ['severity_high']);
 
             expect(filtered).toHaveLength(1);
-            expect(filtered[0].Severity.Severity).toBe(8.0);
+            expect(filtered[0]!.Severity.Severity).toBe(8.0);
         });
 
         it('should filter by severity_medium', () => {
@@ -178,7 +178,7 @@ describe('VulnerabilitiesFilterService', () => {
             const [filtered] = service.filter(vulnerabilities, '', ['severity_medium']);
 
             expect(filtered).toHaveLength(1);
-            expect(filtered[0].Severity.Severity).toBe(5.0);
+            expect(filtered[0]!.Severity.Severity).toBe(5.0);
         });
 
         it('should filter by severity_low', () => {
@@ -194,7 +194,7 @@ describe('VulnerabilitiesFilterService', () => {
             const [filtered] = service.filter(vulnerabilities, '', ['severity_low']);
 
             expect(filtered).toHaveLength(1);
-            expect(filtered[0].Severity.Severity).toBe(2.0);
+            expect(filtered[0]!.Severity.Severity).toBe(2.0);
         });
 
         it('should filter by severity_none', () => {
@@ -210,7 +210,7 @@ describe('VulnerabilitiesFilterService', () => {
             const [filtered] = service.filter(vulnerabilities, '', ['severity_none']);
 
             expect(filtered).toHaveLength(1);
-            expect(filtered[0].Severity.Severity).toBe(0.0);
+            expect(filtered[0]!.Severity.Severity).toBe(0.0);
         });
 
         it('should filter by OWASP Top 10 categories', () => {
@@ -244,7 +244,7 @@ describe('VulnerabilitiesFilterService', () => {
             const [filtered] = service.filter(vulnerabilities, '', ['owasp_top_10_2021_a1']);
 
             expect(filtered).toHaveLength(1);
-            expect(filtered[0].Weaknesses![0].OWASPTop10Id).toBe('1345');
+            expect(filtered[0]!.Weaknesses![0]!.OWASPTop10Id).toBe('1345');
         });
 
         it('should filter by availability impact', () => {
@@ -260,7 +260,7 @@ describe('VulnerabilitiesFilterService', () => {
             const [filtered] = service.filter(vulnerabilities, '', ['availability_impact']);
 
             expect(filtered).toHaveLength(1);
-            expect(filtered[0].Severity.AvailabilityImpact).toBe('HIGH');
+            expect(filtered[0]!.Severity.AvailabilityImpact).toBe('HIGH');
         });
 
         it('should filter by confidentiality impact', () => {
@@ -282,7 +282,7 @@ describe('VulnerabilitiesFilterService', () => {
             const [filtered] = service.filter(vulnerabilities, '', ['confidentiality_impact']);
 
             expect(filtered).toHaveLength(1);
-            expect(filtered[0].Severity.ConfidentialityImpact).toBe('HIGH');
+            expect(filtered[0]!.Severity.ConfidentialityImpact).toBe('HIGH');
         });
 
         it('should filter by integrity impact', () => {
@@ -298,7 +298,7 @@ describe('VulnerabilitiesFilterService', () => {
             const [filtered] = service.filter(vulnerabilities, '', ['integrity_impact']);
 
             expect(filtered).toHaveLength(1);
-            expect(filtered[0].Severity.IntegrityImpact).toBe('HIGH');
+            expect(filtered[0]!.Severity.IntegrityImpact).toBe('HIGH');
         });
 
         it('should filter by conflict flags', () => {
@@ -320,7 +320,7 @@ describe('VulnerabilitiesFilterService', () => {
             const [filtered] = service.filter(vulnerabilities, '', ['hide_correct_matching']);
 
             expect(filtered).toHaveLength(1);
-            expect(filtered[0].Conflict.ConflictFlag).toBe(ConflictFlag.MATCH_INCORRECT);
+            expect(filtered[0]!.Conflict.ConflictFlag).toBe(ConflictFlag.MATCH_INCORRECT);
         });
 
         it('should apply multiple filters simultaneously', () => {
@@ -349,8 +349,8 @@ describe('VulnerabilitiesFilterService', () => {
             ]);
 
             expect(filtered).toHaveLength(1);
-            expect(filtered[0].Severity.Severity).toBe(9.5);
-            expect(filtered[0].Weaknesses![0].OWASPTop10Id).toBe('1345');
+            expect(filtered[0]!.Severity.Severity).toBe(9.5);
+            expect(filtered[0]!.Weaknesses![0]!.OWASPTop10Id).toBe('1345');
         });
 
         it('should return counts for each filter option', () => {
@@ -367,8 +367,8 @@ describe('VulnerabilitiesFilterService', () => {
 
             expect(counts).toBeDefined();
             expect(typeof counts).toBe('object');
-            expect(counts.severity_critical).toBeDefined();
-            expect(counts.severity_medium).toBeDefined();
+            expect(counts['severity_critical']).toBeDefined();
+            expect(counts['severity_medium']).toBeDefined();
         });
 
         it('should handle empty vulnerability list', () => {
@@ -379,7 +379,8 @@ describe('VulnerabilitiesFilterService', () => {
         });
 
         it('should handle null weakness values', () => {
-            const vulnerabilities = [createMockVulnerability({ Weaknesses: undefined })];
+            const { Weaknesses, ...vulnWithoutWeaknesses } = createMockVulnerability();
+            const vulnerabilities = [vulnWithoutWeaknesses as any];
 
             const [filtered] = service.filter(vulnerabilities, '', ['owasp_top_10_2021_a1']);
 

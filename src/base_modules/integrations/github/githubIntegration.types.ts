@@ -1,6 +1,6 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 import { IsEnum, IsNotEmpty } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
 import {
     AccessTokenBasedIntegration,
     AccessTokenBasedIntegrationCreate,
@@ -31,15 +31,15 @@ export class GithubIntegration
 {
     @ApiProperty()
     @Expose()
-    token_type: GithubTokenType;
+    token_type!: GithubTokenType;
 
     @ApiProperty()
     @Expose()
-    organization_id: string;
+    organization_id!: string;
 
     @Exclude({ toPlainOnly: true })
     @Type(() => VCSIntegrationMetaData)
-    meta_data: VCSIntegrationMetaData;
+    meta_data!: VCSIntegrationMetaData;
 }
 
 /********************************************/
@@ -49,12 +49,12 @@ export class GithubIntegration
 export class LinkGithubCreateBody {
     @ApiProperty()
     @IsNotEmpty()
-    token: string;
+    token!: string;
 
     @ApiProperty()
     @IsNotEmpty()
     @IsEnum(GithubTokenType)
-    token_type: GithubTokenType;
+    token_type!: GithubTokenType;
 }
 
 /********************************************/
@@ -63,10 +63,10 @@ export class LinkGithubCreateBody {
 
 export class LinkGithubPatchBody {
     @IsNotEmpty()
-    token: string;
+    token!: string;
 
     @IsNotEmpty()
-    token_type: GithubTokenType;
+    token_type!: GithubTokenType;
 }
 
 /********************************************/
@@ -81,18 +81,18 @@ export interface LinkGithubCreate {
 export class GithubIntegrationCreate
     implements AccessTokenBasedIntegrationCreate, IntegrationCreate
 {
-    integration_type: IntegrationType;
-    integration_provider: IntegrationProvider;
-    token_type: GithubTokenType;
-    access_token: string;
-    refresh_token?: string | undefined;
-    expiry_date?: Date | undefined;
-    service_domain: string;
-    invalid: boolean;
-    added_on: Date;
-    added_by: string;
-    organization_id: string;
-    meta_data: VCSIntegrationMetaData;
+    integration_type!: IntegrationType;
+    integration_provider!: IntegrationProvider;
+    token_type!: GithubTokenType;
+    access_token!: string;
+    refresh_token?: string;
+    expiry_date?: Date;
+    service_domain!: string;
+    invalid!: boolean;
+    added_on!: Date;
+    added_by!: string;
+    organization_id!: string;
+    meta_data!: VCSIntegrationMetaData;
 }
 
 /********************************************/
@@ -100,10 +100,10 @@ export class GithubIntegrationCreate
 /********************************************/
 
 export class GithubIntegrationUpdate {
-    access_token: string;
+    access_token!: string;
     refresh_token?: string | undefined;
     expiry_date?: Date | undefined;
-    invalid: boolean;
-    token_type: GithubTokenType;
-    meta_data: VCSIntegrationMetaData;
+    invalid!: boolean;
+    token_type!: GithubTokenType;
+    meta_data!: VCSIntegrationMetaData;
 }

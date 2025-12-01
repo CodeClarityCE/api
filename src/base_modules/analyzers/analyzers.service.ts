@@ -1,14 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { AnalyzerCreateBody } from 'src/base_modules/analyzers/analyzer.types';
-import { TypedPaginatedData } from 'src/types/pagination.types';
-import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { OrganizationLoggerService } from '../organizations/log/organizationLogger.service';
-import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { ActionType } from 'src/base_modules/organizations/log/orgAuditLog.types';
 import { Analyzer } from 'src/base_modules/analyzers/analyzer.entity';
-import { UsersRepository } from '../users/users.repository';
+import { AnalyzerCreateBody } from 'src/base_modules/analyzers/analyzer.types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { ActionType } from 'src/base_modules/organizations/log/orgAuditLog.types';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
+import {
+    TypedPaginatedData,
+    PaginationConfig,
+    PaginationUserSuppliedConf
+} from 'src/types/pagination.types';
+import { OrganizationLoggerService } from '../organizations/log/organizationLogger.service';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
+import { UsersRepository } from '../users/users.repository';
 import { AnalyzersRepository } from './analyzers.repository';
 
 @Injectable()
@@ -44,9 +47,11 @@ export class AnalyzersService {
         analyzer.name = analyzerData.name;
         analyzer.description = analyzerData.description;
         analyzer.steps = analyzerData.steps;
-        analyzer.supported_languages = analyzerData.supported_languages || ['javascript'];
-        analyzer.language_config = analyzerData.language_config;
-        analyzer.logo = analyzerData.logo || 'js';
+        analyzer.supported_languages = analyzerData.supported_languages ?? ['javascript'];
+        if (analyzerData.language_config !== undefined) {
+            analyzer.language_config = analyzerData.language_config;
+        }
+        analyzer.logo = analyzerData.logo ?? 'js';
         analyzer.global = false;
         analyzer.organization = organization;
 
@@ -76,7 +81,7 @@ export class AnalyzersService {
         analyzerId: string,
         analyzerData: AnalyzerCreateBody,
         user: AuthenticatedUser
-    ) {
+    ): Promise<void> {
         // Check if the user is allowed to update an analyzer (is at least admin)
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 

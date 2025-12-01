@@ -1,10 +1,10 @@
-import { SbomDependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
+import type { SbomDependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
 
 function filter(
     dependencies: SbomDependency[],
     searchKey: string | undefined,
     activeFilters: string[] | undefined
-): [SbomDependency[], { [key: string]: number }] {
+): [SbomDependency[], Record<string, number>] {
     // Validation of input
     let searchkeySafe: string;
     let activeFiltersSafe: string[];
@@ -23,20 +23,20 @@ function filter(
         'severity_none'
     ];
 
-    if (searchKey == null) {
+    if (searchKey === null || searchKey === undefined) {
         searchkeySafe = '';
     } else {
         searchkeySafe = searchKey;
     }
 
-    if (activeFilters == null) {
+    if (activeFilters === null || activeFilters === undefined) {
         activeFiltersSafe = [];
     } else {
         activeFiltersSafe = activeFilters;
     }
 
     function filterBySearchKey(dependencies: SbomDependency[]): SbomDependency[] {
-        if (searchKey == '') {
+        if (searchKey === '') {
             return dependencies;
         }
 
@@ -44,21 +44,15 @@ function filter(
         searchKey = searchkeySafe.toLocaleLowerCase();
 
         for (const dependency of dependencies) {
-            if (
-                dependency.name != null &&
-                dependency.name.toLocaleLowerCase().includes(searchKey)
-            ) {
+            if (dependency.name?.toLocaleLowerCase().includes(searchKey)) {
                 toReturn.push(dependency);
                 continue;
             }
-            if (
-                dependency.version != null &&
-                dependency.version.toLocaleLowerCase().includes(searchKey)
-            ) {
+            if (dependency.version?.toLocaleLowerCase().includes(searchKey)) {
                 toReturn.push(dependency);
                 continue;
             }
-            // if (dependency.licenses != null) {
+            // if (dependency.licenses !== null) {
             //     for (const license of dependency.licenses) {
             //         if (license.toLocaleLowerCase().includes(searchKey)) {
             //             toReturn.push(dependency);
@@ -88,7 +82,7 @@ function filter(
             //     if (!dependency.outdated) continue;
             // }
             // if (filters.includes('unlicensed')) {
-            //     if (dependency.licenses != null && dependency.licenses.length > 0) continue;
+            //     if (dependency.licenses !== null && dependency.licenses.length > 0) continue;
             // }
             // if (filters.includes('vulnerable')) {
             //     if (!dependency.vulnerable) continue;
@@ -97,22 +91,22 @@ function filter(
             //     if (dependency.vulnerable) continue;
             // }
             // if (filters.includes('severity_critical')) {
-            //     if (dependency.severity_dist == null || dependency.severity_dist.critical == 0)
+            //     if (dependency.severity_dist === null || dependency.severity_dist.critical === 0)
             //         continue;
             // }
             // if (filters.includes('severity_high')) {
-            //     if (dependency.severity_dist == null || dependency.severity_dist.high == 0)
+            //     if (dependency.severity_dist === null || dependency.severity_dist.high === 0)
             //         continue;
             // }
             // if (filters.includes('severity_medium')) {
-            //     if (dependency.severity_dist == null || dependency.severity_dist.medium == 0)
+            //     if (dependency.severity_dist === null || dependency.severity_dist.medium === 0)
             //         continue;
             // }
             // if (filters.includes('severity_low')) {
-            //     if (dependency.severity_dist == null || dependency.severity_dist.low == 0) continue;
+            //     if (dependency.severity_dist === null || dependency.severity_dist.low === 0) continue;
             // }
             // if (filters.includes('severity_none')) {
-            //     if (dependency.severity_dist == null || dependency.severity_dist.none == 0)
+            //     if (dependency.severity_dist === null || dependency.severity_dist.none === 0)
             //         continue;
             // }
             toReturn.push(dependency);
@@ -123,7 +117,7 @@ function filter(
 
     const filteredBySearchKey = filterBySearchKey(dependencies);
 
-    const counts: { [key: string]: number } = {};
+    const counts: Record<string, number> = {};
     for (const filter of possibleFilters) {
         if (filter in activeFiltersSafe) continue;
         const filters = [filter];

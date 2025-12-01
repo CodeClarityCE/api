@@ -1,11 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
+import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { DependencyPatchPolicyController } from './dependencyPatch.controller';
 import { DependencyPatchPolicyService } from './dependencyPatch.service';
-import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import {
-    DependencyPatchPolicy,
-    DependencyPatchPolicyCreateBody,
-    DependencyPatchPolicyPatchBody,
+    type DependencyPatchPolicy,
+    type DependencyPatchPolicyCreateBody,
+    type DependencyPatchPolicyPatchBody,
     FullFixVersionSelection,
     PartialFixVersionSelection
 } from './dependencyPatchPolicy.types';

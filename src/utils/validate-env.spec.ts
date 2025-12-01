@@ -14,7 +14,7 @@ describe('validate-env', () => {
 
     describe('validate', () => {
         it('should validate production environment config', () => {
-            process.env.ENV = 'prod';
+            process.env['ENV'] = 'prod';
 
             const validConfig = {
                 ENV: Environment.Production,
@@ -53,7 +53,7 @@ describe('validate-env', () => {
         });
 
         it('should validate development environment config', () => {
-            process.env.ENV = 'dev';
+            process.env['ENV'] = 'dev';
 
             const validConfig = {
                 ENV: Environment.Development,
@@ -94,19 +94,19 @@ describe('validate-env', () => {
         });
 
         it('should throw error when ENV is missing', () => {
-            delete process.env.ENV;
+            delete process.env['ENV'];
 
             expect(() => validate({})).toThrow("'ENV' environment variable missing");
         });
 
         it('should throw error when ENV is empty', () => {
-            process.env.ENV = '';
+            process.env['ENV'] = '';
 
             expect(() => validate({})).toThrow("'ENV' environment variable missing");
         });
 
         it('should throw error for invalid config', () => {
-            process.env.ENV = 'prod';
+            process.env['ENV'] = 'prod';
 
             const invalidConfig = {
                 ENV: 'invalid-env',
@@ -118,7 +118,7 @@ describe('validate-env', () => {
         });
 
         it('should throw error for missing required fields', () => {
-            process.env.ENV = 'prod';
+            process.env['ENV'] = 'prod';
 
             const incompleteConfig = {
                 ENV: Environment.Production,
@@ -130,7 +130,7 @@ describe('validate-env', () => {
         });
 
         it('should convert string numbers to integers', () => {
-            process.env.ENV = 'prod';
+            process.env['ENV'] = 'prod';
 
             const configWithStringNumbers = {
                 ENV: Environment.Production,
@@ -169,7 +169,7 @@ describe('validate-env', () => {
         });
 
         it('should handle REQUIRE_ACCOUNT_VERIFICATION boolean transformation in dev', () => {
-            process.env.ENV = 'dev';
+            process.env['ENV'] = 'dev';
 
             const configWithBooleanString = {
                 ENV: Environment.Development,

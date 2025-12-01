@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { NPMPackageRepository } from './npm.repository';
-import { Package } from '../package/package.entity';
 import { EntityNotFound } from 'src/types/error.types';
+import type { Repository } from 'typeorm';
+import { Package } from '../package/package.entity';
+import { NPMPackageRepository } from './npm.repository';
 
 describe('NPMPackageRepository', () => {
     let npmRepository: NPMPackageRepository;
@@ -145,7 +145,7 @@ describe('NPMPackageRepository', () => {
         });
 
         it('should handle very long package names', async () => {
-            const longPackageName = 'very-long-' + 'package-name-'.repeat(20) + 'final';
+            const longPackageName = `very-long-${'package-name-'.repeat(20)}final`;
             mockRepository.findOne.mockResolvedValue(null);
 
             await expect(npmRepository.getNpmPackageData(longPackageName)).rejects.toThrow(
@@ -249,8 +249,8 @@ describe('NPMPackageRepository', () => {
 
             expect(result.license).toBe('SEE LICENSE IN LICENSE.txt');
             expect(result.licenses).toHaveLength(2);
-            expect(result.licenses[0].type).toBe('Apache-2.0');
-            expect(result.licenses[1].type).toBe('MIT');
+            expect(result.licenses[0]!.type).toBe('Apache-2.0');
+            expect(result.licenses[1]!.type).toBe('MIT');
         });
 
         it('should handle package with no homepage', async () => {
@@ -525,8 +525,9 @@ describe('NPMPackageRepository', () => {
             expect(typeof result.source).toBe('object');
             expect(Array.isArray(result.licenses)).toBe(true);
             expect(typeof result.extra).toBe('object');
-            expect(result.extra.nested.data).toBe('value');
-            expect(result.extra.nested.array).toEqual([1, 2, 3]);
+            const extra = result.extra as Record<string, Record<string, unknown>>;
+            expect(extra['nested']!['data']).toBe('value');
+            expect(extra['nested']!['array']).toEqual([1, 2, 3]);
         });
     });
 

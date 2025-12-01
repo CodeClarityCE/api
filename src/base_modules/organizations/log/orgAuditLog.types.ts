@@ -1,5 +1,5 @@
-import { Expose, Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+import { Expose, Type } from 'class-transformer';
 import { TeamMember } from '../../users/teamMember.types';
 
 /********************************************/
@@ -48,23 +48,23 @@ export enum ActionType {
 export class OrganizationAuditLog {
     @Expose()
     @ApiProperty()
-    id: string;
+    id!: string;
 
     @Expose()
     @ApiProperty()
-    action_severity: ActionSeverity;
+    action_severity!: ActionSeverity;
 
     @Expose()
     @ApiProperty()
-    action_class: ActionClassType;
+    action_class!: ActionClassType;
 
     @Expose()
     @ApiProperty()
-    action: ActionType;
+    action!: ActionType;
 
     @Expose()
     @ApiProperty()
-    description: string;
+    description!: string;
 
     @Expose()
     @ApiProperty()
@@ -72,16 +72,16 @@ export class OrganizationAuditLog {
 
     @Expose()
     @ApiProperty()
-    blame_on_email: string;
+    blame_on_email!: string;
 
     @Expose()
     @ApiProperty()
     @Type(() => Date)
-    created_on: Date;
+    created_on!: Date;
 
     @Expose()
     @ApiProperty()
-    organization_id: string;
+    organization_id!: string;
 }
 
 /********************************************/

@@ -123,7 +123,7 @@ describe('License Entity', () => {
             expect(license.details.isOsiApproved).toBe(true);
             expect(license.details.licenseProperties.permissions).toContain('commercial-use');
             expect(license.details.crossRef).toHaveLength(1);
-            expect(license.details.crossRef[0].IsLive).toBe(true);
+            expect(license.details.crossRef[0]!.IsLive).toBe(true);
         });
     });
 

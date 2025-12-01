@@ -1,3 +1,5 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { Expose } from 'class-transformer';
 import {
     Entity,
     Column,
@@ -8,8 +10,6 @@ import {
     Index,
     JoinColumn
 } from 'typeorm';
-import { ApiProperty } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
 
 @Entity('package')
 @Index(['name', 'language'], { unique: true })
@@ -17,14 +17,14 @@ export class Package {
     @PrimaryGeneratedColumn('uuid')
     @ApiProperty()
     @Expose()
-    id: string;
+    id!: string;
 
     @Column({
         length: 255
     })
     @ApiProperty()
     @Expose()
-    name: string;
+    name!: string;
 
     @Column({
         length: 50,
@@ -45,7 +45,7 @@ export class Package {
     })
     @ApiProperty()
     @Expose()
-    description: string;
+    description!: string;
 
     @Column({
         length: 255,
@@ -53,33 +53,33 @@ export class Package {
     })
     @ApiProperty()
     @Expose()
-    homepage: string;
+    homepage!: string;
 
     @Column({
         length: 255
     })
     @ApiProperty()
     @Expose()
-    latest_version: string;
+    latest_version!: string;
 
     @Column('timestamptz', {
         nullable: true
     })
     @ApiProperty()
     @Expose()
-    time: Date;
+    time!: Date;
 
     @Column('simple-array', {
         nullable: true
     })
     @ApiProperty()
     @Expose()
-    keywords: string[];
+    keywords!: string[];
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    source: Source;
+    source!: Source;
 
     @Column({
         length: 50,
@@ -87,20 +87,20 @@ export class Package {
     })
     @ApiProperty()
     @Expose()
-    license: string;
+    license!: string;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    licenses: LicenseNpm[];
+    licenses!: LicenseNpm[];
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    extra: { [key: string]: any };
+    extra!: Record<string, unknown>;
 
     @OneToMany(() => Version, (version) => version.package)
-    versions: Relation<Version[]>;
+    versions!: Relation<Version[]>;
 }
 
 @Entity('version')
@@ -108,7 +108,7 @@ export class Version {
     @PrimaryGeneratedColumn('uuid')
     @ApiProperty()
     @Expose()
-    id: string;
+    id!: string;
 
     @Column({
         length: 255
@@ -116,26 +116,26 @@ export class Version {
     @Index()
     @ApiProperty()
     @Expose()
-    version: string;
+    version!: string;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    dependencies: { [key: string]: string };
+    dependencies!: Record<string, string>;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    dev_dependencies: { [key: string]: string };
+    dev_dependencies!: Record<string, string>;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    extra: { [key: string]: any };
+    extra!: Record<string, unknown>;
 
     @ManyToOne(() => Package, (pack) => pack.versions)
     @JoinColumn({ name: 'package_id' })
-    package: Relation<Package>;
+    package!: Relation<Package>;
 }
 
 export interface Source {

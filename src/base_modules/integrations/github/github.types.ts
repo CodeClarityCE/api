@@ -208,7 +208,7 @@ export interface GithubRepositorySchema {
      * Whether to require contributors to sign off on web-based commits
      */
     web_commit_signoff_required?: boolean;
-    [property: string]: any;
+    [property: string]: unknown;
 }
 
 /**
@@ -221,7 +221,7 @@ export interface LicenseSimple {
     node_id: string;
     spdx_id: null | string;
     url: null | string;
-    [property: string]: any;
+    [property: string]: unknown;
 }
 
 /**
@@ -274,7 +274,7 @@ export interface SimpleUser {
     subscriptions_url: string;
     type: string;
     url: string;
-    [property: string]: any;
+    [property: string]: unknown;
 }
 
 /**
@@ -302,7 +302,7 @@ export interface OwnerObject {
     subscriptions_url: string;
     type: string;
     url: string;
-    [property: string]: any;
+    [property: string]: unknown;
 }
 
 export interface CoordinatePermissions {
@@ -311,7 +311,7 @@ export interface CoordinatePermissions {
     pull: boolean;
     push: boolean;
     triage?: boolean;
-    [property: string]: any;
+    [property: string]: unknown;
 }
 
 /**
@@ -455,7 +455,7 @@ export interface TemplateRepository {
     use_squash_pr_title_as_default?: boolean;
     visibility?: string;
     watchers_count?: number;
-    [property: string]: any;
+    [property: string]: unknown;
 }
 
 export interface Owner {
@@ -477,7 +477,7 @@ export interface Owner {
     subscriptions_url?: string;
     type?: string;
     url?: string;
-    [property: string]: any;
+    [property: string]: unknown;
 }
 
 export interface TemplateRepositoryPermissions {
@@ -486,7 +486,7 @@ export interface TemplateRepositoryPermissions {
     pull?: boolean;
     push?: boolean;
     triage?: boolean;
-    [property: string]: any;
+    [property: string]: unknown;
 }
 
 export interface GithubOAuthAccessTokenResponse {

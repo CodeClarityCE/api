@@ -1,23 +1,61 @@
 {
   "compilerOptions": {
+    // Module System
     "module": "commonjs",
     "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true, 
+    "resolveJsonModule": true,
+    
+    // Output Configuration
     "declaration": true,
     "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "esModuleInterop": true,
-    "target": "es2016",
     "sourceMap": true,
     "outDir": "./dist",
+    
+    // Decorators
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    
+    // Target & Library
+    "target": "esnext",
+    "lib": ["esnext"],
+    
+    // Path Resolution
     "baseUrl": "./",
+    
+    // Performance
     "incremental": true,
     "skipLibCheck": true,
-    "strictNullChecks": true,
-    "noImplicitAny": true,
-    "strictBindCallApply": true,
-    "forceConsistentCasingInFileNames": true,
+    "skipDefaultLibCheck": true,
+    
+    // Strict Type Checking (Replace individual flags with strict)
+    "strict": true,                        // Enables all strict options including:
+                                          // - strictNullChecks
+                                          // - noImplicitAny
+                                          // - strictBindCallApply
+                                          // - strictFunctionTypes
+                                          // - strictPropertyInitialization
+                                          // - noImplicitThis
+                                          // - alwaysStrict
+                                          // - useUnknownInCatchVariables
+    
+    // Additional Strict Checks
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "isolatedModules": true
+    "noUncheckedIndexedAccess": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "allowUnusedLabels": false,
+    "allowUnreachableCode": false,
+    "exactOptionalPropertyTypes": true,
+    
+    // Module & File System
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    
+    // Modern JavaScript Features
+    "useDefineForClassFields": true
   }
 }

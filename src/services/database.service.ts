@@ -15,7 +15,7 @@ export class DatabaseService implements OnApplicationBootstrap {
         private readonly knowledgeDataSource: DataSource
     ) {}
 
-    async onApplicationBootstrap() {
+    async onApplicationBootstrap(): Promise<void> {
         this.logger.log('Initializing database indexes...');
         await this.createKnowledgeIndexes();
         this.logger.log('Database indexes initialized successfully');
@@ -61,9 +61,9 @@ export class DatabaseService implements OnApplicationBootstrap {
 
         try {
             // Check if index already exists
-            const indexExists = await this.knowledgeDataSource.query(
+            const indexExists = await this.knowledgeDataSource.query<{ '?column?': number }[]>(
                 `
-                SELECT 1 FROM pg_indexes 
+                SELECT 1 FROM pg_indexes
                 WHERE indexname = $1 AND tablename = $2
             `,
                 [name, table]
@@ -84,10 +84,11 @@ export class DatabaseService implements OnApplicationBootstrap {
             this.logger.log(`Created index: ${name}`);
         } catch (error) {
             // If index creation fails due to it already existing, that's fine
-            if (error.code === '42P07') {
+            const pgError = error as { code?: string };
+            if (pgError.code === '42P07') {
                 this.logger.debug(`Index ${name} already exists (caught during creation)`);
             } else {
-                this.logger.error(`Failed to create index ${name}:`, error.message);
+                this.logger.error(`Failed to create index ${name}:`, (error as Error).message);
                 throw error;
             }
         }

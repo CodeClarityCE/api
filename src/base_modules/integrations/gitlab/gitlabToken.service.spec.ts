@@ -1,6 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
+import {
+    IntegrationInvalidToken,
+    IntegrationTokenMissingPermissions,
+    IntegrationTokenRetrievalFailed
+} from 'src/types/error.types';
+import type { User } from '../../users/users.entity';
 import { GitlabIntegrationTokenService } from './gitlabToken.service';
-import { User } from '../../users/users.entity';
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -99,7 +104,7 @@ describe('GitlabIntegrationTokenService', () => {
 
             await expect(
                 service.validatePersonalAccessTokenPermissions(testToken, testGitlabInstanceUrl, {})
-            ).rejects.toThrow('Invalid or revoked token');
+            ).rejects.toThrow(IntegrationInvalidToken);
         });
 
         it('should throw error when API request fails with non-401 status', async () => {
@@ -110,7 +115,7 @@ describe('GitlabIntegrationTokenService', () => {
 
             await expect(
                 service.validatePersonalAccessTokenPermissions(testToken, testGitlabInstanceUrl, {})
-            ).rejects.toThrow('Failed to fetch user information: 500');
+            ).rejects.toThrow(IntegrationTokenRetrievalFailed);
         });
 
         it('should throw error when token info is null', async () => {
@@ -121,7 +126,7 @@ describe('GitlabIntegrationTokenService', () => {
 
             await expect(
                 service.validatePersonalAccessTokenPermissions(testToken, testGitlabInstanceUrl, {})
-            ).rejects.toThrow('Token does not have the required permissions.');
+            ).rejects.toThrow(IntegrationTokenMissingPermissions);
         });
 
         it('should throw error when token lacks required scopes', async () => {
@@ -136,7 +141,7 @@ describe('GitlabIntegrationTokenService', () => {
 
             await expect(
                 service.validatePersonalAccessTokenPermissions(testToken, testGitlabInstanceUrl, {})
-            ).rejects.toThrow('Token does not have the required permissions.');
+            ).rejects.toThrow(IntegrationTokenMissingPermissions);
         });
 
         it('should throw error when token lacks additional scopes', async () => {
@@ -154,7 +159,7 @@ describe('GitlabIntegrationTokenService', () => {
                 service.validatePersonalAccessTokenPermissions(testToken, testGitlabInstanceUrl, {
                     additionalScopes: ['write_repository']
                 })
-            ).rejects.toThrow('Token does not have the required permissions.');
+            ).rejects.toThrow(IntegrationTokenMissingPermissions);
         });
 
         it('should throw error when token has no scopes property', async () => {
@@ -171,7 +176,7 @@ describe('GitlabIntegrationTokenService', () => {
 
             await expect(
                 service.validatePersonalAccessTokenPermissions(testToken, testGitlabInstanceUrl, {})
-            ).rejects.toThrow('Token does not have the required permissions.');
+            ).rejects.toThrow(IntegrationTokenMissingPermissions);
         });
 
         it('should handle network errors', async () => {
@@ -179,7 +184,7 @@ describe('GitlabIntegrationTokenService', () => {
 
             await expect(
                 service.validatePersonalAccessTokenPermissions(testToken, testGitlabInstanceUrl, {})
-            ).rejects.toThrow('Failed to validate token: Network error');
+            ).rejects.toThrow(IntegrationTokenRetrievalFailed); //  Network error');
         });
 
         it('should handle JSON parsing errors', async () => {
@@ -190,15 +195,17 @@ describe('GitlabIntegrationTokenService', () => {
 
             await expect(
                 service.validatePersonalAccessTokenPermissions(testToken, testGitlabInstanceUrl, {})
-            ).rejects.toThrow('Failed to validate token: JSON parsing error');
+            ).rejects.toThrow(IntegrationTokenRetrievalFailed); //  JSON parsing error');
         });
 
         it('should handle 401 errors from fetch exceptions', async () => {
-            (fetch as jest.Mock).mockRejectedValue(new Error('Fetch failed with 401'));
+            (fetch as jest.Mock).mockRejectedValue(
+                Object.assign(new Error('Fetch failed'), { status: 401 })
+            );
 
             await expect(
                 service.validatePersonalAccessTokenPermissions(testToken, testGitlabInstanceUrl, {})
-            ).rejects.toThrow('Invalid or revoked token');
+            ).rejects.toThrow(IntegrationInvalidToken);
         });
     });
 
@@ -275,7 +282,7 @@ describe('GitlabIntegrationTokenService', () => {
 
             await expect(
                 service.getPersonalAccessTokenExpiryRemote(testToken, testGitlabInstanceUrl)
-            ).rejects.toThrow('Invalid or revoked token');
+            ).rejects.toThrow(IntegrationInvalidToken);
         });
 
         it('should throw error when API request fails with non-401 status', async () => {
@@ -286,7 +293,7 @@ describe('GitlabIntegrationTokenService', () => {
 
             await expect(
                 service.getPersonalAccessTokenExpiryRemote(testToken, testGitlabInstanceUrl)
-            ).rejects.toThrow('Failed to fetch access token info. Status: 403');
+            ).rejects.toThrow(IntegrationTokenRetrievalFailed);
         });
 
         it('should handle network errors', async () => {
@@ -294,7 +301,7 @@ describe('GitlabIntegrationTokenService', () => {
 
             await expect(
                 service.getPersonalAccessTokenExpiryRemote(testToken, testGitlabInstanceUrl)
-            ).rejects.toThrow('Failed to retrieve access token expiry');
+            ).rejects.toThrow(IntegrationTokenRetrievalFailed);
         });
 
         it('should handle JSON parsing errors', async () => {
@@ -305,7 +312,7 @@ describe('GitlabIntegrationTokenService', () => {
 
             await expect(
                 service.getPersonalAccessTokenExpiryRemote(testToken, testGitlabInstanceUrl)
-            ).rejects.toThrow('Failed to retrieve access token expiry');
+            ).rejects.toThrow(IntegrationTokenRetrievalFailed);
         });
 
         it('should handle expires_at with null value', async () => {

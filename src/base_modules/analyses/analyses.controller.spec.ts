@@ -1,14 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AnalysesController } from './analyses.controller';
-import { AnalysesService } from './analyses.service';
-import { AuthenticatedUser, ROLE } from '../auth/auth.types';
-import { Analysis } from './analysis.entity';
-import { AnalysisCreateBody } from './analysis.types';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { EntityNotFound, NotAuthorized } from '../../types/error.types';
 import {
     AnalyzerDoesNotExist,
     AnaylzerMissingConfigAttribute
 } from '../analyzers/analyzers.errors';
+import { AuthenticatedUser, ROLE } from '../auth/auth.types';
+import { AnalysesController } from './analyses.controller';
+import { AnalysesService } from './analyses.service';
+import type { Analysis } from './analysis.entity';
+import type { AnalysisCreateBody } from './analysis.types';
 
 describe('AnalysesController', () => {
     let controller: AnalysesController;
@@ -184,7 +184,7 @@ describe('AnalysesController', () => {
             expect(analysesService.getMany).toHaveBeenCalledWith(
                 'test-org-id',
                 'test-project-id',
-                { currentPage: undefined, entriesPerPage: undefined },
+                { currentPage: 0, entriesPerPage: 0 },
                 mockAuthenticatedUser
             );
             expect(result).toEqual(paginatedResponse);

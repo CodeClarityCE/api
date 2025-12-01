@@ -1,82 +1,82 @@
-import { Entity, Column, PrimaryGeneratedColumn, Index } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
+import { Entity, Column, PrimaryGeneratedColumn, Index } from 'typeorm';
 
 @Entity('nvd')
 export class NVD {
     @PrimaryGeneratedColumn('uuid')
     @ApiProperty()
     @Expose()
-    id: string;
+    id!: string;
 
     @Column()
     @Index({ unique: true })
     @ApiProperty()
     @Expose()
-    nvd_id: string;
+    nvd_id!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    sourceIdentifier: string;
+    sourceIdentifier!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    published: string;
+    published!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    lastModified: string;
+    lastModified!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    vulnStatus: string;
+    vulnStatus!: string;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    descriptions: any;
+    descriptions!: unknown;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    vlai_score: string;
+    vlai_score!: string;
 
     @Column('float', { nullable: true })
     @ApiProperty()
     @Expose()
-    vlai_confidence: number;
+    vlai_confidence!: number;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    metrics: any;
+    metrics!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    weaknesses: any;
+    weaknesses!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    configurations: any;
+    configurations!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    affectedFlattened: any;
+    affectedFlattened!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    affected: any;
+    affected!: unknown;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    references: any;
+    references!: unknown;
 }

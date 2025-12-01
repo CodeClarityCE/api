@@ -1,32 +1,26 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { OSVReportGenerator, NVDReportGenerator } from './reportGenerator';
-import { VersionsRepository } from 'src/codeclarity_modules/knowledge/package/packageVersions.repository';
-import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.repository';
-import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
-import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
+import type { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
+import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
+import type { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
+import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.repository';
 import { OWASPRepository } from 'src/codeclarity_modules/knowledge/owasp/owasp.repository';
+import type { OwaspTop10Info } from 'src/codeclarity_modules/knowledge/owasp/owasp.types';
+import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
+import { VersionsRepository } from 'src/codeclarity_modules/knowledge/package/packageVersions.repository';
+import type { Dependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import {
-    Vulnerability,
+    type Vulnerability,
+    type WeaknessInfo,
     Source,
     ConflictFlag,
-    WeaknessInfo,
     SeverityType
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
-import { Dependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
-import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
-import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
-import { OwaspTop10Info } from 'src/codeclarity_modules/knowledge/owasp/owasp.types';
+import { OSVReportGenerator, NVDReportGenerator } from './reportGenerator';
 
 describe('ReportGenerator Services', () => {
     let osvReportGenerator: OSVReportGenerator;
     let nvdReportGenerator: NVDReportGenerator;
-    let _versionsRepository: VersionsRepository;
-    let _osvRepository: OSVRepository;
-    let _nvdRepository: NVDRepository;
-    let _cweRepository: CWERepository;
-    let _packageRepository: PackageRepository;
-    let _owaspRepository: OWASPRepository;
 
     const mockVersionsRepository = {
         getVersion: jest.fn(),
@@ -221,7 +215,8 @@ describe('ReportGenerator Services', () => {
                 {
                     source: 'nvd@nist.gov',
                     cvssData: {
-                        vectorString: 'AV:N/AC:L/Au:N/C:P/I:P/A:P'
+                        vectorString: 'AV:N/AC:L/Au:N/C:P/I:P/A:P',
+                        baseScore: 7.5
                     },
                     userInteractionRequired: false
                 }
@@ -230,7 +225,8 @@ describe('ReportGenerator Services', () => {
                 {
                     source: 'nvd@nist.gov',
                     cvssData: {
-                        vectorString: 'CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H'
+                        vectorString: 'CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
+                        baseScore: 9.8
                     }
                 }
             ],
@@ -238,7 +234,8 @@ describe('ReportGenerator Services', () => {
                 {
                     source: 'nvd@nist.gov',
                     cvssData: {
-                        vectorString: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H'
+                        vectorString: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
+                        baseScore: 9.8
                     }
                 }
             ]
@@ -261,12 +258,6 @@ describe('ReportGenerator Services', () => {
 
         osvReportGenerator = module.get<OSVReportGenerator>(OSVReportGenerator);
         nvdReportGenerator = module.get<NVDReportGenerator>(NVDReportGenerator);
-        _versionsRepository = module.get<VersionsRepository>(VersionsRepository);
-        _osvRepository = module.get<OSVRepository>(OSVRepository);
-        _nvdRepository = module.get<NVDRepository>(NVDRepository);
-        _cweRepository = module.get<CWERepository>(CWERepository);
-        _packageRepository = module.get<PackageRepository>(PackageRepository);
-        _owaspRepository = module.get<OWASPRepository>(OWASPRepository);
 
         jest.clearAllMocks();
     });
@@ -290,8 +281,8 @@ describe('ReportGenerator Services', () => {
                 );
                 expect(result.vulnerability_info.description).toContain('```javascript');
                 expect(result.vulnerability_info.sources).toHaveLength(2);
-                expect(result.vulnerability_info.sources[0].name).toBe('OSV');
-                expect(result.vulnerability_info.sources[1].name).toBe('NVD');
+                expect(result.vulnerability_info.sources[0]!.name).toBe('OSV');
+                expect(result.vulnerability_info.sources[1]!.name).toBe('NVD');
                 expect(result.vulnerability_info.version_info.affected_versions_string).toBe(
                     '>= 1.0.0 < 1.0.1'
                 );
@@ -482,8 +473,8 @@ describe('ReportGenerator Services', () => {
                     'A vulnerability was found in test-package version 1.0.0.'
                 );
                 expect(result.vulnerability_info.sources).toHaveLength(2);
-                expect(result.vulnerability_info.sources[0].name).toBe('NVD');
-                expect(result.vulnerability_info.sources[1].name).toBe('OSV');
+                expect(result.vulnerability_info.sources[0]!.name).toBe('NVD');
+                expect(result.vulnerability_info.sources[1]!.name).toBe('OSV');
                 expect(result.vulnerability_info.version_info.affected_versions_string).toBe(
                     '>= 1.0.0 < 1.0.1'
                 );
@@ -511,7 +502,7 @@ describe('ReportGenerator Services', () => {
                 );
 
                 expect(result.vulnerability_info.sources).toHaveLength(1);
-                expect(result.vulnerability_info.sources[0].name).toBe('NVD');
+                expect(result.vulnerability_info.sources[0]!.name).toBe('NVD');
                 expect(result.vulnerability_info.aliases).toHaveLength(0);
             });
 
@@ -661,7 +652,8 @@ describe('ReportGenerator Services', () => {
             });
 
             it('should return null when no weaknesses', () => {
-                osvReportGenerator.vulnsData = { ...mockVulnerability, Weaknesses: undefined };
+                const { Weaknesses, ...vulnWithoutWeaknesses } = mockVulnerability;
+                osvReportGenerator.vulnsData = vulnWithoutWeaknesses as any;
                 const owaspInfo = osvReportGenerator.getOwaspTop10Info();
                 expect(owaspInfo).toBeNull();
             });
@@ -688,7 +680,8 @@ describe('ReportGenerator Services', () => {
 
         describe('getWeaknessData', () => {
             it('should return empty arrays when no weaknesses', async () => {
-                osvReportGenerator.vulnsData = { ...mockVulnerability, Weaknesses: undefined };
+                const { Weaknesses, ...vulnWithoutWeaknesses } = mockVulnerability;
+                osvReportGenerator.vulnsData = vulnWithoutWeaknesses as any;
                 const [weaknesses, consequences] = await osvReportGenerator.getWeaknessData();
                 expect(weaknesses).toEqual([]);
                 expect(consequences).toEqual({});
@@ -707,7 +700,7 @@ describe('ReportGenerator Services', () => {
 
         describe('getDependencyData', () => {
             it('should return empty dependency data when dependency data is missing', async () => {
-                osvReportGenerator.dependencyData = undefined;
+                // dependencyData is already undefined by default
                 const result = await osvReportGenerator.getDependencyData();
                 expect(result).toEqual({
                     description: '',

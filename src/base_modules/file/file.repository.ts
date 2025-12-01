@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { File } from 'src/base_modules/file/file.entity';
 import { InjectRepository } from '@nestjs/typeorm';
+import { File } from 'src/base_modules/file/file.entity';
 import { FindOptionsWhere, ObjectId, Repository } from 'typeorm';
 import { User } from '../users/users.entity';
 
@@ -24,7 +24,7 @@ export class FileRepository {
      *
      * @param file - The file to be removed.
      */
-    async remove(file: File) {
+    async remove(file: File): Promise<void> {
         await this.fileRepository.remove(file);
     }
 
@@ -44,7 +44,7 @@ export class FileRepository {
             | Date[]
             | ObjectId[]
             | FindOptionsWhere<File>
-    ) {
+    ): Promise<void> {
         await this.fileRepository.delete(files);
     }
 
@@ -53,7 +53,7 @@ export class FileRepository {
      *
      * @param file - The file to be saved.
      */
-    async saveFile(file: File) {
+    async saveFile(file: File): Promise<void> {
         await this.fileRepository.save(file);
     }
 

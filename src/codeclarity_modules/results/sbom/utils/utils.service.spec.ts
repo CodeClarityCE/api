@@ -1,21 +1,20 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
-import { SbomUtilsService } from './utils';
-import { Result } from 'src/codeclarity_modules/results/result.entity';
-import { VulnerabilitiesUtilsService } from '../../vulnerabilities/utils/utils.service';
-import { LicensesUtilsService } from '../../licenses/utils/utils';
+import type { Package } from 'src/codeclarity_modules/knowledge/package/package.entity';
 import { PackageRepository } from 'src/codeclarity_modules/knowledge/package/package.repository';
-import { Status, Output as SBOMOutput } from '../sbom.types';
-import { Output as VulnsOutput } from '../../vulnerabilities/vulnerabilities.types';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { PluginFailed, PluginResultNotAvailable, UnknownWorkspace } from 'src/types/error.types';
-import { Package } from 'src/codeclarity_modules/knowledge/package/package.entity';
+import { In, type Repository } from 'typeorm';
+import { LicensesUtilsService } from '../../licenses/utils/utils';
+import { VulnerabilitiesUtilsService } from '../../vulnerabilities/utils/utils.service';
+import type { Output as VulnsOutput } from '../../vulnerabilities/vulnerabilities.types';
+import { Status, type Output as SBOMOutput } from '../sbom.types';
+import { SbomUtilsService } from './utils';
 
 describe('SbomUtilsService', () => {
     let service: SbomUtilsService;
     let resultRepository: jest.Mocked<Repository<Result>>;
     let vulnerabilitiesUtilsService: jest.Mocked<VulnerabilitiesUtilsService>;
-    let licensesUtilsService: jest.Mocked<LicensesUtilsService>;
     let packageRepository: jest.Mocked<PackageRepository>;
 
     const mockAnalysisId = 'test-analysis-id';
@@ -147,7 +146,6 @@ describe('SbomUtilsService', () => {
         service = module.get<SbomUtilsService>(SbomUtilsService);
         resultRepository = module.get(getRepositoryToken(Result, 'codeclarity'));
         vulnerabilitiesUtilsService = module.get(VulnerabilitiesUtilsService);
-        licensesUtilsService = module.get(LicensesUtilsService);
         packageRepository = module.get(PackageRepository);
     });
 
@@ -491,9 +489,9 @@ describe('SbomUtilsService', () => {
 
         it('should handle transitive dependencies correctly', async () => {
             const mockSBOM = createMockSBOMOutput();
-            mockSBOM.workspaces[mockWorkspace].dependencies[dependencyName][
+            mockSBOM.workspaces[mockWorkspace]!.dependencies[dependencyName]![
                 dependencyVersion
-            ].Transitive = true;
+            ]!.Transitive = true;
 
             const mockVulns = createMockVulnsOutput();
             const mockPackageInfo = createMockPackageVersionInfo();
@@ -634,7 +632,6 @@ describe('SbomUtilsService', () => {
         it('should have correct dependencies injected', () => {
             expect(service['resultRepository']).toBe(resultRepository);
             expect(service['vulnerabilitiesUtilsService']).toBe(vulnerabilitiesUtilsService);
-            expect(service['licensesUtilsService']).toBe(licensesUtilsService);
             expect(service['packageRepository']).toBe(packageRepository);
         });
     });

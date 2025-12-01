@@ -1,10 +1,13 @@
-import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
-import { Output as LicensesOutput } from 'src/codeclarity_modules/results/licenses/licenses.types';
-import { Result } from 'src/codeclarity_modules/results/result.entity';
-import { Status } from 'src/types/apiResponses.types';
-import { Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import {
+    Output as LicensesOutput,
+    Status,
+    WorkSpaceLicenseInfo
+} from 'src/codeclarity_modules/results/licenses/licenses.types';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
+import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class LicensesUtilsService {
@@ -32,30 +35,28 @@ export class LicensesUtilsService {
         });
 
         // Fall back to js-license for backward compatibility
-        if (!result) {
-            result = await this.resultRepository.findOne({
-                relations: { analysis: true },
-                where: {
-                    analysis: {
-                        id: analysis_id
-                    },
-                    plugin: 'js-license'
+        result ??= await this.resultRepository.findOne({
+            relations: { analysis: true },
+            where: {
+                analysis: {
+                    id: analysis_id
                 },
-                order: {
-                    analysis: {
-                        created_on: 'DESC'
-                    }
-                },
-                cache: true
-            });
-        }
+                plugin: 'js-license'
+            },
+            order: {
+                analysis: {
+                    created_on: 'DESC'
+                }
+            },
+            cache: true
+        });
 
         if (!result) {
             throw new PluginResultNotAvailable();
         }
 
         const licenses: LicensesOutput = result.result as unknown as LicensesOutput;
-        if (licenses.analysis_info.status == Status.Failure) {
+        if (licenses.analysis_info.status === Status.Failure) {
             throw new PluginFailed();
         }
         return licenses;
@@ -70,19 +71,21 @@ export class LicensesUtilsService {
         ecosystem: string,
         workspace: string
     ): LicensesOutput {
+        const workspaceData = licensesOutput.workspaces[workspace]!;
+        const filteredWorkspace: WorkSpaceLicenseInfo = {
+            LicensesDepMap: {},
+            NonSpdxLicensesDepMap: {},
+            LicenseComplianceViolations: workspaceData.LicenseComplianceViolations,
+            DependencyInfo: workspaceData.DependencyInfo
+        };
+
         const filtered: LicensesOutput = {
             ...licensesOutput,
             workspaces: {
                 ...licensesOutput.workspaces,
-                [workspace]: {
-                    ...licensesOutput.workspaces[workspace],
-                    LicensesDepMap: {},
-                    NonSpdxLicensesDepMap: {}
-                }
+                [workspace]: filteredWorkspace
             }
         };
-
-        const workspaceData = licensesOutput.workspaces[workspace];
 
         // Filter LicensesDepMap
         for (const [licenseId, dependencies] of Object.entries(workspaceData.LicensesDepMap)) {
@@ -90,7 +93,7 @@ export class LicensesUtilsService {
                 (dep) => this.detectPackageEcosystem(dep) === ecosystem
             );
             if (filteredDeps.length > 0) {
-                filtered.workspaces[workspace].LicensesDepMap[licenseId] = filteredDeps;
+                filtered.workspaces[workspace]!.LicensesDepMap[licenseId] = filteredDeps;
             }
         }
 
@@ -102,7 +105,7 @@ export class LicensesUtilsService {
                 (dep) => this.detectPackageEcosystem(dep) === ecosystem
             );
             if (filteredDeps.length > 0) {
-                filtered.workspaces[workspace].NonSpdxLicensesDepMap[licenseId] = filteredDeps;
+                filtered.workspaces[workspace]!.NonSpdxLicensesDepMap[licenseId] = filteredDeps;
             }
         }
 

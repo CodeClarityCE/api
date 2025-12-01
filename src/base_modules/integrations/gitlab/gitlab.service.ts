@@ -1,6 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import {
+    GitlabIntegration,
+    GitlabTokenType,
+    LinkGitlabCreateBody,
+    LinkGitlabPatchBody
+} from 'src/base_modules/integrations/gitlab/gitlabIntegration.types';
 import { GitlabIntegrationToken } from 'src/base_modules/integrations/Token';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
+import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import { UsersRepository } from 'src/base_modules/users/users.repository';
 import {
     DuplicateIntegration,
     EntityNotFound,
@@ -13,19 +22,10 @@ import {
     NotAMember,
     NotAuthorized
 } from 'src/types/error.types';
-import {
-    GitlabIntegration,
-    GitlabTokenType,
-    LinkGitlabCreateBody,
-    LinkGitlabPatchBody
-} from 'src/base_modules/integrations/gitlab/gitlabIntegration.types';
-import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
-import { UsersRepository } from 'src/base_modules/users/users.repository';
+import { VCSIntegrationMetaData } from '../integration.types';
 import { Integration, IntegrationProvider, IntegrationType } from '../integrations.entity';
 import { IntegrationsRepository } from '../integrations.repository';
 import { GitlabIntegrationTokenService } from './gitlabToken.service';
-import { VCSIntegrationMetaData } from '../integration.types';
 
 // https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#prefill-personal-access-token-name-and-scopes
 
@@ -76,9 +76,13 @@ export class GitlabIntegrationService {
         gitlabIntegration.integration_type = integration.integration_type;
         gitlabIntegration.integration_provider = integration.integration_provider;
         gitlabIntegration.invalid = integration.invalid;
-        gitlabIntegration.expiry_date = integration.expiry_date;
-        gitlabIntegration.organization_id = integration.organizations[0].id;
-        gitlabIntegration.refresh_token = integration.refresh_token;
+        if (integration.expiry_date !== undefined) {
+            gitlabIntegration.expiry_date = integration.expiry_date;
+        }
+        gitlabIntegration.organization_id = integration.organizations[0]!.id;
+        if (integration.refresh_token !== undefined) {
+            gitlabIntegration.refresh_token = integration.refresh_token;
+        }
         gitlabIntegration.service_base_url = integration.service_domain;
         gitlabIntegration.token_type = GitlabTokenType.PERSONAL_ACCESS_TOKEN;
 
@@ -139,8 +143,7 @@ export class GitlabIntegrationService {
 
         // Check if the organization already has a GitLab integration
         if (
-            organization.integrations &&
-            organization.integrations.some(
+            organization.integrations?.some(
                 (i) => i.integration_provider === IntegrationProvider.GITLAB
             )
         ) {
@@ -210,7 +213,7 @@ export class GitlabIntegrationService {
         }
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
-        if (linkGitlabCreate.token_type != GitlabTokenType.PERSONAL_ACCESS_TOKEN) {
+        if (linkGitlabCreate.token_type !== GitlabTokenType.PERSONAL_ACCESS_TOKEN) {
             throw new IntegrationWrongTokenType();
         }
 
@@ -275,20 +278,5 @@ export class GitlabIntegrationService {
             return GitlabTokenType.PERSONAL_ACCESS_TOKEN;
         }
         throw new IntegrationWrongTokenType();
-    }
-
-    // TODO: potential race condition between checking and adding the integration
-    /**
-     * Checks if the gitlab integration, on the same host (ex: https://gitlab.uni.lu), already exists
-     * @param orgId The organization id
-     * @param serviceBaseUrl The gitlab server domain
-     * @param transaction Transaction
-     * @returns a boolean indicating if the gitlab integration, on the same host (ex: https://gitlab.uni.lu), already exists
-     */
-    private async checkIfIntegrationAlreadyExists(
-        _orgId: string,
-        _serviceBaseUrl: string
-    ): Promise<boolean> {
-        throw new Error('Method not implemented.');
     }
 }

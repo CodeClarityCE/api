@@ -1,28 +1,22 @@
 // Import necessary modules and classes from NestJS and Fastify libraries
 import compression from '@fastify/compress';
-import { NestFactory, Reflector } from '@nestjs/core';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import multipart from '@fastify/multipart';
-
-// Import the main application module
+import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
+import { NestFactory, Reflector } from '@nestjs/core';
+import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-
-// Import custom filters and interceptors for error handling and response body formatting
 import { ErrorFilter } from './filters/ExceptionFilter';
 import { ResponseBodyInterceptor } from './interceptors/ResponseBodyInterceptor';
-
-// Import built-in classes for validation, serialization, and Swagger documentation
-import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { ValidationFailed } from './types/error.types';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 /**
  * The main entry point of the application.
  */
-async function bootstrap() {
+async function bootstrap(): Promise<void> {
     // Create a new NestJS application instance using Fastify as the underlying server
     const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
-    app.register(multipart, {
+    await app.register(multipart as Parameters<typeof app.register>[0], {
         limits: {
             fileSize: 25 * 1024 * 1024 //25 MB
         }
@@ -31,17 +25,35 @@ async function bootstrap() {
      * Add a polyfill to make Passport.js compatible with Fastify.
      * This is necessary because Fastify has a different API than Express.js.
      */
+    interface RawResponse {
+        setHeader: (key: string, value: string) => void;
+        end: () => void;
+    }
+
     app.getHttpAdapter()
         .getInstance()
-        .addHook('onRequest', (request: any, reply: any, done) => {
+        .addHook('onRequest', (request, reply, done) => {
             // Set up the reply object to mimic the Express.js API
-            reply.setHeader = function (key: any, value: any) {
+            interface ReplyWithPolyfill {
+                raw: RawResponse;
+                setHeader?: (key: string, value: string) => void;
+                end?: () => void;
+            }
+            interface RequestWithRes {
+                res?: unknown;
+            }
+
+            (reply as unknown as ReplyWithPolyfill).setHeader = function (
+                this: { raw: RawResponse },
+                key: string,
+                value: string
+            ) {
                 return this.raw.setHeader(key, value);
             };
-            reply.end = function () {
+            (reply as unknown as ReplyWithPolyfill).end = function (this: { raw: RawResponse }) {
                 this.raw.end();
             };
-            request.res = reply;
+            (request as unknown as RequestWithRes).res = reply;
             done();
         });
 
@@ -92,13 +104,13 @@ async function bootstrap() {
     SwaggerModule.setup('api_doc', app, document);
 
     // Register the compression middleware to enable gzip and deflate encoding
-    await app.register(compression, {
+    await app.register(compression as Parameters<typeof app.register>[0], {
         encodings: ['gzip', 'deflate']
     });
 
     // Start listening on the specified port and host
-    await app.listen(process.env.PORT!, '0.0.0.0');
+    await app.listen(process.env['PORT']!, '0.0.0.0');
 }
 
 // Call the bootstrap function to start the application
-bootstrap();
+void bootstrap();

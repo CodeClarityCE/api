@@ -1,16 +1,15 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { ConfigModule } from '@nestjs/config';
-import { validate } from '../../src/utils/validate-env';
+import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
+import { Test, type TestingModule } from '@nestjs/testing';
+import * as bcrypt from 'bcrypt';
+import { DataSource } from 'typeorm';
 import { AppModule } from '../../src/app.module';
-import { AuthService } from '../../src/base_modules/auth/auth.service';
-import { UsersRepository } from '../../src/base_modules/users/users.repository';
+import { MemberRole } from '../../src/base_modules/organizations/memberships/orgMembership.types';
+import { Organization } from '../../src/base_modules/organizations/organization.entity';
 import { OrganizationsRepository } from '../../src/base_modules/organizations/organizations.repository';
 import { User } from '../../src/base_modules/users/users.entity';
-import { Organization } from '../../src/base_modules/organizations/organization.entity';
-import { MemberRole } from '../../src/base_modules/organizations/memberships/orgMembership.types';
-import { DataSource } from 'typeorm';
-import * as bcrypt from 'bcrypt';
+import { UsersRepository } from '../../src/base_modules/users/users.repository';
+import { validate } from '../../src/utils/validate-env';
 
 export interface TestUser {
     user: User;
@@ -20,11 +19,10 @@ export interface TestUser {
 }
 
 export class IntegrationTestHelper {
-    private app: NestFastifyApplication;
-    private dataSource: DataSource;
-    private authService: AuthService;
-    private usersRepository: UsersRepository;
-    private organizationsRepository: OrganizationsRepository;
+    private app!: NestFastifyApplication;
+    private dataSource!: DataSource;
+    private usersRepository!: UsersRepository;
+    private organizationsRepository!: OrganizationsRepository;
 
     async setupTestApp(): Promise<NestFastifyApplication> {
         const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -45,7 +43,6 @@ export class IntegrationTestHelper {
 
         // Get services for test data creation
         this.dataSource = moduleFixture.get<DataSource>(DataSource);
-        this.authService = moduleFixture.get<AuthService>(AuthService);
         this.usersRepository = moduleFixture.get<UsersRepository>(UsersRepository);
         this.organizationsRepository =
             moduleFixture.get<OrganizationsRepository>(OrganizationsRepository);
@@ -94,13 +91,13 @@ export class IntegrationTestHelper {
         }> = {}
     ): Promise<TestUser> {
         const userData = {
-            email: overrides.email || 'test@example.com',
-            password: overrides.password || 'TestPassword123!',
-            firstName: overrides.firstName || 'Test',
-            lastName: overrides.lastName || 'User',
-            orgName: overrides.orgName || 'Test Organization',
-            orgDescription: overrides.orgDescription || 'Test organization description',
-            role: overrides.role || MemberRole.ADMIN
+            email: overrides.email ?? 'test@example.com',
+            password: overrides.password ?? 'TestPassword123!',
+            firstName: overrides.firstName ?? 'Test',
+            lastName: overrides.lastName ?? 'User',
+            orgName: overrides.orgName ?? 'Test Organization',
+            orgDescription: overrides.orgDescription ?? 'Test organization description',
+            role: overrides.role ?? MemberRole.ADMIN
         };
 
         // Hash password
@@ -117,7 +114,7 @@ export class IntegrationTestHelper {
         user.activated = true;
         user.social = false;
         user.setup_done = true;
-        user.handle = userData.email.split('@')[0];
+        user.handle = userData.email.split('@')[0] ?? 'user';
 
         const savedUser = await this.usersRepository.saveUser(user);
 
@@ -142,8 +139,8 @@ export class IntegrationTestHelper {
 
         // Generate tokens (mock since generateTokens doesn't exist)
         const tokens = {
-            access_token: 'mock-access-token-' + savedUser.id,
-            refresh_token: 'mock-refresh-token-' + savedUser.id
+            access_token: `mock-access-token-${savedUser.id}`,
+            refresh_token: `mock-refresh-token-${savedUser.id}`
         };
 
         return {
@@ -160,15 +157,20 @@ export class IntegrationTestHelper {
         accessToken: string,
         body?: any
     ): Promise<any> {
-        const request = this.app.inject({
+        const requestOptions: any = {
             method,
             url,
             headers: {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json'
-            },
-            payload: body ? JSON.stringify(body) : undefined
-        });
+            }
+        };
+
+        if (body) {
+            requestOptions.payload = JSON.stringify(body);
+        }
+
+        const request = this.app.inject(requestOptions);
 
         return request;
     }
@@ -178,14 +180,19 @@ export class IntegrationTestHelper {
         url: string,
         body?: any
     ): Promise<any> {
-        const request = this.app.inject({
+        const requestOptions: any = {
             method,
             url,
             headers: {
                 'Content-Type': 'application/json'
-            },
-            payload: body ? JSON.stringify(body) : undefined
-        });
+            }
+        };
+
+        if (body) {
+            requestOptions.payload = JSON.stringify(body);
+        }
+
+        const request = this.app.inject(requestOptions);
 
         return request;
     }

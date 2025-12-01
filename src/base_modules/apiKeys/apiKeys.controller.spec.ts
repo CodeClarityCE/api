@@ -1,7 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
+import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { ApiKeysController } from './apiKeys.controller';
 import { ApiKeysService } from './apiKeys.service';
-import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 
 describe('ApiKeysController', () => {
     let controller: ApiKeysController;

@@ -1,5 +1,5 @@
-import { TypedPaginatedData } from './pagination.types';
 import { ApiProperty, ApiResponseProperty } from '@nestjs/swagger';
+import { TypedPaginatedData } from './pagination.types';
 
 /**
  * Enum representing a status.
@@ -22,7 +22,7 @@ export interface PaginatedResponse {
     /**
      * The data returned by the API call.
      */
-    data: any;
+    data: unknown;
     /**
      * The current page number.
      */
@@ -50,7 +50,7 @@ export interface PaginatedResponse {
     /**
      * An object containing filter counts for each key.
      */
-    filter_count: { [key: string]: number };
+    filter_count: Record<string, number>;
 }
 
 /**
@@ -66,7 +66,7 @@ export class Response {
      * The data returned by the API call.
      */
     @ApiProperty()
-    data: any;
+    data!: unknown;
 }
 
 /**
@@ -77,7 +77,7 @@ export class CreatedResponse {
      * Unique identifier of the created resource.
      */
     @ApiProperty()
-    id: string;
+    id!: string;
 }
 
 /**
@@ -90,7 +90,7 @@ export class TypedResponse<Type> {
      * The data returned by the API call.
      */
     @ApiProperty()
-    data: Type;
+    data!: Type;
 }
 
 /**
@@ -103,47 +103,47 @@ export class TypedPaginatedResponse<Type> implements TypedPaginatedData<Type> {
      * An array of entries returned by the API call.
      */
     @ApiProperty()
-    data: Type[];
+    data!: Type[];
 
     /**
      * The current page number.
      */
     @ApiProperty()
-    page: number;
+    page!: number;
 
     /**
      * The total count of entries.
      */
     @ApiProperty()
-    entry_count: number;
+    entry_count!: number;
 
     /**
      * The number of entries per page, not included in the API response (used by pagination).
      */
     @ApiResponseProperty()
-    entries_per_page: number;
+    entries_per_page!: number;
 
     /**
      * The total number of entries across all pages.
      */
     @ApiProperty()
-    total_entries: number;
+    total_entries!: number;
 
     /**
      * The total number of pages.
      */
     @ApiProperty()
-    total_pages: number;
+    total_pages!: number;
 
     /**
      * The count of matching entries.
      */
     @ApiProperty()
-    matching_count: number;
+    matching_count!: number;
 
     /**
      * An object containing filter counts for each key.
      */
     @ApiProperty()
-    filter_count: { [key: string]: number };
+    filter_count!: Record<string, number>;
 }

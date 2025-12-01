@@ -1,37 +1,37 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Controller, Get, Post, Body, ValidationPipe } from '@nestjs/common';
-import { IsEmail, IsString, MinLength } from 'class-validator';
 import { APP_PIPE } from '@nestjs/core';
+import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import { Test, TestingModule } from '@nestjs/testing';
+import { IsEmail, IsString, MinLength } from 'class-validator';
 
 // Simple DTOs for validation testing
 class SignupDto {
     @IsEmail()
-    email: string;
+    email!: string;
 
     @IsString()
     @MinLength(8)
-    password: string;
+    password!: string;
 
     @IsString()
-    first_name: string;
+    first_name!: string;
 
     @IsString()
-    last_name: string;
+    last_name!: string;
 
     @IsString()
-    organization_name: string;
+    organization_name!: string;
 
     @IsString()
-    organization_description: string;
+    organization_description!: string;
 }
 
 class LoginDto {
     @IsEmail()
-    email: string;
+    email!: string;
 
     @IsString()
-    password: string;
+    password!: string;
 }
 
 // Simple test controller

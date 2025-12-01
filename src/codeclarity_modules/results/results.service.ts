@@ -1,11 +1,12 @@
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { ProjectMemberService } from '../../base_modules/projects/projectMember.service';
 import { Injectable } from '@nestjs/common';
+import { AnalysesRepository } from 'src/base_modules/analyses/analyses.repository';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
-import { AnalysesRepository } from 'src/base_modules/analyses/analyses.repository';
-import { AnalysisResultsRepository } from './results.repository';
 import { EntityNotFound } from 'src/types/error.types';
+import { ProjectMemberService } from '../../base_modules/projects/projectMember.service';
+import { Result } from './result.entity';
+import { AnalysisResultsRepository } from './results.repository';
 
 @Injectable()
 export class AnalysisResultsService {
@@ -28,7 +29,7 @@ export class AnalysisResultsService {
         projectId: string,
         analysisId: string,
         user: AuthenticatedUser
-    ) {
+    ): Promise<void> {
         // (1) Check if user has access to org
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
@@ -45,7 +46,7 @@ export class AnalysisResultsService {
         analysis_id: string,
         type: string,
         user: AuthenticatedUser
-    ) {
+    ): Promise<Result> {
         await this.checkAccess(org_id, project_id, analysis_id, user);
 
         // Special handling for SBOM requests - use fallback logic

@@ -141,11 +141,11 @@ export interface PersonalAccessTokenGitlabResponse {
  * API Version: N/A
  */
 export class TokenResGitlabResponse {
-    access_token: string;
-    token_type: string;
-    expires_in: number;
-    refresh_token: string;
-    created_at: number;
+    access_token!: string;
+    token_type!: string;
+    expires_in!: number;
+    refresh_token!: string;
+    created_at!: number;
 }
 
 /**
@@ -178,7 +178,7 @@ export interface GitlabUserResponse {
     web_url: string;
     created_at: string;
     bio: string;
-    location: any;
+    location: string | null;
     public_email: string;
     skype: string;
     linkedin: string;
@@ -189,7 +189,7 @@ export interface GitlabUserResponse {
     job_title: string;
     pronouns: string;
     bot: boolean;
-    work_information: any;
+    work_information: string | null;
     followers: number;
     following: number;
     local_time: string;
@@ -200,10 +200,10 @@ export interface GitlabUserResponse {
     color_scheme_id: number;
     projects_limit: number;
     current_sign_in_at: string;
-    identities: Array<{
+    identities: {
         provider: string;
         extern_uid: string;
-    }>;
+    }[];
     can_create_group: boolean;
     can_create_project: boolean;
     two_factor_enabled: boolean;

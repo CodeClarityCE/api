@@ -167,7 +167,8 @@ describe('NVD Entity', () => {
 
         nvdEntity.descriptions = complexDescriptions;
         expect(nvdEntity.descriptions).toEqual(complexDescriptions);
-        expect(nvdEntity.descriptions.description_data).toBeDefined();
-        expect(nvdEntity.descriptions.additional_info).toBeDefined();
+        const descriptions = nvdEntity.descriptions as typeof complexDescriptions;
+        expect(descriptions.description_data).toBeDefined();
+        expect(descriptions.additional_info).toBeDefined();
     });
 });

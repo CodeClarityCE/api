@@ -68,7 +68,7 @@ export class EcosystemMapper {
      * Gets ecosystem info for a given plugin name
      */
     static getEcosystemInfo(pluginName: string): EcosystemInfoRuntime | null {
-        return PLUGIN_ECOSYSTEM_MAP[pluginName] || null;
+        return PLUGIN_ECOSYSTEM_MAP[pluginName] ?? null;
     }
 
     /**
@@ -92,7 +92,7 @@ export class EcosystemMapper {
         const entry = Object.values(PLUGIN_ECOSYSTEM_MAP).find(
             (info) => info.ecosystem === ecosystem
         );
-        return entry || null;
+        return entry ?? null;
     }
 
     /**
@@ -118,14 +118,14 @@ export class EcosystemMapper {
      * Gets ecosystem from dependency PURL (Package URL) if available
      */
     static getEcosystemFromPurl(purl: string): string | null {
-        if (!purl || !purl.startsWith('pkg:')) {
+        if (!purl?.startsWith('pkg:')) {
             return null;
         }
 
         try {
             const purlParts = purl.split('/');
-            const typeWithPrefix = purlParts[0]; // "pkg:type"
-            const type = typeWithPrefix.split(':')[1]; // "type"
+            const typeWithPrefix = purlParts[0]!; // "pkg:type"
+            const type = typeWithPrefix.split(':')[1]!; // "type"
 
             // Map PURL types to our ecosystem names
             const purlToEcosystem: Record<string, string> = {
@@ -139,7 +139,7 @@ export class EcosystemMapper {
                 gem: 'rubygems'
             };
 
-            return purlToEcosystem[type] || null;
+            return purlToEcosystem[type] ?? null;
         } catch {
             return null;
         }

@@ -1,7 +1,7 @@
-import { FileModule } from './file.module';
 import { FileController } from './file.controller';
-import { FileService } from './file.service';
+import { FileModule } from './file.module';
 import { FileRepository } from './file.repository';
+import { FileService } from './file.service';
 
 describe('FileModule', () => {
     describe('Module Structure', () => {

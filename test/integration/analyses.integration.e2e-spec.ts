@@ -1,5 +1,5 @@
-import { testHelper, TestUser } from '../utils/integration-test-helper';
 import { MemberRole } from '../../src/base_modules/organizations/memberships/orgMembership.types';
+import { testHelper, type TestUser } from '../utils/integration-test-helper';
 
 describe('Analyses Integration (e2e)', () => {
     let adminUser: TestUser;

@@ -1,13 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { PatchingService } from './patching.service';
-import { AnalysisResultsService } from '../results.service';
-import { PatchingUtilsService } from './utils/utils';
-import { SbomUtilsService } from '../sbom/utils/utils';
-import { VulnerabilitiesUtilsService } from '../vulnerabilities/utils/utils.service';
-import { Result } from '../result.entity';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { UnknownWorkspace } from 'src/types/error.types';
+import { Result } from '../result.entity';
+import { AnalysisResultsService } from '../results.service';
+import { SbomUtilsService } from '../sbom/utils/utils';
+import { VulnerabilitiesUtilsService } from '../vulnerabilities/utils/utils.service';
+import { PatchingService } from './patching.service';
+import { PatchingUtilsService } from './utils/utils';
 
 describe('PatchingService', () => {
     let service: PatchingService;
@@ -104,16 +104,18 @@ describe('PatchingService', () => {
                 'project-123',
                 'analysis-123',
                 mockUser,
-                'default',
-                0,
-                20,
-                'name',
-                'asc',
-                undefined,
-                undefined
+                {
+                    workspace: 'default',
+                    page: 0,
+                    entriesPerPage: 20,
+                    sortBy: 'name',
+                    sortDirection: 'asc',
+                    activeFilters: undefined,
+                    searchKey: undefined
+                }
             );
 
-            expect(result).toEqual(mockPatchesOutput.workspaces['default']);
+            expect(result).toEqual(mockPatchesOutput.workspaces.default);
             expect(analysisResultsService.checkAccess).toHaveBeenCalledWith(
                 'org-123',
                 'project-123',
@@ -128,19 +130,15 @@ describe('PatchingService', () => {
             mockPatchingUtilsService.getPatchingResult.mockResolvedValue(mockPatchesOutput);
 
             await expect(
-                service.getPatches(
-                    'org-123',
-                    'project-123',
-                    'analysis-123',
-                    mockUser,
-                    'invalid-workspace',
-                    0,
-                    20,
-                    'name',
-                    'asc',
-                    undefined,
-                    undefined
-                )
+                service.getPatches('org-123', 'project-123', 'analysis-123', mockUser, {
+                    workspace: 'invalid-workspace',
+                    page: 0,
+                    entriesPerPage: 20,
+                    sortBy: 'name',
+                    sortDirection: 'asc',
+                    activeFilters: undefined,
+                    searchKey: undefined
+                })
             ).rejects.toThrow(UnknownWorkspace);
         });
 
@@ -149,19 +147,15 @@ describe('PatchingService', () => {
             mockAnalysisResultsService.checkAccess.mockRejectedValue(accessError);
 
             await expect(
-                service.getPatches(
-                    'org-123',
-                    'project-123',
-                    'analysis-123',
-                    mockUser,
-                    'default',
-                    0,
-                    20,
-                    'name',
-                    'asc',
-                    undefined,
-                    undefined
-                )
+                service.getPatches('org-123', 'project-123', 'analysis-123', mockUser, {
+                    workspace: 'default',
+                    page: 0,
+                    entriesPerPage: 20,
+                    sortBy: 'name',
+                    sortDirection: 'asc',
+                    activeFilters: undefined,
+                    searchKey: undefined
+                })
             ).rejects.toThrow('Access denied');
         });
     });

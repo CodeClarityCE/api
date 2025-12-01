@@ -1,10 +1,10 @@
-import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
-import { Output as PatchesOutput } from 'src/codeclarity_modules/results/patching/patching.types';
-import { Status } from 'src/types/apiResponses.types';
-import { Result } from 'src/codeclarity_modules/results/result.entity';
-import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Output as PatchesOutput } from 'src/codeclarity_modules/results/patching/patching.types';
+import { Result } from 'src/codeclarity_modules/results/result.entity';
+import { Status } from 'src/types/apiResponses.types';
+import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class PatchingUtilsService {
@@ -34,7 +34,7 @@ export class PatchingUtilsService {
         }
 
         const patches: PatchesOutput = result.result as unknown as PatchesOutput;
-        if (patches.analysis_info.status == Status.Failure) {
+        if (patches.analysis_info.status === Status.Failure) {
             throw new PluginFailed();
         }
         return patches;

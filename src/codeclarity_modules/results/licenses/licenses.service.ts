@@ -1,25 +1,34 @@
 import { Injectable } from '@nestjs/common';
-import { PaginatedResponse } from 'src/types/apiResponses.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { AnalysisResultsService } from '../results.service';
-import { paginate } from 'src/codeclarity_modules/results/utils/utils';
-import { Output as LicensesOutput } from 'src/codeclarity_modules/results/licenses/licenses.types';
+import { LicenseRepository } from 'src/codeclarity_modules/knowledge/license/license.repository';
+import { Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
 import {
+    Output as LicensesOutput,
     LicenseInfo,
     DepShortInfo
-} from 'src/codeclarity_modules/results/licenses/licenses2.types';
+} from 'src/codeclarity_modules/results/licenses/licenses.types';
 import { filter } from 'src/codeclarity_modules/results/licenses/utils/filter';
 import { sort } from 'src/codeclarity_modules/results/licenses/utils/sort';
 import { Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
-import { LicenseRepository } from 'src/codeclarity_modules/knowledge/license/license.repository';
-import { LicensesUtilsService } from './utils/utils';
+import { StatusError, StatusResponse } from 'src/codeclarity_modules/results/status.types';
+import { paginate } from 'src/codeclarity_modules/results/utils/utils';
+import { PaginatedResponse } from 'src/types/apiResponses.types';
 import { UnknownWorkspace } from 'src/types/error.types';
+import { AnalysisResultsService } from '../results.service';
 import { SbomUtilsService } from '../sbom/utils/utils';
-import { StatusResponse } from 'src/codeclarity_modules/results/status.types';
-import { Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Result } from 'src/codeclarity_modules/results/result.entity';
+import { LicensesUtilsService } from './utils/utils';
+
+/** Query options for licenses list endpoint */
+export interface LicensesQueryOptions {
+    workspace: string;
+    page?: number | undefined;
+    entriesPerPage?: number | undefined;
+    sortBy?: string | undefined;
+    sortDirection?: string | undefined;
+    activeFilters?: string | undefined;
+    searchKey?: string | undefined;
+    ecosystemFilter?: string | undefined;
+}
 
 @Injectable()
 export class LicensesService {
@@ -27,9 +36,7 @@ export class LicensesService {
         private readonly analysisResultsService: AnalysisResultsService,
         private readonly licenseRepository: LicenseRepository,
         private readonly licensesUtilsService: LicensesUtilsService,
-        private readonly sbomUtilsService: SbomUtilsService,
-        @InjectRepository(Result, 'codeclarity')
-        private resultRepository: Repository<Result>
+        private readonly sbomUtilsService: SbomUtilsService
     ) {}
 
     async getLicensesUsed(
@@ -37,20 +44,24 @@ export class LicensesService {
         projectId: string,
         analysisId: string,
         user: AuthenticatedUser,
-        workspace: string,
-        page: number | undefined,
-        entries_per_page: number | undefined,
-        sort_by: string | undefined,
-        sort_direction: string | undefined,
-        active_filters_string: string | undefined,
-        search_key: string | undefined,
-        ecosystem_filter?: string
+        options: LicensesQueryOptions
     ): Promise<PaginatedResponse> {
         // Check if the user is allowed to view this analysis result
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
+        const {
+            workspace,
+            page,
+            entriesPerPage: entries_per_page,
+            sortBy: sort_by,
+            sortDirection: sort_direction,
+            activeFilters: active_filters_string,
+            searchKey: search_key,
+            ecosystemFilter: ecosystem_filter
+        } = options;
+
         let active_filters: string[] = [];
-        if (active_filters_string != null)
+        if (active_filters_string !== null && active_filters_string !== undefined)
             active_filters = active_filters_string.replace('[', '').replace(']', '').split(',');
 
         let licensesOutput: LicensesOutput =
@@ -70,8 +81,8 @@ export class LicensesService {
             );
         }
 
-        const licensesWorkspaceInfo = licensesOutput.workspaces[workspace];
-        const licenseMap: { [key: string]: LicenseInfo } = {};
+        const licensesWorkspaceInfo = licensesOutput.workspaces[workspace]!;
+        const licenseMap: Record<string, LicenseInfo> = {};
 
         // Ensure LicensesDepMap exists and is an object
         if (
@@ -164,7 +175,7 @@ export class LicensesService {
         user: AuthenticatedUser,
         workspace: string,
         license: string
-    ): Promise<{ [key: string]: DepShortInfo }> {
+    ): Promise<Record<string, DepShortInfo>> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
         const licensesOutput: LicensesOutput =
@@ -176,22 +187,22 @@ export class LicensesService {
             throw new UnknownWorkspace();
         }
 
-        const licensesWorkspaceInfo = licensesOutput.workspaces[workspace];
+        const licensesWorkspaceInfo = licensesOutput.workspaces[workspace]!;
 
-        const allDeps: Set<string> = new Set();
+        const allDeps = new Set<string>();
 
         if (license in licensesWorkspaceInfo.LicensesDepMap) {
-            for (const dep of licensesWorkspaceInfo.LicensesDepMap[license]) {
+            for (const dep of licensesWorkspaceInfo.LicensesDepMap[license]!) {
                 allDeps.add(dep);
             }
         }
 
-        const depShortInfoMap: { [key: string]: DepShortInfo } = {};
+        const depShortInfoMap: Record<string, DepShortInfo> = {};
 
         const safeAllDeps = [];
         for (const dep of allDeps) {
             const lastIndex = dep.lastIndexOf('@');
-            const replaced = dep.slice(0, lastIndex) + ':' + dep.slice(lastIndex + 1);
+            const replaced = `${dep.slice(0, lastIndex)}:${dep.slice(lastIndex + 1)}`;
             safeAllDeps.push(replaced);
         }
 
@@ -200,12 +211,12 @@ export class LicensesService {
             const versionIndex = key.lastIndexOf(':');
             const depName = key.slice(0, versionIndex);
             const depVersion = key.slice(versionIndex + 1);
-            const depKey = depName + '@' + depVersion;
+            const depKey = `${depName}@${depVersion}`;
             let packageManagerUrl = '';
 
-            if (sbomOutput.analysis_info.package_manager == 'NPM') {
+            if (sbomOutput.analysis_info.package_manager === 'NPM') {
                 packageManagerUrl = `https://www.npmjs.com/package/${depName}/v/${depVersion}`;
-            } else if (sbomOutput.analysis_info.package_manager == 'YARN') {
+            } else if (sbomOutput.analysis_info.package_manager === 'YARN') {
                 packageManagerUrl = `https://yarn.pm/${depName}`;
             }
 
@@ -236,8 +247,8 @@ export class LicensesService {
 
         if (licensesOutput.analysis_info.private_errors.length) {
             return {
-                public_errors: licensesOutput.analysis_info.public_errors,
-                private_errors: licensesOutput.analysis_info.private_errors,
+                public_errors: licensesOutput.analysis_info.public_errors as StatusError[],
+                private_errors: licensesOutput.analysis_info.private_errors as StatusError[],
                 stage_start: licensesOutput.analysis_info.analysis_start_time,
                 stage_end: licensesOutput.analysis_info.analysis_end_time
             };
@@ -250,9 +261,7 @@ export class LicensesService {
         };
     }
 
-    private async getDependencyVersions(
-        versionsArray: string[]
-    ): Promise<{ [key: string]: Version }> {
+    private async getDependencyVersions(versionsArray: string[]): Promise<Record<string, Version>> {
         const safeVersionsArray: string[] = [];
 
         for (let version of versionsArray) {
@@ -264,7 +273,7 @@ export class LicensesService {
             }
         }
 
-        const versions: { [key: string]: Version } = {};
+        const versions: Record<string, Version> = {};
 
         // TODO: Implement dependency version lookup from package database
         // For now, return empty versions to avoid 500 errors

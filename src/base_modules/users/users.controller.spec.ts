@@ -1,9 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { UsersController } from './users.controller';
-import { UsersService } from './users.service';
-import { AuthenticatedUser, ROLE } from '../auth/auth.types';
-import { User } from './users.entity';
+import { Reflector } from '@nestjs/core';
+import { JwtService } from '@nestjs/jwt';
+import { Test, type TestingModule } from '@nestjs/testing';
+import { EntityNotFound, NotAuthorized } from '../../types/error.types';
 import {
+    PasswordsDoNotMatch,
+    AccountRegistrationVerificationTokenInvalidOrExpired
+} from '../auth/auth.errors';
+import { AuthenticatedUser, ROLE } from '../auth/auth.types';
+import { CombinedAuthGuard } from '../auth/guards/combined.guard';
+import type {
     UserCompleteSocialCreateBody,
     UserPasswordPatchBody,
     UserPatchBody,
@@ -12,20 +17,15 @@ import {
     ResendAccountRegEmailBody,
     RegistrationConfirmationBody
 } from './user.types';
+import { UsersController } from './users.controller';
+import type { User } from './users.entity';
 import {
     SetupAlreadyDone,
     FailedToSendAccountRegistrationVerificationEmail,
     CannotPerformActionOnNormalAccount,
     CannotPerformActionOnSocialAccount
 } from './users.errors';
-import { EntityNotFound, NotAuthorized } from '../../types/error.types';
-import {
-    PasswordsDoNotMatch,
-    AccountRegistrationVerificationTokenInvalidOrExpired
-} from '../auth/auth.errors';
-import { JwtService } from '@nestjs/jwt';
-import { Reflector } from '@nestjs/core';
-import { CombinedAuthGuard } from '../auth/guards/combined.guard';
+import { UsersService } from './users.service';
 
 describe('UsersController', () => {
     let controller: UsersController;

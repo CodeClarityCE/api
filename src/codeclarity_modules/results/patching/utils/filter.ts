@@ -1,29 +1,29 @@
-import { PatchInfo } from 'src/codeclarity_modules/results/patching/patching2.types';
+import type { PatchSummary } from 'src/codeclarity_modules/results/patching/patching.types';
 
 export function filter(
-    patches: PatchInfo[],
+    patches: PatchSummary[],
     searchKey: string | undefined,
     activeFilters: string[] | undefined
-): [PatchInfo[], { [key: string]: number }] {
+): [PatchSummary[], Record<string, number>] {
     // Validation of input
     let searchkeySafe: string;
     let activeFiltersSafe: string[];
     const possibleFilters: string[] = ['full_patch', 'partial_patch', 'none_patch'];
 
-    if (searchKey == null) {
+    if (searchKey === null || searchKey === undefined) {
         searchkeySafe = '';
     } else {
         searchkeySafe = searchKey;
     }
 
-    if (activeFilters == null) {
+    if (activeFilters === null || activeFilters === undefined) {
         activeFiltersSafe = [];
     } else {
         activeFiltersSafe = activeFilters;
     }
 
-    function filterBySearchKey(patches: PatchInfo[]): PatchInfo[] {
-        if (searchkeySafe == '') {
+    function filterBySearchKey(patches: PatchSummary[]): PatchSummary[] {
+        if (searchkeySafe === '') {
             return patches;
         }
 
@@ -31,17 +31,11 @@ export function filter(
         const searchKeyLower = searchkeySafe.toLocaleLowerCase();
 
         for (const patch of patches) {
-            if (
-                patch.affected_dep_name != null &&
-                patch.affected_dep_name.toLowerCase().includes(searchKeyLower)
-            ) {
+            if (patch.affected_dep_name?.toLowerCase().includes(searchKeyLower)) {
                 toReturn.push(patch);
                 continue;
             }
-            if (
-                patch.vulnerability_id != null &&
-                patch.vulnerability_id.toLowerCase().includes(searchKeyLower)
-            ) {
+            if (patch.vulnerability_id?.toLowerCase().includes(searchKeyLower)) {
                 toReturn.push(patch);
                 continue;
             }
@@ -50,18 +44,18 @@ export function filter(
         return toReturn;
     }
 
-    function filterByOptions(patches: PatchInfo[], _filters: string[]): PatchInfo[] {
+    function filterByOptions(patches: PatchSummary[], _filters: string[]): PatchSummary[] {
         const toReturn = [];
 
         for (const patch of patches) {
             // if (filters.includes('full_patch')) {
-            //     if (patch.patch_type != PatchType.Full) continue;
+            //     if (patch.patch_type !== PatchType.Full) continue;
             // }
             // if (filters.includes('partial_patch')) {
-            //     if (patch.patch_type != PatchType.Partial) continue;
+            //     if (patch.patch_type !== PatchType.Partial) continue;
             // }
             // if (filters.includes('none_patch')) {
-            //     if (patch.patch_type != PatchType.None) continue;
+            //     if (patch.patch_type !== PatchType.None) continue;
             // }
             toReturn.push(patch);
         }
@@ -71,7 +65,7 @@ export function filter(
 
     const filteredBySearchKey = filterBySearchKey(patches);
 
-    const counts: { [key: string]: number } = {};
+    const counts: Record<string, number> = {};
     for (const filter of possibleFilters) {
         if (filter in activeFiltersSafe) continue;
         const filters = [filter];

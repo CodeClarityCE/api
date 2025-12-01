@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { EntityNotFound, UserDoesNotExist } from 'src/types/error.types';
-import { User } from 'src/base_modules/users/users.entity';
 import { InjectRepository } from '@nestjs/typeorm';
+import { User } from 'src/base_modules/users/users.entity';
+import { EntityNotFound, UserDoesNotExist } from 'src/types/error.types';
 import { Repository } from 'typeorm';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { ProjectsRepository } from '../projects/projects.repository';
@@ -28,7 +28,7 @@ export class UsersRepository {
     async getUserById(userId: string, relations?: object): Promise<User> {
         const user = await this.userRepository.findOne({
             where: { id: userId },
-            relations: relations
+            ...(relations ? { relations: relations } : {})
         });
 
         if (!user) {
@@ -61,7 +61,7 @@ export class UsersRepository {
         return this.userRepository.save(user);
     }
 
-    async deleteUser(userId: string) {
+    async deleteUser(userId: string): Promise<void> {
         await this.organizationsRepository.removeUserMemberships(userId);
         await this.projectsRepository.deleteUserProjects(userId);
         await this.userRepository.delete(userId);

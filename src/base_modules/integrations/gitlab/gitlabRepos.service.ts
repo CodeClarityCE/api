@@ -1,18 +1,28 @@
 import { Injectable } from '@nestjs/common';
-import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
+import { InjectRepository } from '@nestjs/typeorm';
+import ms from 'ms';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { MemberRole } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
+import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import { RepositoryCache, RepositoryType } from 'src/base_modules/projects/repositoryCache.entity';
+import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
+import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
 import { Repository } from 'typeorm';
-import { RepositoryCache, RepositoryType } from 'src/base_modules/projects/repositoryCache.entity';
-import { GitlabIntegrationService } from './gitlab.service';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
-import { IntegrationsRepository } from '../integrations.repository';
-import { InjectRepository } from '@nestjs/typeorm';
-import { MemberRole } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
-import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
-import ms from 'ms';
 import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from '../github/constants';
+import { IntegrationsRepository } from '../integrations.repository';
+import { GitlabIntegrationService } from './gitlab.service';
+
+/** GitLab API project response structure */
+interface GitLabProject {
+    name_with_namespace: string;
+    http_url_to_repo: string;
+    default_branch: string;
+    visibility?: string;
+    description?: string;
+    created_at?: string;
+}
 
 @Injectable()
 export class GitlabRepositoriesService {
@@ -49,9 +59,9 @@ export class GitlabRepositoriesService {
 
         try {
             const response = await fetch(
-                integration.service_domain +
-                    '/api/v4/projects?owned=true&membership=true&per_page=' +
-                    entriesPerPage,
+                `${
+                    integration.service_domain
+                }/api/v4/projects?owned=true&membership=true&per_page=${entriesPerPage}`,
                 {
                     headers: {
                         'PRIVATE-TOKEN': rawToken
@@ -65,7 +75,7 @@ export class GitlabRepositoriesService {
                 );
             }
 
-            const projects = await response.json();
+            const projects = (await response.json()) as GitLabProject[];
 
             // Process the projects and save them to the repository cache
             for (const project of projects) {
@@ -81,7 +91,9 @@ export class GitlabRepositoriesService {
                 repository.visibility = project.visibility ?? 'public';
                 repository.fully_qualified_name = project.name_with_namespace;
                 repository.description = project.description ?? '';
-                repository.created_at = project.created_at ?? new Date();
+                repository.created_at = project.created_at
+                    ? new Date(project.created_at)
+                    : new Date();
                 repository.integration = integration;
 
                 await this.repositoryCacheRepository.save(repository);
@@ -133,6 +145,9 @@ export class GitlabRepositoriesService {
             IMPORTED = 'imported'
         }
 
+        // Type-safe comparison by casting sortBy to AllowedOrderBy
+        const typedSortBy = sortBy as AllowedOrderBy | undefined;
+
         // (1) Check that the user has the right to access the org
         await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
@@ -162,7 +177,7 @@ export class GitlabRepositoriesService {
 
         const isSynced = await this.areGitlabReposSynced(integrationId);
 
-        if (forceRefresh != undefined && forceRefresh == true) {
+        if (forceRefresh !== undefined && forceRefresh === true) {
             await this.syncGitlabRepos(integrationId);
         } else {
             if (!isSynced) {
@@ -174,14 +189,14 @@ export class GitlabRepositoriesService {
             .createQueryBuilder('repo')
             .where('repo.integration = :integrationId', { integrationId });
 
-        if (sortBy) {
-            if (sortBy == AllowedOrderBy.FULLY_QUALIFIED_NAME)
+        if (typedSortBy) {
+            if (typedSortBy === AllowedOrderBy.FULLY_QUALIFIED_NAME)
                 repositoryQB = repositoryQB.orderBy('fully_qualified_name', sortDirection ?? 'ASC');
-            else if (sortBy == AllowedOrderBy.DESCRIPTION)
+            else if (typedSortBy === AllowedOrderBy.DESCRIPTION)
                 repositoryQB = repositoryQB.orderBy('description', sortDirection ?? 'ASC');
-            else if (sortBy == AllowedOrderBy.CREATED)
+            else if (typedSortBy === AllowedOrderBy.CREATED)
                 repositoryQB = repositoryQB.orderBy('created_at', sortDirection ?? 'ASC');
-            else if (sortBy == AllowedOrderBy.IMPORTED)
+            else if (typedSortBy === AllowedOrderBy.IMPORTED)
                 repositoryQB = repositoryQB.orderBy('imported_already', sortDirection ?? 'ASC');
         }
 
@@ -277,7 +292,7 @@ export class GitlabRepositoriesService {
 
         const isSynced = await this.areGitlabReposSynced(integrationId);
 
-        if (forceRefresh != undefined && forceRefresh == true) {
+        if (forceRefresh !== undefined && forceRefresh === true) {
             await this.syncGitlabRepos(integrationId);
         } else {
             if (!isSynced) {

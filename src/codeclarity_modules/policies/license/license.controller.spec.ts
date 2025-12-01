@@ -1,13 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
+import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
+import { PolicyType, type Policy, type PolicyFrontend } from '../policy.entity';
 import { LicensePolicyController } from './license.controller';
 import { LicensePolicyService } from './license.service';
-import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import {
-    LicensePolicyCreateBody,
-    LicensePolicyPatchBody,
+    type LicensePolicyCreateBody,
+    type LicensePolicyPatchBody,
     LicensePolicyType
 } from './licensePolicy.types';
-import { Policy, PolicyType, PolicyFrontend } from '../policy.entity';
 
 describe('LicensePolicyController', () => {
     let controller: LicensePolicyController;

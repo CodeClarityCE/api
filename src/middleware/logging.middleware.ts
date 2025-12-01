@@ -1,7 +1,7 @@
+import { randomUUID } from 'crypto';
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { CodeClarityLogger, LogContext } from 'src/services/logger.service';
-import { randomUUID } from 'crypto';
 
 export interface RequestWithLogging extends FastifyRequest {
     requestId?: string;
@@ -17,7 +17,7 @@ export interface RequestWithLogging extends FastifyRequest {
 export class LoggingMiddleware implements NestMiddleware {
     private readonly logger = CodeClarityLogger.forService('api-http');
 
-    use(req: RequestWithLogging, res: FastifyReply, next: () => void) {
+    use(req: RequestWithLogging, res: FastifyReply, next: () => void): void {
         // Generate unique request ID
         const requestId = randomUUID();
         req.requestId = requestId;
@@ -27,15 +27,16 @@ export class LoggingMiddleware implements NestMiddleware {
         req.logger = this.logger.child({ requestId });
 
         // Extract user info if available
-        const userId = (req as any).user?.userId;
-        const organizationId = (req as any).user?.organizationId;
+        const reqWithUser = req as { user?: { userId?: string; organizationId?: string } };
+        const userId = reqWithUser.user?.userId;
+        const organizationId = reqWithUser.user?.organizationId;
 
         // Log incoming request
         const requestContext: LogContext = {
             requestId,
             method: req.method,
             url: req.url,
-            userAgent: req.headers['user-agent'] as string,
+            userAgent: req.headers['user-agent'] ?? 'unknown',
             ip: this.getClientIP(req),
             ...(userId && { userId }),
             ...(organizationId && { organizationId })
@@ -44,14 +45,14 @@ export class LoggingMiddleware implements NestMiddleware {
         // Don't log sensitive headers
         const sanitizedHeaders = this.sanitizeHeaders(req.headers);
         if (Object.keys(sanitizedHeaders).length > 0) {
-            requestContext.headers = sanitizedHeaders;
+            requestContext['headers'] = sanitizedHeaders;
         }
 
         req.logger.log('HTTP request started', requestContext);
 
         // Hook into response completion for Fastify
         res.raw.on('finish', () => {
-            const duration = Date.now() - (req.startTime || Date.now());
+            const duration = Date.now() - (req.startTime ?? Date.now());
 
             const responseContext: LogContext = {
                 requestId,
@@ -85,9 +86,9 @@ export class LoggingMiddleware implements NestMiddleware {
      */
     private getClientIP(req: FastifyRequest): string {
         return (
-            (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
-            (req.headers['x-real-ip'] as string) ||
-            req.socket?.remoteAddress ||
+            (req.headers['x-forwarded-for'] as string)?.split(',')[0] ??
+            (req.headers['x-real-ip'] as string) ??
+            req.socket?.remoteAddress ??
             'unknown'
         );
     }
@@ -95,7 +96,7 @@ export class LoggingMiddleware implements NestMiddleware {
     /**
      * Remove sensitive headers from logging
      */
-    private sanitizeHeaders(headers: Record<string, any>): Record<string, any> {
+    private sanitizeHeaders(headers: Record<string, unknown>): Record<string, unknown> {
         const sensitiveHeaders = [
             'authorization',
             'cookie',
@@ -107,7 +108,7 @@ export class LoggingMiddleware implements NestMiddleware {
             'secret'
         ];
 
-        const sanitized: Record<string, any> = {};
+        const sanitized: Record<string, unknown> = {};
 
         Object.entries(headers).forEach(([key, value]) => {
             const lowerKey = key.toLowerCase();
@@ -137,21 +138,23 @@ export class LoggingMiddleware implements NestMiddleware {
  * Decorator to extend Express Request with logging properties
  */
 export function RequestLogger() {
-    return function (target: any, propertyName: string, descriptor: PropertyDescriptor) {
-        const method = descriptor.value;
+    return function (target: object, propertyName: string, descriptor: PropertyDescriptor) {
+        const method = descriptor.value as (...args: unknown[]) => unknown;
 
-        descriptor.value = function (...args: any[]) {
+        descriptor.value = function (...args: unknown[]) {
             const req = args.find(
-                (arg) => arg && typeof arg === 'object' && arg.requestId
+                (arg) => arg && typeof arg === 'object' && 'requestId' in arg
             ) as RequestWithLogging;
 
-            if (req && req.logger) {
+            if (req?.logger) {
                 // Add method-specific context
                 const context: LogContext = {
-                    requestId: req.requestId,
                     controller: target.constructor.name,
                     method: propertyName
                 };
+                if (req.requestId) {
+                    context.requestId = req.requestId;
+                }
 
                 req.logger.debug('Controller method called', context);
             }

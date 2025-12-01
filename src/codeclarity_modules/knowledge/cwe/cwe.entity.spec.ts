@@ -194,8 +194,14 @@ describe('CWE Entity', () => {
             expect(cwe.name).toBe('Cross-site Scripting');
             expect(cwe.related_weaknesses).toHaveLength(2);
             expect(cwe.common_consequences).toHaveLength(1);
-            expect(cwe.applicable_platforms.languages).toHaveLength(3);
-            expect(cwe.applicable_platforms.technologies).toHaveLength(1);
+            expect(
+                (cwe.applicable_platforms as { languages: unknown[]; technologies: unknown[] })
+                    .languages
+            ).toHaveLength(3);
+            expect(
+                (cwe.applicable_platforms as { languages: unknown[]; technologies: unknown[] })
+                    .technologies
+            ).toHaveLength(1);
         });
 
         it('should handle CWE-89 (SQL Injection) data structure', () => {
@@ -233,7 +239,9 @@ describe('CWE Entity', () => {
             expect(cwe.likelihood_of_exploit).toBe('High');
             expect(cwe.modes_of_introduction).toHaveLength(1);
             expect(cwe.observed_examples).toHaveLength(2);
-            expect(cwe.observed_examples[0].reference).toBe('CVE-2008-2790');
+            expect((cwe.observed_examples as { reference: string }[])[0]!.reference).toBe(
+                'CVE-2008-2790'
+            );
         });
 
         it('should handle empty arrays and objects in JSONB fields', () => {
@@ -298,8 +306,9 @@ describe('CWE Entity', () => {
             cwe.taxonomy_mappings = deepObject;
 
             expect(cwe.taxonomy_mappings).toEqual(deepObject);
-            expect(cwe.taxonomy_mappings.level1.level2.level3.data).toBe('deep nested value');
-            expect(cwe.taxonomy_mappings.level1.level2.level3.nested_array).toHaveLength(2);
+            const mappings = cwe.taxonomy_mappings as typeof deepObject;
+            expect(mappings.level1.level2.level3.data).toBe('deep nested value');
+            expect(mappings.level1.level2.level3.nested_array).toHaveLength(2);
         });
     });
 });

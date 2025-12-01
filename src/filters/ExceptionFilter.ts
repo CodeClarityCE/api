@@ -1,6 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException } from '@nestjs/common';
-import { Status } from 'src/types/apiResponses.types';
 import { FastifyReply } from 'fastify';
+import { Status } from 'src/types/apiResponses.types';
 import { PrivateAPIError, PublicAPIError } from 'src/types/error.types';
 
 /**
@@ -16,7 +16,7 @@ export class ErrorFilter implements ExceptionFilter {
      * The goal of this method is to filter out sensitive information from error responses,
      * as well as convert them to snake_case format (underscores instead of camel case).
      */
-    catch(exception: Error, host: ArgumentsHost) {
+    catch(exception: Error, host: ArgumentsHost): void {
         const ctx = host.switchToHttp();
         const response = ctx.getResponse<FastifyReply>();
         let status = 500;
@@ -28,7 +28,7 @@ export class ErrorFilter implements ExceptionFilter {
         if (exception instanceof PublicAPIError) {
             const error: PublicAPIError = exception;
             status = error.getHttpStatusCode();
-            const rawError: any = error;
+            const rawError = error as unknown as Record<string, unknown>;
             delete rawError['errorCause'];
             const object = snakeCase(rawError);
             response.status(status).send(JSON.stringify(object));
@@ -49,12 +49,15 @@ export class ErrorFilter implements ExceptionFilter {
         } else {
             console.error('[UnhandledException]', exception);
             // Catch any other unexpected exceptions and return a generic InternalError response
-            if ('name' in exception && exception['name'] == 'FastifyError') {
-                const fastifyException: any = exception;
-                if (fastifyException['statusCode'] >= 400 && fastifyException['statusCode'] < 500) {
+            if ('name' in exception && exception.name === 'FastifyError') {
+                const fastifyException = exception as unknown as {
+                    statusCode: number;
+                    message: string;
+                };
+                if (fastifyException.statusCode >= 400 && fastifyException.statusCode < 500) {
                     errorCode = 'BadRequest';
                     status = 400;
-                    message = fastifyException['message'];
+                    message = fastifyException.message;
                 }
             }
         }
@@ -75,16 +78,27 @@ export class ErrorFilter implements ExceptionFilter {
  *
  * This function is used to convert the error objects returned in API responses from NestJS's default camel case format to snake case, which is what our API clients expect.
  */
-function snakeCase(fields: any) {
+function snakeCase(fields: Record<string, unknown>): Record<string, unknown> {
     for (const key in fields) {
-        if (fields[key] instanceof Object) {
-            // Recursively call this function on nested objects
-            fields[key] = snakeCase(fields[key]);
+        const value = fields[key];
+
+        // Handle arrays - recursively process each item
+        if (Array.isArray(value)) {
+            fields[key] = value.map((item: unknown) => {
+                if (item !== null && typeof item === 'object' && !Array.isArray(item)) {
+                    return snakeCase(item as Record<string, unknown>);
+                }
+                return item;
+            });
+        }
+        // Handle nested objects
+        else if (value !== null && typeof value === 'object') {
+            fields[key] = snakeCase(value as Record<string, unknown>);
         }
 
         const snakeKey = key
-            .replace(/\.?([A-Z]+)/g, function (x, y) {
-                return '_' + y.toLowerCase();
+            .replace(/\.?([A-Z]+)/g, function (_x, y: string) {
+                return `_${y.toLowerCase()}`;
             })
             .replace(/^_/, '');
 

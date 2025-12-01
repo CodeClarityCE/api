@@ -23,15 +23,15 @@ jest.mock('@nestjs/core', () => ({
     }
 }));
 
-import * as mainModule from './main';
-import { ValidationFailed } from './types/error.types';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { ValidationPipe } from '@nestjs/common';
 import { FastifyAdapter } from '@nestjs/platform-fastify';
+import { DocumentBuilder } from '@nestjs/swagger';
 import { ErrorFilter } from './filters/ExceptionFilter';
 import { ResponseBodyInterceptor } from './interceptors/ResponseBodyInterceptor';
-import { DocumentBuilder } from '@nestjs/swagger';
+import * as mainModule from './main';
+import { ValidationFailed } from './types/error.types';
 
 // Mock FastifyAdapter
 jest.mock('@nestjs/platform-fastify', () => {
@@ -125,16 +125,16 @@ describe('Main.ts Bootstrap Configuration and Testing', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        originalPort = process.env.PORT;
-        process.env.PORT = '3001';
+        originalPort = process.env['PORT'];
+        process.env['PORT'] = '3001';
     });
 
     afterEach(() => {
         jest.restoreAllMocks();
         if (originalPort !== undefined) {
-            process.env.PORT = originalPort;
+            process.env['PORT'] = originalPort;
         } else {
-            delete process.env.PORT;
+            delete process.env['PORT'];
         }
     });
 
@@ -199,7 +199,7 @@ describe('Main.ts Bootstrap Configuration and Testing', () => {
         it('should listen on environment PORT', () => {
             const mainContent = readFileSync(join(__dirname, 'main.ts'), 'utf8');
 
-            expect(mainContent).toContain("process.env.PORT!, '0.0.0.0'");
+            expect(mainContent).toContain("process.env['PORT']!, '0.0.0.0'");
         });
 
         it('should use Fastify as HTTP adapter', () => {
@@ -234,25 +234,25 @@ describe('Main.ts Bootstrap Configuration and Testing', () => {
             const mainContent = readFileSync(join(__dirname, 'main.ts'), 'utf8');
 
             expect(mainContent).toContain("addHook('onRequest'");
-            expect(mainContent).toContain('reply.setHeader = function');
-            expect(mainContent).toContain('reply.end = function');
-            expect(mainContent).toContain('request.res = reply');
+            expect(mainContent).toContain('.setHeader = function');
+            expect(mainContent).toContain('.end = function');
+            expect(mainContent).toContain('.res = reply');
         });
     });
 
     describe('Environment Variables Usage', () => {
         it('should use PORT environment variable', () => {
-            process.env.PORT = '8080';
+            process.env['PORT'] = '8080';
 
             const mainContent = readFileSync(join(__dirname, 'main.ts'), 'utf8');
 
-            expect(mainContent).toContain('process.env.PORT!');
+            expect(mainContent).toContain("process.env['PORT']!");
         });
 
         it('should require PORT environment variable', () => {
             const mainContent = readFileSync(join(__dirname, 'main.ts'), 'utf8');
 
-            expect(mainContent).toMatch(/process\.env\.PORT!/);
+            expect(mainContent).toMatch(/process\.env\[['"]PORT['"]\]!/);
         });
     });
 
@@ -263,7 +263,7 @@ describe('Main.ts Bootstrap Configuration and Testing', () => {
             // Core NestJS imports
             expect(mainContent).toContain("import { NestFactory, Reflector } from '@nestjs/core'");
             expect(mainContent).toContain(
-                "import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify'"
+                "import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'"
             );
             expect(mainContent).toContain(
                 "import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common'"
@@ -361,10 +361,10 @@ describe('Main.ts Bootstrap Configuration and Testing', () => {
 
     describe('Error Scenarios and Edge Cases', () => {
         it('should handle missing PORT environment variable gracefully', () => {
-            delete process.env.PORT;
+            delete process.env['PORT'];
 
             expect(() => {
-                if (!process.env.PORT) {
+                if (!process.env['PORT']) {
                     throw new Error('PORT environment variable is required');
                 }
             }).toThrow('PORT environment variable is required');
@@ -400,26 +400,26 @@ describe('Main.ts Bootstrap Configuration and Testing', () => {
 
     describe('Environment Variable Validation', () => {
         it('should require PORT environment variable to be set', () => {
-            process.env.PORT = '3000';
-            expect(process.env.PORT).toBe('3000');
+            process.env['PORT'] = '3000';
+            expect(process.env['PORT']).toBe('3000');
 
-            delete process.env.PORT;
-            expect(process.env.PORT).toBeUndefined();
+            delete process.env['PORT'];
+            expect(process.env['PORT']).toBeUndefined();
         });
 
         it('should validate PORT environment variable usage in code', () => {
             const mainContent = readFileSync(join(__dirname, 'main.ts'), 'utf8');
-            expect(mainContent).toMatch(/process\.env\.PORT!/);
+            expect(mainContent).toMatch(/process\.env\[['"]PORT['"]\]!/);
         });
 
         it('should handle various PORT values', () => {
             const validPorts = ['3000', '8080', '5000', '9000'];
 
             validPorts.forEach((port) => {
-                process.env.PORT = port;
-                expect(process.env.PORT).toBe(port);
+                process.env['PORT'] = port;
+                expect(process.env['PORT']).toBe(port);
 
-                const parsedPort = parseInt(process.env.PORT, 10);
+                const parsedPort = parseInt(process.env['PORT'], 10);
                 expect(parsedPort).toBeGreaterThan(0);
                 expect(parsedPort).toBeLessThanOrEqual(65535);
             });
@@ -429,9 +429,9 @@ describe('Main.ts Bootstrap Configuration and Testing', () => {
             const invalidPorts = ['0', '-1', '70000', 'abc', ''];
 
             invalidPorts.forEach((port) => {
-                process.env.PORT = port;
+                process.env['PORT'] = port;
 
-                const parsedPort = parseInt(process.env.PORT, 10);
+                const parsedPort = parseInt(process.env['PORT'], 10);
                 const isValid = !isNaN(parsedPort) && parsedPort > 0 && parsedPort <= 65535;
 
                 if (
@@ -484,7 +484,7 @@ describe('Main.ts Bootstrap Configuration and Testing', () => {
 
         it('should await app.listen with correct parameters', () => {
             const mainContent = readFileSync(join(__dirname, 'main.ts'), 'utf8');
-            expect(mainContent).toContain("await app.listen(process.env.PORT!, '0.0.0.0')");
+            expect(mainContent).toContain("await app.listen(process.env['PORT']!, '0.0.0.0')");
         });
     });
 
@@ -545,15 +545,15 @@ describe('Main.ts Bootstrap Configuration and Testing', () => {
         });
 
         it('should test environment variable requirement logic', () => {
-            const originalPort = process.env.PORT;
+            const originalPort = process.env['PORT'];
 
-            process.env.PORT = '3000';
-            expect(process.env.PORT).toBe('3000');
+            process.env['PORT'] = '3000';
+            expect(process.env['PORT']).toBe('3000');
 
-            const portValue = process.env.PORT!;
+            const portValue = process.env['PORT'];
             expect(portValue).toBe('3000');
 
-            process.env.PORT = originalPort;
+            process.env['PORT'] = originalPort;
         });
 
         it('should test Fastify hook callback logic to cover lines 38-45', () => {

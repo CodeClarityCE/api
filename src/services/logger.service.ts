@@ -1,4 +1,4 @@
-import { Injectable, Logger, LoggerService as NestLoggerService } from '@nestjs/common';
+import { Injectable, LoggerService as NestLoggerService } from '@nestjs/common';
 
 export interface LogContext {
     service?: string;
@@ -7,7 +7,7 @@ export interface LogContext {
     projectId?: string;
     analysisId?: string;
     requestId?: string;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 /**
@@ -16,25 +16,26 @@ export interface LogContext {
  */
 @Injectable()
 export class CodeClarityLogger implements NestLoggerService {
-    private readonly nestLogger = new Logger();
+    private defaultContext?: LogContext;
 
     /**
      * Log an informational message
      */
-    log(message: string, context?: LogContext) {
+    log(message: string, context?: LogContext): void {
         this.writeLog('info', message, this.getFullContext(context));
     }
 
     /**
      * Log an error message
      */
-    error(message: string, error?: Error | string, context?: LogContext) {
-        const errorDetails =
-            error instanceof Error
-                ? { error: error.message, stack: error.stack }
-                : error
-                  ? { error }
-                  : {};
+    error(message: string, error?: Error | string, context?: LogContext): void {
+        let errorDetails: Record<string, unknown> = {};
+
+        if (error instanceof Error) {
+            errorDetails = { error: error.message, stack: error.stack };
+        } else if (error) {
+            errorDetails = { error };
+        }
 
         this.writeLog('error', message, this.getFullContext({ ...context, ...errorDetails }));
     }
@@ -42,21 +43,21 @@ export class CodeClarityLogger implements NestLoggerService {
     /**
      * Log a warning message
      */
-    warn(message: string, context?: LogContext) {
+    warn(message: string, context?: LogContext): void {
         this.writeLog('warn', message, this.getFullContext(context));
     }
 
     /**
      * Log a debug message
      */
-    debug(message: string, context?: LogContext) {
+    debug(message: string, context?: LogContext): void {
         this.writeLog('debug', message, this.getFullContext(context));
     }
 
     /**
      * Log a verbose message
      */
-    verbose(message: string, context?: LogContext) {
+    verbose(message: string, context?: LogContext): void {
         this.writeLog('debug', message, this.getFullContext(context));
     }
 
@@ -64,10 +65,10 @@ export class CodeClarityLogger implements NestLoggerService {
      * Write structured log entry in JSON format
      * Format matches Go services: {"level":"info","service":"api","time":"2024-01-01T10:00:00Z","msg":"message","fields":{...}}
      */
-    private writeLog(level: string, message: string, context?: LogContext) {
+    private writeLog(level: string, message: string, context?: LogContext): void {
         const logEntry = {
             level,
-            service: context?.service || 'api',
+            service: context?.service ?? 'api',
             time: new Date().toISOString(),
             msg: message,
             ...(context &&
@@ -77,14 +78,15 @@ export class CodeClarityLogger implements NestLoggerService {
         };
 
         // Output JSON to stdout for Alloy to collect
+        // eslint-disable-next-line no-console
         console.log(JSON.stringify(logEntry));
     }
 
     /**
      * Remove undefined/null values and sanitize sensitive data
      */
-    private sanitizeContext(context: LogContext): Record<string, any> {
-        const sanitized: Record<string, any> = {};
+    private sanitizeContext(context: LogContext): Record<string, unknown> {
+        const sanitized: Record<string, unknown> = {};
 
         for (const [key, value] of Object.entries(context)) {
             if (value !== undefined && value !== null) {
@@ -129,7 +131,7 @@ export class CodeClarityLogger implements NestLoggerService {
     static forService(serviceName: string): CodeClarityLogger {
         const logger = new CodeClarityLogger();
         // Store default context
-        (logger as any).defaultContext = { service: serviceName };
+        logger.defaultContext = { service: serviceName };
         return logger;
     }
 
@@ -138,13 +140,13 @@ export class CodeClarityLogger implements NestLoggerService {
      */
     child(additionalContext: LogContext): CodeClarityLogger {
         const childLogger = new CodeClarityLogger();
-        const parentContext = (this as any).defaultContext || {};
-        (childLogger as any).defaultContext = { ...parentContext, ...additionalContext };
+        const parentContext = this.defaultContext ?? {};
+        childLogger.defaultContext = { ...parentContext, ...additionalContext };
         return childLogger;
     }
 
     private getFullContext(context?: LogContext): LogContext {
-        const defaultContext = (this as any).defaultContext || {};
+        const defaultContext = this.defaultContext ?? {};
         return { ...defaultContext, ...context };
     }
 }

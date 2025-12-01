@@ -1,6 +1,6 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToMany, Relation, JoinTable } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToMany, Relation, JoinTable } from 'typeorm';
 import type { User } from '../users/users.entity';
 
 enum NotificationType {
@@ -20,35 +20,35 @@ export class Notification {
     @ApiProperty()
     @Expose()
     @PrimaryGeneratedColumn('uuid')
-    id: string;
+    id!: string;
 
     @ApiProperty()
     @Expose()
     @Column({ length: 100 })
-    title: string;
+    title!: string;
 
     @ApiProperty()
     @Expose()
     @Column('text')
-    description: string;
+    description!: string;
 
     @ApiProperty()
     @Expose()
     @Column('jsonb')
-    content: Record<string, any>;
+    content!: Record<string, unknown>;
 
     @ApiProperty()
     @Expose()
     @Column()
-    type: NotificationType;
+    type!: NotificationType;
 
     @ApiProperty()
     @Expose()
     @Column()
-    content_type: NotificationContentType;
+    content_type!: NotificationContentType;
 
     // Users who have this notification
     @ManyToMany('User', 'notifications')
     @JoinTable()
-    users: Relation<User[]>;
+    users!: Relation<User[]>;
 }

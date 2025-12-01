@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { NVDRepository } from './nvd.repository';
-import { NVD } from './nvd.entity';
 import { EntityNotFound } from 'src/types/error.types';
+import type { Repository } from 'typeorm';
+import { NVD } from './nvd.entity';
+import { NVDRepository } from './nvd.repository';
 
 describe('NVDRepository', () => {
     let nvdRepository: NVDRepository;
@@ -260,8 +260,13 @@ describe('NVDRepository', () => {
             expect(result.vulnStatus).toBe('Analyzed');
             expect(result.vlai_score).toBe('HIGH');
             expect(result.vlai_confidence).toBe(0.95);
-            expect(result.metrics.cvssMetricV31[0].cvssData.baseScore).toBe(10.0);
-            expect(result.descriptions[0].value).toContain('Apache Log4j2');
+            expect(
+                (result.metrics as { cvssMetricV31: { cvssData: { baseScore: number } }[] })
+                    .cvssMetricV31[0]!.cvssData.baseScore
+            ).toBe(10.0);
+            expect((result.descriptions as { value: string }[])[0]!.value).toContain(
+                'Apache Log4j2'
+            );
         });
 
         it('should handle vulnerability with multiple weaknesses', async () => {
@@ -285,9 +290,10 @@ describe('NVDRepository', () => {
 
             const result = await nvdRepository.getVuln('CVE-2023-MULTI');
 
-            expect(result.weaknesses).toHaveLength(2);
-            expect(result.weaknesses[0].description[0].value).toBe('CWE-502');
-            expect(result.weaknesses[1].description[0].value).toBe('CWE-20');
+            const weaknesses = result.weaknesses as { description: { value: string }[] }[];
+            expect(weaknesses).toHaveLength(2);
+            expect(weaknesses[0]!.description[0]!.value).toBe('CWE-502');
+            expect(weaknesses[1]!.description[0]!.value).toBe('CWE-20');
         });
 
         it('should handle vulnerability with multiple CVSS versions', async () => {
@@ -325,10 +331,14 @@ describe('NVDRepository', () => {
 
             const result = await nvdRepository.getVuln('CVE-2023-MULTI-CVSS');
 
-            expect(result.metrics.cvssMetricV2).toBeDefined();
-            expect(result.metrics.cvssMetricV31).toBeDefined();
-            expect(result.metrics.cvssMetricV2[0].cvssData.version).toBe('2.0');
-            expect(result.metrics.cvssMetricV31[0].cvssData.version).toBe('3.1');
+            const metrics = result.metrics as {
+                cvssMetricV2: { cvssData: { version: string } }[];
+                cvssMetricV31: { cvssData: { version: string } }[];
+            };
+            expect(metrics.cvssMetricV2).toBeDefined();
+            expect(metrics.cvssMetricV31).toBeDefined();
+            expect(metrics.cvssMetricV2[0]!.cvssData.version).toBe('2.0');
+            expect(metrics.cvssMetricV31[0]!.cvssData.version).toBe('3.1');
         });
 
         it('should handle vulnerability with complex affected products', async () => {
@@ -357,8 +367,9 @@ describe('NVDRepository', () => {
             const result = await nvdRepository.getVuln('CVE-2023-COMPLEX');
 
             expect(result.affected).toHaveLength(2);
-            expect(Object.keys(result.affectedFlattened)).toHaveLength(2);
-            expect(result.affectedFlattened['apache:log4j']).toEqual(['2.0-beta9', '2.15.0']);
+            const affectedFlattened = result.affectedFlattened as Record<string, string[]>;
+            expect(Object.keys(affectedFlattened)).toHaveLength(2);
+            expect(affectedFlattened['apache:log4j']).toEqual(['2.0-beta9', '2.15.0']);
         });
     });
 
@@ -390,7 +401,7 @@ describe('NVDRepository', () => {
         });
 
         it('should handle very long CVE ID strings', async () => {
-            const longCveId = 'CVE-2023-' + '1'.repeat(1000);
+            const longCveId = `CVE-2023-${'1'.repeat(1000)}`;
             mockRepository.findOne.mockResolvedValue(null);
 
             const result = await nvdRepository.getVulnWithoutFailing(longCveId);

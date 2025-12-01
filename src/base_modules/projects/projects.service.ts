@@ -1,28 +1,35 @@
-import { Injectable } from '@nestjs/common';
-import { TypedPaginatedData } from 'src/types/pagination.types';
-import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
-import { EntityNotFound, IntegrationNotSupported, NotAuthorized } from 'src/types/error.types';
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { OrganizationLoggerService } from 'src/base_modules/organizations/log/organizationLogger.service';
-import { ProjectMemberService } from './projectMember.service';
-import { SortDirection } from 'src/types/sort.types';
-import { GithubRepositoriesService } from '../integrations/github/githubRepos.service';
-import { GitlabRepositoriesService } from '../integrations/gitlab/gitlabRepos.service';
-import { ProjectImportBody } from 'src/base_modules/projects/project.types';
-import { IntegrationProvider } from 'src/base_modules/integrations/integration.types';
-import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { ActionType } from 'src/base_modules/organizations/log/orgAuditLog.types';
-import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
-import { IntegrationType, Project } from 'src/base_modules/projects/project.entity';
-import { join } from 'path';
 import { existsSync } from 'fs';
 import { mkdir, rm } from 'fs/promises';
-import { UsersRepository } from '../users/users.repository';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
-import { FileRepository } from '../file/file.repository';
-import { IntegrationsRepository } from '../integrations/integrations.repository';
+import { Injectable } from '@nestjs/common';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { IntegrationProvider as IntegrationProviderEntity } from 'src/base_modules/integrations/integrations.entity';
+import { OrganizationLoggerService } from 'src/base_modules/organizations/log/organizationLogger.service';
+import { ActionType } from 'src/base_modules/organizations/log/orgAuditLog.types';
+import { MemberRole } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
+import {
+    IntegrationProvider,
+    IntegrationType,
+    Project
+} from 'src/base_modules/projects/project.entity';
+import { ProjectImportBody } from 'src/base_modules/projects/project.types';
+import { RepositoryCache } from 'src/base_modules/projects/repositoryCache.entity';
 import { AnalysisResultsRepository } from 'src/codeclarity_modules/results/results.repository';
+import { EntityNotFound, IntegrationNotSupported, NotAuthorized } from 'src/types/error.types';
+import {
+    PaginationConfig,
+    PaginationUserSuppliedConf,
+    TypedPaginatedData
+} from 'src/types/pagination.types';
+import { SortDirection } from 'src/types/sort.types';
+import { validateAndJoinPath } from 'src/utils/path-validator';
 import { AnalysesRepository } from '../analyses/analyses.repository';
+import { FileRepository } from '../file/file.repository';
+import { GithubRepositoriesService } from '../integrations/github/githubRepos.service';
+import { GitlabRepositoriesService } from '../integrations/gitlab/gitlabRepos.service';
+import { IntegrationsRepository } from '../integrations/integrations.repository';
+import { OrganizationsRepository } from '../organizations/organizations.repository';
+import { UsersRepository } from '../users/users.repository';
+import { ProjectMemberService } from './projectMember.service';
 import { ProjectsRepository } from './projects.repository';
 
 export enum AllowedOrderByGetProjects {
@@ -30,21 +37,73 @@ export enum AllowedOrderByGetProjects {
     NAME = 'url'
 }
 
+/** Repository services grouped for dependency injection */
+interface RepositoryServices {
+    users: UsersRepository;
+    organizations: OrganizationsRepository;
+    file: FileRepository;
+    integrations: IntegrationsRepository;
+    results: AnalysisResultsRepository;
+    analyses: AnalysesRepository;
+    projects: ProjectsRepository;
+}
+
 @Injectable()
 export class ProjectService {
+    private readonly repos: RepositoryServices;
+
     constructor(
         private readonly organizationLoggerService: OrganizationLoggerService,
         private readonly projectMemberService: ProjectMemberService,
         private readonly githubRepositoriesService: GithubRepositoriesService,
         private readonly gitlabRepositoriesService: GitlabRepositoriesService,
-        private readonly usersRepository: UsersRepository,
-        private readonly organizationsRepository: OrganizationsRepository,
-        private readonly fileRepository: FileRepository,
-        private readonly integrationsRepository: IntegrationsRepository,
-        private readonly resultsRepository: AnalysisResultsRepository,
-        private readonly analysesRepository: AnalysesRepository,
-        private readonly projectsRepository: ProjectsRepository
-    ) {}
+        usersRepository: UsersRepository,
+        organizationsRepository: OrganizationsRepository,
+        fileRepository: FileRepository,
+        integrationsRepository: IntegrationsRepository,
+        resultsRepository: AnalysisResultsRepository,
+        analysesRepository: AnalysesRepository,
+        projectsRepository: ProjectsRepository
+    ) {
+        this.repos = {
+            users: usersRepository,
+            organizations: organizationsRepository,
+            file: fileRepository,
+            integrations: integrationsRepository,
+            results: resultsRepository,
+            analyses: analysesRepository,
+            projects: projectsRepository
+        };
+    }
+
+    /**
+     * Check if a repository URL is publicly accessible and create a fallback RepositoryCache
+     * @param url The repository URL
+     * @param serviceDomain The domain (e.g., 'github.com', 'gitlab.com')
+     * @returns RepositoryCache for the public repository
+     * @throws The original error if the repository is not public
+     */
+    private async checkPublicRepositoryAccess(
+        url: string,
+        serviceDomain: string,
+        originalError: Error
+    ): Promise<RepositoryCache> {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw originalError;
+        }
+        const body = await response.text();
+        if (body.includes('Page not found')) {
+            throw originalError;
+        }
+
+        const repo = new RepositoryCache();
+        repo.fully_qualified_name = url.replace(`https://${serviceDomain}/`, '');
+        repo.description = 'Imported manually';
+        repo.default_branch = 'main';
+        repo.service_domain = serviceDomain;
+        return repo;
+    }
 
     /**
      * Import a source code project
@@ -64,13 +123,13 @@ export class ProjectService {
         user: AuthenticatedUser
     ): Promise<string> {
         // (1) Check that the user is a member of the org
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.repos.organizations.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const project = new Project();
 
         if (projectData.integration_id) {
             const integration =
-                await this.integrationsRepository.getIntegrationByIdAndOrganizationAndUser(
+                await this.repos.integrations.getIntegrationByIdAndOrganizationAndUser(
                     projectData.integration_id,
                     orgId,
                     user.userId
@@ -78,7 +137,7 @@ export class ProjectService {
 
             let repo: RepositoryCache;
 
-            if (integration.integration_provider == IntegrationProvider.GITHUB) {
+            if (integration.integration_provider === IntegrationProviderEntity.GITHUB) {
                 await this.githubRepositoriesService.syncGithubRepos(projectData.integration_id);
                 try {
                     repo = await this.githubRepositoriesService.getGithubRepository(
@@ -88,31 +147,14 @@ export class ProjectService {
                         user
                     );
                 } catch (err) {
-                    // Check if the repository is public
-                    if (err instanceof EntityNotFound) {
-                        const response = await fetch(projectData.url);
-                        if (!response.ok) {
-                            throw err;
-                        }
-                        // Process the response body
-                        const body = await response.text();
-                        if (body.includes('Page not found')) {
-                            throw err;
-                        }
-
-                        repo = new RepositoryCache();
-                        repo.fully_qualified_name = projectData.url.replace(
-                            'https://github.com/',
-                            ''
-                        );
-                        repo.description = 'Imported manually';
-                        repo.default_branch = 'main';
-                        repo.service_domain = 'github.com';
-                    } else {
-                        throw err;
-                    }
+                    if (!(err instanceof EntityNotFound)) throw err;
+                    repo = await this.checkPublicRepositoryAccess(
+                        projectData.url,
+                        'github.com',
+                        err
+                    );
                 }
-            } else if (integration.integration_provider == IntegrationProvider.GITLAB) {
+            } else if (integration.integration_provider === IntegrationProviderEntity.GITLAB) {
                 await this.gitlabRepositoriesService.syncGitlabRepos(projectData.integration_id);
                 try {
                     repo = await this.gitlabRepositoriesService.getGitlabRepository(
@@ -122,29 +164,12 @@ export class ProjectService {
                         user
                     );
                 } catch (err) {
-                    // Check if the repository is public
-                    if (err instanceof EntityNotFound) {
-                        const response = await fetch(projectData.url);
-                        if (!response.ok) {
-                            throw err;
-                        }
-                        // Process the response body
-                        const body = await response.text();
-                        if (body.includes('Page not found')) {
-                            throw err;
-                        }
-
-                        repo = new RepositoryCache();
-                        repo.fully_qualified_name = projectData.url.replace(
-                            'https://gitlab.com/',
-                            ''
-                        );
-                        repo.description = 'Imported manually';
-                        repo.default_branch = 'main';
-                        repo.service_domain = 'gitlab.com';
-                    } else {
-                        throw err;
-                    }
+                    if (!(err instanceof EntityNotFound)) throw err;
+                    repo = await this.checkPublicRepositoryAccess(
+                        projectData.url,
+                        'gitlab.com',
+                        err
+                    );
                 }
             } else {
                 throw new IntegrationNotSupported();
@@ -152,11 +177,12 @@ export class ProjectService {
 
             project.name = repo.fully_qualified_name;
             project.description = repo.description;
-            project.type = integration.integration_provider;
+            project.type = integration.integration_provider as unknown as IntegrationProvider;
             project.integration = integration;
             project.default_branch = repo.default_branch;
             project.service_domain = repo.service_domain;
-            project.integration_provider = integration.integration_provider;
+            project.integration_provider =
+                integration.integration_provider as unknown as IntegrationProvider;
             project.url = projectData.url;
         } else {
             project.name = projectData.name;
@@ -169,9 +195,9 @@ export class ProjectService {
             project.integration_provider = IntegrationProvider.FILE;
         }
 
-        const user_adding = await this.usersRepository.getUserById(user.userId);
+        const user_adding = await this.repos.users.getUserById(user.userId);
 
-        const organization = await this.organizationsRepository.getOrganizationById(orgId);
+        const organization = await this.repos.organizations.getOrganizationById(orgId);
 
         project.downloaded = false;
         project.added_on = new Date();
@@ -180,10 +206,17 @@ export class ProjectService {
         project.integration_type = IntegrationType.VCS;
         project.invalid = false;
 
-        const added_project = await this.projectsRepository.saveProject(project);
+        const added_project = await this.repos.projects.saveProject(project);
 
-        const downloadPath = process.env.DOWNLOAD_PATH || '/private';
-        const folderPath = join(downloadPath, organization.id, 'projects', added_project.id);
+        const downloadPath = process.env['DOWNLOAD_PATH'] ?? '/private';
+        const folderPath = validateAndJoinPath(
+            downloadPath,
+            organization.id,
+            'projects',
+            added_project.id
+        );
+        // Path is validated using validateAndJoinPath to prevent traversal attacks
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
         await mkdir(folderPath, { recursive: true });
 
         await this.organizationLoggerService.addAuditLog(
@@ -208,7 +241,7 @@ export class ProjectService {
      */
     async get(organizationId: string, id: string, user: AuthenticatedUser): Promise<Project> {
         // (1) Every member of an org can retrieve a project
-        await this.organizationsRepository.hasRequiredRole(
+        await this.repos.organizations.hasRequiredRole(
             organizationId,
             user.userId,
             MemberRole.USER
@@ -217,7 +250,7 @@ export class ProjectService {
         // (2) Check if project belongs to org
         await this.projectMemberService.doesProjectBelongToOrg(id, organizationId);
 
-        return this.projectsRepository.getProjectById(id, {
+        return this.repos.projects.getProjectById(id, {
             files: true,
             added_by: true
         });
@@ -244,7 +277,7 @@ export class ProjectService {
         _sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<Project>> {
         // Every member of an org can retrieve all project
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.repos.organizations.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const paginationConfig: PaginationConfig = {
             maxEntriesPerPage: 100,
@@ -263,12 +296,7 @@ export class ProjectService {
         if (paginationUserSuppliedConf.currentPage)
             currentPage = Math.max(0, paginationUserSuppliedConf.currentPage);
 
-        return this.projectsRepository.getManyProjects(
-            orgId,
-            currentPage,
-            entriesPerPage,
-            searchKey
-        );
+        return this.repos.projects.getManyProjects(orgId, currentPage, entriesPerPage, searchKey);
     }
 
     /**
@@ -282,12 +310,12 @@ export class ProjectService {
      */
     async delete(orgId: string, id: string, user: AuthenticatedUser): Promise<void> {
         // (1) Check that member is at least a user
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.repos.organizations.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check if project belongs to org
-        await this.projectsRepository.doesProjectBelongToOrg(id, orgId);
+        await this.repos.projects.doesProjectBelongToOrg(id, orgId);
 
-        const membership = await this.organizationsRepository.getMembershipRole(orgId, user.userId);
+        const membership = await this.repos.organizations.getMembershipRole(orgId, user.userId);
 
         if (!membership) {
             throw new EntityNotFound();
@@ -295,49 +323,51 @@ export class ProjectService {
 
         const memberRole = membership.role;
 
-        const project = await this.projectsRepository.getProjectById(id, {
+        const project = await this.repos.projects.getProjectById(id, {
             files: true,
             added_by: true
         });
 
         // Every moderator, admin or owner can remove a project.
         // a normal user can also delete it, iff he is the one that added the project
-        if (memberRole == MemberRole.USER) {
-            // Get edge and check if added_by == user.userId
-            if (!project.added_by || project.added_by.id != user.userId) {
+        if (memberRole === MemberRole.USER) {
+            // Get edge and check if added_by === user.userId
+            if (!project.added_by || project.added_by.id !== user.userId) {
                 throw new NotAuthorized();
             }
         }
 
-        const organization = await this.organizationsRepository.getOrganizationById(orgId, {
+        const organization = await this.repos.organizations.getOrganizationById(orgId, {
             projects: true
         });
-        organization.projects = organization.projects.filter((p) => p.id != id);
-        await this.organizationsRepository.saveOrganization(organization);
+        organization.projects = organization.projects.filter((p) => p.id !== id);
+        await this.repos.organizations.saveOrganization(organization);
 
-        const analyses = await this.analysesRepository.getAnalysesByProjectId(project.id, {
+        const analyses = await this.repos.analyses.getAnalysesByProjectId(project.id, {
             results: true
         });
         for (const analysis of analyses) {
             for (const result of analysis.results) {
-                await this.resultsRepository.remove(result);
+                await this.repos.results.remove(result);
             }
 
-            await this.analysesRepository.deleteAnalysis(analysis.id);
+            await this.repos.analyses.deleteAnalysis(analysis.id);
         }
 
         // Remove project folder
-        const downloadPath = process.env.DOWNLOAD_PATH || '/private';
-        const filePath = join(downloadPath, organization.id, 'projects', project.id);
+        const downloadPath = process.env['DOWNLOAD_PATH'] ?? '/private';
+        const filePath = validateAndJoinPath(downloadPath, organization.id, 'projects', project.id);
+        // Path is validated using validateAndJoinPath to prevent traversal attacks
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
         if (existsSync(filePath)) {
             await rm(filePath, { recursive: true, force: true });
         }
 
         for (const file of project.files) {
-            await this.fileRepository.remove(file);
+            await this.repos.file.remove(file);
         }
 
-        await this.projectsRepository.deleteProject(id);
+        await this.repos.projects.deleteProject(id);
 
         await this.organizationLoggerService.addAuditLog(
             ActionType.ProjectDelete,

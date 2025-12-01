@@ -10,27 +10,24 @@ import {
     DefaultValuePipe,
     ParseIntPipe
 } from '@nestjs/common';
-import { AnalyzersService } from './analyzers.service';
-import { AnalyzerTemplatesService, AnalyzerTemplate } from './analyzer-templates.service';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { Analyzer } from 'src/base_modules/analyzers/analyzer.entity';
+import { AnalyzerCreateBody } from 'src/base_modules/analyzers/analyzer.types';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { AuthUser } from 'src/decorators/UserDecorator';
 import {
     CreatedResponse,
     NoDataResponse,
     TypedPaginatedResponse,
     TypedResponse
 } from 'src/types/apiResponses.types';
-import { AnalyzerCreateBody } from 'src/base_modules/analyzers/analyzer.types';
-import { AuthUser } from 'src/decorators/UserDecorator';
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { Analyzer } from 'src/base_modules/analyzers/analyzer.entity';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { AnalyzerTemplatesService, AnalyzerTemplate } from './analyzer-templates.service';
+import { AnalyzersService } from './analyzers.service';
 
 @ApiBearerAuth()
 @Controller('/org/:org_id/analyzers')
 export class AnalyzersController {
-    constructor(
-        private readonly analyzersService: AnalyzersService,
-        private readonly analyzerTemplatesService: AnalyzerTemplatesService
-    ) {}
+    constructor(private readonly analyzersService: AnalyzersService) {}
 
     @Post('')
     async create(
@@ -99,18 +96,18 @@ export class AnalyzersController {
 @ApiBearerAuth()
 @Controller('/analyzer-templates')
 export class AnalyzerTemplatesController {
-    constructor(private readonly analyzerTemplatesService: AnalyzerTemplatesService) {}
+    constructor(private readonly __analyzerTemplatesService: AnalyzerTemplatesService) {}
 
     @Get('')
     async getAllTemplates(): Promise<TypedResponse<AnalyzerTemplate[]>> {
-        return { data: this.analyzerTemplatesService.getTemplates() };
+        return { data: this.__analyzerTemplatesService.getTemplates() };
     }
 
     @Get(':language')
     async getTemplateByLanguage(
         @Param('language') language: string
     ): Promise<TypedResponse<AnalyzerTemplate>> {
-        return { data: this.analyzerTemplatesService.getTemplateByLanguage(language) };
+        return { data: this.__analyzerTemplatesService.getTemplateByLanguage(language) };
     }
 }
 
@@ -118,17 +115,19 @@ export class AnalyzerTemplatesController {
 @ApiBearerAuth()
 @Controller('/languages')
 export class LanguagesController {
-    constructor(private readonly analyzerTemplatesService: AnalyzerTemplatesService) {}
+    constructor(private readonly __analyzerTemplatesService: AnalyzerTemplatesService) {}
 
     @Get('')
     async getSupportedLanguages(): Promise<TypedResponse<string[]>> {
         // Extract unique languages from all templates
-        const templates = this.analyzerTemplatesService.getTemplates();
+        const templates = this.__analyzerTemplatesService.getTemplates();
         const languages = new Set<string>();
 
-        templates.forEach((template) => {
-            template.supported_languages.forEach((lang) => languages.add(lang));
-        });
+        for (const template of templates) {
+            for (const lang of template.supported_languages) {
+                languages.add(lang);
+            }
+        }
 
         return { data: Array.from(languages).sort() };
     }

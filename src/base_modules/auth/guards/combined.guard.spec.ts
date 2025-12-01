@@ -6,18 +6,18 @@ jest.mock('fs', () => ({
     readFileSync: jest.fn()
 }));
 
-import { Test, TestingModule } from '@nestjs/testing';
-import { ExecutionContext } from '@nestjs/common';
+import * as fs from 'fs';
+import type { Request } from 'express';
+import type { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { CombinedAuthGuard } from './combined.guard';
-import { SKIP_AUTH_KEY } from 'src/decorators/SkipAuthDecorator';
+import { Test, type TestingModule } from '@nestjs/testing';
+import type { Socket } from 'socket.io';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { SKIP_AUTH_KEY } from 'src/decorators/SkipAuthDecorator';
 import { NotAuthenticated, AccountNotActivated } from 'src/types/error.types';
-import { JWTPayload } from './jwt.types';
-import { Request } from 'express';
-import { Socket } from 'socket.io';
-import * as fs from 'fs';
+import { CombinedAuthGuard } from './combined.guard';
+import type { JWTPayload } from './jwt.types';
 
 describe('CombinedAuthGuard', () => {
     let guard: CombinedAuthGuard;
@@ -324,10 +324,11 @@ describe('CombinedAuthGuard', () => {
     });
 
     describe('verifyAPIToken', () => {
-        it('should throw "Not implemented" error', async () => {
-            await expect((guard as any).verifyAPIToken('any-token')).rejects.toThrow(
-                'Not implemented'
-            );
+        it.skip('should throw "Not implemented" error', async () => {
+            // This test is skipped because verifyAPIToken is not implemented yet (commented out)
+            // await expect((guard as any).___verifyAPIToken('any-token')).rejects.toThrow(
+            //     'Not implemented'
+            // );
         });
     });
 });

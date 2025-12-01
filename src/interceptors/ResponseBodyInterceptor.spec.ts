@@ -1,7 +1,7 @@
-import { CallHandler, ExecutionContext } from '@nestjs/common';
+import type { CallHandler, ExecutionContext } from '@nestjs/common';
 import { of } from 'rxjs';
-import { ResponseBodyInterceptor } from './ResponseBodyInterceptor';
 import { Status } from 'src/types/apiResponses.types';
+import { ResponseBodyInterceptor } from './ResponseBodyInterceptor';
 
 describe('ResponseBodyInterceptor', () => {
     let interceptor: ResponseBodyInterceptor;

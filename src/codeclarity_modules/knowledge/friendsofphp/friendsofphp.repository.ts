@@ -15,7 +15,7 @@ export class FriendsOfPhpRepository {
             const result = await this.friendsOfPhpRepository.findOne({
                 where: { cve: cve }
             });
-            return result || null;
+            return result ?? null;
         } catch (error) {
             console.error('Error fetching FriendsOfPhp vulnerability:', error);
             return null;
@@ -27,7 +27,7 @@ export class FriendsOfPhpRepository {
             const result = await this.friendsOfPhpRepository.findOne({
                 where: { advisory_id: advisoryId }
             });
-            return result || null;
+            return result ?? null;
         } catch (error) {
             console.error('Error fetching FriendsOfPhp vulnerability by advisory ID:', error);
             return null;

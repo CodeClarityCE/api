@@ -18,7 +18,7 @@ export class PluginService {
      * Get all plugins
      * @returns all plugins
      */
-    async getAll(): Promise<Array<Plugin>> {
+    async getAll(): Promise<Plugin[]> {
         return this.pluginsRepository.getAll();
     }
 }

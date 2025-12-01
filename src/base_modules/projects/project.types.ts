@@ -1,5 +1,5 @@
-import { IsOptional, IsUrl } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsOptional, IsUrl } from 'class-validator';
 import { IntegrationProvider } from '../integrations/integration.types';
 
 /********************************************/
@@ -9,20 +9,20 @@ import { IntegrationProvider } from '../integrations/integration.types';
 export class ProjectImportBody {
     @ApiProperty()
     @IsOptional()
-    integration_id: string;
+    integration_id!: string;
 
     @ApiProperty()
     @IsUrl()
     @IsOptional()
-    url: string;
+    url!: string;
 
     @ApiProperty()
     @IsOptional()
-    name: string;
+    name!: string;
 
     @ApiProperty()
     @IsOptional()
-    description: string;
+    description!: string;
 }
 
 /********************************************/

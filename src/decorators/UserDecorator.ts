@@ -1,11 +1,28 @@
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
+import type { FastifyRequest } from 'fastify';
+import type { Socket } from 'socket.io';
+import type { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 
-export const AuthUser = createParamDecorator((data: unknown, ctx: ExecutionContext): any => {
-    if (ctx.getType() == 'ws') {
-        const request = ctx.switchToWs().getClient();
-        return request.data['user'];
-    } else {
-        const request = ctx.switchToHttp().getRequest();
-        return request.user;
+/** Extended FastifyRequest with user property from auth guard */
+interface AuthenticatedRequest extends FastifyRequest {
+    user?: AuthenticatedUser;
+}
+
+/** Extended Socket with user data from auth guard */
+interface AuthenticatedSocket extends Socket {
+    data: {
+        user?: AuthenticatedUser;
+    };
+}
+
+export const AuthUser = createParamDecorator(
+    (_data: unknown, ctx: ExecutionContext): AuthenticatedUser | undefined => {
+        if (ctx.getType() === 'ws') {
+            const client = ctx.switchToWs().getClient<AuthenticatedSocket>();
+            return client.data.user;
+        } else {
+            const request = ctx.switchToHttp().getRequest<AuthenticatedRequest>();
+            return request.user;
+        }
     }
-});
+);

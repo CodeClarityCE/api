@@ -1,19 +1,19 @@
 import {
-    SeverityDist,
+    type SeverityDist,
+    type Dependency,
+    type DependencyDetails,
+    type WorkSpaceData,
+    type Output,
+    type AnalysisInfo,
+    type LicenseDist,
+    type Stats,
+    type StatusError,
+    type ParsedGitUrl,
+    type GraphOutput,
+    type WorkspacesOutput,
     LinkType,
     Status,
-    Dependency,
-    SbomDependency,
-    DependencyDetails,
-    WorkSpaceData,
-    Output,
-    AnalysisInfo,
-    LicenseDist,
-    Stats,
-    StatusError,
-    ParsedGitUrl,
-    GraphOutput,
-    WorkspacesOutput
+    SbomDependency
 } from './sbom.types';
 
 describe('SBOM Types', () => {
@@ -250,9 +250,9 @@ describe('SBOM Types', () => {
                 }
             };
 
-            expect(workspaceData.start.dependencies![0].name).toBe('test-package');
-            expect(workspaceData.start.dependencies![0].version).toBe('1.0.0');
-            expect(workspaceData.start.dependencies![0].constraint).toBe('^1.0.0');
+            expect(workspaceData.start.dependencies![0]!.name).toBe('test-package');
+            expect(workspaceData.start.dependencies![0]!.version).toBe('1.0.0');
+            expect(workspaceData.start.dependencies![0]!.constraint).toBe('^1.0.0');
         });
     });
 
@@ -295,7 +295,7 @@ describe('SBOM Types', () => {
 
             expect(workspaceData.dependencies).toBeDefined();
             expect(workspaceData.dependencies['test-package']).toBeDefined();
-            expect(workspaceData.dependencies['test-package']['1.0.0']).toBeDefined();
+            expect(workspaceData.dependencies['test-package']!['1.0.0']).toBeDefined();
             expect(workspaceData.start.dependencies).toHaveLength(1);
             expect(workspaceData.start.dev_dependencies).toHaveLength(1);
         });

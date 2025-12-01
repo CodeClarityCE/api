@@ -1,8 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
+import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
+import type { PaginatedResponse } from 'src/types/apiResponses.types';
 import { SBOMController } from './sbom.controller';
 import { SBOMService } from './sbom.service';
-import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
-import { PaginatedResponse } from 'src/types/apiResponses.types';
 
 describe('SBOMController', () => {
     let controller: SBOMController;
@@ -74,14 +74,16 @@ describe('SBOMController', () => {
                 'project-123',
                 'analysis-123',
                 mockUser,
-                'default',
-                -1,
-                20,
-                'name',
-                'asc',
-                undefined,
-                undefined,
-                undefined
+                {
+                    workspace: 'default',
+                    page: -1,
+                    entriesPerPage: 20,
+                    sortBy: 'name',
+                    sortDirection: 'asc',
+                    activeFilters: undefined,
+                    searchKey: undefined,
+                    ecosystemFilter: undefined
+                }
             );
         });
 
@@ -119,14 +121,16 @@ describe('SBOMController', () => {
                 'project-123',
                 'analysis-123',
                 mockUser,
-                'default',
-                1,
-                10,
-                'version',
-                'desc',
-                '[direct,transitive]',
-                'package',
-                undefined
+                {
+                    workspace: 'default',
+                    page: 1,
+                    entriesPerPage: 10,
+                    sortBy: 'version',
+                    sortDirection: 'desc',
+                    activeFilters: '[direct,transitive]',
+                    searchKey: 'package',
+                    ecosystemFilter: undefined
+                }
             );
         });
 
@@ -158,14 +162,16 @@ describe('SBOMController', () => {
                 'project-123',
                 'analysis-123',
                 mockUser,
-                'default',
-                -1,
-                -1,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                undefined
+                {
+                    workspace: 'default',
+                    page: -1,
+                    entriesPerPage: -1,
+                    sortBy: undefined,
+                    sortDirection: undefined,
+                    activeFilters: undefined,
+                    searchKey: undefined,
+                    ecosystemFilter: undefined
+                }
             );
         });
     });

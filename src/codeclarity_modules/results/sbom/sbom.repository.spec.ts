@@ -1,10 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { In } from 'typeorm';
-import { SBOMRepository } from './sbom.repository';
-import { Result } from '../result.entity';
-import { Status } from './sbom.types';
 import { PluginFailed, PluginResultNotAvailable } from 'src/types/error.types';
+import { In } from 'typeorm';
+import { Result } from '../result.entity';
+import { SBOMRepository } from './sbom.repository';
+import { Status } from './sbom.types';
 
 describe('SBOMRepository', () => {
     let repository: SBOMRepository;

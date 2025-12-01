@@ -17,7 +17,7 @@ export class ProjectMemberService {
      * @param orgId The id of the organization
      * @returns whether or not the project belongs to the org
      */
-    async doesProjectBelongToOrg(projectId: string, orgId: string) {
+    async doesProjectBelongToOrg(projectId: string, orgId: string): Promise<void> {
         const project = await this.projectRepository.findOne({
             relations: {
                 organizations: true

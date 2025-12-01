@@ -1,15 +1,6 @@
 import { Controller, Post, Body, Get, Patch, Delete, Param } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { AuthUser } from 'src/decorators/UserDecorator';
-import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { CreatedResponse, NoDataResponse, TypedResponse } from 'src/types/apiResponses.types';
-import { NonAuthEndpoint } from 'src/decorators/SkipAuthDecorator';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
-import { ApiErrorDecorator } from 'src/decorators/ApiException';
-import { EntityNotFound, InternalError, NotAuthorized, Unsupported } from 'src/types/error.types';
-import { APIDocNoDataResponseDecorator } from 'src/decorators/NoDataResponse';
-import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
+import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
     DefaultOrgPatchBody,
     DeleteAccountBody,
@@ -20,16 +11,25 @@ import {
     UserPatchBody
 } from 'src/base_modules/users/user.types';
 import { User } from 'src/base_modules/users/users.entity';
+import { ApiErrorDecorator } from 'src/decorators/ApiException';
+import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';
+import { APIDocNoDataResponseDecorator } from 'src/decorators/NoDataResponse';
+import { NonAuthEndpoint } from 'src/decorators/SkipAuthDecorator';
+import { APIDocTypedResponseDecorator } from 'src/decorators/TypedResponse';
+import { AuthUser } from 'src/decorators/UserDecorator';
+import { CreatedResponse, NoDataResponse, TypedResponse } from 'src/types/apiResponses.types';
+import { EntityNotFound, InternalError, NotAuthorized, Unsupported } from 'src/types/error.types';
+import {
+    AccountRegistrationVerificationTokenInvalidOrExpired,
+    PasswordsDoNotMatch
+} from '../auth/auth.errors';
 import {
     SetupAlreadyDone,
     FailedToSendAccountRegistrationVerificationEmail,
     CannotPerformActionOnNormalAccount,
     CannotPerformActionOnSocialAccount
 } from './users.errors';
-import {
-    AccountRegistrationVerificationTokenInvalidOrExpired,
-    PasswordsDoNotMatch
-} from '../auth/auth.errors';
+import { UsersService } from './users.service';
 
 @ApiBearerAuth()
 @Controller('users')

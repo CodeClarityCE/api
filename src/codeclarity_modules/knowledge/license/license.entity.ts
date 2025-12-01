@@ -1,13 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, Index } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
+import { Entity, Column, PrimaryGeneratedColumn, Index } from 'typeorm';
 
 @Entity('licenses')
 export class License {
     @PrimaryGeneratedColumn('uuid')
     @ApiProperty()
     @Expose()
-    id: string;
+    id!: string;
 
     @Column({
         length: 250,
@@ -16,7 +16,7 @@ export class License {
     @Index('idx_license_name')
     @ApiProperty()
     @Expose()
-    name: string;
+    name!: string;
 
     @Column({
         length: 250,
@@ -24,43 +24,43 @@ export class License {
     })
     @ApiProperty()
     @Expose()
-    reference: string;
+    reference!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    isDeprecatedLicenseId: boolean;
+    isDeprecatedLicenseId!: boolean;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    detailsUrl: string;
+    detailsUrl!: string;
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    referenceNumber: number;
+    referenceNumber!: number;
 
     @Column({ nullable: true })
     @Index({ unique: true })
     @ApiProperty()
     @Expose()
-    licenseId: string;
+    licenseId!: string;
 
     @Column('simple-array', { nullable: true })
     @ApiProperty()
     @Expose()
-    seeAlso: string[];
+    seeAlso!: string[];
 
     @Column({ nullable: true })
     @ApiProperty()
     @Expose()
-    isOsiApproved: boolean;
+    isOsiApproved!: boolean;
 
     @Column('jsonb', { nullable: true })
     @ApiProperty()
     @Expose()
-    details: Details;
+    details!: Details;
 }
 
 interface Details {

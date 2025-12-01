@@ -2,11 +2,9 @@ import { Injectable } from '@nestjs/common';
 
 export interface LanguageDetectionResult {
     detected_languages: string[];
-    primary_language: string;
+    primary_language: string | undefined;
     detection_confidence: number;
-    detected_files: {
-        [language: string]: string[];
-    };
+    detected_files: Record<string, string[]>;
 }
 
 @Injectable()
@@ -32,7 +30,7 @@ export class LanguageDetectionService {
         // - Repository metadata analysis
 
         const detectedLanguages: string[] = [];
-        const detectedFiles: { [language: string]: string[] } = {};
+        const detectedFiles: Record<string, string[]> = {};
 
         // JavaScript detection patterns
         const jsFiles = ['package.json', 'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'];
@@ -41,7 +39,6 @@ export class LanguageDetectionService {
         const phpFiles = ['composer.json', 'composer.lock'];
 
         // Python detection patterns (future use)
-        const _pythonFiles = ['requirements.txt', 'pyproject.toml', 'setup.py', 'Pipfile'];
 
         // This is a simplified implementation
         // In practice, you would scan the actual repository or file system
@@ -53,12 +50,12 @@ export class LanguageDetectionService {
         // This should be enhanced with actual file system or repository API calls
         if (this.hasJavaScriptIndicators(repositoryUrl)) {
             detectedLanguages.push('javascript');
-            detectedFiles.javascript = jsFiles;
+            detectedFiles['javascript'] = jsFiles;
         }
 
         if (this.hasPHPIndicators(repositoryUrl)) {
             detectedLanguages.push('php');
-            detectedFiles.php = phpFiles;
+            detectedFiles['php'] = phpFiles;
         }
 
         // If no languages detected, we should return empty rather than assuming JavaScript

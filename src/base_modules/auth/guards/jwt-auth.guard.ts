@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { SKIP_AUTH_KEY } from 'src/decorators/SkipAuthDecorator';
 import { NotAuthenticated } from 'src/types/error.types';
+import { JwtValidationResult } from '../auth.types';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -10,7 +11,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         super();
     }
 
-    canActivate(context: ExecutionContext) {
+    canActivate(context: ExecutionContext): boolean | Promise<boolean> {
         // Check if this endpoint is a public / non-auth endpoint
         const isNonAuthEndpoint = this.reflector.getAllAndOverride<boolean>(SKIP_AUTH_KEY, [
             context.getHandler(),
@@ -21,13 +22,13 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         }
 
         // Othwerwise check the jwt with the defined jwt strategy
-        return super.canActivate(context);
+        return super.canActivate(context) as boolean | Promise<boolean>;
     }
 
-    handleRequest(err: any, user: any) {
+    handleRequest<TUser = JwtValidationResult>(err: Error | null, user: TUser | false): TUser {
         // You can throw an exception based on either "info" or "err" arguments
         if (err || !user) {
-            throw err || new NotAuthenticated();
+            throw err ?? new NotAuthenticated();
         }
         return user;
     }

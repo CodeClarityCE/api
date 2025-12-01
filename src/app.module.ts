@@ -1,28 +1,28 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from './base_modules/auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
-import { validate } from './utils/validate-env';
-import { EnterpriseModule } from './enterprise_modules/enterprise.module';
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions.js';
-import { CodeClarityModule } from './codeclarity_modules/codeclarity.module';
+import { AuthModule } from './base_modules/auth/auth.module';
 import { BaseModule } from './base_modules/base.module';
+import { CodeClarityModule } from './codeclarity_modules/codeclarity.module';
+import { EnterpriseModule } from './enterprise_modules/enterprise.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { validate } from './utils/validate-env';
 
-const ENV = process.env.ENV;
-const password = process.env.PG_DB_PASSWORD;
-const host = process.env.PG_DB_HOST;
-const user = process.env.PG_DB_USER;
-const port = parseInt(process.env.PG_DB_PORT || '6432', 10);
+const ENV = process.env['ENV'];
+const password = process.env['PG_DB_PASSWORD'];
+const host = process.env['PG_DB_HOST'];
+const user = process.env['PG_DB_USER'];
+const port = parseInt(process.env['PG_DB_PORT'] ?? '6432', 10);
 
 export const defaultOptions: PostgresConnectionOptions = {
     type: 'postgres',
-    host: host,
+    host: host ?? 'localhost',
     port: port,
-    username: user,
-    password: password,
+    username: user ?? 'postgres',
+    password: password ?? '',
     // synchronize is now disabled by default; can be force-enabled in local/dev ONLY.
     // Use proper TypeORM migrations instead (see src/migrations/* and datasource files).
-    synchronize: process.env.DB_FORCE_SYNC === 'true',
+    synchronize: process.env['DB_FORCE_SYNC'] === 'true',
     logging: false
     // dropSchema: true
 };

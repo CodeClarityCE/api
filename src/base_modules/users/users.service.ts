@@ -1,6 +1,11 @@
 import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { NotAuthorized } from 'src/types/error.types';
+import { Email, EmailType } from 'src/base_modules/email/email.entity';
+import {
+    MemberRole,
+    OrganizationMemberships
+} from 'src/base_modules/organizations/memberships/organization.memberships.entity';
+import { Organization } from 'src/base_modules/organizations/organization.entity';
 import {
     SocialType,
     UserCompleteSocialCreateBody,
@@ -8,27 +13,22 @@ import {
     UserPasswordPatchBody,
     UserPatchBody
 } from 'src/base_modules/users/user.types';
-import { EmailService } from '../email/email.service';
-import { genRandomString, hash } from 'src/utils/crypto';
-import { AuthService } from '../auth/auth.service';
 import { User } from 'src/base_modules/users/users.entity';
-import { Organization } from 'src/base_modules/organizations/organization.entity';
-import {
-    MemberRole,
-    OrganizationMemberships
-} from 'src/base_modules/organizations/memberships/organization.memberships.entity';
-import { Email, EmailType } from 'src/base_modules/email/email.entity';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
-import { EmailRepository } from '../email/email.repository';
-import { UsersRepository } from './users.repository';
-import {
-    CannotPerformActionOnSocialAccount,
-    FailedToSendAccountRegistrationVerificationEmail
-} from './users.errors';
+import { NotAuthorized } from 'src/types/error.types';
+import { genRandomString, hash } from 'src/utils/crypto';
 import {
     AccountRegistrationVerificationTokenInvalidOrExpired,
     PasswordsDoNotMatch
 } from '../auth/auth.errors';
+import { AuthService } from '../auth/auth.service';
+import { EmailRepository } from '../email/email.repository';
+import { EmailService } from '../email/email.service';
+import { OrganizationsRepository } from '../organizations/organizations.repository';
+import {
+    CannotPerformActionOnSocialAccount,
+    FailedToSendAccountRegistrationVerificationEmail
+} from './users.errors';
+import { UsersRepository } from './users.repository';
 
 /**
  * This service offers methods for working with users
@@ -53,7 +53,7 @@ export class UsersService {
      * @returns the user
      */
     async getUser(userId: string, authenticatedUser: AuthenticatedUser): Promise<User> {
-        if (userId != authenticatedUser.userId) {
+        if (userId !== authenticatedUser.userId) {
             throw new NotAuthorized();
         }
 
@@ -88,7 +88,7 @@ export class UsersService {
             default: true
         });
 
-        // if (user.id != organization.created_by?.id) {
+        // if (user.id !== organization.created_by?.id) {
         //     throw new NotAuthorized('The user is not the owner of the organization');
         // }
 
@@ -107,7 +107,7 @@ export class UsersService {
      * @returns the id of the created user
      */
     async register(userData: UserCreateBody): Promise<string> {
-        if (userData.password != userData.password_confirmation) {
+        if (userData.password !== userData.password_confirmation) {
             throw new PasswordsDoNotMatch();
         }
 
@@ -132,7 +132,7 @@ export class UsersService {
         user.setup_done = true;
         user.activated = false;
         user.registration_verified = false;
-        user.avatar_url = undefined;
+        // avatar_url is already undefined by default
         user.created_on = new Date();
         user.default_org = organization;
 
@@ -170,7 +170,7 @@ export class UsersService {
         const user = await this.usersRepository.getUserByEmail(email);
 
         // If the user's registration is already verified simply return
-        if (user.registration_verified == true) {
+        if (user.registration_verified === true) {
             return;
         }
 
@@ -393,18 +393,19 @@ export class UsersService {
         authenticatedUser: AuthenticatedUser,
         password?: string
     ): Promise<void> {
-        if (userId == '@self') {
+        if (userId === '@self') {
             userId = authenticatedUser.userId;
         }
 
-        if (authenticatedUser.userId != userId) {
+        if (authenticatedUser.userId !== userId) {
             throw new NotAuthorized();
         }
 
         const user = await this.usersRepository.getUserById(userId);
 
         if (!user.social) {
-            if (password == undefined) {
+            // Require password for non-social users
+            if (!password) {
                 throw new NotAuthorized();
             }
 

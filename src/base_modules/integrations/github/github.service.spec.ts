@@ -1,18 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { GithubIntegrationService } from './github.service';
-import { GithubIntegrationTokenService } from './githubToken.service';
-import { UsersRepository } from '../../users/users.repository';
-import { OrganizationsRepository } from '../../organizations/organizations.repository';
-import { IntegrationsRepository } from '../integrations.repository';
-import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
-import {
-    GithubTokenType,
-    LinkGithubCreateBody,
-    LinkGithubPatchBody
-} from './githubIntegration.types';
-import { Integration } from '../integrations.entity';
-import { Organization } from '../../organizations/organization.entity';
-import { User } from '../../users/users.entity';
+import { Test, type TestingModule } from '@nestjs/testing';
 import {
     DuplicateIntegration,
     EntityNotFound,
@@ -25,8 +11,22 @@ import {
     NotAMember,
     NotAuthorized
 } from '../../../types/error.types';
-import { IntegrationProvider, IntegrationType } from '../integration.types';
+import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
 import { MemberRole } from '../../organizations/memberships/orgMembership.types';
+import type { Organization } from '../../organizations/organization.entity';
+import { OrganizationsRepository } from '../../organizations/organizations.repository';
+import type { User } from '../../users/users.entity';
+import { UsersRepository } from '../../users/users.repository';
+import { IntegrationProvider, IntegrationType } from '../integration.types';
+import type { Integration } from '../integrations.entity';
+import { IntegrationsRepository } from '../integrations.repository';
+import { GithubIntegrationService } from './github.service';
+import {
+    type LinkGithubCreateBody,
+    type LinkGithubPatchBody,
+    GithubTokenType
+} from './githubIntegration.types';
+import { GithubIntegrationTokenService } from './githubToken.service';
 
 describe('GithubIntegrationService', () => {
     let service: GithubIntegrationService;
@@ -65,7 +65,7 @@ describe('GithubIntegrationService', () => {
         service_domain: 'github.com',
         expiry_date: undefined,
         refresh_token: undefined
-    } as Integration;
+    } as unknown as Integration;
 
     beforeEach(async () => {
         const mockGithubTokenService = {

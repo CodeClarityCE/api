@@ -1,4 +1,4 @@
-import { Dependency } from '../sbom/sbom.types';
+import type { Dependency } from '../sbom/sbom.types';
 
 export interface License {
     reference: string;
@@ -46,10 +46,10 @@ export interface LicenseProperties {
 }
 
 export interface WorkSpaceLicenseInfo {
-    LicensesDepMap: { [key: string]: string[] };
-    NonSpdxLicensesDepMap: { [key: string]: string[] };
+    LicensesDepMap: Record<string, string[]>;
+    NonSpdxLicensesDepMap: Record<string, string[]>;
     LicenseComplianceViolations: string[];
-    DependencyInfo: { [key: string]: DependencyInfo | undefined };
+    DependencyInfo: Record<string, DependencyInfo | undefined>;
 }
 
 export interface DependencyInfo {
@@ -58,10 +58,10 @@ export interface DependencyInfo {
 }
 
 export interface WorkSpaceLicenseInfoInternal {
-    LicensesDepMap: { [key: string]: (Dependency | undefined)[] };
-    NonSpdxLicensesDepMap: { [key: string]: (Dependency | undefined)[] };
-    LicenseComplianceViolations: { [key: string]: (Dependency | undefined)[] };
-    DependencyInfo: { [key: string]: DependencyInfo | undefined };
+    LicensesDepMap: Record<string, (Dependency | undefined)[]>;
+    NonSpdxLicensesDepMap: Record<string, (Dependency | undefined)[]>;
+    LicenseComplianceViolations: Record<string, (Dependency | undefined)[]>;
+    DependencyInfo: Record<string, DependencyInfo | undefined>;
 }
 
 export interface AnalysisStats {
@@ -69,7 +69,7 @@ export interface AnalysisStats {
     number_of_non_spdx_licenses: number;
     number_of_copy_left_licenses: number;
     number_of_permissive_licenses: number;
-    license_dist: { [key: string]: number };
+    license_dist: Record<string, number>;
 }
 
 export enum Status {
@@ -79,8 +79,8 @@ export enum Status {
 
 export interface AnalysisInfo {
     status: Status;
-    private_errors: any[];
-    public_errors: any[];
+    private_errors: unknown[];
+    public_errors: unknown[];
     analysis_start_time: string;
     analysis_end_time: string;
     analysis_delta_time: number;
@@ -92,6 +92,33 @@ export interface AnalysisInfo {
 }
 
 export interface Output {
-    workspaces: { [key: string]: WorkSpaceLicenseInfo };
+    workspaces: Record<string, WorkSpaceLicenseInfo>;
     analysis_info: AnalysisInfo;
+}
+
+// Types from licenses2.types.ts (for service/API responses)
+
+export interface LicenseReportOutput {
+    license_infos: LicenseInfo[];
+    dependency_infos: Record<string, DepShortInfo>;
+}
+
+export interface DepShortInfo {
+    name: string;
+    version: string;
+    description?: string;
+    package_manager_link?: string;
+    package_manager: string;
+}
+
+export interface LicenseInfo {
+    id: string;
+    name: string;
+    unable_to_infer: boolean;
+    license_compliance_violation: boolean;
+    description?: string;
+    references?: string[];
+    deps_using_license: string[];
+    license_category?: string;
+    license_properties?: LicenseProperties;
 }

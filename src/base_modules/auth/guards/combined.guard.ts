@@ -1,16 +1,17 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { Request } from 'express';
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { SKIP_AUTH_KEY } from 'src/decorators/SkipAuthDecorator';
-import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
-import { NotAuthenticated, AccountNotActivated } from 'src/types/error.types';
 import { Algorithm } from 'jsonwebtoken';
-import { JWTPayload } from 'src/base_modules/auth/guards/jwt.types';
-import { Request } from 'express';
 import { Socket } from 'socket.io';
+import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
+import { JWTPayload } from 'src/base_modules/auth/guards/jwt.types';
+import { SKIP_AUTH_KEY } from 'src/decorators/SkipAuthDecorator';
+import { NotAuthenticated, AccountNotActivated } from 'src/types/error.types';
+
 // import { ApiKeysService } from 'src/codeclarity_modules/apiKeys/apiKeys.service';
-import { readFileSync } from 'fs';
-import { join } from 'path';
 
 /**
  * This is a guard that combines JWT and API authentication.
@@ -43,15 +44,15 @@ export class CombinedAuthGuard implements CanActivate {
         let apiHeader: string | string[] | undefined = undefined;
         let request: Request | undefined = undefined;
         let socket: Socket | undefined = undefined;
-        if (context.getType() == 'ws') {
+        if (context.getType() === 'ws') {
             // console.log(context.switchToWs().getClient());
-            socket = context.switchToWs().getClient() as Socket;
-            authHeader = socket.handshake.headers.authorization;
+            socket = context.switchToWs().getClient();
+            authHeader = socket?.handshake.headers.authorization;
         } else {
             // If the endpoint requires authentication, check jwt and api tokens
-            request = context.switchToHttp().getRequest() as Request;
-            authHeader = request.headers.authorization;
-            apiHeader = request.headers['x-api-key'] ?? request.headers['X-API-KEY'];
+            request = context.switchToHttp().getRequest();
+            authHeader = request?.headers.authorization;
+            apiHeader = request?.headers['x-api-key'] ?? request?.headers['X-API-KEY'];
         }
 
         const jwtToken = this.extractJWTTokenFromHeader(authHeader);
@@ -68,15 +69,16 @@ export class CombinedAuthGuard implements CanActivate {
             if (!userJWT?.activated) throw new AccountNotActivated();
             if (jwtTokenValid) {
                 if (request) {
-                    request['user'] = userJWT;
+                    request.user = userJWT;
                 } else if (socket) {
-                    socket.data['user'] = userJWT;
+                    (socket.data as { user?: AuthenticatedUser }).user = userJWT;
                 }
                 return true;
             }
         }
 
         throw new Error('Not implemented');
+        // TODO: Implement API token verification
         // if (apiToken) {
         //     // 2. Verify api token (costly, requires db lookup)
         //     const [apiTokenValid, userAPI] = await this.verifyAPIToken(apiToken);
@@ -91,8 +93,7 @@ export class CombinedAuthGuard implements CanActivate {
         //         return true;
         //     }
         // }
-
-        throw new NotAuthenticated();
+        // throw new NotAuthenticated();
     }
 
     /**
@@ -118,7 +119,7 @@ export class CombinedAuthGuard implements CanActivate {
     private extractAPITokenFromHeader(
         apiHeader: string | string[] | undefined
     ): string | undefined {
-        if (apiHeader && typeof apiHeader == 'string') {
+        if (apiHeader && typeof apiHeader === 'string') {
             return apiHeader;
         }
         return undefined;
@@ -138,32 +139,10 @@ export class CombinedAuthGuard implements CanActivate {
             // TODO: get roles from payload
             return [
                 true,
-                new AuthenticatedUser(
-                    payload.userId,
-                    payload.roles as Array<ROLE>,
-                    payload.activated
-                )
+                new AuthenticatedUser(payload.userId, payload.roles as ROLE[], payload.activated)
             ];
         } catch {
             return [false, undefined];
         }
-    }
-
-    /**
-     * Verifies that a given API token is valid.
-     * @param token the API token
-     * @returns {Promise<[boolean, AuthenticatedUser|undefined]>} (1) a boolean indicating if it is valid, and (2) the user to which the API token belongs if valid otherwise undefined
-     */
-    private async verifyAPIToken(
-        _token: string
-    ): Promise<[boolean, AuthenticatedUser | undefined]> {
-        throw new Error('Not implemented');
-        // try {
-        //     const user: User = await this.apiKeyService.getUserOfApiKey(token);
-        //     // TODO: get roles from db
-        //     return [true, new AuthenticatedUser(user.id, [ROLE.USER], user.activated, token)];
-        // } catch (error) {
-        //     return [false, undefined];
-        // }
     }
 }

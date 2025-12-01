@@ -1,8 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ProjectsRepository } from './projects.repository';
-import { Project } from './project.entity';
 import { EntityNotFound, NotAuthorized, ProjectDoesNotExist } from 'src/types/error.types';
+import { Project } from './project.entity';
+import { ProjectsRepository } from './projects.repository';
 
 describe('ProjectsRepository', () => {
     let projectsRepository: ProjectsRepository;

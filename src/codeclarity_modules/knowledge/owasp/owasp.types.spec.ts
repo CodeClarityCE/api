@@ -316,8 +316,8 @@ describe('OWASP Types', () => {
             ];
 
             expect(owaspCategories).toHaveLength(2);
-            expect(owaspCategories[0].id).toBe('A01:2021');
-            expect(owaspCategories[1].id).toBe('A02:2021');
+            expect(owaspCategories[0]!.id).toBe('A01:2021');
+            expect(owaspCategories[1]!.id).toBe('A02:2021');
         });
 
         it('should work as optional properties', () => {
@@ -364,8 +364,8 @@ describe('OWASP Types', () => {
                 ]
             };
 
-            expect(report.findings[0].owasp.id).toBe('A01:2021');
-            expect(report.findings[0].severity).toBe('HIGH');
+            expect(report.findings[0]!.owasp.id).toBe('A01:2021');
+            expect(report.findings[0]!.severity).toBe('HIGH');
         });
     });
 });

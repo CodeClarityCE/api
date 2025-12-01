@@ -1,9 +1,84 @@
 import { Injectable } from '@nestjs/common';
 import { GitlabIntegration } from 'src/base_modules/integrations/gitlab/gitlabIntegration.types';
 import { User } from 'src/base_modules/users/users.entity';
+import { IntegrationTokenMissingPermissions } from 'src/types/error.types';
+import { BaseVCSTokenService } from '../base/baseVCSTokenService';
+import { parseTokenExpiry, hasRequiredScopes } from '../utils/tokenValidation.utils';
 
 @Injectable()
-export class GitlabIntegrationTokenService {
+export class GitlabIntegrationTokenService extends BaseVCSTokenService {
+    protected getDefaultScopes(): string[] {
+        return ['read_repository', 'read_user', 'read_api', 'self_rotate'];
+    }
+
+    protected async validateTokenScopes(
+        token: string,
+        requiredScopes: string[],
+        options?: Record<string, unknown>
+    ): Promise<void> {
+        const gitlabInstanceUrl = options?.['gitlabInstanceUrl'];
+        if (!gitlabInstanceUrl || typeof gitlabInstanceUrl !== 'string') {
+            throw new Error('gitlabInstanceUrl is required for GitLab token validation');
+        }
+
+        const response = await fetch(`${gitlabInstanceUrl}/api/v4/personal_access_tokens/self`, {
+            headers: { 'PRIVATE-TOKEN': token }
+        });
+
+        if (!response.ok) {
+            const error = new Error(`Failed to fetch token info: ${response.status}`) as Error & {
+                status: number;
+            };
+            error.status = response.status;
+            throw error;
+        }
+
+        const tokenInfo = (await response.json()) as { scopes?: string[] };
+
+        // GitLab uses strict scope checking (no hierarchy)
+        if (!tokenInfo?.scopes || !hasRequiredScopes(tokenInfo.scopes, requiredScopes)) {
+            throw new IntegrationTokenMissingPermissions();
+        }
+    }
+
+    protected async fetchTokenExpiry(
+        token: string,
+        options?: Record<string, unknown>
+    ): Promise<[boolean, Date | undefined]> {
+        const gitlabInstanceUrl = options?.['gitlabInstanceUrl'];
+        if (!gitlabInstanceUrl || typeof gitlabInstanceUrl !== 'string') {
+            throw new Error('gitlabInstanceUrl is required');
+        }
+
+        const response = await fetch(`${gitlabInstanceUrl}/api/v4/admin/token`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'PRIVATE-TOKEN': token
+            },
+            body: JSON.stringify({ token })
+        });
+
+        if (!response.ok) {
+            const error = new Error(`Failed to fetch token expiry: ${response.status}`) as Error & {
+                status: number;
+            };
+            error.status = response.status;
+            throw error;
+        }
+
+        const data = (await response.json()) as { expires_at?: string } | null;
+
+        if (data?.expires_at) {
+            const date = parseTokenExpiry(data.expires_at);
+            if (date) {
+                return [true, date];
+            }
+        }
+
+        return [false, undefined];
+    }
+
     /**
      * Validates that a given gitlab personal access token has the necessary scopes/permissions to perform the necessary actions withing the API
      * @throws {IntegrationTokenMissingPermissions} In case any scopes/permissions are not granted
@@ -19,44 +94,10 @@ export class GitlabIntegrationTokenService {
         gitlabInstanceUrl: string,
         { additionalScopes = [] }: { additionalScopes?: string[] }
     ): Promise<void> {
-        const requiredScopes = ['read_repository', 'read_user', 'read_api', 'self_rotate'];
-        const allScopes = [...requiredScopes, ...additionalScopes];
-
-        try {
-            const response = await fetch(
-                `${gitlabInstanceUrl}/api/v4/personal_access_tokens/self`,
-                {
-                    headers: {
-                        'PRIVATE-TOKEN': token
-                    }
-                }
-            );
-
-            if (!response.ok) {
-                if (response.status === 401) {
-                    throw new Error('Invalid or revoked token');
-                }
-                throw new Error(`Failed to fetch user information: ${response.status}`);
-            }
-
-            const tokenInfo = await response.json();
-
-            // Check if the token has the required scopes
-            if (!tokenInfo) {
-                throw new Error('Token does not have the required permissions.');
-            }
-
-            const hasAllScopes = allScopes.every((scope) => tokenInfo.scopes?.includes(scope));
-
-            if (!hasAllScopes) {
-                throw new Error('Token does not have the required permissions.');
-            }
-        } catch (error) {
-            if (error instanceof Error && error.message.includes('401')) {
-                throw new Error('Invalid or revoked token');
-            }
-            throw new Error(`Failed to validate token: ${error.message}`);
-        }
+        return this.validatePermissions(token, {
+            additionalScopes,
+            gitlabInstanceUrl
+        });
     }
 
     /**
@@ -72,44 +113,7 @@ export class GitlabIntegrationTokenService {
         token: string,
         gitlabInstanceUrl: string
     ): Promise<[boolean, Date | undefined]> {
-        try {
-            const response = await fetch(`${gitlabInstanceUrl}/api/v4/admin/token`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'PRIVATE-TOKEN': token
-                },
-                body: JSON.stringify({ token: token })
-            });
-
-            if (!response.ok) {
-                if (response.status === 401) {
-                    throw new Error('Invalid or revoked token');
-                }
-                throw new Error(`Failed to fetch access token info. Status: ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            if (data && data.expires_at) {
-                const expiryDate = new Date(data.expires_at);
-                return [true, expiryDate];
-            }
-
-            return [false, undefined]; // Token does not have an expiry date
-        } catch (error) {
-            console.error('Error fetching access token expiry:', error);
-            if (error instanceof Error && error.message.includes('Invalid or revoked token')) {
-                throw error;
-            }
-            if (
-                error instanceof Error &&
-                error.message.includes('Failed to fetch access token info')
-            ) {
-                throw error;
-            }
-            throw new Error('Failed to retrieve access token expiry');
-        }
+        return this.getTokenExpiry(token, { gitlabInstanceUrl });
     }
 
     /**

@@ -1,10 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { FileController, UploadData } from './file.controller';
-import { FileService } from './file.service';
-import { AuthenticatedUser, ROLE } from '../auth/auth.types';
-import { InternalError } from '../../types/error.types';
-import { MulterFile } from '@webundsoehne/nest-fastify-file-upload';
 import { readFile } from 'fs';
+import { Test, type TestingModule } from '@nestjs/testing';
+import type { MulterFile } from '@webundsoehne/nest-fastify-file-upload';
+import { InternalError } from '../../types/error.types';
+import { AuthenticatedUser, ROLE } from '../auth/auth.types';
+import { FileController, type UploadData } from './file.controller';
+import { FileService } from './file.service';
 
 jest.mock('fs', () => ({
     ...jest.requireActual('fs'),
@@ -258,7 +258,7 @@ describe('FileController', () => {
         it('should retrieve file content successfully', async () => {
             const fileContent = 'This is the file content';
             const mockReadFile = readFile as unknown as jest.Mock;
-            mockReadFile.mockImplementation((path, encoding, callback) => {
+            mockReadFile.mockImplementation((_path, _encoding, callback) => {
                 callback(null, fileContent);
             });
 
@@ -280,7 +280,7 @@ describe('FileController', () => {
         it('should handle file read errors', async () => {
             const mockReadFile = readFile as unknown as jest.Mock;
             const error = new Error('File not found');
-            mockReadFile.mockImplementation((path, encoding, callback) => {
+            mockReadFile.mockImplementation((_path, _encoding, callback) => {
                 callback(error);
             });
 
@@ -291,7 +291,7 @@ describe('FileController', () => {
 
         it('should escape file names to prevent directory traversal', async () => {
             const mockReadFile = readFile as unknown as jest.Mock;
-            mockReadFile.mockImplementation((path, encoding, callback) => {
+            mockReadFile.mockImplementation((_path, _encoding, callback) => {
                 callback(null, 'content');
             });
 
@@ -310,11 +310,11 @@ describe('FileController', () => {
         });
 
         it('should use custom download path from environment', async () => {
-            const originalEnv = process.env.DOWNLOAD_PATH;
-            process.env.DOWNLOAD_PATH = '/custom/path';
+            const originalEnv = process.env['DOWNLOAD_PATH'];
+            process.env['DOWNLOAD_PATH'] = '/custom/path';
 
             const mockReadFile = readFile as unknown as jest.Mock;
-            mockReadFile.mockImplementation((path, encoding, callback) => {
+            mockReadFile.mockImplementation((_path, _encoding, callback) => {
                 callback(null, 'content');
             });
 
@@ -326,12 +326,12 @@ describe('FileController', () => {
                 expect.any(Function)
             );
 
-            process.env.DOWNLOAD_PATH = originalEnv;
+            process.env['DOWNLOAD_PATH'] = originalEnv;
         });
 
         it('should handle empty file content', async () => {
             const mockReadFile = readFile as unknown as jest.Mock;
-            mockReadFile.mockImplementation((path, encoding, callback) => {
+            mockReadFile.mockImplementation((_path, _encoding, callback) => {
                 callback(null, '');
             });
 
@@ -348,7 +348,7 @@ describe('FileController', () => {
         it('should handle large file content', async () => {
             const largeContent = 'x'.repeat(1000000); // 1MB of 'x'
             const mockReadFile = readFile as unknown as jest.Mock;
-            mockReadFile.mockImplementation((path, encoding, callback) => {
+            mockReadFile.mockImplementation((_path, _encoding, callback) => {
                 callback(null, largeContent);
             });
 
@@ -364,7 +364,7 @@ describe('FileController', () => {
 
         it('should handle special characters in file names', async () => {
             const mockReadFile = readFile as unknown as jest.Mock;
-            mockReadFile.mockImplementation((path, encoding, callback) => {
+            mockReadFile.mockImplementation((_path, _encoding, callback) => {
                 callback(null, 'content');
             });
 
@@ -385,7 +385,7 @@ describe('FileController', () => {
 
         it('should handle concurrent file reads', async () => {
             const mockReadFile = readFile as unknown as jest.Mock;
-            mockReadFile.mockImplementation((path, encoding, callback) => {
+            mockReadFile.mockImplementation((_path, _encoding, callback) => {
                 // Immediate callback instead of setTimeout
                 callback(null, 'content');
             });
@@ -431,7 +431,7 @@ describe('FileController', () => {
         });
 
         it('should handle very long file names', async () => {
-            const longFileName = 'a'.repeat(255) + '.txt';
+            const longFileName = `${'a'.repeat(255)}.txt`;
             const longUploadData: UploadData = {
                 ...mockUploadData,
                 file_name: longFileName

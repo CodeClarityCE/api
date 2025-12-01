@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { Project } from 'src/base_modules/projects/project.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Project } from 'src/base_modules/projects/project.entity';
 import { EntityNotFound, NotAuthorized, ProjectDoesNotExist } from 'src/types/error.types';
 import { TypedPaginatedData } from 'src/types/pagination.types';
-import { AllowedOrderByGetProjects } from './projects.service';
 import { SortDirection } from 'src/types/sort.types';
+import { Repository } from 'typeorm';
+import { AllowedOrderByGetProjects } from './projects.service';
 
 @Injectable()
 export class ProjectsRepository {
@@ -16,8 +16,8 @@ export class ProjectsRepository {
 
     async getProjectById(projectId: string, relations?: object): Promise<Project> {
         const project = await this.projectRepository.findOne({
-            relations: relations,
-            where: { id: projectId }
+            where: { id: projectId },
+            ...(relations ? { relations: relations } : {})
         });
 
         if (!project) {
@@ -39,7 +39,7 @@ export class ProjectsRepository {
                     id: organizationId
                 }
             },
-            relations: relations
+            ...(relations ? { relations: relations } : {})
         });
 
         if (!project) {
@@ -55,7 +55,7 @@ export class ProjectsRepository {
      * @param orgId The id of the organization
      * @returns whether or not the integration belongs to the org
      */
-    async doesProjectBelongToOrg(projectId: string, orgId: string) {
+    async doesProjectBelongToOrg(projectId: string, orgId: string): Promise<void> {
         const belongs = await this.projectRepository.exists({
             relations: {
                 organizations: true
@@ -72,11 +72,11 @@ export class ProjectsRepository {
         }
     }
 
-    async deleteProject(projectId: string) {
+    async deleteProject(projectId: string): Promise<void> {
         await this.projectRepository.delete(projectId);
     }
 
-    async deleteUserProjects(userId: string) {
+    async deleteUserProjects(userId: string): Promise<void> {
         const projects = await this.projectRepository.find({ where: { added_by: { id: userId } } });
         await this.projectRepository.remove(projects);
     }
@@ -105,9 +105,9 @@ export class ProjectsRepository {
             .addOrderBy('analyses.created_on', 'DESC');
 
         // if (sortBy && sortDirection) {
-        //     if (sortBy == AllowedOrderByGetProjects.NAME)
+        //     if (sortBy === AllowedOrderByGetProjects.NAME)
         //         queryBuilder = queryBuilder.orderBy('name', sortDirection);
-        //     else if (sortBy == AllowedOrderByGetProjects.IMPORTED_ON)
+        //     else if (sortBy === AllowedOrderByGetProjects.IMPORTED_ON)
         //         queryBuilder = queryBuilder.orderBy('added_on', sortDirection);
         // }
 
