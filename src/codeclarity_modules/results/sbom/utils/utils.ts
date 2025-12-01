@@ -16,6 +16,13 @@ import { Repository, In } from 'typeorm';
 import { VulnerabilitiesUtilsService } from '../../vulnerabilities/utils/utils.service';
 import { EcosystemMapper } from './ecosystem-mapper';
 
+/** Extended dependency with ecosystem and source plugin information */
+interface EnhancedDependency extends Dependency {
+    ecosystem?: string;
+    source_plugin?: string;
+    transitive?: boolean;
+}
+
 @Injectable()
 export class SbomUtilsService {
     constructor(
@@ -192,9 +199,7 @@ export class SbomUtilsService {
 
             // Merge dependencies with ecosystem tracking
             for (const [depName, versions] of Object.entries(workspaceData.dependencies || {})) {
-                if (!mergedDependencies[depName]) {
-                    mergedDependencies[depName] = {};
-                }
+                mergedDependencies[depName] ??= {};
 
                 for (const [version, dependency] of Object.entries(versions)) {
                     // Add ecosystem and source plugin information
@@ -252,7 +257,8 @@ export class SbomUtilsService {
                 const filteredVersions: Record<string, Dependency> = {};
 
                 for (const [version, dependency] of Object.entries(versions)) {
-                    if ((dependency as any).ecosystem === ecosystem) {
+                    const enhancedDep = dependency as EnhancedDependency;
+                    if (enhancedDep.ecosystem === ecosystem) {
                         filteredVersions[version] = dependency;
                     }
                 }
@@ -280,15 +286,11 @@ export class SbomUtilsService {
     ): Promise<DependencyDetails> {
         const dependency =
             sbom.workspaces[workspace]!.dependencies[dependency_name]![dependency_version]!;
+        const enhancedDep = dependency as EnhancedDependency;
 
         // Determine the language based on the ecosystem
-        const ecosystem = (dependency as any).ecosystem;
-        let language = 'javascript'; // default
-        if (ecosystem === 'packagist') {
-            language = 'php';
-        } else if (ecosystem === 'pypi') {
-            language = 'python';
-        }
+        const ecosystem = enhancedDep.ecosystem;
+        const language = this.getLanguageFromEcosystem(ecosystem);
 
         // Try to get package version info, but handle cases where it doesn't exist
         let package_version;
@@ -310,17 +312,20 @@ export class SbomUtilsService {
             version = null;
         }
 
+        const enginesExtra = version?.extra?.['Engines'] as Record<string, string> | undefined;
+        const timeExtra = version?.extra?.['Time'] as string | undefined;
+
         const dependency_details: DependencyDetails = {
             name: dependency_name,
             version: version?.version ?? dependency_version,
             latest_version: package_version?.latest_version ?? dependency_version,
             dependencies: version?.dependencies ?? {},
             dev_dependencies: version?.dev_dependencies ?? {},
-            transitive: dependency.Transitive ?? (dependency as any).transitive ?? false,
+            transitive: dependency.Transitive ?? enhancedDep.transitive ?? false,
             package_manager: sbom.analysis_info.package_manager,
             license: package_version?.license ?? '',
-            engines: version?.extra?.['Engines'] ?? {},
-            release_date: version?.extra?.['Time'] ? new Date(version.extra?.['Time']) : new Date(),
+            engines: enginesExtra ?? {},
+            release_date: timeExtra ? new Date(timeExtra) : new Date(),
             lastest_release_date: package_version?.time
                 ? new Date(package_version.time)
                 : new Date(),
@@ -338,6 +343,25 @@ export class SbomUtilsService {
         }
 
         // Attach vulnerability info if the service has finished
+        await this.attachVulnerabilityInfo(
+            analysis_id,
+            dependency_name,
+            dependency_version,
+            dependency_details
+        );
+
+        return dependency_details;
+    }
+
+    /**
+     * Attach vulnerability information to dependency details
+     */
+    private async attachVulnerabilityInfo(
+        analysis_id: string,
+        dependency_name: string,
+        dependency_version: string,
+        dependency_details: DependencyDetails
+    ): Promise<void> {
         const vulns: VulnsOutput =
             await this.vulnerabilitiesUtilsService.getVulnsResult(analysis_id);
 
@@ -349,20 +373,48 @@ export class SbomUtilsService {
                 vuln.AffectedVersion === dependency_version
             ) {
                 dependency_details.vulnerabilities.push(vuln.VulnerabilityId);
-                dependency_details.severity_dist.critical +=
-                    vuln.Severity.SeverityClass === 'CRITICAL' ? 1 : 0;
-                dependency_details.severity_dist.high +=
-                    vuln.Severity.SeverityClass === 'HIGH' ? 1 : 0;
-                dependency_details.severity_dist.medium +=
-                    vuln.Severity.SeverityClass === 'MEDIUM' ? 1 : 0;
-                dependency_details.severity_dist.low +=
-                    vuln.Severity.SeverityClass === 'LOW' ? 1 : 0;
-                dependency_details.severity_dist.none +=
-                    vuln.Severity.SeverityClass === 'NONE' ? 1 : 0;
+                this.incrementSeverityCount(
+                    dependency_details.severity_dist,
+                    vuln.Severity.SeverityClass
+                );
             }
         }
+    }
 
-        return dependency_details;
+    /**
+     * Increment severity count based on severity class
+     */
+    private incrementSeverityCount(
+        severityDist: DependencyDetails['severity_dist'],
+        severityClass: string
+    ): void {
+        switch (severityClass) {
+            case 'CRITICAL':
+                severityDist.critical += 1;
+                break;
+            case 'HIGH':
+                severityDist.high += 1;
+                break;
+            case 'MEDIUM':
+                severityDist.medium += 1;
+                break;
+            case 'LOW':
+                severityDist.low += 1;
+                break;
+            case 'NONE':
+            default:
+                severityDist.none += 1;
+                break;
+        }
+    }
+
+    /**
+     * Get programming language from ecosystem identifier
+     */
+    private getLanguageFromEcosystem(ecosystem: string | undefined): string {
+        if (ecosystem === 'packagist') return 'php';
+        if (ecosystem === 'pypi') return 'python';
+        return 'javascript'; // default
     }
 
     // export async function getParents(

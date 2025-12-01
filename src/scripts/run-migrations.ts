@@ -10,10 +10,12 @@ async function runAll(): Promise<void> {
             if (!ds.isInitialized) await ds.initialize();
             await ds.runMigrations();
             await ds.destroy();
-            const dbName = typeof ds.options.database === 'string' ? ds.options.database : 'unknown';
+            const dbName =
+                typeof ds.options.database === 'string' ? ds.options.database : 'unknown';
             console.warn(`Migrations executed for ${dbName}`);
         } catch (e) {
-            const dbName = typeof ds.options.database === 'string' ? ds.options.database : 'unknown';
+            const dbName =
+                typeof ds.options.database === 'string' ? ds.options.database : 'unknown';
             console.error(`Failed migrations for ${dbName}`, e);
             process.exit(1);
         }

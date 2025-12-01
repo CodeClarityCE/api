@@ -137,9 +137,7 @@ describe('BaseVCSTokenService', () => {
         });
 
         it('should convert generic errors to IntegrationTokenRetrievalFailed', async () => {
-            service.mockValidateTokenScopes.mockRejectedValue(
-                new Error('Network error')
-            );
+            service.mockValidateTokenScopes.mockRejectedValue(new Error('Network error'));
 
             await expect(service.validatePermissions('test-token')).rejects.toThrow(
                 IntegrationTokenRetrievalFailed

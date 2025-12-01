@@ -199,7 +199,9 @@ describe('GitlabIntegrationTokenService', () => {
         });
 
         it('should handle 401 errors from fetch exceptions', async () => {
-            (fetch as jest.Mock).mockRejectedValue(Object.assign(new Error('Fetch failed'), { status: 401 }));
+            (fetch as jest.Mock).mockRejectedValue(
+                Object.assign(new Error('Fetch failed'), { status: 401 })
+            );
 
             await expect(
                 service.validatePersonalAccessTokenPermissions(testToken, testGitlabInstanceUrl, {})

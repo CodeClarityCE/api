@@ -368,10 +368,11 @@ describe('sort', () => {
                     const result = sort(dependencies, field, 'ASC');
 
                     expect(result).toHaveLength(3);
-                    // Date parsing: valid dates (2023-01-10) come before invalid dates (NaN) in ASC order
+                    // Invalid dates and null values fall back to epoch (1970), which sorts before valid dates
+                    // Stable sort preserves original order for equal values
                     expect((result[0] as any)[field]).toBe('invalid-date');
-                    expect((result[1] as any)[field]).toBe('2023-01-10');
-                    expect((result[2] as any)[field]).toBe(null);
+                    expect((result[1] as any)[field]).toBe(null);
+                    expect((result[2] as any)[field]).toBe('2023-01-10');
                 });
             });
         });

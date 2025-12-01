@@ -138,10 +138,7 @@ describe('GithubIntegrationTokenService', () => {
             });
 
             await expect(
-                (service as any).validateTokenScopes('ghp_test_token', [
-                    'public_repo',
-                    'write:org'
-                ])
+                (service as any).validateTokenScopes('ghp_test_token', ['public_repo', 'write:org'])
             ).resolves.toBeUndefined();
         });
 
@@ -187,10 +184,7 @@ describe('GithubIntegrationTokenService', () => {
             });
 
             await expect(
-                (service as any).validateTokenScopes('ghp_test_token', [
-                    'public_repo',
-                    'write:org'
-                ])
+                (service as any).validateTokenScopes('ghp_test_token', ['public_repo', 'write:org'])
             ).rejects.toThrow(IntegrationTokenMissingPermissions);
         });
 
@@ -244,10 +238,7 @@ describe('GithubIntegrationTokenService', () => {
             });
 
             await expect(
-                (service as any).validateTokenScopes('ghp_test_token', [
-                    'public_repo',
-                    'write:org'
-                ])
+                (service as any).validateTokenScopes('ghp_test_token', ['public_repo', 'write:org'])
             ).resolves.toBeUndefined();
         });
     });

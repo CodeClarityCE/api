@@ -6,6 +6,8 @@ import {
     DependencyDetails,
     Output as SBOMOutput,
     SbomDependency,
+    WorkSpaceData,
+    WorkSpaceDependency,
     WorkspacesOutput
 } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import {
@@ -21,6 +23,28 @@ import { AnalysisResultsService } from '../results.service';
 import { GraphDependency, GraphTraversalUtils } from './sbom_graph.types';
 import { filter } from './utils/filter';
 import { sort } from './utils/sort';
+
+/**
+ * Extended dependency with multi-language support fields.
+ * Different plugins (js-sbom, php-sbom) may use different casing.
+ */
+interface EnhancedDependency extends Dependency {
+    direct?: boolean;
+    transitive?: boolean;
+    bundled?: boolean;
+    optional?: boolean;
+    dev?: boolean;
+    prod?: boolean;
+    ecosystem?: string;
+    source_plugin?: string;
+}
+
+/** Get language identifier from ecosystem */
+function getLanguageFromEcosystem(ecosystem: string | undefined): string {
+    if (ecosystem === 'packagist') return 'php';
+    if (ecosystem === 'pypi') return 'python';
+    return 'javascript';
+}
 
 @Injectable()
 export class SBOMService {
@@ -76,125 +100,8 @@ export class SBOMService {
         wPrevStats.number_of_dev_dependencies =
             sbomPrevious.workspaces[workspace]?.start.dev_dependencies?.length ?? 0;
 
-        for (const [dep_key, dep] of Object.entries(dependencies)) {
-            for (const [version_key, version] of Object.entries(dep)) {
-                // Handle case sensitivity for different plugin formats
-                const isDirect = version.Direct ?? (version as any).direct;
-                const isTransitive = version.Transitive ?? (version as any).transitive;
-                const isBundled = version.Bundled ?? (version as any).bundled;
-                const isOptional = version.Optional ?? (version as any).optional;
-                const isDev = version.Dev ?? (version as any).dev ?? false;
-                const isProd = version.Prod ?? (version as any).prod ?? false;
-
-                // Only count dependencies that are actually used (have dev or prod flags)
-                if (isDev || isProd) {
-                    if (isBundled) wStats.number_of_bundled_dependencies += 1;
-                    if (isOptional) wStats.number_of_optional_dependencies += 1;
-                    if (isTransitive && isDirect)
-                        wStats.number_of_both_direct_transitive_dependencies += 1;
-                    else if (isTransitive) wStats.number_of_transitive_dependencies += 1;
-                    else if (isDirect) wStats.number_of_direct_dependencies += 1;
-
-                    // Check if dependency is outdated by comparing with latest version
-                    // Determine the language based on the ecosystem
-                    const ecosystem = (version as any).ecosystem;
-                    let language = 'javascript'; // default
-                    if (ecosystem === 'packagist') {
-                        language = 'php';
-                    } else if (ecosystem === 'pypi') {
-                        language = 'python';
-                    }
-
-                    const pack = await this.packageRepository.getPackageInfoWithoutFailing(
-                        dep_key,
-                        language
-                    );
-                    if (pack?.latest_version && pack.latest_version !== version_key) {
-                        wStats.number_of_outdated_dependencies += 1;
-                    }
-
-                    // Check if dependency is deprecated
-                    if (pack) {
-                        try {
-                            const versionInfo = await this.packageRepository.getVersionInfo(
-                                dep_key,
-                                version_key,
-                                language
-                            );
-                            // After filtering in getVersionInfo, versions[0] is the specific version
-                            const specificVersion = versionInfo.versions?.[0];
-                            if (specificVersion?.extra?.['Deprecated']) {
-                                wStats.number_of_deprecated_dependencies += 1;
-                            }
-                        } catch {
-                            // Continue if we can't get version info
-                        }
-                    }
-
-                    wStats.number_of_dependencies += 1;
-                }
-            }
-        }
-
-        for (const [dep_key, dep] of Object.entries(dependenciesPrevious)) {
-            for (const [version_key, version] of Object.entries(dep)) {
-                // Handle case sensitivity for different plugin formats
-                const isDirect = version.Direct || (version as any).direct;
-                const isTransitive = version.Transitive || (version as any).transitive;
-                const isBundled = version.Bundled || (version as any).bundled;
-                const isOptional = version.Optional || (version as any).optional;
-                const isDev = version.Dev ?? (version as any).dev ?? false;
-                const isProd = version.Prod ?? (version as any).prod ?? false;
-
-                // Only count dependencies that are actually used (have dev or prod flags)
-                if (isDev || isProd) {
-                    if (isBundled) wPrevStats.number_of_bundled_dependencies += 1;
-                    if (isOptional) wPrevStats.number_of_optional_dependencies += 1;
-                    if (isTransitive && isDirect)
-                        wPrevStats.number_of_both_direct_transitive_dependencies += 1;
-                    else if (isTransitive) wPrevStats.number_of_transitive_dependencies += 1;
-                    else if (isDirect) wPrevStats.number_of_direct_dependencies += 1;
-
-                    // Check if dependency is outdated by comparing with latest version
-                    // Determine the language based on the ecosystem
-                    const ecosystem = (version as any).ecosystem;
-                    let language = 'javascript'; // default
-                    if (ecosystem === 'packagist') {
-                        language = 'php';
-                    } else if (ecosystem === 'pypi') {
-                        language = 'python';
-                    }
-
-                    const pack = await this.packageRepository.getPackageInfoWithoutFailing(
-                        dep_key,
-                        language
-                    );
-                    if (pack?.latest_version && pack.latest_version !== version_key) {
-                        wPrevStats.number_of_outdated_dependencies += 1;
-                    }
-
-                    // Check if dependency is deprecated
-                    if (pack) {
-                        try {
-                            const versionInfo = await this.packageRepository.getVersionInfo(
-                                dep_key,
-                                version_key,
-                                language
-                            );
-                            // After filtering in getVersionInfo, versions[0] is the specific version
-                            const specificVersion = versionInfo.versions?.[0];
-                            if (specificVersion?.extra?.['Deprecated']) {
-                                wPrevStats.number_of_deprecated_dependencies += 1;
-                            }
-                        } catch {
-                            // Continue if we can't get version info
-                        }
-                    }
-
-                    wPrevStats.number_of_dependencies += 1;
-                }
-            }
-        }
+        await this.processDependencyStats(dependencies, wStats);
+        await this.processDependencyStats(dependenciesPrevious, wPrevStats);
 
         wStats.number_of_dev_dependencies_diff =
             wStats.number_of_dev_dependencies - wPrevStats.number_of_dev_dependencies;
@@ -224,6 +131,7 @@ export class SBOMService {
         return wStats;
     }
 
+    // eslint-disable-next-line max-params
     async getSbom(
         orgId: string,
         projectId: string,
@@ -252,102 +160,42 @@ export class SBOMService {
             ? this.sbomUtilsService.filterSbomByEcosystem(mergedSbom, ecosystem_filter)
             : mergedSbom;
 
+        const workspaceData = sbom.workspaces[workspace]!;
         const dependenciesArray: SbomDependency[] = [];
 
-        for (const [dep_key, dep] of Object.entries(sbom.workspaces[workspace]!.dependencies)) {
-            for (const [version_key, version] of Object.entries(dep)) {
-                let is_direct = 0;
-
-                if (sbom.workspaces[workspace]!.start.dependencies) {
-                    for (const [, dependency] of Object.entries(
-                        sbom.workspaces[workspace]!.start.dependencies
-                    )) {
-                        if (dependency.name === dep_key && dependency.version === version_key) {
-                            is_direct = 1;
-                            break;
-                        }
-                    }
-                }
-                if (sbom.workspaces[workspace]!.start.dev_dependencies && is_direct === 0) {
-                    for (const [, dependency] of Object.entries(
-                        sbom.workspaces[workspace]!.start.dev_dependencies
-                    )) {
-                        if (dependency.name === dep_key && dependency.version === version_key) {
-                            is_direct = 1;
-                            break;
-                        }
-                    }
-                }
-
-                const sbomDependency: SbomDependency = {
-                    ...version,
-                    name: dep_key,
-                    version: version_key,
-                    newest_release: version_key,
-                    dev: version.Dev ?? (version as any).dev ?? false,
-                    prod: version.Prod ?? (version as any).prod ?? false,
-                    is_direct_count: is_direct,
-                    is_transitive_count: version.Transitive || (version as any).transitive ? 1 : 0,
-                    // Add ecosystem and source plugin information
-                    ecosystem: (version as any).ecosystem,
-                    source_plugin: (version as any).source_plugin
-                };
-
-                // Determine the language based on the ecosystem
-                const ecosystem = (version as any).ecosystem;
-                let language = 'javascript'; // default
-                if (ecosystem === 'packagist') {
-                    language = 'php';
-                } else if (ecosystem === 'pypi') {
-                    language = 'python';
-                }
-
-                const pack = await this.packageRepository.getPackageInfoWithoutFailing(
+        for (const [dep_key, dep] of Object.entries(workspaceData.dependencies)) {
+            for (const [version_key, depVersion] of Object.entries(dep)) {
+                const version = depVersion as EnhancedDependency;
+                const is_direct = this.isDirectDependency(
                     dep_key,
-                    language
+                    version_key,
+                    workspaceData.start
                 );
-                if (pack) {
-                    sbomDependency.newest_release = pack.latest_version;
 
-                    // Check for deprecation by loading version-specific info
-                    try {
-                        const versionInfo = await this.packageRepository.getVersionInfo(
-                            dep_key,
-                            version_key,
-                            language
-                        );
+                const sbomDependency: SbomDependency = new SbomDependency();
+                sbomDependency.name = dep_key;
+                sbomDependency.version = version_key;
+                sbomDependency.newest_release = version_key;
+                sbomDependency.dev = version.Dev ?? version.dev ?? false;
+                sbomDependency.prod = version.Prod ?? version.prod ?? false;
+                sbomDependency.is_direct_count = is_direct;
+                sbomDependency.is_transitive_count =
+                    (version.Transitive ?? version.transitive) ? 1 : 0;
+                if (version.ecosystem) sbomDependency.ecosystem = version.ecosystem;
+                if (version.source_plugin) sbomDependency.source_plugin = version.source_plugin;
 
-                        // After filtering in getVersionInfo, versions[0] is the specific version we want
-                        const specificVersion = versionInfo.versions?.[0];
-                        const deprecatedValue = specificVersion?.extra?.['Deprecated'];
+                // Check package info and deprecation status
+                const language = getLanguageFromEcosystem(version.ecosystem);
+                await this.enrichSbomDependency(sbomDependency, dep_key, version_key, language);
 
-                        if (deprecatedValue) {
-                            sbomDependency.deprecated = true;
-                            sbomDependency.deprecated_message =
-                                typeof deprecatedValue === 'string'
-                                    ? deprecatedValue
-                                    : 'This package is deprecated';
-                        } else {
-                            sbomDependency.deprecated = false;
-                        }
-                    } catch {
-                        // Version info not available in knowledge database
-                        sbomDependency.deprecated = false;
-                    }
-                } else {
-                    sbomDependency.deprecated = false;
-                }
-
-                // If the dependency is not tagged as prod or dev,
-                // then it is not used in the workspace.
-                // It can be used in another workspace
+                // Only include dependencies that are actually used
                 if (sbomDependency.dev || sbomDependency.prod) {
                     dependenciesArray.push(sbomDependency);
                 }
             }
         }
 
-        // Filter, sort and paginate the dependnecies list
+        // Filter, sort and paginate the dependencies list
         const [filtered, filterCount] = filter(dependenciesArray, search_key, active_filters);
         const sorted = sort(filtered, sort_by, sort_direction);
 
@@ -480,7 +328,7 @@ export class SBOMService {
         // First, build the complete dependency graph
         const completeGraph: GraphDependency[] = this.buildCompleteGraph(
             dependenciesMap,
-            mergedSbom.workspaces[workspace]
+            mergedSbom.workspaces[workspace]!
         );
 
         // Find the target dependency in the complete graph
@@ -538,12 +386,12 @@ export class SBOMService {
      * ensuring every node in the graph has a path to the root.
      *
      * @param dependenciesMap - Map of dependencies from SBOM
-     * @param workspace - Workspace data containing start dependencies
+     * @param workspaceData - Workspace data containing start dependencies
      * @returns Complete graph of all dependencies with parent-child relationships rooted at virtual root
      */
     private buildCompleteGraph(
         dependenciesMap: Record<string, Record<string, Dependency>>,
-        workspace: any
+        workspaceData: WorkSpaceData
     ): GraphDependency[] {
         const graph: GraphDependency[] = [];
         const processedNodes = new Set<string>();
@@ -554,28 +402,12 @@ export class SBOMService {
             id: virtualRootId,
             parentIds: [],
             childrenIds: [],
-            prod: false, // Virtual root is not a production dependency
-            dev: false // Virtual root is not a dev dependency
+            prod: false,
+            dev: false
         };
 
-        // Add root dependencies (those without parents)
-        const rootDependencies = new Set<string>();
-
-        // Collect start dependencies (these are roots)
-        if (workspace.start?.dependencies) {
-            for (const dep of workspace.start.dependencies) {
-                if (dep.name && dep.version) {
-                    rootDependencies.add(`${dep.name}@${dep.version}`);
-                }
-            }
-        }
-        if (workspace.start?.dev_dependencies) {
-            for (const dep of workspace.start.dev_dependencies) {
-                if (dep.name && dep.version) {
-                    rootDependencies.add(`${dep.name}@${dep.version}`);
-                }
-            }
-        }
+        // Collect root dependencies from start dependencies
+        const rootDependencies = this.collectRootDependencies(workspaceData.start);
 
         // Process all dependencies and build parent-child relationships
         for (const [depName, versions] of Object.entries(dependenciesMap)) {
@@ -585,50 +417,16 @@ export class SBOMService {
                 if (!version || !depData) continue;
 
                 const nodeId = `${depName}@${version}`;
-                if (processedNodes.has(nodeId)) {
-                    continue;
-                }
+                if (processedNodes.has(nodeId)) continue;
 
-                // Determine if this is a root node
-                const isRoot = rootDependencies.has(nodeId);
-
-                // Default node
-                const node: GraphDependency = {
-                    id: nodeId,
-                    parentIds: [],
-                    childrenIds: [],
-                    prod: !!depData.Prod, // True if this is a production dependency
-                    dev: !!depData.Dev // True if this is a dev dependency
-                };
-
-                // Add children from Dependencies property
-                if (depData.Dependencies && typeof depData.Dependencies === 'object') {
-                    for (const [childName, childVersion] of Object.entries(depData.Dependencies)) {
-                        if (childName && childVersion) {
-                            const childId = `${childName}@${childVersion}`;
-                            node.childrenIds!.push(childId);
-                        }
-                    }
-                }
-
-                // Find all parents for this node
-                const parents = this.findParentDependencies(nodeId, dependenciesMap);
-
-                if (parents.length > 0) {
-                    // Node has real parents
-                    node.parentIds = parents;
-                } else if (isRoot) {
-                    // Root node (from package.json) - make it a child of virtual root
-                    node.parentIds = [virtualRootId];
-                    virtualRootNode.childrenIds!.push(nodeId);
-                    // Add prod/dev info for direct children of root
-                    node.prod = !!depData.Prod;
-                    node.dev = !!depData.Dev;
-                } else {
-                    // Orphaned node (no parents found) - make it a child of virtual root
-                    node.parentIds = [virtualRootId];
-                    virtualRootNode.childrenIds!.push(nodeId);
-                }
+                const node = this.createGraphNode(
+                    nodeId,
+                    depData,
+                    rootDependencies,
+                    dependenciesMap,
+                    virtualRootId,
+                    virtualRootNode
+                );
 
                 graph.push(node);
                 processedNodes.add(nodeId);
@@ -639,6 +437,77 @@ export class SBOMService {
         graph.push(virtualRootNode);
 
         return graph;
+    }
+
+    /**
+     * Collect root dependencies from start dependencies
+     */
+    private collectRootDependencies(start: {
+        dependencies?: WorkSpaceDependency[];
+        dev_dependencies?: WorkSpaceDependency[];
+    }): Set<string> {
+        const rootDependencies = new Set<string>();
+
+        const addDeps = (deps: WorkSpaceDependency[] | undefined): void => {
+            if (!deps) return;
+            for (const dep of deps) {
+                if (dep.name && dep.version) {
+                    rootDependencies.add(`${dep.name}@${dep.version}`);
+                }
+            }
+        };
+
+        addDeps(start.dependencies);
+        addDeps(start.dev_dependencies);
+
+        return rootDependencies;
+    }
+
+    /**
+     * Create a graph node for a dependency
+     */
+    private createGraphNode(
+        nodeId: string,
+        depData: Dependency,
+        rootDependencies: Set<string>,
+        dependenciesMap: Record<string, Record<string, Dependency>>,
+        virtualRootId: string,
+        virtualRootNode: GraphDependency
+    ): GraphDependency {
+        const isRoot = rootDependencies.has(nodeId);
+
+        const node: GraphDependency = {
+            id: nodeId,
+            parentIds: [],
+            childrenIds: [],
+            prod: !!depData.Prod,
+            dev: !!depData.Dev
+        };
+
+        // Add children from Dependencies property
+        if (depData.Dependencies && typeof depData.Dependencies === 'object') {
+            for (const [childName, childVersion] of Object.entries(depData.Dependencies)) {
+                if (childName && childVersion) {
+                    node.childrenIds!.push(`${childName}@${childVersion}`);
+                }
+            }
+        }
+
+        // Find all parents for this node
+        const parents = this.findParentDependencies(nodeId, dependenciesMap);
+
+        if (parents.length > 0) {
+            node.parentIds = parents;
+        } else if (isRoot) {
+            node.parentIds = [virtualRootId];
+            virtualRootNode.childrenIds!.push(nodeId);
+        } else {
+            // Orphaned node - make it a child of virtual root
+            node.parentIds = [virtualRootId];
+            virtualRootNode.childrenIds!.push(nodeId);
+        }
+
+        return node;
     }
 
     /**
@@ -681,5 +550,132 @@ export class SBOMService {
         }
 
         return parents;
+    }
+
+    /**
+     * Check if a dependency is a direct dependency (in start dependencies)
+     */
+    private isDirectDependency(
+        depKey: string,
+        versionKey: string,
+        start: { dependencies?: WorkSpaceDependency[]; dev_dependencies?: WorkSpaceDependency[] }
+    ): number {
+        const checkDeps = (deps: WorkSpaceDependency[] | undefined): boolean => {
+            return deps?.some((d) => d.name === depKey && d.version === versionKey) ?? false;
+        };
+        return checkDeps(start.dependencies) || checkDeps(start.dev_dependencies) ? 1 : 0;
+    }
+
+    /**
+     * Enrich SBOM dependency with package info and deprecation status
+     */
+    private async enrichSbomDependency(
+        sbomDependency: SbomDependency,
+        depKey: string,
+        versionKey: string,
+        language: string
+    ): Promise<void> {
+        const pack = await this.packageRepository.getPackageInfoWithoutFailing(depKey, language);
+        if (!pack) {
+            sbomDependency.deprecated = false;
+            return;
+        }
+
+        sbomDependency.newest_release = pack.latest_version;
+
+        try {
+            const versionInfo = await this.packageRepository.getVersionInfo(
+                depKey,
+                versionKey,
+                language
+            );
+            const specificVersion = versionInfo.versions?.[0];
+            const extra = specificVersion?.extra as Record<string, unknown> | undefined;
+            const deprecatedValue = extra?.['Deprecated'];
+
+            if (deprecatedValue) {
+                sbomDependency.deprecated = true;
+                sbomDependency.deprecated_message =
+                    typeof deprecatedValue === 'string'
+                        ? deprecatedValue
+                        : 'This package is deprecated';
+            } else {
+                sbomDependency.deprecated = false;
+            }
+        } catch {
+            sbomDependency.deprecated = false;
+        }
+    }
+
+    /**
+     * Process dependency stats for a set of dependencies
+     */
+    private async processDependencyStats(
+        dependencies: Record<string, Record<string, Dependency>>,
+        stats: AnalysisStats
+    ): Promise<void> {
+        for (const [dep_key, dep] of Object.entries(dependencies)) {
+            for (const [version_key, depVersion] of Object.entries(dep)) {
+                const version = depVersion as EnhancedDependency;
+                // Handle case sensitivity for different plugin formats
+                const isDirect = version.Direct ?? version.direct;
+                const isTransitive = version.Transitive ?? version.transitive;
+                const isBundled = version.Bundled ?? version.bundled;
+                const isOptional = version.Optional ?? version.optional;
+                const isDev = version.Dev ?? version.dev ?? false;
+                const isProd = version.Prod ?? version.prod ?? false;
+
+                // Only count dependencies that are actually used (have dev or prod flags)
+                if (!isDev && !isProd) continue;
+
+                if (isBundled) stats.number_of_bundled_dependencies += 1;
+                if (isOptional) stats.number_of_optional_dependencies += 1;
+                if (isTransitive && isDirect) {
+                    stats.number_of_both_direct_transitive_dependencies += 1;
+                } else if (isTransitive) {
+                    stats.number_of_transitive_dependencies += 1;
+                } else if (isDirect) {
+                    stats.number_of_direct_dependencies += 1;
+                }
+
+                // Check if dependency is outdated/deprecated
+                const language = getLanguageFromEcosystem(version.ecosystem);
+                await this.checkDependencyVersionStatus(dep_key, version_key, language, stats);
+
+                stats.number_of_dependencies += 1;
+            }
+        }
+    }
+
+    /**
+     * Check if a dependency version is outdated or deprecated
+     */
+    private async checkDependencyVersionStatus(
+        depKey: string,
+        versionKey: string,
+        language: string,
+        stats: AnalysisStats
+    ): Promise<void> {
+        const pack = await this.packageRepository.getPackageInfoWithoutFailing(depKey, language);
+        if (!pack) return;
+
+        if (pack.latest_version && pack.latest_version !== versionKey) {
+            stats.number_of_outdated_dependencies += 1;
+        }
+
+        try {
+            const versionInfo = await this.packageRepository.getVersionInfo(
+                depKey,
+                versionKey,
+                language
+            );
+            const specificVersion = versionInfo.versions?.[0];
+            const extra = specificVersion?.extra as Record<string, unknown> | undefined;
+            if (extra?.['Deprecated']) {
+                stats.number_of_deprecated_dependencies += 1;
+            }
+        } catch {
+            // Continue if we can't get version info
+        }
     }
 }

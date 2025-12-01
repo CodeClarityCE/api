@@ -168,7 +168,7 @@ describe('validateAndJoinPath', () => {
 
     describe('Edge cases', () => {
         it('should handle very long valid filenames', () => {
-            const longName = `${'a'.repeat(200)  }.txt`;
+            const longName = `${'a'.repeat(200)}.txt`;
             const result = validateAndJoinPath(baseDir, longName);
             expect(result).toBe(`${baseDir}${sep}${longName}`);
         });

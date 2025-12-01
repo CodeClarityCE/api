@@ -74,11 +74,13 @@ function sort(
         sortBySafe === 'outdated' ||
         sortBySafe === 'is_direct'
     ) {
-        sorted = dependencies.sort((a: any, b: any) => {
-            if ((a[sortBySafe] ?? false) > (b[sortBySafe] ?? false))
-                return sortDirectionSafe === 'DESC' ? -1 : 1;
-            if ((a[sortBySafe] ?? false) < (b[sortBySafe] ?? false))
-                return sortDirectionSafe === 'DESC' ? 1 : -1;
+        sorted = dependencies.sort((a: SbomDependency, b: SbomDependency) => {
+            const aRecord = a as unknown as Record<string, unknown>;
+            const bRecord = b as unknown as Record<string, unknown>;
+            const aVal = (aRecord[sortBySafe] as boolean | undefined) ?? false;
+            const bVal = (bRecord[sortBySafe] as boolean | undefined) ?? false;
+            if (aVal > bVal) return sortDirectionSafe === 'DESC' ? -1 : 1;
+            if (aVal < bVal) return sortDirectionSafe === 'DESC' ? 1 : -1;
             return 0;
         });
     } else if (sortBySafe === 'combined_severity') {
@@ -93,17 +95,15 @@ function sort(
         //     return 0;
         // });
     } else if (sortBySafe === 'last_published' || sortBySafe === 'release') {
-        sorted = dependencies.sort((a: any, b: any) => {
-            if (
-                (Date.parse(a[sortBySafe]) ?? Date.parse('1970')) >
-                (Date.parse(b[sortBySafe]) ?? Date.parse('1970'))
-            )
-                return sortDirectionSafe === 'DESC' ? -1 : 1;
-            if (
-                (Date.parse(a[sortBySafe]) ?? Date.parse('1970')) <
-                (Date.parse(b[sortBySafe]) ?? Date.parse('1970'))
-            )
-                return sortDirectionSafe === 'DESC' ? 1 : -1;
+        sorted = dependencies.sort((a: SbomDependency, b: SbomDependency) => {
+            const aRecord = a as unknown as Record<string, unknown>;
+            const bRecord = b as unknown as Record<string, unknown>;
+            const aDateStr = (aRecord[sortBySafe] as string | undefined) ?? '1970';
+            const bDateStr = (bRecord[sortBySafe] as string | undefined) ?? '1970';
+            const aDate = Date.parse(aDateStr) || Date.parse('1970');
+            const bDate = Date.parse(bDateStr) || Date.parse('1970');
+            if (aDate > bDate) return sortDirectionSafe === 'DESC' ? -1 : 1;
+            if (aDate < bDate) return sortDirectionSafe === 'DESC' ? 1 : -1;
             return 0;
         });
     } else if (sortBySafe === 'newest_release') {
@@ -142,21 +142,21 @@ function sort(
         //         return b.is_direct - a.is_direct;
         //     });
     } else if (sortBySafe === 'dev') {
-        sorted = dependencies.sort((a: any, b: any) => {
-            return b.dev - a.dev;
+        sorted = dependencies.sort((a: SbomDependency, b: SbomDependency) => {
+            return Number(b.dev) - Number(a.dev);
         });
 
         if (sortDirectionSafe === 'DESC') sorted.reverse();
     } else if (sortBySafe === 'is_direct_count') {
-        sorted = dependencies.sort((a: any, b: any) => {
+        sorted = dependencies.sort((a: SbomDependency, b: SbomDependency) => {
             return b.is_direct_count - a.is_direct_count;
         });
 
         if (sortDirectionSafe === 'DESC') sorted.reverse();
     } else if (sortBySafe === 'version') {
-        sorted = dependencies.sort((a: any, b: any) => {
-            const versionA = a[sortBySafe] ?? '0.0.0';
-            const versionB = b[sortBySafe] ?? '0.0.0';
+        sorted = dependencies.sort((a: SbomDependency, b: SbomDependency) => {
+            const versionA: string = a.version ?? '0.0.0';
+            const versionB: string = b.version ?? '0.0.0';
 
             try {
                 if (gt(versionA, versionB)) {
@@ -172,11 +172,13 @@ function sort(
             }
         });
     } else {
-        sorted = dependencies.sort((a: any, b: any) => {
-            if ((a[sortBySafe] ?? '') > (b[sortBySafe] ?? ''))
-                return sortDirectionSafe === 'DESC' ? 1 : -1;
-            if ((a[sortBySafe] ?? '') < (b[sortBySafe] ?? ''))
-                return sortDirectionSafe === 'DESC' ? -1 : 1;
+        sorted = dependencies.sort((a: SbomDependency, b: SbomDependency) => {
+            const aRecord = a as unknown as Record<string, unknown>;
+            const bRecord = b as unknown as Record<string, unknown>;
+            const aVal = (aRecord[sortBySafe] as string | undefined) ?? '';
+            const bVal = (bRecord[sortBySafe] as string | undefined) ?? '';
+            if (aVal > bVal) return sortDirectionSafe === 'DESC' ? 1 : -1;
+            if (aVal < bVal) return sortDirectionSafe === 'DESC' ? -1 : 1;
             return 0;
         });
     }

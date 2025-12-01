@@ -36,20 +36,20 @@ export class LicensesUtilsService {
 
         // Fall back to js-license for backward compatibility
         result ??= await this.resultRepository.findOne({
-                relations: { analysis: true },
-                where: {
-                    analysis: {
-                        id: analysis_id
-                    },
-                    plugin: 'js-license'
+            relations: { analysis: true },
+            where: {
+                analysis: {
+                    id: analysis_id
                 },
-                order: {
-                    analysis: {
-                        created_on: 'DESC'
-                    }
-                },
-                cache: true
-            });
+                plugin: 'js-license'
+            },
+            order: {
+                analysis: {
+                    created_on: 'DESC'
+                }
+            },
+            cache: true
+        });
 
         if (!result) {
             throw new PluginResultNotAvailable();

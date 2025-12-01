@@ -31,15 +31,11 @@ export function filter(
         const searchKeyLower = searchkeySafe.toLocaleLowerCase();
 
         for (const patch of patches) {
-            if (
-                patch.affected_dep_name?.toLowerCase().includes(searchKeyLower)
-            ) {
+            if (patch.affected_dep_name?.toLowerCase().includes(searchKeyLower)) {
                 toReturn.push(patch);
                 continue;
             }
-            if (
-                patch.vulnerability_id?.toLowerCase().includes(searchKeyLower)
-            ) {
+            if (patch.vulnerability_id?.toLowerCase().includes(searchKeyLower)) {
                 toReturn.push(patch);
                 continue;
             }

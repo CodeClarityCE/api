@@ -110,30 +110,77 @@ export class VulnerabilitiesFilterService {
         }
 
         /** Check if vulnerability passes severity filter */
-        function passesSeverityFilter(vulnerability: VulnerabilityMerged, filters: string[]): boolean {
-            if (filters.includes('severity_critical') && !isCriticalSeverity(vulnerability.Severity.Severity)) return false;
-            if (filters.includes('severity_high') && !isHighSeverity(vulnerability.Severity.Severity)) return false;
-            if (filters.includes('severity_medium') && !isMediumSeverity(vulnerability.Severity.Severity)) return false;
-            if (filters.includes('severity_low') && !isLowSeverity(vulnerability.Severity.Severity)) return false;
-            if (filters.includes('severity_none') && !isNoneSeverity(vulnerability.Severity.Severity)) return false;
+        function passesSeverityFilter(
+            vulnerability: VulnerabilityMerged,
+            filters: string[]
+        ): boolean {
+            if (
+                filters.includes('severity_critical') &&
+                !isCriticalSeverity(vulnerability.Severity.Severity)
+            )
+                return false;
+            if (
+                filters.includes('severity_high') &&
+                !isHighSeverity(vulnerability.Severity.Severity)
+            )
+                return false;
+            if (
+                filters.includes('severity_medium') &&
+                !isMediumSeverity(vulnerability.Severity.Severity)
+            )
+                return false;
+            if (filters.includes('severity_low') && !isLowSeverity(vulnerability.Severity.Severity))
+                return false;
+            if (
+                filters.includes('severity_none') &&
+                !isNoneSeverity(vulnerability.Severity.Severity)
+            )
+                return false;
             return true;
         }
 
         /** Check if vulnerability passes impact filters */
-        function passesImpactFilter(vulnerability: VulnerabilityMerged, filters: string[]): boolean {
+        function passesImpactFilter(
+            vulnerability: VulnerabilityMerged,
+            filters: string[]
+        ): boolean {
             const severity = vulnerability.Severity;
-            if (filters.includes('availability_impact') && (!severity?.AvailabilityImpact || severity.AvailabilityImpact === 'NONE')) return false;
-            if (filters.includes('confidentiality_impact') && (!severity?.ConfidentialityImpact || severity.ConfidentialityImpact === 'NONE')) return false;
-            if (filters.includes('integrity_impact') && (!severity?.IntegrityImpact || severity.IntegrityImpact === 'NONE')) return false;
+            if (
+                filters.includes('availability_impact') &&
+                (!severity?.AvailabilityImpact || severity.AvailabilityImpact === 'NONE')
+            )
+                return false;
+            if (
+                filters.includes('confidentiality_impact') &&
+                (!severity?.ConfidentialityImpact || severity.ConfidentialityImpact === 'NONE')
+            )
+                return false;
+            if (
+                filters.includes('integrity_impact') &&
+                (!severity?.IntegrityImpact || severity.IntegrityImpact === 'NONE')
+            )
+                return false;
             return true;
         }
 
         /** Check if vulnerability passes conflict flag filters */
-        function passesConflictFilter(vulnerability: VulnerabilityMerged, filters: string[]): boolean {
+        function passesConflictFilter(
+            vulnerability: VulnerabilityMerged,
+            filters: string[]
+        ): boolean {
             const flag = vulnerability.Conflict.ConflictFlag;
-            if (filters.includes('hide_correct_matching') && flag === ConflictFlag.MATCH_CORRECT) return false;
-            if (filters.includes('hide_incorrect_matching') && flag === ConflictFlag.MATCH_INCORRECT) return false;
-            if (filters.includes('hide_possibly_incorrect_matching') && flag === ConflictFlag.MATCH_POSSIBLE_INCORRECT) return false;
+            if (filters.includes('hide_correct_matching') && flag === ConflictFlag.MATCH_CORRECT)
+                return false;
+            if (
+                filters.includes('hide_incorrect_matching') &&
+                flag === ConflictFlag.MATCH_INCORRECT
+            )
+                return false;
+            if (
+                filters.includes('hide_possibly_incorrect_matching') &&
+                flag === ConflictFlag.MATCH_POSSIBLE_INCORRECT
+            )
+                return false;
             return true;
         }
 

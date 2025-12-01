@@ -61,7 +61,7 @@ export class DatabaseService implements OnApplicationBootstrap {
 
         try {
             // Check if index already exists
-            const indexExists = await this.knowledgeDataSource.query<{ "?column?": number }[]>(
+            const indexExists = await this.knowledgeDataSource.query<{ '?column?': number }[]>(
                 `
                 SELECT 1 FROM pg_indexes
                 WHERE indexname = $1 AND tablename = $2

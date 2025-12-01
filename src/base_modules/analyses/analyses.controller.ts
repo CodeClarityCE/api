@@ -12,7 +12,11 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Analysis } from 'src/base_modules/analyses/analysis.entity';
-import { AnalysisCreateBody, AnalysisRun, ScheduleUpdateBody } from 'src/base_modules/analyses/analysis.types';
+import {
+    AnalysisCreateBody,
+    AnalysisRun,
+    ScheduleUpdateBody
+} from 'src/base_modules/analyses/analysis.types';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { ApiErrorDecorator } from 'src/decorators/ApiException';
 import { APIDocCreatedResponseDecorator } from 'src/decorators/CrudResponse';

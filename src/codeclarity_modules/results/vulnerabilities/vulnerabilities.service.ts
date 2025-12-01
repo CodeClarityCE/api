@@ -761,7 +761,10 @@ export class VulnerabilitiesService {
             // Extract vulnerability policies from vuln-finder configuration
             const config = analysis.config as AnalysisConfig;
             const vulnFinderConfig = config['vuln-finder'];
-            if (!vulnFinderConfig?.vulnerabilityPolicy || !Array.isArray(vulnFinderConfig.vulnerabilityPolicy)) {
+            if (
+                !vulnFinderConfig?.vulnerabilityPolicy ||
+                !Array.isArray(vulnFinderConfig.vulnerabilityPolicy)
+            ) {
                 return { vulnerabilities: new Set(), policies: new Map() };
             }
 
@@ -806,11 +809,11 @@ export class VulnerabilitiesService {
     ): Promise<void> {
         try {
             // Get policy directly from the unified policy table
-            const policy = await this.vulnerabilityPolicyService.get(
-                orgId,
-                policyId,
-                { userId: 'system', roles: [], activated: true } as unknown as AuthenticatedUser
-            );
+            const policy = await this.vulnerabilityPolicyService.get(orgId, policyId, {
+                userId: 'system',
+                roles: [],
+                activated: true
+            } as unknown as AuthenticatedUser);
             if (policy?.content && Array.isArray(policy.content)) {
                 for (const vuln of policy.content) {
                     blacklistedVulns.add(vuln);

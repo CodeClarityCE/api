@@ -401,7 +401,9 @@ abstract class BaseReportGenerator {
             if (affectedEntry.versions && Array.isArray(affectedEntry.versions)) {
                 for (const version of affectedEntry.versions) {
                     const versionString = String(version);
-                    const cleanVersion = versionString.startsWith('v') ? versionString.slice(1) : versionString;
+                    const cleanVersion = versionString.startsWith('v')
+                        ? versionString.slice(1)
+                        : versionString;
                     if (!versions.includes(cleanVersion)) {
                         versions.push(cleanVersion);
                     }
@@ -660,14 +662,19 @@ abstract class BaseReportGenerator {
         return uniqueDescriptions;
     }
 
-    private collectOSVSpecificVersions(affectedEntry: OSVAffectedEntry, allSpecificVersions: string[]): void {
+    private collectOSVSpecificVersions(
+        affectedEntry: OSVAffectedEntry,
+        allSpecificVersions: string[]
+    ): void {
         if (!affectedEntry.versions || !Array.isArray(affectedEntry.versions)) {
             return;
         }
 
         for (const version of affectedEntry.versions) {
             const versionString = String(version);
-            const cleanVersion = versionString.startsWith('v') ? versionString.slice(1) : versionString;
+            const cleanVersion = versionString.startsWith('v')
+                ? versionString.slice(1)
+                : versionString;
             if (!allSpecificVersions.includes(cleanVersion)) {
                 allSpecificVersions.push(cleanVersion);
             }
@@ -693,7 +700,11 @@ abstract class BaseReportGenerator {
         }
     }
 
-    private extractOSVEventDetails(events: OSVEvent[]): { introduced: string; fixed: string; lastAffected: string } {
+    private extractOSVEventDetails(events: OSVEvent[]): {
+        introduced: string;
+        fixed: string;
+        lastAffected: string;
+    } {
         let introduced = '';
         let fixed = '';
         let lastAffected = '';
@@ -713,7 +724,11 @@ abstract class BaseReportGenerator {
         return { introduced, fixed, lastAffected };
     }
 
-    private createOSVRangeDescription(details: { introduced: string; fixed: string; lastAffected: string }): string | null {
+    private createOSVRangeDescription(details: {
+        introduced: string;
+        fixed: string;
+        lastAffected: string;
+    }): string | null {
         const { introduced, fixed, lastAffected } = details;
 
         if (introduced && fixed) {
@@ -885,7 +900,10 @@ abstract class BaseReportGenerator {
         }
 
         // Add user interaction required flag for CVSS v2
-        if (severityInfo.cvss_2 !== undefined && metrics.cvssMetricV2?.[0]?.userInteractionRequired !== undefined) {
+        if (
+            severityInfo.cvss_2 !== undefined &&
+            metrics.cvssMetricV2?.[0]?.userInteractionRequired !== undefined
+        ) {
             severityInfo.cvss_2.user_interaction_required =
                 metrics.cvssMetricV2[0].userInteractionRequired;
         }

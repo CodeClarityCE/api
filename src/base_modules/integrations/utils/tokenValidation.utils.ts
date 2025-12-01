@@ -5,9 +5,7 @@ import { IntegrationTokenExpired } from 'src/types/error.types';
  * @param expiryValue - String, number, or undefined expiry value
  * @returns Parsed Date or undefined
  */
-export function parseTokenExpiry(
-    expiryValue: string | number | undefined
-): Date | undefined {
+export function parseTokenExpiry(expiryValue: string | number | undefined): Date | undefined {
     if (!expiryValue) return undefined;
 
     if (typeof expiryValue === 'string') {
@@ -46,10 +44,7 @@ export function validateNotExpired(expiryDate: Date | undefined): void {
  * @param requiredScopes - Scopes required
  * @returns true if all required scopes present
  */
-export function hasRequiredScopes(
-    tokenScopes: string[],
-    requiredScopes: string[]
-): boolean {
+export function hasRequiredScopes(tokenScopes: string[], requiredScopes: string[]): boolean {
     const scopeSet = new Set(tokenScopes);
     return requiredScopes.every((scope) => scopeSet.has(scope));
 }

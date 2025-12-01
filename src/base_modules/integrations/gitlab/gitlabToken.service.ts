@@ -21,10 +21,9 @@ export class GitlabIntegrationTokenService extends BaseVCSTokenService {
             throw new Error('gitlabInstanceUrl is required for GitLab token validation');
         }
 
-        const response = await fetch(
-            `${gitlabInstanceUrl}/api/v4/personal_access_tokens/self`,
-            { headers: { 'PRIVATE-TOKEN': token } }
-        );
+        const response = await fetch(`${gitlabInstanceUrl}/api/v4/personal_access_tokens/self`, {
+            headers: { 'PRIVATE-TOKEN': token }
+        });
 
         if (!response.ok) {
             const error = new Error(`Failed to fetch token info: ${response.status}`) as Error & {
