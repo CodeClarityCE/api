@@ -12,6 +12,7 @@ export class FindingsController {
         private readonly vulnerabilitiesService: VulnerabilitiesService
     ) {}
 
+    // eslint-disable-next-line max-params
     @Get(':analysis_id/vulnerabilities')
     async getVulnerabilities(
         @Param('org_id') org_id: string,

@@ -36,8 +36,60 @@ import { VulnerabilitiesFilterService } from './utils/filter.service';
 import { VulnerabilitiesSortService } from './utils/sort.service';
 import { VulnerabilitiesUtilsService } from './utils/utils.service';
 
+/** NVD vulnerability description entry */
+interface NvdDescription {
+    lang: string;
+    value: string;
+}
+
+/** OSV affected entry with version/range information */
+interface OsvAffected {
+    ranges?: unknown[];
+    versions?: unknown[];
+}
+
+/** Analysis config structure for vuln-finder */
+interface VulnFinderConfig {
+    vulnerabilityPolicy?: string[];
+}
+
+/** Analysis config record type */
+interface AnalysisConfig {
+    'vuln-finder'?: VulnFinderConfig;
+}
+
+/** Map OWASP category ID to stats property name */
+const OWASP_STATS_MAP: Record<string, keyof AnalysisStats> = {
+    '1345': 'number_of_owasp_top_10_2021_a1',
+    '1346': 'number_of_owasp_top_10_2021_a2',
+    '1347': 'number_of_owasp_top_10_2021_a3',
+    '1348': 'number_of_owasp_top_10_2021_a4',
+    '1349': 'number_of_owasp_top_10_2021_a5',
+    '1352': 'number_of_owasp_top_10_2021_a6',
+    '1353': 'number_of_owasp_top_10_2021_a7',
+    '1354': 'number_of_owasp_top_10_2021_a8',
+    '1355': 'number_of_owasp_top_10_2021_a9',
+    '1356': 'number_of_owasp_top_10_2021_a10'
+};
+
+/** Convert discrete CIA impact string to continuous value */
+function getContinuousFromDiscreteCIA(metric: string): number {
+    if (metric === 'COMPLETE') return 1.0; // CVSS 2
+    if (metric === 'PARTIAL') return 0.5; // CVSS 2
+    if (metric === 'HIGH') return 1.0; // CVSS 3
+    if (metric === 'LOW') return 0.5; // CVSS 3
+    return 0.0;
+}
+
+/** Check if conflict flag indicates no conflict (including empty string from malformed data) */
+function isNoConflict(flag: ConflictFlag | string): boolean {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
+    return flag === ConflictFlag.NO_CONFLICT || flag === '';
+}
+
 @Injectable()
 export class VulnerabilitiesService {
+    // eslint-disable-next-line max-params
     constructor(
         private readonly analysisResultsService: AnalysisResultsService,
         private readonly findingsUtilsService: VulnerabilitiesUtilsService,
@@ -62,27 +114,6 @@ export class VulnerabilitiesService {
     ): Promise<AnalysisStats> {
         // Check if the user is allowed to view this analysis result
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
-
-        const owaspTop102021CweCategoryIds = [
-            '1345',
-            '1346',
-            '1347',
-            '1348',
-            '1349',
-            '1352',
-            '1353',
-            '1354',
-            '1355',
-            '1356'
-        ];
-
-        function getContinuousFromDiscreteCIA(metric: string): number {
-            if (metric === 'COMPLETE') return 1.0; // CVSS 2
-            if (metric === 'PARTIAL') return 0.5; // CVSS 2
-            if (metric === 'HIGH') return 1.0; // CVSS 3
-            if (metric === 'LOW') return 0.5; // CVSS 3
-            return 0.0;
-        }
 
         let findingsArrayPrevious: Vulnerability[];
         // let dependencyMapPrevious: { [key: string]: Dependency };
@@ -178,57 +209,8 @@ export class VulnerabilitiesService {
 
             // Only count unique vulnerabilities
             if (!encounteredVulns.has(finding.VulnerabilityId)) {
-                if (finding.Weaknesses && finding.Weaknesses.length > 0) {
-                    for (const weakness of finding.Weaknesses) {
-                        if (owaspTop102021CweCategoryIds.includes(weakness.OWASPTop10Id)) {
-                            switch (weakness.OWASPTop10Id) {
-                                case '1345':
-                                    wStats.number_of_owasp_top_10_2021_a1 += 1;
-                                    break;
-                                case '1346':
-                                    wStats.number_of_owasp_top_10_2021_a2 += 1;
-                                    break;
-                                case '1347':
-                                    wStats.number_of_owasp_top_10_2021_a3 += 1;
-                                    break;
-                                case '1348':
-                                    wStats.number_of_owasp_top_10_2021_a4 += 1;
-                                    break;
-                                case '1349':
-                                    wStats.number_of_owasp_top_10_2021_a5 += 1;
-                                    break;
-                                case '1352':
-                                    wStats.number_of_owasp_top_10_2021_a6 += 1;
-                                    break;
-                                case '1353':
-                                    wStats.number_of_owasp_top_10_2021_a7 += 1;
-                                    break;
-                                case '1354':
-                                    wStats.number_of_owasp_top_10_2021_a8 += 1;
-                                    break;
-                                case '1355':
-                                    wStats.number_of_owasp_top_10_2021_a9 += 1;
-                                    break;
-                                case '1356':
-                                    wStats.number_of_owasp_top_10_2021_a10 += 1;
-                                    break;
-                                default:
-                                    // Unknown OWASP category, ignore
-                                    break;
-                            }
-                        }
-                    }
-                }
-
-                if (finding.Severity !== null) {
-                    const severity = finding.Severity.Severity;
-                    if (isNoneSeverity(severity)) wStats.number_of_none += 1;
-                    else if (isLowSeverity(severity)) wStats.number_of_low += 1;
-                    else if (isMediumSeverity(severity)) wStats.number_of_medium += 1;
-                    else if (isHighSeverity(severity)) wStats.number_of_high += 1;
-                    else if (isCriticalSeverity(severity)) wStats.number_of_critical += 1;
-                } else if (finding.Severity === null || finding.Severity === undefined)
-                    wStats.number_of_none += 1;
+                this.incrementOwaspStats(wStats, finding.Weaknesses);
+                this.incrementSeverityStats(wStats, finding.Severity);
             }
 
             encounteredVulns.add(finding.VulnerabilityId);
@@ -296,57 +278,8 @@ export class VulnerabilitiesService {
             }
             beforeEncounteredDeps.add(finding.AffectedDependency);
 
-            if (finding.Weaknesses && finding.Weaknesses.length > 0) {
-                for (const weakness of finding.Weaknesses) {
-                    if (owaspTop102021CweCategoryIds.includes(weakness.OWASPTop10Id)) {
-                        switch (weakness.OWASPTop10Id) {
-                            case '1345':
-                                wBeforeStats.number_of_owasp_top_10_2021_a1 += 1;
-                                break;
-                            case '1346':
-                                wBeforeStats.number_of_owasp_top_10_2021_a2 += 1;
-                                break;
-                            case '1347':
-                                wBeforeStats.number_of_owasp_top_10_2021_a3 += 1;
-                                break;
-                            case '1348':
-                                wBeforeStats.number_of_owasp_top_10_2021_a4 += 1;
-                                break;
-                            case '1349':
-                                wBeforeStats.number_of_owasp_top_10_2021_a5 += 1;
-                                break;
-                            case '1352':
-                                wBeforeStats.number_of_owasp_top_10_2021_a6 += 1;
-                                break;
-                            case '1353':
-                                wBeforeStats.number_of_owasp_top_10_2021_a7 += 1;
-                                break;
-                            case '1354':
-                                wBeforeStats.number_of_owasp_top_10_2021_a8 += 1;
-                                break;
-                            case '1355':
-                                wBeforeStats.number_of_owasp_top_10_2021_a9 += 1;
-                                break;
-                            case '1356':
-                                wBeforeStats.number_of_owasp_top_10_2021_a10 += 1;
-                                break;
-                            default:
-                                // Unknown OWASP category, ignore
-                                break;
-                        }
-                    }
-                }
-            }
-
-            if (finding.Severity !== null) {
-                const severity = finding.Severity.Severity;
-                if (isNoneSeverity(severity)) wBeforeStats.number_of_none += 1;
-                else if (isLowSeverity(severity)) wBeforeStats.number_of_low += 1;
-                else if (isMediumSeverity(severity)) wBeforeStats.number_of_medium += 1;
-                else if (isHighSeverity(severity)) wBeforeStats.number_of_high += 1;
-                else if (isCriticalSeverity(severity)) wBeforeStats.number_of_critical += 1;
-            } else if (finding.Severity === null || finding.Severity === undefined)
-                wBeforeStats.number_of_none += 1;
+            this.incrementOwaspStats(wBeforeStats, finding.Weaknesses);
+            this.incrementSeverityStats(wBeforeStats, finding.Severity);
 
             beforeEncounteredVulns.add(finding.VulnerabilityId);
         }
@@ -412,6 +345,7 @@ export class VulnerabilitiesService {
         return wStats;
     }
 
+    // eslint-disable-next-line max-params, complexity
     async getVulnerabilities(
         orgId: string,
         projectId: string,
@@ -490,18 +424,24 @@ export class VulnerabilitiesService {
                     mergedFinding.Weaknesses = finding.Weaknesses;
                 }
                 if (finding.NVDMatch) {
-                    mergedFinding.VLAI.push({
-                        Source: Source.Nvd,
-                        Score: finding.NVDMatch.Vulnerability.Vlai_score,
-                        Confidence: finding.NVDMatch.Vulnerability.Vlai_confidence
-                    });
+                    const nvdVuln = finding.NVDMatch.Vulnerability;
+                    if (nvdVuln && typeof nvdVuln === 'object' && 'Vlai_score' in nvdVuln) {
+                        mergedFinding.VLAI.push({
+                            Source: Source.Nvd,
+                            Score: String(nvdVuln.Vlai_score),
+                            Confidence: Number(nvdVuln.Vlai_confidence)
+                        });
+                    }
                 }
                 if (finding.OSVMatch) {
-                    mergedFinding.VLAI.push({
-                        Source: Source.Osv,
-                        Score: finding.OSVMatch.Vulnerability.Vlai_score,
-                        Confidence: finding.OSVMatch.Vulnerability.Vlai_confidence
-                    });
+                    const osvVuln = finding.OSVMatch.Vulnerability;
+                    if (osvVuln && typeof osvVuln === 'object' && 'Vlai_score' in osvVuln) {
+                        mergedFinding.VLAI.push({
+                            Source: Source.Osv,
+                            Score: String(osvVuln.Vlai_score),
+                            Confidence: Number(osvVuln.Vlai_confidence)
+                        });
+                    }
                 }
 
                 // Check for source disagreements
@@ -512,8 +452,7 @@ export class VulnerabilitiesService {
                 if (
                     finding.NVDMatch &&
                     isCve &&
-                    (mergedFinding.Conflict.ConflictFlag === ConflictFlag.NO_CONFLICT ||
-                        (mergedFinding.Conflict.ConflictFlag as any) === '')
+                    isNoConflict(mergedFinding.Conflict.ConflictFlag)
                 ) {
                     // For CVEs with NVD data, assume potential source disagreement
                     // This is a workaround for the OSV matching issue in PHP vulnerabilities
@@ -586,7 +525,8 @@ export class VulnerabilitiesService {
                 nvdVuln = await this.nvdRepository.getVulnWithoutFailing(finding.Vulnerability);
 
                 if (nvdVuln) {
-                    nvdDescription = nvdVuln.descriptions[0].value;
+                    const descriptions = nvdVuln.descriptions as NvdDescription[] | undefined;
+                    nvdDescription = descriptions?.[0]?.value ?? '';
                 }
 
                 osvVuln = await this.osvRepository.getVulnByCVEIDWithoutFailing(
@@ -611,15 +551,11 @@ export class VulnerabilitiesService {
             }
 
             // Check for source disagreements when both NVD and OSV data exist
-            if (
-                nvdVuln &&
-                osvVuln &&
-                (finding.Conflict.ConflictFlag === ConflictFlag.NO_CONFLICT ||
-                    (finding.Conflict.ConflictFlag as any) === '')
-            ) {
+            if (nvdVuln && osvVuln && isNoConflict(finding.Conflict.ConflictFlag)) {
                 // Check if OSV has specific version/range data
-                const osvHasRanges = osvVuln.affected?.some(
-                    (affected: any) => affected.ranges?.length > 0 || affected.versions?.length > 0
+                const affected = osvVuln.affected as OsvAffected[] | undefined;
+                const osvHasRanges = affected?.some(
+                    (a) => (a.ranges?.length ?? 0) > 0 || (a.versions?.length ?? 0) > 0
                 );
 
                 // When OSV has specific version data and both sources exist,
@@ -771,6 +707,43 @@ export class VulnerabilitiesService {
     }
 
     /**
+     * Increment OWASP Top 10 stats based on weakness information
+     */
+    private incrementOwaspStats(
+        stats: AnalysisStats,
+        weaknesses: { OWASPTop10Id: string }[] | undefined
+    ): void {
+        if (!weaknesses || weaknesses.length === 0) return;
+
+        for (const weakness of weaknesses) {
+            const statKey = OWASP_STATS_MAP[weakness.OWASPTop10Id];
+            if (statKey) {
+                stats[statKey] += 1;
+            }
+        }
+    }
+
+    /**
+     * Increment severity distribution stats based on severity value
+     */
+    private incrementSeverityStats(
+        stats: AnalysisStats,
+        severity: { Severity: number } | null | undefined
+    ): void {
+        if (severity === null || severity === undefined) {
+            stats.number_of_none += 1;
+            return;
+        }
+
+        const severityValue = severity.Severity;
+        if (isNoneSeverity(severityValue)) stats.number_of_none += 1;
+        else if (isLowSeverity(severityValue)) stats.number_of_low += 1;
+        else if (isMediumSeverity(severityValue)) stats.number_of_medium += 1;
+        else if (isHighSeverity(severityValue)) stats.number_of_high += 1;
+        else if (isCriticalSeverity(severityValue)) stats.number_of_critical += 1;
+    }
+
+    /**
      * Get blacklisted vulnerabilities from analysis configuration
      */
     private async getBlacklistedVulnerabilities(
@@ -786,16 +759,14 @@ export class VulnerabilitiesService {
             }
 
             // Extract vulnerability policies from vuln-finder configuration
-            const vulnFinderConfig = (analysis.config as any)['vuln-finder'];
-            if (
-                !vulnFinderConfig?.vulnerabilityPolicy ||
-                !Array.isArray(vulnFinderConfig.vulnerabilityPolicy)
-            ) {
+            const config = analysis.config as AnalysisConfig;
+            const vulnFinderConfig = config['vuln-finder'];
+            if (!vulnFinderConfig?.vulnerabilityPolicy || !Array.isArray(vulnFinderConfig.vulnerabilityPolicy)) {
                 return { vulnerabilities: new Set(), policies: new Map() };
             }
 
             const policyIds = vulnFinderConfig.vulnerabilityPolicy.filter(
-                (id: any) => typeof id === 'string' && id.trim()
+                (id): id is string => typeof id === 'string' && id.trim() !== ''
             );
             if (policyIds.length === 0) {
                 return { vulnerabilities: new Set(), policies: new Map() };
@@ -806,30 +777,12 @@ export class VulnerabilitiesService {
             const policyNames = new Map<string, string>();
 
             for (const policyId of policyIds) {
-                try {
-                    // Get policy directly from the unified policy table
-                    const policy = await this.vulnerabilityPolicyService.get(
-                        orgId,
-                        policyId,
-                        {
-                            userId: 'system',
-                            roles: [],
-                            activated: true
-                        } as unknown as AuthenticatedUser
-                    );
-                    if (policy?.content && Array.isArray(policy.content)) {
-                        for (const vuln of policy.content) {
-                            blacklistedVulns.add(vuln);
-                            policyNames.set(vuln, policy.name);
-                        }
-                    }
-                } catch (err) {
-                    // Skip invalid policy IDs
-                    console.warn(
-                        `Could not fetch vulnerability policy ${policyId}:`,
-                        (err as Error).message
-                    );
-                }
+                await this.fetchPolicyVulnerabilities(
+                    orgId,
+                    policyId,
+                    blacklistedVulns,
+                    policyNames
+                );
             }
 
             return { vulnerabilities: blacklistedVulns, policies: policyNames };
@@ -839,6 +792,37 @@ export class VulnerabilitiesService {
                 (err as Error).message
             );
             return { vulnerabilities: new Set(), policies: new Map() };
+        }
+    }
+
+    /**
+     * Fetch vulnerabilities from a single policy and add to the sets
+     */
+    private async fetchPolicyVulnerabilities(
+        orgId: string,
+        policyId: string,
+        blacklistedVulns: Set<string>,
+        policyNames: Map<string, string>
+    ): Promise<void> {
+        try {
+            // Get policy directly from the unified policy table
+            const policy = await this.vulnerabilityPolicyService.get(
+                orgId,
+                policyId,
+                { userId: 'system', roles: [], activated: true } as unknown as AuthenticatedUser
+            );
+            if (policy?.content && Array.isArray(policy.content)) {
+                for (const vuln of policy.content) {
+                    blacklistedVulns.add(vuln);
+                    policyNames.set(vuln, policy.name);
+                }
+            }
+        } catch (err) {
+            // Skip invalid policy IDs
+            console.warn(
+                `Could not fetch vulnerability policy ${policyId}:`,
+                (err as Error).message
+            );
         }
     }
 }

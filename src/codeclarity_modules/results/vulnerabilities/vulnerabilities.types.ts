@@ -1,6 +1,6 @@
 import type { CVSS2, CVSS3, CVSS31 } from '../../knowledge/cvss.types';
 import type { PatchInfo } from '../patching/patching2.types';
-import type { ParsedGitUrl } from '../sbom/sbom.types';
+import type { ParsedGitUrl, StatusError } from '../sbom/sbom.types';
 
 export interface VulnSourceInfo {
     name: string;
@@ -103,8 +103,8 @@ export enum Status {
 
 export interface AnalysisInfo {
     status: Status;
-    private_errors: any[];
-    public_errors: any[];
+    private_errors: StatusError[];
+    public_errors: StatusError[];
     analysis_start_time: string;
     analysis_end_time: string;
     analysis_delta_time: number;
@@ -188,18 +188,24 @@ export interface Vulnerability {
     Conflict: Conflict;
 }
 
+/** Vulnerability info containing VLAI scores from matching */
+export interface VulnInfo {
+    Vlai_score: string;
+    Vlai_confidence: number;
+}
+
 interface Vuln {
-    Vulnerability: any;
-    Dependency: any;
+    Vulnerability: string | VulnInfo | object | null;
+    Dependency: unknown;
     AffectedInfo: AffectedInfo[];
-    VulnerableEvidenceRange: any;
-    VulnerableEvidenceExact: any;
-    VulnerableEvidenceUniversal: any;
-    VulnerableEvidenceType: any;
-    Vulnerable: any;
-    ConflictFlag: any;
-    Severity: any;
-    SeverityType: any;
+    VulnerableEvidenceRange: unknown;
+    VulnerableEvidenceExact: unknown;
+    VulnerableEvidenceUniversal: unknown;
+    VulnerableEvidenceType: unknown;
+    Vulnerable: unknown;
+    ConflictFlag: unknown;
+    Severity: unknown;
+    SeverityType: unknown;
 }
 
 export interface VulnerabilityMerged {
@@ -261,7 +267,7 @@ interface Semver {
 }
 
 interface Exact {
-    CPEInfo: any;
+    CPEInfo: unknown;
     VersionSemver: Semver;
     VersionString: string;
 }
