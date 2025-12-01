@@ -4,7 +4,6 @@ import { VulnerabilityMerged } from 'src/codeclarity_modules/results/vulnerabili
 
 @Injectable()
 export class VulnerabilitiesSortService {
-    constructor() {}
 
     sort(
         vulnerabilities: VulnerabilityMerged[],
@@ -185,11 +184,16 @@ export class VulnerabilitiesSortService {
                 return 0;
             });
         } else {
-            sorted = vulnerabilities.sort((a: any, b: any) => {
-                if ((a[sortBySafe] ?? '') > (b[sortBySafe] ?? ''))
-                    return sortDirectionSafe === 'DESC' ? 1 : -1;
-                if ((a[sortBySafe] ?? '') < (b[sortBySafe] ?? ''))
-                    return sortDirectionSafe === 'DESC' ? -1 : 1;
+            sorted = vulnerabilities.sort((a: VulnerabilityMerged, b: VulnerabilityMerged) => {
+                const aRecord = a as unknown as Record<string, unknown>;
+                const bRecord = b as unknown as Record<string, unknown>;
+                const aRaw = aRecord[sortBySafe];
+                const bRaw = bRecord[sortBySafe];
+                // Only compare primitive values to avoid [object Object] stringification
+                const aVal = typeof aRaw === 'string' || typeof aRaw === 'number' ? aRaw : '';
+                const bVal = typeof bRaw === 'string' || typeof bRaw === 'number' ? bRaw : '';
+                if (aVal > bVal) return sortDirectionSafe === 'DESC' ? 1 : -1;
+                if (aVal < bVal) return sortDirectionSafe === 'DESC' ? -1 : 1;
                 return 0;
             });
         }
