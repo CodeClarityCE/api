@@ -1,4 +1,4 @@
-import type { LicenseInfo } from '../licenses2.types';
+import type { LicenseInfo } from '../licenses.types';
 import { filter } from './filter';
 
 describe('filter', () => {

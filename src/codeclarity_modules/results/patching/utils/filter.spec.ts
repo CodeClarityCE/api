@@ -1,4 +1,4 @@
-import type { PatchInfo, VulnerabilitySummary } from '../patching2.types';
+import type { PatchSummary, VulnerabilitySummary } from '../patching.types';
 import { filter } from './filter';
 
 describe('filter', () => {
@@ -7,7 +7,7 @@ describe('filter', () => {
         Weaknesses: ['CWE-79']
     });
 
-    const createMockPatchInfo = (overrides: Partial<PatchInfo> = {}): PatchInfo => ({
+    const createMockPatchSummary = (overrides: Partial<PatchSummary> = {}): PatchSummary => ({
         affected_deps: ['dep1', 'dep2'],
         affected_dep_name: 'test-package',
         occurance_count: 1,
@@ -24,8 +24,8 @@ describe('filter', () => {
     describe('basic functionality', () => {
         it('should return all patches when no filters are applied', () => {
             const patches = [
-                createMockPatchInfo({ affected_dep_name: 'package-a' }),
-                createMockPatchInfo({ affected_dep_name: 'package-b' })
+                createMockPatchSummary({ affected_dep_name: 'package-a' }),
+                createMockPatchSummary({ affected_dep_name: 'package-b' })
             ];
 
             const [filteredPatches, counts] = filter(patches, undefined, undefined);
@@ -53,15 +53,15 @@ describe('filter', () => {
 
     describe('search key filtering', () => {
         const patches = [
-            createMockPatchInfo({
+            createMockPatchSummary({
                 affected_dep_name: 'lodash',
                 vulnerability_id: 'CVE-2023-1001'
             }),
-            createMockPatchInfo({
+            createMockPatchSummary({
                 affected_dep_name: 'express',
                 vulnerability_id: 'CVE-2023-2002'
             }),
-            createMockPatchInfo({
+            createMockPatchSummary({
                 affected_dep_name: 'react',
                 vulnerability_id: 'CVE-2023-3003'
             })
@@ -118,8 +118,8 @@ describe('filter', () => {
     describe('null and undefined handling', () => {
         it('should handle null dependency name', () => {
             const patches = [
-                createMockPatchInfo({ affected_dep_name: null as any }),
-                createMockPatchInfo({ affected_dep_name: 'valid-package' })
+                createMockPatchSummary({ affected_dep_name: null as any }),
+                createMockPatchSummary({ affected_dep_name: 'valid-package' })
             ];
 
             const [filteredPatches] = filter(patches, 'valid', undefined);
@@ -130,8 +130,8 @@ describe('filter', () => {
 
         it('should handle null vulnerability ID', () => {
             const patches = [
-                createMockPatchInfo({ vulnerability_id: null as any }),
-                createMockPatchInfo({ vulnerability_id: 'CVE-2023-1234' })
+                createMockPatchSummary({ vulnerability_id: null as any }),
+                createMockPatchSummary({ vulnerability_id: 'CVE-2023-1234' })
             ];
 
             const [filteredPatches] = filter(patches, 'CVE', undefined);
@@ -141,7 +141,7 @@ describe('filter', () => {
         });
 
         it('should handle null searchKey', () => {
-            const patches = [createMockPatchInfo()];
+            const patches = [createMockPatchSummary()];
 
             const [filteredPatches] = filter(patches, null as any, undefined);
 
@@ -150,7 +150,7 @@ describe('filter', () => {
         });
 
         it('should handle null activeFilters', () => {
-            const patches = [createMockPatchInfo()];
+            const patches = [createMockPatchSummary()];
 
             const [filteredPatches] = filter(patches, undefined, null as any);
 
@@ -162,8 +162,8 @@ describe('filter', () => {
     describe('active filters (currently not implemented)', () => {
         it('should return all patches regardless of active filters', () => {
             const patches = [
-                createMockPatchInfo({ patch_type: 'full_patch' }),
-                createMockPatchInfo({ patch_type: 'partial_patch' })
+                createMockPatchSummary({ patch_type: 'full_patch' }),
+                createMockPatchSummary({ patch_type: 'partial_patch' })
             ];
 
             const [filteredPatches] = filter(patches, undefined, ['full_patch']);
@@ -173,7 +173,7 @@ describe('filter', () => {
         });
 
         it('should handle empty active filters array', () => {
-            const patches = [createMockPatchInfo()];
+            const patches = [createMockPatchSummary()];
 
             const [filteredPatches] = filter(patches, undefined, []);
 
@@ -184,7 +184,11 @@ describe('filter', () => {
 
     describe('counts calculation', () => {
         it('should calculate counts correctly when no active filters are applied', () => {
-            const patches = [createMockPatchInfo(), createMockPatchInfo(), createMockPatchInfo()];
+            const patches = [
+                createMockPatchSummary(),
+                createMockPatchSummary(),
+                createMockPatchSummary()
+            ];
 
             const [, counts] = filter(patches, undefined, undefined);
 
@@ -196,7 +200,7 @@ describe('filter', () => {
         });
 
         it('should include all filters in counts calculation (current implementation bug)', () => {
-            const patches = [createMockPatchInfo(), createMockPatchInfo()];
+            const patches = [createMockPatchSummary(), createMockPatchSummary()];
 
             const [, counts] = filter(patches, undefined, ['full_patch']);
 
@@ -211,9 +215,9 @@ describe('filter', () => {
 
         it('should calculate counts based on search-filtered results', () => {
             const patches = [
-                createMockPatchInfo({ affected_dep_name: 'lodash' }),
-                createMockPatchInfo({ affected_dep_name: 'express' }),
-                createMockPatchInfo({ affected_dep_name: 'react' })
+                createMockPatchSummary({ affected_dep_name: 'lodash' }),
+                createMockPatchSummary({ affected_dep_name: 'express' }),
+                createMockPatchSummary({ affected_dep_name: 'react' })
             ];
 
             const [, counts] = filter(patches, 'lodash', undefined);
@@ -226,7 +230,7 @@ describe('filter', () => {
         });
 
         it('should return zero counts when search yields no results', () => {
-            const patches = [createMockPatchInfo({ affected_dep_name: 'lodash' })];
+            const patches = [createMockPatchSummary({ affected_dep_name: 'lodash' })];
 
             const [, counts] = filter(patches, 'nonexistent', undefined);
 
@@ -241,11 +245,11 @@ describe('filter', () => {
     describe('combined filtering', () => {
         it('should apply search key filtering before active filters', () => {
             const patches = [
-                createMockPatchInfo({
+                createMockPatchSummary({
                     affected_dep_name: 'lodash',
                     patch_type: 'full_patch'
                 }),
-                createMockPatchInfo({
+                createMockPatchSummary({
                     affected_dep_name: 'express',
                     patch_type: 'partial_patch'
                 })
@@ -273,7 +277,7 @@ describe('filter', () => {
                     vulnerability_info: createMockVulnerabilitySummary(),
                     patches: {}
                 }
-            ] as PatchInfo[];
+            ] as PatchSummary[];
 
             const [filteredPatches] = filter(patches, 'test', undefined);
 
@@ -282,7 +286,7 @@ describe('filter', () => {
 
         it('should handle special characters in search key', () => {
             const patches = [
-                createMockPatchInfo({
+                createMockPatchSummary({
                     affected_dep_name: '@scope/package-name',
                     vulnerability_id: 'CVE-2023-1234'
                 })
@@ -296,7 +300,7 @@ describe('filter', () => {
 
         it('should handle very long search keys', () => {
             const longSearchKey = 'a'.repeat(1000);
-            const patches = [createMockPatchInfo()];
+            const patches = [createMockPatchSummary()];
 
             const [filteredPatches] = filter(patches, longSearchKey, undefined);
 

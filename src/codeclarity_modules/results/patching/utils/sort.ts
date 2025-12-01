@@ -1,10 +1,10 @@
-import type { PatchInfo } from 'src/codeclarity_modules/results/patching/patching2.types';
+import type { PatchSummary } from 'src/codeclarity_modules/results/patching/patching.types';
 
 export function sort(
-    patches: PatchInfo[],
+    patches: PatchSummary[],
     sortBy: string | undefined,
     _sortDirection: string | undefined
-): PatchInfo[] {
+): PatchSummary[] {
     // Defaults
     const ALLOWED_SORT_BY = ['patch_type'];
     const DEFAULT_SORT = 'patch_type';
@@ -36,7 +36,7 @@ export function sort(
     }
 
     // Sorting
-    let sorted: PatchInfo[] = [];
+    let sorted: PatchSummary[] = [];
 
     // function patchTypeToNumeric(patch_type: PatchType): number {
     //     if (patch_type === PatchType.Full) {
@@ -48,7 +48,7 @@ export function sort(
     // }
 
     if (sortBySafe === 'patch_type') {
-        sorted = patches.sort((_a: PatchInfo, _b: PatchInfo) => {
+        sorted = patches.sort((_a: PatchSummary, _b: PatchSummary) => {
             // if (patchTypeToNumeric(a.patch_type) > patchTypeToNumeric(b.patch_type))
             //     return sortDirectionSafe === 'DESC' ? -1 : 1;
             // if (patchTypeToNumeric(a.patch_type) < patchTypeToNumeric(b.patch_type))

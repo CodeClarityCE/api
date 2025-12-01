@@ -2,12 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import {
     Output as PatchesOutput,
-    Workspace
+    Workspace,
+    PatchingAnalysisStats,
+    newPatchingAnalysisStats
 } from 'src/codeclarity_modules/results/patching/patching.types';
-import {
-    AnalysisStats,
-    newAnalysisStats
-} from 'src/codeclarity_modules/results/patching/patching2.types';
 import {
     Output as SbomOutput,
     AnalysisInfo as SbomAnalysisInfo
@@ -100,7 +98,7 @@ export class PatchingService {
         analysisId: string,
         user: AuthenticatedUser,
         workspace: string
-    ): Promise<AnalysisStats> {
+    ): Promise<PatchingAnalysisStats> {
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
         // function getContinuousFromDiscreteCIA(metric: string): number {
@@ -121,7 +119,7 @@ export class PatchingService {
             throw new UnknownWorkspace();
         }
 
-        const stats: AnalysisStats = newAnalysisStats();
+        const stats: PatchingAnalysisStats = newPatchingAnalysisStats();
 
         return stats;
     }

@@ -18,19 +18,17 @@ import { Dependency } from 'src/codeclarity_modules/results/sbom/sbom.types';
 import {
     Vulnerability,
     AffectedInfo,
-    AffectedRange
-} from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
-import {
-    VulnerabilityDetails,
-    VulnerabilityInfo,
-    VulnerableVersionInfo,
-    DependencyInfo,
+    AffectedRange,
+    VulnerabilityDetailsReport,
+    VulnerabilityInfoReport,
+    VulnerableVersionInfoReport,
+    DependencyInfoReport,
     CommonConsequencesInfo,
-    WeaknessInfo,
+    WeaknessInfoReport,
     ReferenceInfo,
     SeverityInfo,
     OtherInfo
-} from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities2.types';
+} from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 
 // Type definitions for NVD affected data structure
 interface NVDAffectedSource {
@@ -417,10 +415,10 @@ abstract class BaseReportGenerator {
     async getVersionsStatusArray(
         affectedVersionsString: string,
         _affectedDependencyName: string
-    ): Promise<VulnerableVersionInfo[]> {
+    ): Promise<VulnerableVersionInfoReport[]> {
         // const versions = await this.#getVersions();
         const versions: Version[] = [];
-        const versionsStatusArray: VulnerableVersionInfo[] = [];
+        const versionsStatusArray: VulnerableVersionInfoReport[] = [];
         for (const version of versions) {
             if (satisfies(version.version, affectedVersionsString)) {
                 versionsStatusArray.push({
@@ -447,9 +445,11 @@ abstract class BaseReportGenerator {
         return this.patchesData;
     }
 
-    async getWeaknessData(): Promise<[WeaknessInfo[], Record<string, CommonConsequencesInfo[]>]> {
+    async getWeaknessData(): Promise<
+        [WeaknessInfoReport[], Record<string, CommonConsequencesInfo[]>]
+    > {
         const common_consequences: Record<string, CommonConsequencesInfo[]> = {};
-        const weakenessses: WeaknessInfo[] = [];
+        const weakenessses: WeaknessInfoReport[] = [];
 
         if (this.vulnsData.Weaknesses === null || this.vulnsData.Weaknesses === undefined)
             return [weakenessses, common_consequences];
@@ -488,8 +488,8 @@ abstract class BaseReportGenerator {
         return [weakenessses, common_consequences];
     }
 
-    async getDependencyData(): Promise<DependencyInfo> {
-        const dependencyInfo: DependencyInfo = {
+    async getDependencyData(): Promise<DependencyInfoReport> {
+        const dependencyInfo: DependencyInfoReport = {
             name: '',
             published: '',
             description: '',
@@ -1011,7 +1011,7 @@ export class OSVReportGenerator extends BaseReportGenerator {
         osvItem?: OSV,
         nvdItem?: NVD,
         friendsOfPhpItem?: FriendsOfPhp
-    ): Promise<VulnerabilityDetails> {
+    ): Promise<VulnerabilityDetailsReport> {
         // this.patchesData = patchesData;
         this.vulnsData = vulnsData;
         this.packageManager = packageManager;
@@ -1030,7 +1030,7 @@ export class OSVReportGenerator extends BaseReportGenerator {
         }
 
         /** Vulnerability Info */
-        const vulnInfo: VulnerabilityInfo = {
+        const vulnInfo: VulnerabilityInfoReport = {
             vulnerability_id: this.osvItem.cve ?? this.osvItem.osv_id,
             description: this.#cleanOsvDescription(this.osvItem.details),
             version_info: {
@@ -1083,7 +1083,7 @@ export class OSVReportGenerator extends BaseReportGenerator {
         vulnInfo.version_info.source_comparison = sourceComparison;
 
         /** Dependency Info */
-        let dependencyInfo: DependencyInfo | undefined;
+        let dependencyInfo: DependencyInfoReport | undefined;
         try {
             dependencyInfo = await this.getDependencyData();
 
@@ -1137,7 +1137,7 @@ export class OSVReportGenerator extends BaseReportGenerator {
         const owaspTop10Info = this.getOwaspTop10Info();
 
         /** Vulnerability Details */
-        const vulnDetails: VulnerabilityDetails = {
+        const vulnDetails: VulnerabilityDetailsReport = {
             vulnerability_info: vulnInfo,
             weaknesses: weakenessses,
             severities: severityInfo,
@@ -1239,7 +1239,7 @@ export class NVDReportGenerator extends BaseReportGenerator {
         osvItem?: OSV,
         nvdItem?: NVD,
         friendsOfPhpItem?: FriendsOfPhp
-    ): Promise<VulnerabilityDetails> {
+    ): Promise<VulnerabilityDetailsReport> {
         // this.patchesData = patchesData;
         this.vulnsData = vulnsData;
         this.packageManager = packageManager;
@@ -1258,7 +1258,7 @@ export class NVDReportGenerator extends BaseReportGenerator {
         }
 
         /** Vulnerability Info */
-        const vulnInfo: VulnerabilityInfo = {
+        const vulnInfo: VulnerabilityInfoReport = {
             vulnerability_id: this.nvdItem.nvd_id,
             description: '',
             version_info: {
@@ -1316,7 +1316,7 @@ export class NVDReportGenerator extends BaseReportGenerator {
         vulnInfo.version_info.source_comparison = sourceComparison;
 
         /** Dependency Info */
-        let dependencyInfo: DependencyInfo | undefined;
+        let dependencyInfo: DependencyInfoReport | undefined;
         try {
             dependencyInfo = await this.getDependencyData();
 
@@ -1369,7 +1369,7 @@ export class NVDReportGenerator extends BaseReportGenerator {
         const owaspTop10Info = this.getOwaspTop10Info();
 
         /** Vulnerability Details */
-        const vulnDetails: VulnerabilityDetails = {
+        const vulnDetails: VulnerabilityDetailsReport = {
             vulnerability_info: vulnInfo,
             weaknesses: weakenessses,
             severities: severityInfo,

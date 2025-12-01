@@ -22,12 +22,10 @@ import {
     Vulnerability,
     VulnerabilityMerged,
     ConflictFlag,
-    Output as VulnsOutput
+    Output as VulnsOutput,
+    VulnerabilityAnalysisStats,
+    newVulnerabilityAnalysisStats
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
-import {
-    AnalysisStats,
-    newAnalysisStats
-} from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities2.types';
 import { PaginatedResponse } from 'src/types/apiResponses.types';
 import { UnknownWorkspace } from 'src/types/error.types';
 import { AnalysisResultsService } from '../results.service';
@@ -59,7 +57,7 @@ interface AnalysisConfig {
 }
 
 /** Map OWASP category ID to stats property name */
-const OWASP_STATS_MAP: Record<string, keyof AnalysisStats> = {
+const OWASP_STATS_MAP: Record<string, keyof VulnerabilityAnalysisStats> = {
     '1345': 'number_of_owasp_top_10_2021_a1',
     '1346': 'number_of_owasp_top_10_2021_a2',
     '1347': 'number_of_owasp_top_10_2021_a3',
@@ -110,7 +108,7 @@ export class VulnerabilitiesService {
         user: AuthenticatedUser,
         workspace: string,
         ecosystem_filter?: string
-    ): Promise<AnalysisStats> {
+    ): Promise<VulnerabilityAnalysisStats> {
         // Check if the user is allowed to view this analysis result
         await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
 
@@ -150,8 +148,8 @@ export class VulnerabilitiesService {
             findingsArrayPrevious = [];
         }
 
-        const wBeforeStats: AnalysisStats = newAnalysisStats();
-        const wStats: AnalysisStats = newAnalysisStats();
+        const wBeforeStats: VulnerabilityAnalysisStats = newVulnerabilityAnalysisStats();
+        const wStats: VulnerabilityAnalysisStats = newVulnerabilityAnalysisStats();
 
         let sumSeverity = 0;
         let countseverity = 0;
@@ -709,7 +707,7 @@ export class VulnerabilitiesService {
      * Increment OWASP Top 10 stats based on weakness information
      */
     private incrementOwaspStats(
-        stats: AnalysisStats,
+        stats: VulnerabilityAnalysisStats,
         weaknesses: { OWASPTop10Id: string }[] | undefined
     ): void {
         if (!weaknesses || weaknesses.length === 0) return;
@@ -726,7 +724,7 @@ export class VulnerabilitiesService {
      * Increment severity distribution stats based on severity value
      */
     private incrementSeverityStats(
-        stats: AnalysisStats,
+        stats: VulnerabilityAnalysisStats,
         severity: { Severity: number } | null | undefined
     ): void {
         if (severity === null || severity === undefined) {

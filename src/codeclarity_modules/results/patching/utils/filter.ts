@@ -1,10 +1,10 @@
-import type { PatchInfo } from 'src/codeclarity_modules/results/patching/patching2.types';
+import type { PatchSummary } from 'src/codeclarity_modules/results/patching/patching.types';
 
 export function filter(
-    patches: PatchInfo[],
+    patches: PatchSummary[],
     searchKey: string | undefined,
     activeFilters: string[] | undefined
-): [PatchInfo[], Record<string, number>] {
+): [PatchSummary[], Record<string, number>] {
     // Validation of input
     let searchkeySafe: string;
     let activeFiltersSafe: string[];
@@ -22,7 +22,7 @@ export function filter(
         activeFiltersSafe = activeFilters;
     }
 
-    function filterBySearchKey(patches: PatchInfo[]): PatchInfo[] {
+    function filterBySearchKey(patches: PatchSummary[]): PatchSummary[] {
         if (searchkeySafe === '') {
             return patches;
         }
@@ -44,7 +44,7 @@ export function filter(
         return toReturn;
     }
 
-    function filterByOptions(patches: PatchInfo[], _filters: string[]): PatchInfo[] {
+    function filterByOptions(patches: PatchSummary[], _filters: string[]): PatchSummary[] {
         const toReturn = [];
 
         for (const patch of patches) {

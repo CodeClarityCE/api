@@ -1,4 +1,4 @@
-import type { LicenseInfo } from 'src/codeclarity_modules/results/licenses/licenses2.types';
+import type { LicenseInfo } from 'src/codeclarity_modules/results/licenses/licenses.types';
 
 function sort(
     licenseInfos: LicenseInfo[],

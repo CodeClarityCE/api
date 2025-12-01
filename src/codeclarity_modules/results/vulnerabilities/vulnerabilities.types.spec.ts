@@ -1,22 +1,22 @@
 import {
-    newAnalysisStats,
+    newVulnerabilityAnalysisStats,
     type VulnSourceInfo,
-    type VersionInfo,
-    type VulnerableVersionInfo,
-    type DependencyInfo,
+    type VersionInfoReport,
+    type VulnerableVersionInfoReport,
+    type DependencyInfoReport,
     type PackageManagerLink,
     type SeverityInfo,
-    type WeaknessInfo,
+    type WeaknessInfoReport,
     type CommonConsequencesInfo,
     type ReferenceInfo,
     type OtherInfo,
-    type VulnerabilityDetails
-} from './vulnerabilities2.types';
+    type VulnerabilityDetailsReport
+} from './vulnerabilities.types';
 
-describe('vulnerabilities2.types', () => {
-    describe('newAnalysisStats', () => {
-        it('should return an AnalysisStats object with all fields initialized to 0', () => {
-            const stats = newAnalysisStats();
+describe('vulnerabilities.types (report generation)', () => {
+    describe('newVulnerabilityAnalysisStats', () => {
+        it('should return a VulnerabilityAnalysisStats object with all fields initialized to 0', () => {
+            const stats = newVulnerabilityAnalysisStats();
 
             expect(stats).toBeDefined();
             expect(stats.number_of_issues).toBe(0);
@@ -29,7 +29,7 @@ describe('vulnerabilities2.types', () => {
         });
 
         it('should initialize all OWASP Top 10 counters to 0', () => {
-            const stats = newAnalysisStats();
+            const stats = newVulnerabilityAnalysisStats();
 
             expect(stats.number_of_owasp_top_10_2021_a1).toBe(0);
             expect(stats.number_of_owasp_top_10_2021_a2).toBe(0);
@@ -44,7 +44,7 @@ describe('vulnerabilities2.types', () => {
         });
 
         it('should initialize all severity level counters to 0', () => {
-            const stats = newAnalysisStats();
+            const stats = newVulnerabilityAnalysisStats();
 
             expect(stats.number_of_critical).toBe(0);
             expect(stats.number_of_high).toBe(0);
@@ -54,7 +54,7 @@ describe('vulnerabilities2.types', () => {
         });
 
         it('should initialize all impact metrics to 0', () => {
-            const stats = newAnalysisStats();
+            const stats = newVulnerabilityAnalysisStats();
 
             expect(stats.mean_confidentiality_impact).toBe(0);
             expect(stats.mean_integrity_impact).toBe(0);
@@ -62,7 +62,7 @@ describe('vulnerabilities2.types', () => {
         });
 
         it('should initialize all diff counters to 0', () => {
-            const stats = newAnalysisStats();
+            const stats = newVulnerabilityAnalysisStats();
 
             expect(stats.number_of_vulnerabilities_diff).toBe(0);
             expect(stats.number_of_vulnerable_dependencies_diff).toBe(0);
@@ -94,8 +94,8 @@ describe('vulnerabilities2.types', () => {
         });
 
         it('should return a new instance on each call', () => {
-            const stats1 = newAnalysisStats();
-            const stats2 = newAnalysisStats();
+            const stats1 = newVulnerabilityAnalysisStats();
+            const stats2 = newVulnerabilityAnalysisStats();
 
             expect(stats1).not.toBe(stats2);
             expect(stats1).toEqual(stats2);
@@ -115,9 +115,9 @@ describe('vulnerabilities2.types', () => {
             });
         });
 
-        describe('VulnerableVersionInfo', () => {
-            it('should accept valid VulnerableVersionInfo objects', () => {
-                const versionInfo: VulnerableVersionInfo = {
+        describe('VulnerableVersionInfoReport', () => {
+            it('should accept valid VulnerableVersionInfoReport objects', () => {
+                const versionInfo: VulnerableVersionInfoReport = {
                     version: '1.0.0',
                     status: 'vulnerable'
                 };
@@ -127,9 +127,9 @@ describe('vulnerabilities2.types', () => {
             });
         });
 
-        describe('VersionInfo', () => {
-            it('should accept valid VersionInfo objects', () => {
-                const versionInfo: VersionInfo = {
+        describe('VersionInfoReport', () => {
+            it('should accept valid VersionInfoReport objects', () => {
+                const versionInfo: VersionInfoReport = {
                     affected_versions_string: '>=1.0.0 <2.0.0',
                     patched_versions_string: '>=2.0.0',
                     versions: [
@@ -156,9 +156,9 @@ describe('vulnerabilities2.types', () => {
             });
         });
 
-        describe('DependencyInfo', () => {
-            it('should accept valid DependencyInfo objects with all fields', () => {
-                const depInfo: DependencyInfo = {
+        describe('DependencyInfoReport', () => {
+            it('should accept valid DependencyInfoReport objects with all fields', () => {
+                const depInfo: DependencyInfoReport = {
                     name: 'example-package',
                     published: '2023-01-01T00:00:00Z',
                     description: 'An example package',
@@ -187,8 +187,8 @@ describe('vulnerabilities2.types', () => {
                 expect(depInfo.github_link?.user).toBe('example');
             });
 
-            it('should accept valid DependencyInfo objects with minimal fields', () => {
-                const depInfo: DependencyInfo = {
+            it('should accept valid DependencyInfoReport objects with minimal fields', () => {
+                const depInfo: DependencyInfoReport = {
                     name: 'minimal-package',
                     published: '2023-01-01T00:00:00Z',
                     description: 'A minimal package',
@@ -228,9 +228,9 @@ describe('vulnerabilities2.types', () => {
             });
         });
 
-        describe('WeaknessInfo', () => {
-            it('should accept valid WeaknessInfo objects', () => {
-                const weakness: WeaknessInfo = {
+        describe('WeaknessInfoReport', () => {
+            it('should accept valid WeaknessInfoReport objects', () => {
+                const weakness: WeaknessInfoReport = {
                     id: 'CWE-79',
                     name: 'Cross-site Scripting',
                     description: 'Improper neutralization of input during web page generation'
@@ -276,9 +276,9 @@ describe('vulnerabilities2.types', () => {
             });
         });
 
-        describe('VulnerabilityDetails', () => {
-            it('should accept valid VulnerabilityDetails objects', () => {
-                const vulnDetails: VulnerabilityDetails = {
+        describe('VulnerabilityDetailsReport', () => {
+            it('should accept valid VulnerabilityDetailsReport objects', () => {
+                const vulnDetails: VulnerabilityDetailsReport = {
                     vulnerability_info: {
                         vulnerability_id: 'CVE-2023-1234',
                         description: 'Test vulnerability',
@@ -373,8 +373,8 @@ describe('vulnerabilities2.types', () => {
                 expect(vulnDetails.location).toContain('/path/to/vulnerable/file.js');
             });
 
-            it('should accept VulnerabilityDetails with null owasp_top_10', () => {
-                const vulnDetails: VulnerabilityDetails = {
+            it('should accept VulnerabilityDetailsReport with null owasp_top_10', () => {
+                const vulnDetails: VulnerabilityDetailsReport = {
                     vulnerability_info: {
                         vulnerability_id: 'CVE-2023-1234',
                         description: 'Test vulnerability',

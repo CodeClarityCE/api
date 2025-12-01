@@ -2,11 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { LicenseRepository } from 'src/codeclarity_modules/knowledge/license/license.repository';
 import { Version } from 'src/codeclarity_modules/knowledge/package/package.entity';
-import { Output as LicensesOutput } from 'src/codeclarity_modules/results/licenses/licenses.types';
 import {
+    Output as LicensesOutput,
     LicenseInfo,
     DepShortInfo
-} from 'src/codeclarity_modules/results/licenses/licenses2.types';
+} from 'src/codeclarity_modules/results/licenses/licenses.types';
 import { filter } from 'src/codeclarity_modules/results/licenses/utils/filter';
 import { sort } from 'src/codeclarity_modules/results/licenses/utils/sort';
 import { Output as SbomOutput } from 'src/codeclarity_modules/results/sbom/sbom.types';
