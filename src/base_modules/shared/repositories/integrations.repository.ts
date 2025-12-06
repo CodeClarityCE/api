@@ -124,9 +124,7 @@ export class IntegrationsRepository {
         integration.organizations = [];
         integration.users = [];
 
-        const filtered = integration.owner.integrations?.filter(
-            (int) => int.id !== integrationId
-        );
+        const filtered = integration.owner.integrations?.filter((int) => int.id !== integrationId);
         if (filtered !== undefined) {
             integration.owner.integrations = filtered;
         }

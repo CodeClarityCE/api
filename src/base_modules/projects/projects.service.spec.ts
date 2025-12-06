@@ -1,4 +1,10 @@
 import { Test, type TestingModule } from '@nestjs/testing';
+import {
+    MembershipsRepository,
+    OrganizationsRepository,
+    ProjectsRepository,
+    UsersRepository
+} from 'src/base_modules/shared/repositories';
 import { AnalysisResultsRepository } from '../../codeclarity_modules/results/results.repository';
 import { EntityNotFound, IntegrationNotSupported, NotAuthorized } from '../../types/error.types';
 import { SortDirection } from '../../types/sort.types';
@@ -11,18 +17,14 @@ import type { IntegrationProvider } from '../integrations/integration.types';
 import { IntegrationsRepository } from '../integrations/integrations.repository';
 import { OrganizationLoggerService } from '../organizations/log/organizationLogger.service';
 import { MemberRole } from '../organizations/memberships/orgMembership.types';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
-import { UsersRepository } from '../users/users.repository';
 import type { Project } from './project.entity';
 import type { ProjectImportBody } from './project.types';
 import { ProjectMemberService } from './projectMember.service';
-import { ProjectsRepository } from './projects.repository';
 import { ProjectService, AllowedOrderByGetProjects } from './projects.service';
 
 describe('ProjectService', () => {
     let service: ProjectService;
-    let projectMemberService: jest.Mocked<ProjectMemberService>;
-    let organizationsRepository: jest.Mocked<OrganizationsRepository>;
+    let membershipsRepository: MembershipsRepository;
     let integrationsRepository: jest.Mocked<IntegrationsRepository>;
     let projectsRepository: jest.Mocked<ProjectsRepository>;
 
@@ -64,10 +66,16 @@ describe('ProjectService', () => {
                 {
                     provide: OrganizationsRepository,
                     useValue: {
-                        hasRequiredRole: jest.fn().mockResolvedValue(undefined),
                         getOrganizationById: jest.fn(),
                         getMembershipRole: jest.fn(),
                         saveOrganization: jest.fn()
+                    }
+                },
+                {
+                    provide: MembershipsRepository,
+                    useValue: {
+                        hasRequiredRole: jest.fn().mockResolvedValue(undefined),
+                        getMembershipRole: jest.fn()
                     }
                 },
                 {
@@ -103,15 +111,16 @@ describe('ProjectService', () => {
         }).compile();
 
         service = module.get<ProjectService>(ProjectService);
-        projectMemberService = module.get(ProjectMemberService);
-        organizationsRepository = module.get(OrganizationsRepository);
+        membershipsRepository = module.get<MembershipsRepository>(MembershipsRepository);
         integrationsRepository = module.get(IntegrationsRepository);
         projectsRepository = module.get(ProjectsRepository);
     });
 
     describe('import', () => {
         it('should throw NotAuthorized when user lacks permission', async () => {
-            organizationsRepository.hasRequiredRole.mockRejectedValue(new NotAuthorized());
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockRejectedValue(
+                new NotAuthorized()
+            );
             const projectImportBody: ProjectImportBody = {
                 name: 'Test Project',
                 description: 'A test project',
@@ -125,7 +134,7 @@ describe('ProjectService', () => {
         });
 
         it('should throw EntityNotFound when integration not found', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
             integrationsRepository.getIntegrationByIdAndOrganizationAndUser.mockRejectedValue(
                 new EntityNotFound()
             );
@@ -142,7 +151,7 @@ describe('ProjectService', () => {
         });
 
         it('should throw IntegrationNotSupported for unsupported integration', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
             integrationsRepository.getIntegrationByIdAndOrganizationAndUser.mockResolvedValue({
                 integration_provider: 'UNSUPPORTED' as IntegrationProvider
             } as any);
@@ -161,7 +170,9 @@ describe('ProjectService', () => {
 
     describe('get', () => {
         it('should throw NotAuthorized when user lacks permission', async () => {
-            organizationsRepository.hasRequiredRole.mockRejectedValue(new NotAuthorized());
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockRejectedValue(
+                new NotAuthorized()
+            );
 
             await expect(
                 service.get(mockOrgId, mockProjectId, mockAuthenticatedUser)
@@ -169,8 +180,8 @@ describe('ProjectService', () => {
         });
 
         it('should throw EntityNotFound when project does not belong to organization', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
-            projectMemberService.doesProjectBelongToOrg.mockRejectedValue(new EntityNotFound());
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
+            projectsRepository.doesProjectBelongToOrg.mockRejectedValue(new EntityNotFound());
 
             await expect(
                 service.get(mockOrgId, mockProjectId, mockAuthenticatedUser)
@@ -178,8 +189,8 @@ describe('ProjectService', () => {
         });
 
         it('should throw EntityNotFound when project does not exist', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
-            projectMemberService.doesProjectBelongToOrg.mockResolvedValue(undefined);
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
+            projectsRepository.doesProjectBelongToOrg.mockResolvedValue(undefined);
             projectsRepository.getProjectById.mockRejectedValue(new EntityNotFound());
 
             await expect(
@@ -189,19 +200,19 @@ describe('ProjectService', () => {
 
         it('should return project successfully', async () => {
             const mockProject = { id: mockProjectId, name: 'Test Project' } as Project;
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
-            projectMemberService.doesProjectBelongToOrg.mockResolvedValue(undefined);
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
+            projectsRepository.doesProjectBelongToOrg.mockResolvedValue(undefined);
             projectsRepository.getProjectById.mockResolvedValue(mockProject);
 
             const result = await service.get(mockOrgId, mockProjectId, mockAuthenticatedUser);
 
             expect(result).toBe(mockProject);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 mockOrgId,
                 'test-user-id',
                 MemberRole.USER
             );
-            expect(projectMemberService.doesProjectBelongToOrg).toHaveBeenCalledWith(
+            expect(projectsRepository.doesProjectBelongToOrg).toHaveBeenCalledWith(
                 mockProjectId,
                 mockOrgId
             );
@@ -214,7 +225,9 @@ describe('ProjectService', () => {
 
     describe('getMany', () => {
         it('should throw NotAuthorized when user lacks permission', async () => {
-            organizationsRepository.hasRequiredRole.mockRejectedValue(new NotAuthorized());
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockRejectedValue(
+                new NotAuthorized()
+            );
 
             await expect(
                 service.getMany(
@@ -237,7 +250,7 @@ describe('ProjectService', () => {
                 filter_count: {}
             };
 
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
             projectsRepository.getManyProjects.mockResolvedValue(mockPaginatedResponse);
 
             const result = await service.getMany(
@@ -250,7 +263,7 @@ describe('ProjectService', () => {
             );
 
             expect(result).toBe(mockPaginatedResponse);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 mockOrgId,
                 'test-user-id',
                 MemberRole.USER
@@ -266,7 +279,9 @@ describe('ProjectService', () => {
 
     describe('delete', () => {
         it('should throw NotAuthorized when user lacks permission', async () => {
-            organizationsRepository.hasRequiredRole.mockRejectedValue(new NotAuthorized());
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockRejectedValue(
+                new NotAuthorized()
+            );
 
             await expect(
                 service.delete(mockOrgId, mockProjectId, mockAuthenticatedUser)
@@ -274,7 +289,7 @@ describe('ProjectService', () => {
         });
 
         it('should throw EntityNotFound when project does not belong to organization', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
             projectsRepository.doesProjectBelongToOrg.mockRejectedValue(new EntityNotFound());
 
             await expect(
@@ -283,9 +298,9 @@ describe('ProjectService', () => {
         });
 
         it('should throw EntityNotFound when membership not found', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
             projectsRepository.doesProjectBelongToOrg.mockResolvedValue(undefined);
-            organizationsRepository.getMembershipRole.mockResolvedValue(null as any);
+            jest.spyOn(membershipsRepository, 'getMembershipRole').mockResolvedValue(null as any);
 
             await expect(
                 service.delete(mockOrgId, mockProjectId, mockAuthenticatedUser)
@@ -293,9 +308,9 @@ describe('ProjectService', () => {
         });
 
         it('should throw NotAuthorized when user is not authorized to delete', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
             projectsRepository.doesProjectBelongToOrg.mockResolvedValue(undefined);
-            organizationsRepository.getMembershipRole.mockResolvedValue({
+            jest.spyOn(membershipsRepository, 'getMembershipRole').mockResolvedValue({
                 role: MemberRole.USER
             } as any);
             projectsRepository.getProjectById.mockResolvedValue({

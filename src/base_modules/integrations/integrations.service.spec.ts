@@ -1,14 +1,18 @@
 import { Test, type TestingModule } from '@nestjs/testing';
+import {
+    MembershipsRepository,
+    OrganizationsRepository
+} from 'src/base_modules/shared/repositories';
 import { NotAuthorized, NotAMember } from 'src/types/error.types';
 import { AuthenticatedUser, ROLE } from '../auth/auth.types';
 import { MemberRole } from '../organizations/memberships/orgMembership.types';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { IntegrationType, IntegrationProvider, type Integration } from './integrations.entity';
 import { IntegrationsRepository } from './integrations.repository';
 import { IntegrationsService } from './integrations.service';
 
 describe('IntegrationsService', () => {
     let service: IntegrationsService;
+    let membershipsRepository: MembershipsRepository;
     let organizationsRepository: OrganizationsRepository;
     let integrationsRepository: IntegrationsRepository;
 
@@ -50,9 +54,14 @@ describe('IntegrationsService', () => {
             providers: [
                 IntegrationsService,
                 {
+                    provide: MembershipsRepository,
+                    useValue: {
+                        hasRequiredRole: jest.fn()
+                    }
+                },
+                {
                     provide: OrganizationsRepository,
                     useValue: {
-                        hasRequiredRole: jest.fn(),
                         doesIntegrationBelongToOrg: jest.fn()
                     }
                 },
@@ -67,6 +76,7 @@ describe('IntegrationsService', () => {
         }).compile();
 
         service = module.get<IntegrationsService>(IntegrationsService);
+        membershipsRepository = module.get<MembershipsRepository>(MembershipsRepository);
         organizationsRepository = module.get<OrganizationsRepository>(OrganizationsRepository);
         integrationsRepository = module.get<IntegrationsRepository>(IntegrationsRepository);
 
@@ -78,7 +88,7 @@ describe('IntegrationsService', () => {
         it('should retrieve VCS integrations successfully', async () => {
             // Arrange
             const paginationConfig = { entriesPerPage: 10, currentPage: 0 };
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(integrationsRepository, 'getVCSIntegrations').mockResolvedValue(
                 mockPaginatedIntegrations
             );
@@ -88,7 +98,7 @@ describe('IntegrationsService', () => {
 
             // Assert
             expect(result).toEqual(mockPaginatedIntegrations);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.USER
@@ -104,7 +114,7 @@ describe('IntegrationsService', () => {
             // Arrange
             const paginationConfig = { entriesPerPage: 10, currentPage: 0 };
             const unauthorizedError = new NotAuthorized();
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockRejectedValue(
                 unauthorizedError
             );
 
@@ -112,7 +122,7 @@ describe('IntegrationsService', () => {
             await expect(
                 service.getVCSIntegrations('org-123', paginationConfig, mockUser)
             ).rejects.toThrow(unauthorizedError);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.USER
@@ -122,7 +132,7 @@ describe('IntegrationsService', () => {
         it('should apply pagination limits correctly', async () => {
             // Arrange
             const paginationConfig = { entriesPerPage: 200 }; // Over limit
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(integrationsRepository, 'getVCSIntegrations').mockResolvedValue(
                 mockPaginatedIntegrations
             );
@@ -141,7 +151,7 @@ describe('IntegrationsService', () => {
         it('should use default pagination when not provided', async () => {
             // Arrange
             const paginationConfig = {};
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(integrationsRepository, 'getVCSIntegrations').mockResolvedValue(
                 mockPaginatedIntegrations
             );
@@ -160,7 +170,7 @@ describe('IntegrationsService', () => {
         it('should handle custom pagination settings', async () => {
             // Arrange
             const paginationConfig = { entriesPerPage: 25 };
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(integrationsRepository, 'getVCSIntegrations').mockResolvedValue(
                 mockPaginatedIntegrations
             );
@@ -180,7 +190,7 @@ describe('IntegrationsService', () => {
             // Note: The current implementation hardcodes currentPage = 0
             // Arrange
             const paginationConfig = { entriesPerPage: 10, currentPage: 5 }; // currentPage is ignored
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(integrationsRepository, 'getVCSIntegrations').mockResolvedValue(
                 mockPaginatedIntegrations
             );
@@ -203,7 +213,7 @@ describe('IntegrationsService', () => {
             jest.spyOn(organizationsRepository, 'doesIntegrationBelongToOrg').mockResolvedValue(
                 true
             );
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(integrationsRepository, 'getIntegrationById').mockResolvedValue(
                 mockIntegration
             );
@@ -217,7 +227,7 @@ describe('IntegrationsService', () => {
                 'integration-123',
                 'org-123'
             );
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.USER
@@ -241,7 +251,7 @@ describe('IntegrationsService', () => {
                 'integration-123',
                 'org-123'
             );
-            expect(organizationsRepository.hasRequiredRole).not.toHaveBeenCalled();
+            expect(membershipsRepository.hasRequiredRole).not.toHaveBeenCalled();
             expect(integrationsRepository.getIntegrationById).not.toHaveBeenCalled();
         });
 
@@ -251,7 +261,7 @@ describe('IntegrationsService', () => {
                 true
             );
             const unauthorizedError = new NotAuthorized();
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockRejectedValue(
                 unauthorizedError
             );
 
@@ -259,7 +269,7 @@ describe('IntegrationsService', () => {
             await expect(
                 service.getIntegration('integration-123', 'org-123', mockUser)
             ).rejects.toThrow(unauthorizedError);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.USER
@@ -271,7 +281,7 @@ describe('IntegrationsService', () => {
             jest.spyOn(organizationsRepository, 'doesIntegrationBelongToOrg').mockResolvedValue(
                 false
             );
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
 
             // Act & Assert
             await expect(
@@ -283,14 +293,14 @@ describe('IntegrationsService', () => {
                 'integration-123',
                 'org-123'
             );
-            expect(organizationsRepository.hasRequiredRole).not.toHaveBeenCalled();
+            expect(membershipsRepository.hasRequiredRole).not.toHaveBeenCalled();
         });
     });
 
     describe('removeIntegration', () => {
         it('should throw not implemented error for valid requests', async () => {
             // Arrange
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(organizationsRepository, 'doesIntegrationBelongToOrg').mockResolvedValue(
                 true
             );
@@ -299,7 +309,7 @@ describe('IntegrationsService', () => {
             await expect(
                 service.removeIntegration('org-123', mockUser, 'integration-123')
             ).rejects.toThrow('Method not implemented.');
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.ADMIN
@@ -313,7 +323,7 @@ describe('IntegrationsService', () => {
         it('should require ADMIN role for removal', async () => {
             // Arrange
             const unauthorizedError = new NotAuthorized();
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockRejectedValue(
                 unauthorizedError
             );
 
@@ -321,7 +331,7 @@ describe('IntegrationsService', () => {
             await expect(
                 service.removeIntegration('org-123', mockUser, 'integration-123')
             ).rejects.toThrow(unauthorizedError);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.ADMIN
@@ -330,7 +340,7 @@ describe('IntegrationsService', () => {
 
         it('should throw NotAuthorized when integration does not belong to org', async () => {
             // Arrange
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(organizationsRepository, 'doesIntegrationBelongToOrg').mockResolvedValue(
                 false
             );
@@ -348,15 +358,13 @@ describe('IntegrationsService', () => {
         it('should handle NotAMember error by converting to NotAuthorized', async () => {
             // Arrange
             const notAMemberError = new NotAMember();
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(
-                notAMemberError
-            );
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockRejectedValue(notAMemberError);
 
             // Act & Assert
             await expect(
                 service.removeIntegration('org-123', mockUser, 'integration-123')
             ).rejects.toThrow(NotAuthorized);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.ADMIN
@@ -366,7 +374,7 @@ describe('IntegrationsService', () => {
         it('should re-throw other errors without modification', async () => {
             // Arrange
             const otherError = new Error('Database connection failed');
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(otherError);
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockRejectedValue(otherError);
 
             // Act & Assert
             await expect(
@@ -376,7 +384,7 @@ describe('IntegrationsService', () => {
 
         it('should validate both role and integration ownership', async () => {
             // Arrange
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(organizationsRepository, 'doesIntegrationBelongToOrg').mockResolvedValue(
                 false
             );
@@ -387,7 +395,7 @@ describe('IntegrationsService', () => {
             ).rejects.toThrow(NotAuthorized);
 
             // Both checks should be called
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.ADMIN

@@ -245,11 +245,7 @@ export class ProjectService {
      */
     async get(organizationId: string, id: string, user: AuthenticatedUser): Promise<Project> {
         // (1) Every member of an org can retrieve a project
-        await this.repos.memberships.hasRequiredRole(
-            organizationId,
-            user.userId,
-            MemberRole.USER
-        );
+        await this.repos.memberships.hasRequiredRole(organizationId, user.userId, MemberRole.USER);
 
         // (2) Check if project belongs to org
         await this.repos.projects.doesProjectBelongToOrg(id, organizationId);

@@ -1,4 +1,10 @@
 import { Test, type TestingModule } from '@nestjs/testing';
+import {
+    MembershipsRepository,
+    OrganizationsRepository,
+    ProjectsRepository,
+    UsersRepository
+} from 'src/base_modules/shared/repositories';
 import { NotAuthorized } from 'src/types/error.types';
 import * as crypto from 'src/utils/crypto';
 import {
@@ -15,14 +21,12 @@ import {
     MemberRole
 } from '../organizations/memberships/organization.memberships.entity';
 import type { Organization } from '../organizations/organization.entity';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
 import type { UserCreateBody, UserPasswordPatchBody, UserPatchBody } from './user.types';
 import type { User } from './users.entity';
 import {
     CannotPerformActionOnSocialAccount,
     FailedToSendAccountRegistrationVerificationEmail
 } from './users.errors';
-import { UsersRepository } from './users.repository';
 import { UsersService } from './users.service';
 
 describe('UsersService', () => {
@@ -30,6 +34,7 @@ describe('UsersService', () => {
     let emailService: EmailService;
     let authService: AuthService;
     let organizationsRepository: OrganizationsRepository;
+    let membershipsRepository: MembershipsRepository;
     let emailRepository: EmailRepository;
     let usersRepository: UsersRepository;
 
@@ -141,10 +146,23 @@ describe('UsersService', () => {
                 {
                     provide: OrganizationsRepository,
                     useValue: {
-                        hasRequiredRole: jest.fn(),
                         getOrganizationById: jest.fn(),
                         saveOrganization: jest.fn(),
                         saveMembership: jest.fn()
+                    }
+                },
+                {
+                    provide: MembershipsRepository,
+                    useValue: {
+                        hasRequiredRole: jest.fn(),
+                        removeUserMemberships: jest.fn().mockResolvedValue(undefined),
+                        saveMembership: jest.fn().mockResolvedValue({} as OrganizationMemberships)
+                    }
+                },
+                {
+                    provide: ProjectsRepository,
+                    useValue: {
+                        deleteUserProjects: jest.fn().mockResolvedValue(undefined)
                     }
                 },
                 {
@@ -172,6 +190,7 @@ describe('UsersService', () => {
         emailService = module.get<EmailService>(EmailService);
         authService = module.get<AuthService>(AuthService);
         organizationsRepository = module.get<OrganizationsRepository>(OrganizationsRepository);
+        membershipsRepository = module.get<MembershipsRepository>(MembershipsRepository);
         emailRepository = module.get<EmailRepository>(EmailRepository);
         usersRepository = module.get<UsersRepository>(UsersRepository);
     });
@@ -202,7 +221,7 @@ describe('UsersService', () => {
     describe('setDefaultOrg', () => {
         it('should set default organization successfully', async () => {
             const orgWithDefault = { ...mockOrganization, default: [] };
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
             jest.spyOn(usersRepository, 'getUserById').mockResolvedValue(mockUser);
             jest.spyOn(organizationsRepository, 'getOrganizationById').mockResolvedValue(
                 orgWithDefault
@@ -213,7 +232,7 @@ describe('UsersService', () => {
 
             await service.setDefaultOrg('test-user-id', 'test-org-id', mockAuthenticatedUser);
 
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'test-org-id',
                 'test-user-id',
                 MemberRole.USER
@@ -231,7 +250,7 @@ describe('UsersService', () => {
         });
 
         it('should throw when user does not have required role', async () => {
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockRejectedValue(
                 new NotAuthorized()
             );
 
@@ -257,7 +276,7 @@ describe('UsersService', () => {
                 return Promise.resolve(user);
             });
 
-            jest.spyOn(organizationsRepository, 'saveMembership').mockResolvedValue(
+            jest.spyOn(membershipsRepository, 'saveMembership').mockResolvedValue(
                 {} as OrganizationMemberships
             );
             jest.spyOn(service, 'sendUserRegistrationVerificationEmail').mockResolvedValue(
@@ -270,7 +289,7 @@ describe('UsersService', () => {
             expect(authService.hashPassword).toHaveBeenCalledWith('password123');
             expect(organizationsRepository.saveOrganization).toHaveBeenCalledTimes(2);
             expect(usersRepository.saveUser).toHaveBeenCalled();
-            expect(organizationsRepository.saveMembership).toHaveBeenCalled();
+            expect(membershipsRepository.saveMembership).toHaveBeenCalled();
             expect(service.sendUserRegistrationVerificationEmail).toHaveBeenCalledWith(
                 'test@example.com'
             );
@@ -300,7 +319,7 @@ describe('UsersService', () => {
                 return Promise.resolve(user);
             });
 
-            jest.spyOn(organizationsRepository, 'saveMembership').mockResolvedValue(
+            jest.spyOn(membershipsRepository, 'saveMembership').mockResolvedValue(
                 {} as OrganizationMemberships
             );
             jest.spyOn(service, 'sendUserRegistrationVerificationEmail').mockRejectedValue(

@@ -8,11 +8,7 @@ import { IntegrationsRepository } from './integrations.repository';
 import { IntegrationsService } from './integrations.service';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([Integration], 'codeclarity'),
-        GitlabModule,
-        GithubModule
-    ],
+    imports: [TypeOrmModule.forFeature([Integration], 'codeclarity'), GitlabModule, GithubModule],
     exports: [IntegrationsRepository, IntegrationsService],
     providers: [IntegrationsService, IntegrationsRepository],
     controllers: [IntegrationsController]

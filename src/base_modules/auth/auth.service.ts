@@ -10,10 +10,10 @@ import {
     TokenResponse
 } from 'src/base_modules/auth/auth.types';
 import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/gitlab/gitlabToken.service';
+import { UsersRepository } from 'src/base_modules/shared/repositories';
 import { SocialType } from 'src/base_modules/users/user.types';
 import { User } from 'src/base_modules/users/users.entity';
 import { UsersService } from 'src/base_modules/users/users.service';
-import { UsersRepository } from 'src/base_modules/shared/repositories';
 import {
     AlreadyExists,
     EntityNotFound,

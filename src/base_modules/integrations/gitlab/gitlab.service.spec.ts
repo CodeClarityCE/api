@@ -1,5 +1,11 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import {
+    IntegrationsRepository,
+    MembershipsRepository,
+    OrganizationsRepository,
+    UsersRepository
+} from 'src/base_modules/shared/repositories';
+import {
     DuplicateIntegration,
     EntityNotFound,
     IntegrationInvalidToken,
@@ -14,11 +20,8 @@ import {
 import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
 import { MemberRole } from '../../organizations/memberships/orgMembership.types';
 import type { Organization } from '../../organizations/organization.entity';
-import { OrganizationsRepository } from '../../organizations/organizations.repository';
 import type { User } from '../../users/users.entity';
-import { UsersRepository } from '../../users/users.repository';
 import { IntegrationProvider, IntegrationType, type Integration } from '../integrations.entity';
-import { IntegrationsRepository } from '../integrations.repository';
 import { GitlabIntegrationService } from './gitlab.service';
 import {
     type LinkGitlabCreateBody,
@@ -31,6 +34,7 @@ import { GitlabIntegrationTokenService } from './gitlabToken.service';
 describe('GitlabIntegrationService', () => {
     let service: GitlabIntegrationService;
     let organizationsRepository: jest.Mocked<OrganizationsRepository>;
+    let membershipsRepository: MembershipsRepository;
     let integrationsRepository: jest.Mocked<IntegrationsRepository>;
     let usersRepository: jest.Mocked<UsersRepository>;
 
@@ -102,8 +106,11 @@ describe('GitlabIntegrationService', () => {
         const mockOrganizationsRepository = {
             getOrganizationById: jest.fn(),
             doesIntegrationBelongToOrg: jest.fn(),
-            hasRequiredRole: jest.fn(),
             saveOrganization: jest.fn()
+        };
+
+        const mockMembershipsRepository = {
+            hasRequiredRole: jest.fn()
         };
 
         const mockIntegrationsRepository = {
@@ -127,6 +134,10 @@ describe('GitlabIntegrationService', () => {
                     useValue: mockOrganizationsRepository
                 },
                 {
+                    provide: MembershipsRepository,
+                    useValue: mockMembershipsRepository
+                },
+                {
                     provide: IntegrationsRepository,
                     useValue: mockIntegrationsRepository
                 },
@@ -139,6 +150,7 @@ describe('GitlabIntegrationService', () => {
 
         service = module.get<GitlabIntegrationService>(GitlabIntegrationService);
         organizationsRepository = module.get(OrganizationsRepository);
+        membershipsRepository = module.get<MembershipsRepository>(MembershipsRepository);
         integrationsRepository = module.get(IntegrationsRepository);
         usersRepository = module.get(UsersRepository);
     });
@@ -150,7 +162,7 @@ describe('GitlabIntegrationService', () => {
     describe('getGitlabIntegration', () => {
         it('should successfully retrieve a GitLab integration', async () => {
             organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
             integrationsRepository.getIntegrationById.mockResolvedValue(mockIntegration);
 
             const result = await service.getGitlabIntegration(
@@ -168,7 +180,7 @@ describe('GitlabIntegrationService', () => {
                 'test-integration-id',
                 'test-org-id'
             );
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'test-org-id',
                 'test-user-id',
                 MemberRole.USER
@@ -193,7 +205,9 @@ describe('GitlabIntegrationService', () => {
 
         it('should throw NotAuthorized when user lacks required role', async () => {
             organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-            organizationsRepository.hasRequiredRole.mockRejectedValue(new NotAuthorized());
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockRejectedValue(
+                new NotAuthorized()
+            );
 
             await expect(
                 service.getGitlabIntegration(
@@ -353,7 +367,9 @@ describe('GitlabIntegrationService', () => {
 
         it('should throw NotAuthorized when user lacks admin role', async () => {
             organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-            organizationsRepository.hasRequiredRole.mockRejectedValue(new NotAuthorized());
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockRejectedValue(
+                new NotAuthorized()
+            );
 
             await expect(
                 service.modifyGitlabIntegration(
@@ -367,7 +383,7 @@ describe('GitlabIntegrationService', () => {
 
         it('should throw IntegrationWrongTokenType when token type is not PAT', async () => {
             organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
 
             const invalidBody = {
                 ...linkGitlabPatchBody,
@@ -386,7 +402,7 @@ describe('GitlabIntegrationService', () => {
 
         it('should throw Error for unimplemented method', async () => {
             organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
 
             await expect(
                 service.modifyGitlabIntegration(

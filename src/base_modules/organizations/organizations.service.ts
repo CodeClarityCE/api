@@ -10,13 +10,13 @@ import {
     OrganizationInfoForInvitee
 } from 'src/base_modules/organizations/org.types';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
-import { TeamMember } from 'src/base_modules/users/teamMember.types';
 import {
     InvitationsRepository,
     MembershipsRepository,
     OrganizationsRepository,
     UsersRepository
 } from 'src/base_modules/shared/repositories';
+import { TeamMember } from 'src/base_modules/users/teamMember.types';
 import { EntityNotFound } from 'src/types/error.types';
 import { PaginationUserSuppliedConf, TypedPaginatedData } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
@@ -165,10 +165,10 @@ export class OrganizationsService {
         _sortBy?: string,
         _sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<OrganizationMemberships>> {
-        const memberships = await this.membershipsRepository.getMembershipsByOrganizationId(
-            orgId,
-            { organization: true, user: true }
-        );
+        const memberships = await this.membershipsRepository.getMembershipsByOrganizationId(orgId, {
+            organization: true,
+            user: true
+        });
         return {
             data: memberships,
             page: 0,
@@ -465,8 +465,7 @@ export class OrganizationsService {
     async deleteOrg(orgId: string, user: AuthenticatedUser): Promise<void> {
         await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
-        const memberships =
-            await this.membershipsRepository.getMembershipsByOrganizationId(orgId);
+        const memberships = await this.membershipsRepository.getMembershipsByOrganizationId(orgId);
         await this.membershipsRepository.removeMemberships(memberships);
         await this.organizationsRepository.deleteOrganization(orgId);
     }

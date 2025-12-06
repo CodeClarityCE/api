@@ -5,10 +5,7 @@ import { MemberRole } from 'src/base_modules/organizations/memberships/orgMember
 import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import { NotAMember, NotAuthorized } from 'src/types/error.types';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
-import {
-    MembershipsRepository,
-    OrganizationsRepository
-} from '../shared/repositories';
+import { MembershipsRepository, OrganizationsRepository } from '../shared/repositories';
 import { IntegrationsRepository } from './integrations.repository';
 
 @Injectable()
@@ -99,11 +96,7 @@ export class IntegrationsService {
     ): Promise<void> {
         try {
             // Only organization owners and admins can remove an integration.
-            await this.membershipsRepository.hasRequiredRole(
-                orgId,
-                user.userId,
-                MemberRole.ADMIN
-            );
+            await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
             // Verify that the specified integration belongs to the given organization.
             if (

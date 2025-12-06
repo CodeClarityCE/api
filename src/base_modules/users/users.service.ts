@@ -7,6 +7,12 @@ import {
 } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import {
+    MembershipsRepository,
+    OrganizationsRepository,
+    ProjectsRepository,
+    UsersRepository
+} from 'src/base_modules/shared/repositories';
+import {
     SocialType,
     UserCompleteSocialCreateBody,
     UserCreateBody,
@@ -14,12 +20,6 @@ import {
     UserPatchBody
 } from 'src/base_modules/users/user.types';
 import { User } from 'src/base_modules/users/users.entity';
-import {
-    MembershipsRepository,
-    OrganizationsRepository,
-    ProjectsRepository,
-    UsersRepository
-} from 'src/base_modules/shared/repositories';
 import { NotAuthorized } from 'src/types/error.types';
 import { genRandomString, hash } from 'src/utils/crypto';
 import {

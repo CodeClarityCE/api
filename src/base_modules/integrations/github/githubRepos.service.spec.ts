@@ -1,5 +1,10 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import {
+    IntegrationsRepository,
+    MembershipsRepository,
+    OrganizationsRepository
+} from 'src/base_modules/shared/repositories';
 import type { Repository } from 'typeorm';
 import {
     EntityNotFound,
@@ -10,9 +15,7 @@ import {
 import { SortDirection } from '../../../types/sort.types';
 import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
 import { MemberRole } from '../../organizations/memberships/orgMembership.types';
-import { OrganizationsRepository } from '../../organizations/organizations.repository';
 import { RepositoryCache, RepositoryType } from '../../projects/repositoryCache.entity';
-import { IntegrationsRepository } from '../integrations.repository';
 import type { GithubIntegrationToken } from '../Token';
 import { GithubIntegrationService } from './github.service';
 import type { GithubRepositorySchema } from './github.types';
@@ -43,6 +46,7 @@ describe('GithubRepositoriesService', () => {
     let service: GithubRepositoriesService;
     let githubIntegrationService: jest.Mocked<GithubIntegrationService>;
     let organizationsRepository: jest.Mocked<OrganizationsRepository>;
+    let membershipsRepository: MembershipsRepository;
     let integrationsRepository: jest.Mocked<IntegrationsRepository>;
     let repositoryCacheRepository: jest.Mocked<Repository<RepositoryCache>>;
 
@@ -92,8 +96,11 @@ describe('GithubRepositoriesService', () => {
         };
 
         const mockOrganizationsRepository = {
-            hasRequiredRole: jest.fn(),
             doesIntegrationBelongToOrg: jest.fn()
+        };
+
+        const mockMembershipsRepository = {
+            hasRequiredRole: jest.fn()
         };
 
         const mockIntegrationsRepository = {
@@ -119,6 +126,10 @@ describe('GithubRepositoriesService', () => {
                     useValue: mockOrganizationsRepository
                 },
                 {
+                    provide: MembershipsRepository,
+                    useValue: mockMembershipsRepository
+                },
+                {
                     provide: IntegrationsRepository,
                     useValue: mockIntegrationsRepository
                 },
@@ -132,6 +143,7 @@ describe('GithubRepositoriesService', () => {
         service = module.get<GithubRepositoriesService>(GithubRepositoriesService);
         githubIntegrationService = module.get(GithubIntegrationService);
         organizationsRepository = module.get(OrganizationsRepository);
+        membershipsRepository = module.get<MembershipsRepository>(MembershipsRepository);
         integrationsRepository = module.get(IntegrationsRepository);
         repositoryCacheRepository = module.get(getRepositoryToken(RepositoryCache, 'codeclarity'));
 
@@ -213,7 +225,7 @@ describe('GithubRepositoriesService', () => {
         const paginationUserSuppliedConf = { currentPage: 0, entriesPerPage: 20 };
 
         beforeEach(() => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
             jest.spyOn(service, 'areGithubReposSynced').mockResolvedValue(true);
 
@@ -248,7 +260,7 @@ describe('GithubRepositoriesService', () => {
                 filter_count: {}
             });
 
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 orgId,
                 mockAuthenticatedUser.userId,
                 MemberRole.USER
@@ -416,7 +428,7 @@ describe('GithubRepositoriesService', () => {
         const repoUrl = 'https://github.com/test/repo';
 
         beforeEach(() => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
             jest.spyOn(service, 'areGithubReposSynced').mockResolvedValue(true);
         });

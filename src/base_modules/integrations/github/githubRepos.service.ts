@@ -4,12 +4,12 @@ import ms from 'ms';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { GithubRepositorySchema } from 'src/base_modules/integrations/github/github.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
+import { RepositoryCache, RepositoryType } from 'src/base_modules/projects/repositoryCache.entity';
 import {
     IntegrationsRepository,
     MembershipsRepository,
     OrganizationsRepository
 } from 'src/base_modules/shared/repositories';
-import { RepositoryCache, RepositoryType } from 'src/base_modules/projects/repositoryCache.entity';
 import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import {
     EntityNotFound,

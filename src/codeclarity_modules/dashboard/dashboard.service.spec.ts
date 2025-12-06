@@ -3,7 +3,10 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import {
+    MembershipsRepository,
+    OrganizationsRepository
+} from 'src/base_modules/shared/repositories';
 import { NotAuthorized } from 'src/types/error.types';
 import type { Repository } from 'typeorm';
 import { DashboardService } from './dashboard.service';
@@ -11,7 +14,7 @@ import { ProjectGradeClass } from './dashboard.types';
 
 describe('DashboardService', () => {
     let service: DashboardService;
-    let organizationsRepository: jest.Mocked<OrganizationsRepository>;
+    let membershipsRepository: jest.Mocked<MembershipsRepository>;
     let organizationRepository: jest.Mocked<Repository<Organization>>;
 
     const mockAuthenticatedUser: AuthenticatedUser = new AuthenticatedUser(
@@ -108,7 +111,9 @@ describe('DashboardService', () => {
     };
 
     beforeEach(async () => {
-        const mockOrganizationsRepository = {
+        const mockOrganizationsRepository = {};
+
+        const mockMembershipsRepository = {
             hasRequiredRole: jest.fn()
         };
 
@@ -120,6 +125,7 @@ describe('DashboardService', () => {
             providers: [
                 DashboardService,
                 { provide: OrganizationsRepository, useValue: mockOrganizationsRepository },
+                { provide: MembershipsRepository, useValue: mockMembershipsRepository },
                 {
                     provide: getRepositoryToken(Organization, 'codeclarity'),
                     useValue: mockOrganizationRepository
@@ -128,7 +134,7 @@ describe('DashboardService', () => {
         }).compile();
 
         service = module.get<DashboardService>(DashboardService);
-        organizationsRepository = module.get(OrganizationsRepository);
+        membershipsRepository = module.get(MembershipsRepository);
         organizationRepository = module.get(getRepositoryToken(Organization, 'codeclarity'));
     });
 
@@ -138,7 +144,7 @@ describe('DashboardService', () => {
 
     describe('getWeeklySeverityInfo', () => {
         it('should return weekly severity info successfully', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const mockQueryBuilder = {
                 where: jest.fn().mockReturnThis(),
@@ -158,7 +164,7 @@ describe('DashboardService', () => {
                 ['integration1']
             );
 
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 mockOrgId,
                 mockAuthenticatedUser.userId,
                 MemberRole.USER
@@ -168,7 +174,7 @@ describe('DashboardService', () => {
         });
 
         it('should use default date ranges when not provided', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const mockQueryBuilder = {
                 where: jest.fn().mockReturnThis(),
@@ -186,8 +192,8 @@ describe('DashboardService', () => {
             expect(Array.isArray(result)).toBe(true);
         });
 
-        it('should throw error when organization not found', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+        it('should return empty array when organization not found', async () => {
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const mockQueryBuilder = {
                 where: jest.fn().mockReturnThis(),
@@ -199,13 +205,13 @@ describe('DashboardService', () => {
 
             organizationRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
 
-            await expect(
-                service.getWeeklySeverityInfo(mockOrgId, mockAuthenticatedUser)
-            ).rejects.toThrow('Organization not found');
+            const result = await service.getWeeklySeverityInfo(mockOrgId, mockAuthenticatedUser);
+
+            expect(result).toEqual([]);
         });
 
         it('should throw NotAuthorized when user lacks permission', async () => {
-            organizationsRepository.hasRequiredRole.mockRejectedValue(new NotAuthorized());
+            membershipsRepository.hasRequiredRole.mockRejectedValue(new NotAuthorized());
 
             await expect(
                 service.getWeeklySeverityInfo(mockOrgId, mockAuthenticatedUser)
@@ -215,7 +221,7 @@ describe('DashboardService', () => {
 
     describe('getOverallAttackVectorDist', () => {
         it('should return attack vector distribution successfully', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const mockQueryBuilder = {
                 where: jest.fn().mockReturnThis(),
@@ -242,7 +248,7 @@ describe('DashboardService', () => {
         });
 
         it('should use default date ranges when not provided', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const mockQueryBuilder = {
                 where: jest.fn().mockReturnThis(),
@@ -262,8 +268,8 @@ describe('DashboardService', () => {
             expect(Array.isArray(result)).toBe(true);
         });
 
-        it('should throw error when organization not found', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+        it('should return empty array when organization not found', async () => {
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const mockQueryBuilder = {
                 where: jest.fn().mockReturnThis(),
@@ -274,15 +280,18 @@ describe('DashboardService', () => {
 
             organizationRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder as any);
 
-            await expect(
-                service.getOverallAttackVectorDist(mockOrgId, mockAuthenticatedUser)
-            ).rejects.toThrow('Organization not found');
+            const result = await service.getOverallAttackVectorDist(
+                mockOrgId,
+                mockAuthenticatedUser
+            );
+
+            expect(result).toEqual([]);
         });
     });
 
     describe('getOverallCIAImpact', () => {
         it('should return CIA impact distribution successfully', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const mockQueryBuilder = {
                 where: jest.fn().mockReturnThis(),
@@ -309,7 +318,7 @@ describe('DashboardService', () => {
         });
 
         it('should use default date ranges when not provided', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const mockQueryBuilder = {
                 where: jest.fn().mockReturnThis(),
@@ -329,7 +338,7 @@ describe('DashboardService', () => {
 
     describe('getOverallLicenseDist', () => {
         it('should return license distribution successfully', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const mockQueryBuilder = {
                 where: jest.fn().mockReturnThis(),
@@ -361,7 +370,7 @@ describe('DashboardService', () => {
                 projects: []
             };
 
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const mockQueryBuilder = {
                 where: jest.fn().mockReturnThis(),
@@ -382,7 +391,7 @@ describe('DashboardService', () => {
 
     describe('getRecentVuls', () => {
         it('should return recent vulnerabilities successfully', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const mockQueryBuilder = {
                 where: jest.fn().mockReturnThis(),
@@ -409,7 +418,7 @@ describe('DashboardService', () => {
         });
 
         it('should classify vulnerability severities correctly', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const mockQueryBuilder = {
                 where: jest.fn().mockReturnThis(),
@@ -438,7 +447,7 @@ describe('DashboardService', () => {
 
     describe('getQuickStats', () => {
         it('should throw "Not implemented" error', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const mockQueryBuilder = {
                 where: jest.fn().mockReturnThis(),
@@ -455,7 +464,7 @@ describe('DashboardService', () => {
         });
 
         it('should use default date ranges when not provided', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const mockQueryBuilder = {
                 where: jest.fn().mockReturnThis(),
@@ -474,7 +483,7 @@ describe('DashboardService', () => {
 
     describe('getProjectsQuickStats', () => {
         it('should return paginated project quick stats', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const result = await service.getProjectsQuickStats(
                 mockOrgId,
@@ -502,7 +511,7 @@ describe('DashboardService', () => {
         });
 
         it('should handle pagination limits correctly', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const result = await service.getProjectsQuickStats(
                 mockOrgId,
@@ -515,7 +524,7 @@ describe('DashboardService', () => {
         });
 
         it('should handle missing pagination parameters', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const result = await service.getProjectsQuickStats(
                 mockOrgId,
@@ -528,7 +537,7 @@ describe('DashboardService', () => {
         });
 
         it('should use default date ranges when not provided', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const result = await service.getProjectsQuickStats(mockOrgId, mockAuthenticatedUser, {
                 currentPage: 0,
@@ -581,7 +590,7 @@ describe('DashboardService', () => {
 
     describe('error scenarios', () => {
         it('should handle database errors gracefully', async () => {
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const mockQueryBuilder = {
                 where: jest.fn().mockReturnThis(),
@@ -599,7 +608,7 @@ describe('DashboardService', () => {
         });
 
         it('should handle authorization errors', async () => {
-            organizationsRepository.hasRequiredRole.mockRejectedValue(new NotAuthorized());
+            membershipsRepository.hasRequiredRole.mockRejectedValue(new NotAuthorized());
 
             await expect(
                 service.getOverallAttackVectorDist(mockOrgId, mockAuthenticatedUser)
@@ -629,7 +638,7 @@ describe('DashboardService', () => {
                 ]
             };
 
-            organizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
             const mockQueryBuilder = {
                 where: jest.fn().mockReturnThis(),

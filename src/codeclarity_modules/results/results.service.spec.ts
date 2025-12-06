@@ -1,17 +1,19 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-import { AnalysesRepository } from 'src/base_modules/analyses/analyses.repository';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import {
+    AnalysesRepository,
+    MembershipsRepository,
+    ProjectsRepository
+} from 'src/base_modules/shared/repositories';
 import { EntityNotFound } from 'src/types/error.types';
-import { ProjectMemberService } from '../../base_modules/projects/projectMember.service';
 import { AnalysisResultsRepository } from './results.repository';
 import { AnalysisResultsService } from './results.service';
 
 describe('AnalysisResultsService', () => {
     let service: AnalysisResultsService;
-    let projectMemberService: ProjectMemberService;
-    let organizationsRepository: OrganizationsRepository;
+    let projectsRepository: ProjectsRepository;
+    let membershipsRepository: MembershipsRepository;
     let analysesRepository: AnalysesRepository;
     let resultsRepository: AnalysisResultsRepository;
 
@@ -23,11 +25,11 @@ describe('AnalysisResultsService', () => {
         data: { findings: [] }
     };
 
-    const mockProjectMemberService = {
+    const mockProjectsRepository = {
         doesProjectBelongToOrg: jest.fn()
     };
 
-    const mockOrganizationsRepository = {
+    const mockMembershipsRepository = {
         hasRequiredRole: jest.fn()
     };
 
@@ -36,7 +38,8 @@ describe('AnalysisResultsService', () => {
     };
 
     const mockResultsRepository = {
-        getByAnalysisIdAndPluginType: jest.fn()
+        getByAnalysisIdAndPluginType: jest.fn(),
+        getPreferredSbomResult: jest.fn()
     };
 
     beforeEach(async () => {
@@ -44,12 +47,12 @@ describe('AnalysisResultsService', () => {
             providers: [
                 AnalysisResultsService,
                 {
-                    provide: ProjectMemberService,
-                    useValue: mockProjectMemberService
+                    provide: ProjectsRepository,
+                    useValue: mockProjectsRepository
                 },
                 {
-                    provide: OrganizationsRepository,
-                    useValue: mockOrganizationsRepository
+                    provide: MembershipsRepository,
+                    useValue: mockMembershipsRepository
                 },
                 {
                     provide: AnalysesRepository,
@@ -63,8 +66,8 @@ describe('AnalysisResultsService', () => {
         }).compile();
 
         service = module.get<AnalysisResultsService>(AnalysisResultsService);
-        projectMemberService = module.get<ProjectMemberService>(ProjectMemberService);
-        organizationsRepository = module.get<OrganizationsRepository>(OrganizationsRepository);
+        projectsRepository = module.get<ProjectsRepository>(ProjectsRepository);
+        membershipsRepository = module.get<MembershipsRepository>(MembershipsRepository);
         analysesRepository = module.get<AnalysesRepository>(AnalysesRepository);
         resultsRepository = module.get<AnalysisResultsRepository>(AnalysisResultsRepository);
 
@@ -73,20 +76,20 @@ describe('AnalysisResultsService', () => {
 
     describe('checkAccess', () => {
         it('should pass when user has all required access', async () => {
-            mockOrganizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
-            mockProjectMemberService.doesProjectBelongToOrg.mockResolvedValue(undefined);
+            mockMembershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            mockProjectsRepository.doesProjectBelongToOrg.mockResolvedValue(undefined);
             mockAnalysesRepository.doesAnalysesBelongToProject.mockResolvedValue(undefined);
 
             await expect(
                 service.checkAccess('org-123', 'project-123', 'analysis-123', mockUser)
             ).resolves.toBeUndefined();
 
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.USER
             );
-            expect(projectMemberService.doesProjectBelongToOrg).toHaveBeenCalledWith(
+            expect(projectsRepository.doesProjectBelongToOrg).toHaveBeenCalledWith(
                 'project-123',
                 'org-123'
             );
@@ -98,36 +101,36 @@ describe('AnalysisResultsService', () => {
 
         it('should throw error when user lacks organization access', async () => {
             const accessError = new Error('Insufficient organization role');
-            mockOrganizationsRepository.hasRequiredRole.mockRejectedValue(accessError);
+            mockMembershipsRepository.hasRequiredRole.mockRejectedValue(accessError);
 
             await expect(
                 service.checkAccess('org-123', 'project-123', 'analysis-123', mockUser)
             ).rejects.toThrow('Insufficient organization role');
 
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.USER
             );
-            expect(projectMemberService.doesProjectBelongToOrg).not.toHaveBeenCalled();
+            expect(projectsRepository.doesProjectBelongToOrg).not.toHaveBeenCalled();
             expect(analysesRepository.doesAnalysesBelongToProject).not.toHaveBeenCalled();
         });
 
         it('should throw error when project does not belong to organization', async () => {
             const projectError = new Error('Project not in organization');
-            mockOrganizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
-            mockProjectMemberService.doesProjectBelongToOrg.mockRejectedValue(projectError);
+            mockMembershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            mockProjectsRepository.doesProjectBelongToOrg.mockRejectedValue(projectError);
 
             await expect(
                 service.checkAccess('org-123', 'project-123', 'analysis-123', mockUser)
             ).rejects.toThrow('Project not in organization');
 
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.USER
             );
-            expect(projectMemberService.doesProjectBelongToOrg).toHaveBeenCalledWith(
+            expect(projectsRepository.doesProjectBelongToOrg).toHaveBeenCalledWith(
                 'project-123',
                 'org-123'
             );
@@ -136,20 +139,20 @@ describe('AnalysisResultsService', () => {
 
         it('should throw error when analysis does not belong to project', async () => {
             const analysisError = new Error('Analysis not in project');
-            mockOrganizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
-            mockProjectMemberService.doesProjectBelongToOrg.mockResolvedValue(undefined);
+            mockMembershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            mockProjectsRepository.doesProjectBelongToOrg.mockResolvedValue(undefined);
             mockAnalysesRepository.doesAnalysesBelongToProject.mockRejectedValue(analysisError);
 
             await expect(
                 service.checkAccess('org-123', 'project-123', 'analysis-123', mockUser)
             ).rejects.toThrow('Analysis not in project');
 
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.USER
             );
-            expect(projectMemberService.doesProjectBelongToOrg).toHaveBeenCalledWith(
+            expect(projectsRepository.doesProjectBelongToOrg).toHaveBeenCalledWith(
                 'project-123',
                 'org-123'
             );
@@ -162,8 +165,8 @@ describe('AnalysisResultsService', () => {
 
     describe('getResultByType', () => {
         it('should return result when access is granted and result exists', async () => {
-            mockOrganizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
-            mockProjectMemberService.doesProjectBelongToOrg.mockResolvedValue(undefined);
+            mockMembershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            mockProjectsRepository.doesProjectBelongToOrg.mockResolvedValue(undefined);
             mockAnalysesRepository.doesAnalysesBelongToProject.mockResolvedValue(undefined);
             mockResultsRepository.getByAnalysisIdAndPluginType.mockResolvedValue(mockResult);
 
@@ -183,8 +186,8 @@ describe('AnalysisResultsService', () => {
         });
 
         it('should throw EntityNotFound when result does not exist', async () => {
-            mockOrganizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
-            mockProjectMemberService.doesProjectBelongToOrg.mockResolvedValue(undefined);
+            mockMembershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            mockProjectsRepository.doesProjectBelongToOrg.mockResolvedValue(undefined);
             mockAnalysesRepository.doesAnalysesBelongToProject.mockResolvedValue(undefined);
             mockResultsRepository.getByAnalysisIdAndPluginType.mockResolvedValue(null);
 
@@ -206,7 +209,7 @@ describe('AnalysisResultsService', () => {
 
         it('should throw access error before checking result existence', async () => {
             const accessError = new Error('Access denied');
-            mockOrganizationsRepository.hasRequiredRole.mockRejectedValue(accessError);
+            mockMembershipsRepository.hasRequiredRole.mockRejectedValue(accessError);
 
             await expect(
                 service.getResultByType(
@@ -222,8 +225,8 @@ describe('AnalysisResultsService', () => {
         });
 
         it('should handle different plugin types', async () => {
-            mockOrganizationsRepository.hasRequiredRole.mockResolvedValue(undefined);
-            mockProjectMemberService.doesProjectBelongToOrg.mockResolvedValue(undefined);
+            mockMembershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
+            mockProjectsRepository.doesProjectBelongToOrg.mockResolvedValue(undefined);
             mockAnalysesRepository.doesAnalysesBelongToProject.mockResolvedValue(undefined);
 
             const sbomResult = { ...mockResult, pluginType: 'sbom' };

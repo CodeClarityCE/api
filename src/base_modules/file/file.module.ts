@@ -6,9 +6,7 @@ import { FileRepository } from './file.repository';
 import { FileService } from './file.service';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([File], 'codeclarity')
-    ],
+    imports: [TypeOrmModule.forFeature([File], 'codeclarity')],
     exports: [FileRepository],
     providers: [FileService, FileRepository],
     controllers: [FileController]

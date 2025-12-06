@@ -2,14 +2,18 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AuthenticatedUser, ROLE } from 'src/base_modules/auth/auth.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
-import { UsersRepository } from 'src/base_modules/users/users.repository';
+import {
+    OrganizationsRepository,
+    MembershipsRepository,
+    UsersRepository
+} from 'src/base_modules/shared/repositories';
 import { Policy, PolicyType } from '../policy.entity';
 import { LicensePolicyService } from './license.service';
 import { LicensePolicyType, type LicensePolicyCreateBody } from './licensePolicy.types';
 
 describe('LicensePolicyService', () => {
     let service: LicensePolicyService;
+    let membershipsRepository: MembershipsRepository;
     let organizationsRepository: OrganizationsRepository;
     let usersRepository: UsersRepository;
 
@@ -72,9 +76,14 @@ describe('LicensePolicyService', () => {
             providers: [
                 LicensePolicyService,
                 {
+                    provide: MembershipsRepository,
+                    useValue: {
+                        hasRequiredRole: jest.fn()
+                    }
+                },
+                {
                     provide: OrganizationsRepository,
                     useValue: {
-                        hasRequiredRole: jest.fn(),
                         getOrganizationById: jest.fn()
                     }
                 },
@@ -92,6 +101,7 @@ describe('LicensePolicyService', () => {
         }).compile();
 
         service = module.get<LicensePolicyService>(LicensePolicyService);
+        membershipsRepository = module.get<MembershipsRepository>(MembershipsRepository);
         organizationsRepository = module.get<OrganizationsRepository>(OrganizationsRepository);
         usersRepository = module.get<UsersRepository>(UsersRepository);
 
@@ -103,7 +113,7 @@ describe('LicensePolicyService', () => {
     describe('create', () => {
         it('should create a license policy successfully', async () => {
             // Arrange
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(organizationsRepository, 'getOrganizationById').mockResolvedValue(
                 mockOrganization as any
             );
@@ -115,7 +125,7 @@ describe('LicensePolicyService', () => {
 
             // Assert
             expect(result).toBe('policy-123');
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.ADMIN
@@ -137,7 +147,7 @@ describe('LicensePolicyService', () => {
 
         it('should throw error when organization not found', async () => {
             // Arrange
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(organizationsRepository, 'getOrganizationById').mockResolvedValue(
                 null as any
             );
@@ -150,7 +160,7 @@ describe('LicensePolicyService', () => {
 
         it('should throw error when user not found', async () => {
             // Arrange
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(organizationsRepository, 'getOrganizationById').mockResolvedValue(
                 mockOrganization as any
             );
@@ -165,7 +175,7 @@ describe('LicensePolicyService', () => {
         it('should require ADMIN role', async () => {
             // Arrange
             const unauthorizedError = new Error('NotAuthorized');
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockRejectedValue(
                 unauthorizedError
             );
 
@@ -173,7 +183,7 @@ describe('LicensePolicyService', () => {
             await expect(
                 service.create('org-123', mockLicensePolicyCreateBody, mockUser)
             ).rejects.toThrow(unauthorizedError);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.ADMIN
@@ -183,7 +193,7 @@ describe('LicensePolicyService', () => {
         it('should create policy with default flag set to true', async () => {
             // Arrange
             const defaultPolicyCreateBody = { ...mockLicensePolicyCreateBody, default: true };
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(organizationsRepository, 'getOrganizationById').mockResolvedValue(
                 mockOrganization as any
             );
@@ -208,7 +218,7 @@ describe('LicensePolicyService', () => {
                 type: LicensePolicyType.BLACKLIST,
                 licenses: ['GPL-3.0', 'AGPL-3.0']
             };
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             jest.spyOn(organizationsRepository, 'getOrganizationById').mockResolvedValue(
                 mockOrganization as any
             );
@@ -231,7 +241,7 @@ describe('LicensePolicyService', () => {
     describe('get', () => {
         it('should retrieve a license policy successfully', async () => {
             // Arrange
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             mockPolicyRepository.findOne.mockResolvedValue(mockPolicy);
 
             // Act
@@ -239,7 +249,7 @@ describe('LicensePolicyService', () => {
 
             // Assert
             expect(result).toEqual(mockPolicy);
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.USER
@@ -256,7 +266,7 @@ describe('LicensePolicyService', () => {
 
         it('should throw error when policy not found', async () => {
             // Arrange
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             mockPolicyRepository.findOne.mockResolvedValue(null as any);
 
             // Act & Assert
@@ -268,7 +278,7 @@ describe('LicensePolicyService', () => {
         it('should require USER role for read access', async () => {
             // Arrange
             const unauthorizedError = new Error('NotAuthorized');
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockRejectedValue(
                 unauthorizedError
             );
 
@@ -276,7 +286,7 @@ describe('LicensePolicyService', () => {
             await expect(service.get('org-123', 'policy-123', mockUser)).rejects.toThrow(
                 unauthorizedError
             );
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.USER
@@ -290,7 +300,7 @@ describe('LicensePolicyService', () => {
             const policies = [mockPolicy];
             const paginationConfig = { entriesPerPage: 10, currentPage: 0 };
 
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             mockQueryBuilder.getCount.mockResolvedValue(1);
             mockQueryBuilder.getMany.mockResolvedValue(policies);
 
@@ -319,7 +329,7 @@ describe('LicensePolicyService', () => {
                 matching_count: 1,
                 filter_count: {}
             });
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.USER
@@ -333,7 +343,7 @@ describe('LicensePolicyService', () => {
             // Arrange
             const paginationConfig = { entriesPerPage: 200, currentPage: -1 }; // Over limit and negative page
 
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             mockQueryBuilder.getCount.mockResolvedValue(0);
             mockQueryBuilder.getMany.mockResolvedValue([]);
 
@@ -351,7 +361,7 @@ describe('LicensePolicyService', () => {
             // Arrange
             const paginationConfig = {};
 
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             mockQueryBuilder.getCount.mockResolvedValue(0);
             mockQueryBuilder.getMany.mockResolvedValue([]);
 
@@ -369,7 +379,7 @@ describe('LicensePolicyService', () => {
             // Arrange
             const paginationConfig = { entriesPerPage: 10, currentPage: 0 };
 
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             mockQueryBuilder.getCount.mockResolvedValue(0);
             mockQueryBuilder.getMany.mockResolvedValue([]);
 
@@ -394,7 +404,7 @@ describe('LicensePolicyService', () => {
             const policies = Array(5).fill(mockPolicy);
             const paginationConfig = { entriesPerPage: 5, currentPage: 2 };
 
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             mockQueryBuilder.getCount.mockResolvedValue(25);
             mockQueryBuilder.getMany.mockResolvedValue(policies);
 
@@ -413,7 +423,7 @@ describe('LicensePolicyService', () => {
             // Arrange
             const paginationConfig = { entriesPerPage: 10, currentPage: 0 };
 
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             mockQueryBuilder.getCount.mockResolvedValue(0);
             mockQueryBuilder.getMany.mockResolvedValue([]);
 
@@ -431,13 +441,13 @@ describe('LicensePolicyService', () => {
     describe('update', () => {
         it('should throw not implemented error', async () => {
             // Arrange
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
 
             // Act & Assert
             await expect(service.update('org-123', 'policy-123', {}, mockUser)).rejects.toThrow(
                 'Method not implemented.'
             );
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.ADMIN
@@ -447,7 +457,7 @@ describe('LicensePolicyService', () => {
         it('should require ADMIN role for update', async () => {
             // Arrange
             const unauthorizedError = new Error('NotAuthorized');
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockRejectedValue(
                 unauthorizedError
             );
 
@@ -455,7 +465,7 @@ describe('LicensePolicyService', () => {
             await expect(service.update('org-123', 'policy-123', {}, mockUser)).rejects.toThrow(
                 unauthorizedError
             );
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.ADMIN
@@ -466,13 +476,13 @@ describe('LicensePolicyService', () => {
     describe('remove', () => {
         it('should throw not implemented error', async () => {
             // Arrange
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
 
             // Act & Assert
             await expect(service.remove('org-123', 'policy-123', mockUser)).rejects.toThrow(
                 'Method not implemented.'
             );
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.ADMIN
@@ -482,7 +492,7 @@ describe('LicensePolicyService', () => {
         it('should require ADMIN role for removal', async () => {
             // Arrange
             const unauthorizedError = new Error('NotAuthorized');
-            jest.spyOn(organizationsRepository, 'hasRequiredRole').mockRejectedValue(
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockRejectedValue(
                 unauthorizedError
             );
 
@@ -490,7 +500,7 @@ describe('LicensePolicyService', () => {
             await expect(service.remove('org-123', 'policy-123', mockUser)).rejects.toThrow(
                 unauthorizedError
             );
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 'org-123',
                 'user-123',
                 MemberRole.ADMIN

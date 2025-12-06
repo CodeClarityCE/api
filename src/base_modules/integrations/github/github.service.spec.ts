@@ -1,5 +1,11 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import {
+    IntegrationsRepository,
+    MembershipsRepository,
+    OrganizationsRepository,
+    UsersRepository
+} from 'src/base_modules/shared/repositories';
+import {
     DuplicateIntegration,
     EntityNotFound,
     IntegrationInvalidToken,
@@ -14,12 +20,9 @@ import {
 import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
 import { MemberRole } from '../../organizations/memberships/orgMembership.types';
 import type { Organization } from '../../organizations/organization.entity';
-import { OrganizationsRepository } from '../../organizations/organizations.repository';
 import type { User } from '../../users/users.entity';
-import { UsersRepository } from '../../users/users.repository';
 import { IntegrationProvider, IntegrationType } from '../integration.types';
 import type { Integration } from '../integrations.entity';
-import { IntegrationsRepository } from '../integrations.repository';
 import { GithubIntegrationService } from './github.service';
 import {
     type LinkGithubCreateBody,
@@ -33,6 +36,7 @@ describe('GithubIntegrationService', () => {
     let githubTokenService: jest.Mocked<GithubIntegrationTokenService>;
     let usersRepository: jest.Mocked<UsersRepository>;
     let organizationsRepository: jest.Mocked<OrganizationsRepository>;
+    let membershipsRepository: MembershipsRepository;
     let integrationsRepository: jest.Mocked<IntegrationsRepository>;
 
     const mockAuthenticatedUser: AuthenticatedUser = new AuthenticatedUser(
@@ -80,7 +84,10 @@ describe('GithubIntegrationService', () => {
         const mockOrganizationsRepository = {
             getOrganizationById: jest.fn(),
             saveOrganization: jest.fn(),
-            doesIntegrationBelongToOrg: jest.fn(),
+            doesIntegrationBelongToOrg: jest.fn()
+        };
+
+        const mockMembershipsRepository = {
             hasRequiredRole: jest.fn()
         };
 
@@ -105,6 +112,10 @@ describe('GithubIntegrationService', () => {
                     useValue: mockOrganizationsRepository
                 },
                 {
+                    provide: MembershipsRepository,
+                    useValue: mockMembershipsRepository
+                },
+                {
                     provide: IntegrationsRepository,
                     useValue: mockIntegrationsRepository
                 }
@@ -115,6 +126,7 @@ describe('GithubIntegrationService', () => {
         githubTokenService = module.get(GithubIntegrationTokenService);
         usersRepository = module.get(UsersRepository);
         organizationsRepository = module.get(OrganizationsRepository);
+        membershipsRepository = module.get(MembershipsRepository);
         integrationsRepository = module.get(IntegrationsRepository);
     });
 
@@ -299,7 +311,7 @@ describe('GithubIntegrationService', () => {
 
         it('should successfully modify a GitHub integration', async () => {
             organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-            organizationsRepository.hasRequiredRole.mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             githubTokenService.getClassicTokenExpiryRemote.mockResolvedValue([false, undefined]);
             integrationsRepository.getIntegrationById.mockResolvedValue(mockIntegration);
             integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
@@ -315,7 +327,7 @@ describe('GithubIntegrationService', () => {
                 integrationId,
                 orgId
             );
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 orgId,
                 mockAuthenticatedUser.userId,
                 MemberRole.ADMIN
@@ -330,7 +342,7 @@ describe('GithubIntegrationService', () => {
         it('should successfully modify a GitHub integration with expiry date', async () => {
             const expiryDate = new Date(Date.now() + 86400000); // 1 day from now
             organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-            organizationsRepository.hasRequiredRole.mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             githubTokenService.getClassicTokenExpiryRemote.mockResolvedValue([true, expiryDate]);
             integrationsRepository.getIntegrationById.mockResolvedValue(mockIntegration);
             integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
@@ -367,7 +379,7 @@ describe('GithubIntegrationService', () => {
                 token_type: GithubTokenType.OAUTH_TOKEN
             };
             organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-            organizationsRepository.hasRequiredRole.mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
 
             await expect(
                 service.modifyGithubIntegration(
@@ -385,7 +397,7 @@ describe('GithubIntegrationService', () => {
                 token: 'gho_oauth_token'
             };
             organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-            organizationsRepository.hasRequiredRole.mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
 
             await expect(
                 service.modifyGithubIntegration(
@@ -404,7 +416,7 @@ describe('GithubIntegrationService', () => {
 
         it('should successfully get a GitHub integration', async () => {
             organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-            organizationsRepository.hasRequiredRole.mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
             integrationsRepository.getIntegrationById.mockResolvedValue(mockIntegration);
 
             const result = await service.getGithubIntegration(
@@ -418,7 +430,7 @@ describe('GithubIntegrationService', () => {
                 integrationId,
                 orgId
             );
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 orgId,
                 mockAuthenticatedUser.userId,
                 MemberRole.USER
@@ -449,7 +461,7 @@ describe('GithubIntegrationService', () => {
 
         it('should throw Error for not implemented functionality', async () => {
             organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-            organizationsRepository.hasRequiredRole.mockResolvedValue();
+            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue();
 
             await expect(
                 service.removeGithubIntegration(orgId, integrationId, mockAuthenticatedUser)
@@ -459,7 +471,7 @@ describe('GithubIntegrationService', () => {
                 integrationId,
                 orgId
             );
-            expect(organizationsRepository.hasRequiredRole).toHaveBeenCalledWith(
+            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
                 orgId,
                 mockAuthenticatedUser.userId,
                 MemberRole.ADMIN
