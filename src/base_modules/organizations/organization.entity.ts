@@ -101,4 +101,7 @@ export class Organization {
 
     @OneToMany('Log', 'organization')
     logs!: Relation<Log[]>;
+
+    @OneToMany('Ticket', 'organization')
+    tickets!: Relation<unknown[]>;
 }

@@ -164,4 +164,10 @@ export class User {
 
     @OneToMany('Email', 'user')
     mails!: Relation<Email[]>;
+
+    @OneToMany('Ticket', 'created_by')
+    tickets_created!: Relation<unknown[]>;
+
+    @OneToMany('Ticket', 'assigned_to')
+    tickets_assigned!: Relation<unknown[]>;
 }

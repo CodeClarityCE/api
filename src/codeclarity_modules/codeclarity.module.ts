@@ -6,6 +6,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { KnowledgeModule } from './knowledge/knowledge.module';
 import { PolicyModule } from './policies/policy.module';
 import { ResultsModule } from './results/results.module';
+import { TicketsModule } from './tickets/tickets.module';
 
 @Module({
     imports: [
@@ -13,6 +14,7 @@ import { ResultsModule } from './results/results.module';
         PolicyModule,
         KnowledgeModule,
         DashboardModule,
+        TicketsModule,
         TypeOrmModule.forRootAsync({
             imports: [ConfigModule],
             name: 'knowledge',
