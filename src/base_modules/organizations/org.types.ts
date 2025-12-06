@@ -86,6 +86,11 @@ export class JoinOrgCreateBody {
     email_digest!: string;
 }
 
+export class OrganizationSettingsUpdateBody {
+    @ApiProperty({ required: false })
+    auto_resolve_tickets?: boolean;
+}
+
 /********************************************/
 /*             Create interfaces            */
 /********************************************/

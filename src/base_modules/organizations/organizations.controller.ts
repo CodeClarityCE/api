@@ -6,6 +6,7 @@ import {
     Get,
     Param,
     ParseIntPipe,
+    Patch,
     Post,
     Query
 } from '@nestjs/common';
@@ -20,7 +21,8 @@ import {
     JoinOrgCreateBody,
     OrganizationCreateBody,
     OrganizationInfoForInvitee,
-    OrganizationMetaData
+    OrganizationMetaData,
+    OrganizationSettingsUpdateBody
 } from 'src/base_modules/organizations/org.types';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { TeamMember } from 'src/base_modules/users/teamMember.types';
@@ -157,6 +159,22 @@ export class OrganizationsController {
         @Param('organization_id') organization_id: string
     ): Promise<NoDataResponse> {
         await this.organizationsService.deleteOrg(organization_id, user);
+        return {};
+    }
+
+    @ApiTags('Organizations')
+    @APIDocNoDataResponseDecorator()
+    @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
+    @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
+    @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
+    @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
+    @Patch(':organization_id/settings')
+    async updateSettings(
+        @AuthUser() user: AuthenticatedUser,
+        @Param('organization_id') organization_id: string,
+        @Body() settingsBody: OrganizationSettingsUpdateBody
+    ): Promise<NoDataResponse> {
+        await this.organizationsService.updateSettings(organization_id, settingsBody, user);
         return {};
     }
 

@@ -7,7 +7,8 @@ import { OrganizationMemberships } from 'src/base_modules/organizations/membersh
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import {
     OrganizationCreateBody,
-    OrganizationInfoForInvitee
+    OrganizationInfoForInvitee,
+    OrganizationSettingsUpdateBody
 } from 'src/base_modules/organizations/org.types';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import {
@@ -486,5 +487,30 @@ export class OrganizationsService {
         _user: AuthenticatedUser
     ): Promise<TeamMember> {
         throw new Error('Method not implemented.');
+    }
+
+    /**
+     * Update organization settings
+     * @throws {NotAuthorized} If the user is not an admin or owner
+     * @throws {EntityNotFound} If the organization does not exist
+     *
+     * @param orgId The id of the organization
+     * @param settingsBody The settings to update
+     * @param user The authenticated user
+     */
+    async updateSettings(
+        orgId: string,
+        settingsBody: OrganizationSettingsUpdateBody,
+        user: AuthenticatedUser
+    ): Promise<void> {
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+
+        const organization = await this.organizationsRepository.getOrganizationById(orgId);
+
+        if (settingsBody.auto_resolve_tickets !== undefined) {
+            organization.auto_resolve_tickets = settingsBody.auto_resolve_tickets;
+        }
+
+        await this.organizationsRepository.saveOrganization(organization);
     }
 }

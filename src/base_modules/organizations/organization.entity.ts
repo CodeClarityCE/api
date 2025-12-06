@@ -56,6 +56,11 @@ export class Organization {
     @Column()
     personal!: boolean;
 
+    @ApiProperty()
+    @Expose()
+    @Column({ default: false })
+    auto_resolve_tickets!: boolean;
+
     // Foreign keys
     @ApiProperty()
     @Expose()
