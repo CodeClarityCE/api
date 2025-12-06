@@ -10,14 +10,18 @@ import {
     PaginationUserSuppliedConf
 } from 'src/types/pagination.types';
 import { OrganizationLoggerService } from '../organizations/log/organizationLogger.service';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
-import { UsersRepository } from '../users/users.repository';
+import {
+    MembershipsRepository,
+    OrganizationsRepository,
+    UsersRepository
+} from '../shared/repositories';
 import { AnalyzersRepository } from './analyzers.repository';
 
 @Injectable()
 export class AnalyzersService {
     constructor(
         private readonly organizationLoggerService: OrganizationLoggerService,
+        private readonly membershipsRepository: MembershipsRepository,
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly usersRepository: UsersRepository,
         private readonly analyzersRepository: AnalyzersRepository
@@ -35,7 +39,7 @@ export class AnalyzersService {
         user: AuthenticatedUser
     ): Promise<string> {
         // Check if the user is allowed to create an analyzer (is at least admin)
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
         const creator = await this.usersRepository.getUserById(user.userId);
         const organization = await this.organizationsRepository.getOrganizationById(orgId);
@@ -83,7 +87,7 @@ export class AnalyzersService {
         user: AuthenticatedUser
     ): Promise<void> {
         // Check if the user is allowed to update an analyzer (is at least admin)
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
         const analyzer = await this.analyzersRepository.getAnalyzerById(analyzerId);
 
@@ -121,7 +125,7 @@ export class AnalyzersService {
      */
     async get(orgId: string, id: string, user: AuthenticatedUser): Promise<Analyzer> {
         // Check if the user is allowed to get an analyzer (is at least user)
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // Verify that the specified analyzer belongs to the organization
         await this.analyzersRepository.doesAnalyzerBelongToOrg(id, orgId);
@@ -137,7 +141,7 @@ export class AnalyzersService {
      */
     async getByName(orgId: string, name: string, user: AuthenticatedUser): Promise<Analyzer> {
         // Check if the user is allowed to get an analyzer (is at least user)
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const analyzer = await this.analyzersRepository.getByNameAndOrganization(name, orgId);
 
@@ -159,7 +163,7 @@ export class AnalyzersService {
         user: AuthenticatedUser
     ): Promise<TypedPaginatedData<Analyzer>> {
         // Check if the user is allowed to get analyzers (is at least user)
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const paginationConfig: PaginationConfig = {
             maxEntriesPerPage: 100,
@@ -193,7 +197,7 @@ export class AnalyzersService {
      */
     async delete(orgId: string, id: string, user: AuthenticatedUser): Promise<void> {
         // Check if the user is allowed to delete an analyzer (is at least admin)
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
         // Verify that the specified analyzer belongs to the organization
         await this.analyzersRepository.doesAnalyzerBelongToOrg(id, orgId);

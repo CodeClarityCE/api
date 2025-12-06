@@ -6,7 +6,7 @@ import { GitlabIntegrationTokenService } from '../integrations/gitlab/gitlabToke
 import { SocialType } from '../users/user.types';
 import type { User } from '../users/users.entity';
 import { CannotPerformActionOnSocialAccount } from '../users/users.errors';
-import { UsersRepository } from '../users/users.repository';
+import { UsersRepository } from '../shared/repositories';
 import { UsersService } from '../users/users.service';
 import { WrongCredentials, RegistrationNotVerified } from './auth.errors';
 import { AuthService } from './auth.service';

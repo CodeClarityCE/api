@@ -1,11 +1,10 @@
 import * as fs from 'fs';
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/gitlab/gitlabToken.service';
 import { EmailModule } from '../email/email.module';
-import { OrganizationsModule } from '../organizations/organizations.module';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -23,8 +22,7 @@ import { RefreshJWTStrategy } from './strategies/refresh-token.strategy';
     imports: [
         PassportModule,
         EmailModule,
-        UsersModule,
-        OrganizationsModule,
+        forwardRef(() => UsersModule), // Service-level circular dep: AuthService <-> UsersService
         JwtModule.register({
             global: true,
             publicKey: fs.readFileSync('./jwt/public.pem', 'utf8'),

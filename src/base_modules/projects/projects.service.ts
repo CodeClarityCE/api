@@ -27,10 +27,12 @@ import { FileRepository } from '../file/file.repository';
 import { GithubRepositoriesService } from '../integrations/github/githubRepos.service';
 import { GitlabRepositoriesService } from '../integrations/gitlab/gitlabRepos.service';
 import { IntegrationsRepository } from '../integrations/integrations.repository';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
-import { UsersRepository } from '../users/users.repository';
-import { ProjectMemberService } from './projectMember.service';
-import { ProjectsRepository } from './projects.repository';
+import {
+    MembershipsRepository,
+    OrganizationsRepository,
+    ProjectsRepository,
+    UsersRepository
+} from '../shared/repositories';
 
 export enum AllowedOrderByGetProjects {
     IMPORTED_ON = 'imported_on',
@@ -41,6 +43,7 @@ export enum AllowedOrderByGetProjects {
 interface RepositoryServices {
     users: UsersRepository;
     organizations: OrganizationsRepository;
+    memberships: MembershipsRepository;
     file: FileRepository;
     integrations: IntegrationsRepository;
     results: AnalysisResultsRepository;
@@ -54,11 +57,11 @@ export class ProjectService {
 
     constructor(
         private readonly organizationLoggerService: OrganizationLoggerService,
-        private readonly projectMemberService: ProjectMemberService,
         private readonly githubRepositoriesService: GithubRepositoriesService,
         private readonly gitlabRepositoriesService: GitlabRepositoriesService,
         usersRepository: UsersRepository,
         organizationsRepository: OrganizationsRepository,
+        membershipsRepository: MembershipsRepository,
         fileRepository: FileRepository,
         integrationsRepository: IntegrationsRepository,
         resultsRepository: AnalysisResultsRepository,
@@ -68,6 +71,7 @@ export class ProjectService {
         this.repos = {
             users: usersRepository,
             organizations: organizationsRepository,
+            memberships: membershipsRepository,
             file: fileRepository,
             integrations: integrationsRepository,
             results: resultsRepository,
@@ -123,7 +127,7 @@ export class ProjectService {
         user: AuthenticatedUser
     ): Promise<string> {
         // (1) Check that the user is a member of the org
-        await this.repos.organizations.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.repos.memberships.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const project = new Project();
 
@@ -241,14 +245,14 @@ export class ProjectService {
      */
     async get(organizationId: string, id: string, user: AuthenticatedUser): Promise<Project> {
         // (1) Every member of an org can retrieve a project
-        await this.repos.organizations.hasRequiredRole(
+        await this.repos.memberships.hasRequiredRole(
             organizationId,
             user.userId,
             MemberRole.USER
         );
 
         // (2) Check if project belongs to org
-        await this.projectMemberService.doesProjectBelongToOrg(id, organizationId);
+        await this.repos.projects.doesProjectBelongToOrg(id, organizationId);
 
         return this.repos.projects.getProjectById(id, {
             files: true,
@@ -277,7 +281,7 @@ export class ProjectService {
         _sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<Project>> {
         // Every member of an org can retrieve all project
-        await this.repos.organizations.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.repos.memberships.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const paginationConfig: PaginationConfig = {
             maxEntriesPerPage: 100,
@@ -310,12 +314,12 @@ export class ProjectService {
      */
     async delete(orgId: string, id: string, user: AuthenticatedUser): Promise<void> {
         // (1) Check that member is at least a user
-        await this.repos.organizations.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.repos.memberships.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check if project belongs to org
         await this.repos.projects.doesProjectBelongToOrg(id, orgId);
 
-        const membership = await this.repos.organizations.getMembershipRole(orgId, user.userId);
+        const membership = await this.repos.memberships.getMembershipRole(orgId, user.userId);
 
         if (!membership) {
             throw new EntityNotFound();

@@ -2,8 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
-import { UsersRepository } from 'src/base_modules/users/users.repository';
+import {
+    MembershipsRepository,
+    OrganizationsRepository,
+    UsersRepository
+} from 'src/base_modules/shared/repositories';
 import {
     LicensePolicyCreateBody,
     LicensePolicyPatchBody
@@ -21,6 +24,7 @@ import { Repository } from 'typeorm';
 @Injectable()
 export class LicensePolicyService {
     constructor(
+        private readonly membershipsRepository: MembershipsRepository,
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly usersRepository: UsersRepository,
         @InjectRepository(Policy, 'codeclarity')
@@ -40,7 +44,7 @@ export class LicensePolicyService {
         user: AuthenticatedUser
     ): Promise<string> {
         // Only owners and admins can add an policy to the org
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
         const organization = await this.organizationsRepository.getOrganizationById(orgId);
         if (!organization) {
@@ -76,7 +80,7 @@ export class LicensePolicyService {
      */
     async get(orgId: string, licensePolicyId: string, user: AuthenticatedUser): Promise<Policy> {
         // (1) Check if user has access to org
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const policy = await this.policyRepository.findOne({
             where: {
@@ -113,7 +117,7 @@ export class LicensePolicyService {
         _sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<PolicyFrontend>> {
         // Check if user has access to org
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const paginationConfig: PaginationConfig = {
             maxEntriesPerPage: 100,
@@ -188,7 +192,7 @@ export class LicensePolicyService {
         user: AuthenticatedUser
     ): Promise<void> {
         // Only owners and admins can update an policy to the org
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
         throw new Error('Method not implemented.');
     }
 
@@ -202,7 +206,7 @@ export class LicensePolicyService {
      */
     async remove(orgId: string, _licensePolicyId: string, user: AuthenticatedUser): Promise<void> {
         // Only owners and admins can remove an policy to the org
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
         throw new Error('Method not implemented.');
     }
 }

@@ -1,8 +1,6 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AnalysesModule } from 'src/base_modules/analyses/analyses.module';
 import { OrganizationsModule } from 'src/base_modules/organizations/organizations.module';
-import { ProjectsModule } from 'src/base_modules/projects/projects.module';
 import { UsersModule } from 'src/base_modules/users/users.module';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { LicenseModule } from './licenses/licenses.module';
@@ -17,8 +15,6 @@ import { VulnerabilitiesModule } from './vulnerabilities/vulnerabilities.module'
     imports: [
         forwardRef(() => UsersModule),
         OrganizationsModule,
-        forwardRef(() => AnalysesModule),
-        forwardRef(() => ProjectsModule),
         VulnerabilitiesModule,
         SbomModule,
         PatchingModule,

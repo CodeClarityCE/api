@@ -4,7 +4,11 @@ import ms from 'ms';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { GithubRepositorySchema } from 'src/base_modules/integrations/github/github.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import {
+    IntegrationsRepository,
+    MembershipsRepository,
+    OrganizationsRepository
+} from 'src/base_modules/shared/repositories';
 import { RepositoryCache, RepositoryType } from 'src/base_modules/projects/repositoryCache.entity';
 import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import {
@@ -16,7 +20,6 @@ import {
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
 import { Repository } from 'typeorm';
-import { IntegrationsRepository } from '../integrations.repository';
 import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from './constants';
 import { GithubIntegrationService } from './github.service';
 
@@ -38,6 +41,7 @@ interface OctokitReposResponse {
 export class GithubRepositoriesService {
     constructor(
         private readonly githubIntegrationService: GithubIntegrationService,
+        private readonly membershipsRepository: MembershipsRepository,
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly integrationsRepository: IntegrationsRepository,
         @InjectRepository(RepositoryCache, 'codeclarity')
@@ -128,7 +132,7 @@ export class GithubRepositoriesService {
         const typedSortBy = sortBy as AllowedOrderBy | undefined;
 
         // (1) Check that the user has the right to access the org
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check that the integration belongs to the org
         if (
@@ -241,7 +245,7 @@ export class GithubRepositoriesService {
         forceRefresh?: boolean
     ): Promise<RepositoryCache> {
         // (1) Check that the user has the right to access the org
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check that the integration belongs to the org
         if (
@@ -378,7 +382,7 @@ export class GithubRepositoriesService {
                 per_page: entriesPerPage,
                 page: page,
                 sort: 'updated',
-                since: lastUpdated !== undefined ? lastUpdated.toISOString() : undefined
+                since: lastUpdated ? lastUpdated.toISOString() : undefined
             })) as OctokitReposResponse;
 
             const linkHeader = response.headers.link;

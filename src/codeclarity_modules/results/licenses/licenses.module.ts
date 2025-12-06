@@ -1,8 +1,6 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AnalysesModule } from 'src/base_modules/analyses/analyses.module';
 import { OrganizationsModule } from 'src/base_modules/organizations/organizations.module';
-import { ProjectsModule } from 'src/base_modules/projects/projects.module';
 import { KnowledgeModule } from 'src/codeclarity_modules/knowledge/knowledge.module';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { AnalysisResultsRepository } from '../results.repository';
@@ -16,8 +14,6 @@ import { LicensesUtilsService } from './utils/utils';
 @Module({
     imports: [
         OrganizationsModule,
-        forwardRef(() => ProjectsModule),
-        forwardRef(() => AnalysesModule),
         KnowledgeModule,
         forwardRef(() => SbomModule),
         TypeOrmModule.forFeature([Result], 'codeclarity')

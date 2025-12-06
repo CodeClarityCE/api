@@ -20,7 +20,7 @@ import {
     NotAuthenticated,
     NotAuthorized
 } from 'src/types/error.types';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
+import { OrganizationsRepository } from '../shared/repositories';
 import { IntegrationsRepository } from './integrations.repository';
 import { IntegrationsService } from './integrations.service';
 

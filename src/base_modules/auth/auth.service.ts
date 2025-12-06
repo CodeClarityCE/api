@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import ms from 'ms';
@@ -13,13 +13,13 @@ import { GitlabIntegrationTokenService } from 'src/base_modules/integrations/git
 import { SocialType } from 'src/base_modules/users/user.types';
 import { User } from 'src/base_modules/users/users.entity';
 import { UsersService } from 'src/base_modules/users/users.service';
+import { UsersRepository } from 'src/base_modules/shared/repositories';
 import {
     AlreadyExists,
     EntityNotFound,
     FailedToAuthenticateSocialAccount
 } from 'src/types/error.types';
 import { CannotPerformActionOnSocialAccount } from '../users/users.errors';
-import { UsersRepository } from '../users/users.repository';
 import { RegistrationNotVerified, WrongCredentials } from './auth.errors';
 import {
     CONST_JWT_TOKEN_EXPIRES_IN,
@@ -32,8 +32,8 @@ export class AuthService {
     constructor(
         private jwtService: JwtService,
         private gitlabIntegrationTokenService: GitlabIntegrationTokenService,
+        @Inject(forwardRef(() => UsersService))
         private userService: UsersService,
-        @Inject(forwardRef(() => UsersRepository))
         private readonly usersRepository: UsersRepository
     ) {}
 

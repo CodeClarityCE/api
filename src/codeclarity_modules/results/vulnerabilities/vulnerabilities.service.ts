@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AnalysesRepository } from 'src/base_modules/analyses/analyses.repository';
+import { AnalysesRepository } from 'src/base_modules/shared/repositories';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { CWERepository } from 'src/codeclarity_modules/knowledge/cwe/cwe.repository';
 import { EPSSRepository } from 'src/codeclarity_modules/knowledge/epss/epss.repository';

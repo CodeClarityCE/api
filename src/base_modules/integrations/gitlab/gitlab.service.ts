@@ -8,8 +8,12 @@ import {
 } from 'src/base_modules/integrations/gitlab/gitlabIntegration.types';
 import { GitlabIntegrationToken } from 'src/base_modules/integrations/Token';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
-import { UsersRepository } from 'src/base_modules/users/users.repository';
+import {
+    IntegrationsRepository,
+    MembershipsRepository,
+    OrganizationsRepository,
+    UsersRepository
+} from 'src/base_modules/shared/repositories';
 import {
     DuplicateIntegration,
     EntityNotFound,
@@ -24,7 +28,6 @@ import {
 } from 'src/types/error.types';
 import { VCSIntegrationMetaData } from '../integration.types';
 import { Integration, IntegrationProvider, IntegrationType } from '../integrations.entity';
-import { IntegrationsRepository } from '../integrations.repository';
 import { GitlabIntegrationTokenService } from './gitlabToken.service';
 
 // https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#prefill-personal-access-token-name-and-scopes
@@ -33,6 +36,7 @@ import { GitlabIntegrationTokenService } from './gitlabToken.service';
 export class GitlabIntegrationService {
     constructor(
         private readonly gitlabIntegrationTokenService: GitlabIntegrationTokenService,
+        private readonly membershipsRepository: MembershipsRepository,
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly integrationsRepository: IntegrationsRepository,
         private readonly usersRepository: UsersRepository
@@ -60,7 +64,7 @@ export class GitlabIntegrationService {
         }
 
         // (2) Check that the user has the right to access the org
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
         const integration = await this.integrationsRepository.getIntegrationById(integrationId, {
             organizations: true,
             owner: true
@@ -211,7 +215,7 @@ export class GitlabIntegrationService {
         ) {
             throw new NotAuthorized();
         }
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
         if (linkGitlabCreate.token_type !== GitlabTokenType.PERSONAL_ACCESS_TOKEN) {
             throw new IntegrationWrongTokenType();

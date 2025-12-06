@@ -29,10 +29,12 @@ import { AnalysisStartMessageCreate } from 'src/types/rabbitMqMessages.types';
 import { Repository } from 'typeorm';
 import { AnaylzerMissingConfigAttribute } from '../analyzers/analyzers.errors';
 import { AnalyzersRepository } from '../analyzers/analyzers.repository';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
-import { ProjectMemberService } from '../projects/projectMember.service';
-import { ProjectsRepository } from '../projects/projects.repository';
-import { UsersRepository } from '../users/users.repository';
+import {
+    MembershipsRepository,
+    OrganizationsRepository,
+    ProjectsRepository,
+    UsersRepository
+} from '../shared/repositories';
 import { AnalysesRepository } from './analyses.repository';
 
 /** Configuration option for an analyzer step */
@@ -62,8 +64,8 @@ interface AnalysisConfigInput {
 @Injectable()
 export class AnalysesService {
     constructor(
-        private readonly projectMemberService: ProjectMemberService,
         private readonly configService: ConfigService,
+        private readonly membershipsRepository: MembershipsRepository,
         private readonly usersRepository: UsersRepository,
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly projectsRepository: ProjectsRepository,
@@ -95,10 +97,10 @@ export class AnalysesService {
         user: AuthenticatedUser
     ): Promise<string> {
         // Check if the user has the required role to perform actions on the organization
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // Verify that the project belongs to the specified organization
-        await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
+        await this.projectsRepository.doesProjectBelongToOrg(projectId, orgId);
 
         // Retrieve the analyzer details based on the provided analyzer ID
         const analyzer = await this.analyzersRepository.getAnalyzerById(analysisData.analyzer_id);
@@ -311,10 +313,10 @@ export class AnalysesService {
         user: AuthenticatedUser
     ): Promise<Analysis> {
         // (1) Check if user has access to org
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check if the project belongs to the org
-        await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
+        await this.projectsRepository.doesProjectBelongToOrg(projectId, orgId);
 
         // (3) Check if the analysis belongs to the project
         await this.analysesRepository.doesAnalysesBelongToProject(id, projectId);
@@ -349,10 +351,10 @@ export class AnalysesService {
         user: AuthenticatedUser
     ): Promise<object[]> {
         // (1) Check if user has access to org
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check if the project belongs to the org
-        await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
+        await this.projectsRepository.doesProjectBelongToOrg(projectId, orgId);
 
         // (3) Check if the analysis belongs to the project
         await this.analysesRepository.doesAnalysesBelongToProject(id, projectId);
@@ -429,14 +431,14 @@ export class AnalysesService {
         user: AuthenticatedUser
     ): Promise<TypedPaginatedData<Analysis>> {
         // (1) Check if the user is allowed to create an analyzer (is at least a user)
-        await this.organizationsRepository.hasRequiredRole(
+        await this.membershipsRepository.hasRequiredRole(
             organizationId,
             user.userId,
             MemberRole.USER
         );
 
         // (2) Check if the project belongs to the org
-        await this.projectMemberService.doesProjectBelongToOrg(projectId, organizationId);
+        await this.projectsRepository.doesProjectBelongToOrg(projectId, organizationId);
 
         const paginationConfig: PaginationConfig = {
             maxEntriesPerPage: 100,
@@ -486,10 +488,10 @@ export class AnalysesService {
         user: AuthenticatedUser
     ): Promise<void> {
         // (1) Check if user has access to org
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check if the project belongs to the org
-        await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
+        await this.projectsRepository.doesProjectBelongToOrg(projectId, orgId);
 
         // (3) Check if the analysis belongs to the project
         await this.analysesRepository.doesAnalysesBelongToProject(id, projectId);
@@ -521,10 +523,10 @@ export class AnalysesService {
         user: AuthenticatedUser
     ): Promise<Analysis[]> {
         // Verify user has access to the organization
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // Verify project belongs to the organization
-        await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
+        await this.projectsRepository.doesProjectBelongToOrg(projectId, orgId);
 
         // Return only active scheduled analyses (daily/weekly)
         return this.analysesRepository.getScheduledAnalysesByProjectId(projectId);
@@ -555,8 +557,8 @@ export class AnalysesService {
         user: AuthenticatedUser
     ): Promise<void> {
         // Verify permissions
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
-        await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.projectsRepository.doesProjectBelongToOrg(projectId, orgId);
         await this.analysesRepository.doesAnalysesBelongToProject(analysisId, projectId);
 
         // Get the analysis and update scheduling fields
@@ -591,8 +593,8 @@ export class AnalysesService {
         user: AuthenticatedUser
     ): Promise<void> {
         // Verify permissions
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
-        await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.projectsRepository.doesProjectBelongToOrg(projectId, orgId);
         await this.analysesRepository.doesAnalysesBelongToProject(analysisId, projectId);
 
         // Disable the scheduled analysis
@@ -681,7 +683,7 @@ export class AnalysesService {
     ): Promise<AnalysisRun[]> {
         // Verify permissions
         await this.projectsRepository.doesProjectBelongToOrg(projectId, orgId);
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
         await this.analysesRepository.doesAnalysesBelongToProject(analysisId, projectId);
 
         // Get all results generated by this analysis

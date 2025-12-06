@@ -14,6 +14,12 @@ import {
     UserPatchBody
 } from 'src/base_modules/users/user.types';
 import { User } from 'src/base_modules/users/users.entity';
+import {
+    MembershipsRepository,
+    OrganizationsRepository,
+    ProjectsRepository,
+    UsersRepository
+} from 'src/base_modules/shared/repositories';
 import { NotAuthorized } from 'src/types/error.types';
 import { genRandomString, hash } from 'src/utils/crypto';
 import {
@@ -23,12 +29,10 @@ import {
 import { AuthService } from '../auth/auth.service';
 import { EmailRepository } from '../email/email.repository';
 import { EmailService } from '../email/email.service';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
 import {
     CannotPerformActionOnSocialAccount,
     FailedToSendAccountRegistrationVerificationEmail
 } from './users.errors';
-import { UsersRepository } from './users.repository';
 
 /**
  * This service offers methods for working with users
@@ -38,6 +42,8 @@ export class UsersService {
     constructor(
         private readonly emailService: EmailService,
         private readonly organizationsRepository: OrganizationsRepository,
+        private readonly membershipsRepository: MembershipsRepository,
+        private readonly projectsRepository: ProjectsRepository,
         private readonly emailRepository: EmailRepository,
         @Inject(forwardRef(() => AuthService))
         private readonly authService: AuthService,
@@ -75,7 +81,7 @@ export class UsersService {
         orgId: string,
         authenticatedUser: AuthenticatedUser
     ): Promise<void> {
-        await this.organizationsRepository.hasRequiredRole(
+        await this.membershipsRepository.hasRequiredRole(
             orgId,
             authenticatedUser.userId,
             MemberRole.USER
@@ -149,7 +155,7 @@ export class UsersService {
         orgMember.role = 0;
         orgMember.joined_on = new Date();
 
-        await this.organizationsRepository.saveMembership(orgMember);
+        await this.membershipsRepository.saveMembership(orgMember);
 
         try {
             await this.sendUserRegistrationVerificationEmail(userData.email);
@@ -415,6 +421,9 @@ export class UsersService {
             }
         }
 
+        // Orchestrate cross-repository cleanup before deleting user
+        await this.membershipsRepository.removeUserMemberships(user.id);
+        await this.projectsRepository.deleteUserProjects(user.id);
         await this.usersRepository.deleteUser(user.id);
     }
 

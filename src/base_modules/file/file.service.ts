@@ -5,16 +5,18 @@ import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { File as FileEntity } from 'src/base_modules/file/file.entity';
 import { MemberRole } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
 import { validateAndJoinPath } from 'src/utils/path-validator';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
-import { ProjectsRepository } from '../projects/projects.repository';
-import { UsersRepository } from '../users/users.repository';
+import {
+    MembershipsRepository,
+    ProjectsRepository,
+    UsersRepository
+} from '../shared/repositories';
 import { UploadData } from './file.controller';
 import { FileRepository } from './file.repository';
 
 @Injectable()
 export class FileService {
     constructor(
-        private readonly organizationsRepository: OrganizationsRepository,
+        private readonly membershipsRepository: MembershipsRepository,
         private readonly usersRepository: UsersRepository,
         private readonly projectsRepository: ProjectsRepository,
         private readonly fileRepository: FileRepository
@@ -37,7 +39,7 @@ export class FileService {
         queryParams: UploadData
     ): Promise<void> {
         // Check if the user has the required role in the organization
-        await this.organizationsRepository.hasRequiredRole(
+        await this.membershipsRepository.hasRequiredRole(
             organization_id,
             user.userId,
             MemberRole.USER
@@ -224,7 +226,7 @@ export class FileService {
         user: AuthenticatedUser
     ): Promise<void> {
         // Check if the user has the required role in the organization
-        await this.organizationsRepository.hasRequiredRole(
+        await this.membershipsRepository.hasRequiredRole(
             organization_id,
             user.userId,
             MemberRole.USER

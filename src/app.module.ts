@@ -4,6 +4,7 @@ import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConne
 import { AuthModule } from './base_modules/auth/auth.module';
 import { BaseModule } from './base_modules/base.module';
 import { CodeClarityModule } from './codeclarity_modules/codeclarity.module';
+import { SharedRepositoriesModule } from './base_modules/shared/shared.module';
 import { EnterpriseModule } from './enterprise_modules/enterprise.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { validate } from './utils/validate-env';
@@ -35,6 +36,8 @@ export const defaultOptions: PostgresConnectionOptions = {
      * List of imported modules.
      */
     imports: [
+        // Shared repositories module - provides pure database repositories globally
+        SharedRepositoriesModule,
         // Module for handling authentication-related functionality.
         AuthModule,
         // Module for managing application configuration, including environment variables and validation.

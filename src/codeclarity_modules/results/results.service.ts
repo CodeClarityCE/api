@@ -1,18 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { AnalysesRepository } from 'src/base_modules/analyses/analyses.repository';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import {
+    AnalysesRepository,
+    MembershipsRepository,
+    ProjectsRepository
+} from 'src/base_modules/shared/repositories';
 import { EntityNotFound } from 'src/types/error.types';
-import { ProjectMemberService } from '../../base_modules/projects/projectMember.service';
 import { Result } from './result.entity';
 import { AnalysisResultsRepository } from './results.repository';
 
 @Injectable()
 export class AnalysisResultsService {
     constructor(
-        private readonly projectMemberService: ProjectMemberService,
-        private readonly organizationsRepository: OrganizationsRepository,
+        private readonly projectsRepository: ProjectsRepository,
+        private readonly membershipsRepository: MembershipsRepository,
         private readonly analysesRepository: AnalysesRepository,
         private readonly resultsRepository: AnalysisResultsRepository
     ) {}
@@ -31,10 +33,10 @@ export class AnalysisResultsService {
         user: AuthenticatedUser
     ): Promise<void> {
         // (1) Check if user has access to org
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check if the project belongs to the org
-        await this.projectMemberService.doesProjectBelongToOrg(projectId, orgId);
+        await this.projectsRepository.doesProjectBelongToOrg(projectId, orgId);
 
         // (3) Check if the analyses belongs to the project
         await this.analysesRepository.doesAnalysesBelongToProject(analysisId, projectId);

@@ -5,12 +5,16 @@ import { MemberRole } from 'src/base_modules/organizations/memberships/orgMember
 import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import { NotAMember, NotAuthorized } from 'src/types/error.types';
 import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/pagination.types';
-import { OrganizationsRepository } from '../organizations/organizations.repository';
+import {
+    MembershipsRepository,
+    OrganizationsRepository
+} from '../shared/repositories';
 import { IntegrationsRepository } from './integrations.repository';
 
 @Injectable()
 export class IntegrationsService {
     constructor(
+        private readonly membershipsRepository: MembershipsRepository,
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly integrationRepository: IntegrationsRepository
     ) {}
@@ -29,7 +33,7 @@ export class IntegrationsService {
         user: AuthenticatedUser
     ): Promise<TypedPaginatedResponse<Integration>> {
         // Check if the authenticated user has at least USER role in the specified organization.
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // Define the default and maximum number of entries per page for pagination.
         const paginationConfig: PaginationConfig = {
@@ -73,7 +77,7 @@ export class IntegrationsService {
         }
 
         // Verify that the authenticated user has at least USER role in the organization.
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // Fetch and return the integration by its ID.
         return await this.integrationRepository.getIntegrationById(integrationId);
@@ -95,7 +99,7 @@ export class IntegrationsService {
     ): Promise<void> {
         try {
             // Only organization owners and admins can remove an integration.
-            await this.organizationsRepository.hasRequiredRole(
+            await this.membershipsRepository.hasRequiredRole(
                 orgId,
                 user.userId,
                 MemberRole.ADMIN

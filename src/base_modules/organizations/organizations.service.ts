@@ -11,21 +11,25 @@ import {
 } from 'src/base_modules/organizations/org.types';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { TeamMember } from 'src/base_modules/users/teamMember.types';
+import {
+    InvitationsRepository,
+    MembershipsRepository,
+    OrganizationsRepository,
+    UsersRepository
+} from 'src/base_modules/shared/repositories';
 import { EntityNotFound } from 'src/types/error.types';
-import { TypedPaginatedData, PaginationUserSuppliedConf } from 'src/types/pagination.types';
+import { PaginationUserSuppliedConf, TypedPaginatedData } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
 import { genRandomString, hash } from 'src/utils/crypto';
 import { EmailRepository } from '../email/email.repository';
 import { EmailService } from '../email/email.service';
-import { UsersRepository } from '../users/users.repository';
-import { InvitationsRepository } from './invitations/invitations.repository';
-import { OrganizationsRepository } from './organizations.repository';
 
 @Injectable()
 export class OrganizationsService {
     constructor(
         private readonly emailService: EmailService,
         private readonly organizationsRepository: OrganizationsRepository,
+        private readonly membershipsRepository: MembershipsRepository,
         private readonly usersRepository: UsersRepository,
         private readonly emailRepository: EmailRepository,
         private readonly invitationsRepository: InvitationsRepository
@@ -63,7 +67,7 @@ export class OrganizationsService {
         membership.joined_on = new Date();
         membership.user = creator;
         membership.organization = organization;
-        membership = await this.organizationsRepository.saveMembership(membership);
+        membership = await this.membershipsRepository.saveMembership(membership);
 
         return organization.id;
     }
@@ -78,8 +82,8 @@ export class OrganizationsService {
      * @returns the organization information
      */
     async get(orgId: string, user: AuthenticatedUser): Promise<object> {
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
-        const membership = await this.organizationsRepository.getMembershipByOrganizationAndUser(
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        const membership = await this.membershipsRepository.getMembershipByOrganizationAndUser(
             orgId,
             user.userId,
             {
@@ -91,7 +95,7 @@ export class OrganizationsService {
             }
         );
 
-        const number_of_members = await this.organizationsRepository.countMembers(orgId);
+        const number_of_members = await this.membershipsRepository.countMembers(orgId);
 
         const organizationInfo: object = {
             ...membership.organization,
@@ -112,7 +116,7 @@ export class OrganizationsService {
      * @returns the organization metadata information
      */
     async getOrgMetaData(orgId: string, user: AuthenticatedUser): Promise<Organization> {
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         return await this.organizationsRepository.getOrganizationById(orgId, {
             projects: {
@@ -138,7 +142,7 @@ export class OrganizationsService {
         _sortBy?: string,
         _sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<object>> {
-        return this.organizationsRepository.getOrganizationsOfUser(user.userId);
+        return this.membershipsRepository.getOrganizationsOfUser(user.userId);
     }
 
     /**
@@ -161,7 +165,7 @@ export class OrganizationsService {
         _sortBy?: string,
         _sortDirection?: SortDirection
     ): Promise<TypedPaginatedData<OrganizationMemberships>> {
-        const memberships = await this.organizationsRepository.getMembershipsByOrganizationId(
+        const memberships = await this.membershipsRepository.getMembershipsByOrganizationId(
             orgId,
             { organization: true, user: true }
         );
@@ -196,7 +200,7 @@ export class OrganizationsService {
         inviteBody: InviteCreateBody,
         user: AuthenticatedUser
     ): Promise<void> {
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.OWNER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.OWNER);
 
         const invitedUser = await this.usersRepository.getUserByEmail(inviteBody.user_email);
 
@@ -359,7 +363,7 @@ export class OrganizationsService {
         membership.role = invitation.role;
         membership.user = invitation.user;
 
-        await this.organizationsRepository.saveMembership(membership);
+        await this.membershipsRepository.saveMembership(membership);
         await this.invitationsRepository.deleteInvitation(invitation);
 
         const mail = await this.emailRepository.getActivationMail(inviteToken, emailDigest);
@@ -446,7 +450,7 @@ export class OrganizationsService {
      * @param user The authenticated user
      */
     async leaveOrg(orgId: string, user: AuthenticatedUser): Promise<void> {
-        await this.organizationsRepository.leaveOrganization(user.userId, orgId);
+        await this.membershipsRepository.leaveOrganization(user.userId, orgId);
     }
 
     /**
@@ -459,11 +463,11 @@ export class OrganizationsService {
      * @param user The authenticated user
      */
     async deleteOrg(orgId: string, user: AuthenticatedUser): Promise<void> {
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const memberships =
-            await this.organizationsRepository.getMembershipsByOrganizationId(orgId);
-        await this.organizationsRepository.removeMemberships(memberships);
+            await this.membershipsRepository.getMembershipsByOrganizationId(orgId);
+        await this.membershipsRepository.removeMemberships(memberships);
         await this.organizationsRepository.deleteOrganization(orgId);
     }
 

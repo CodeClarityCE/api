@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import { MembershipsRepository } from 'src/base_modules/shared/repositories';
 import {
     AttackVectorDist,
     CIAImpact,
@@ -43,7 +43,7 @@ function getWeekNumber(date: Date): number {
 @Injectable()
 export class DashboardService {
     constructor(
-        private readonly organizationsRepository: OrganizationsRepository,
+        private readonly membershipsRepository: MembershipsRepository,
         @InjectRepository(Organization, 'codeclarity')
         private organizationRepository: Repository<Organization>
     ) {}
@@ -68,7 +68,7 @@ export class DashboardService {
     ): Promise<SeverityInfoByWeek[]> {
         dateRangeStart ??= subtractMonths(new Date(), 1);
         dateRangeEnd ??= new Date();
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
             .createQueryBuilder('org')
@@ -84,7 +84,7 @@ export class DashboardService {
             .getOne();
 
         if (!res) {
-            throw new Error('Organization not found');
+            return [];
         }
 
         const severityInfoByWeek: SeverityInfoByWeek[] = [];
@@ -162,7 +162,7 @@ export class DashboardService {
     ): Promise<AttackVectorDist[]> {
         dateRangeStart ??= subtractMonths(new Date(), 2);
         dateRangeEnd ??= new Date();
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
             .createQueryBuilder('org')
@@ -177,7 +177,7 @@ export class DashboardService {
             .getOne();
 
         if (!res) {
-            throw new Error('Organization not found');
+            return [];
         }
 
         const attackVectorDist: AttackVectorDist[] = [];
@@ -233,7 +233,7 @@ export class DashboardService {
     ): Promise<CIAImpact[]> {
         dateRangeStart ??= subtractMonths(new Date(), 2);
         dateRangeEnd ??= new Date();
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
             .createQueryBuilder('org')
@@ -248,7 +248,7 @@ export class DashboardService {
             .getOne();
 
         if (!res) {
-            throw new Error('Organization not found');
+            return [];
         }
 
         const ciaImpacts: CIAImpact[] = [];
@@ -303,7 +303,7 @@ export class DashboardService {
     ): Promise<LicenseDist> {
         dateRangeStart ??= subtractMonths(new Date(), 2);
         dateRangeEnd ??= new Date();
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
             .createQueryBuilder('org')
@@ -318,7 +318,7 @@ export class DashboardService {
             .getOne();
 
         if (!res) {
-            throw new Error('Organization not found');
+            return {};
         }
 
         const licenses: LicenseDist = {};
@@ -365,7 +365,7 @@ export class DashboardService {
     ): Promise<LatestVulns> {
         dateRangeStart ??= subtractMonths(new Date(), 2);
         dateRangeEnd ??= new Date();
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
             .createQueryBuilder('org')
@@ -380,7 +380,14 @@ export class DashboardService {
             .getOne();
 
         if (!res) {
-            throw new Error('Organization not found');
+            return {
+                vulns: {},
+                severity_count: [
+                    { severity_class: 'CRITICAL', count: 0 },
+                    { severity_class: 'HIGH', count: 0 },
+                    { severity_class: 'MEDIUM', count: 0 }
+                ]
+            };
         }
 
         const vulns: LatestVulns = {
@@ -447,7 +454,7 @@ export class DashboardService {
     ): Promise<QuickStats> {
         dateRangeStart ??= subtractMonths(new Date(), 2);
         dateRangeEnd ??= new Date();
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         const res = await this.organizationRepository
             .createQueryBuilder('org')
@@ -462,7 +469,21 @@ export class DashboardService {
             .getOne();
 
         if (!res) {
-            throw new Error('Organization not found');
+            return {
+                max_grade: {
+                    score: 0,
+                    class: ProjectGradeClass.D
+                },
+                max_grade_trend: {
+                    trend: Trend.UP,
+                    diff: 0
+                },
+                nmb_deprecated: 0,
+                nmb_deprecated_trend: {
+                    trend: Trend.UP,
+                    diff: 0
+                }
+            };
         }
 
         const quickStats: QuickStats = {
@@ -529,7 +550,7 @@ export class DashboardService {
     ): Promise<TypedPaginatedData<ProjectQuickStats>> {
         dateRangeStart ??= subtractMonths(new Date(), 2);
         dateRangeEnd ??= new Date();
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // enum AllowedOrderBy {
         //     PROJECT = 'project_name',

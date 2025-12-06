@@ -9,7 +9,6 @@ import { GithubModule } from '../integrations/github/github.module';
 import { GitlabModule } from '../integrations/gitlab/gitlab.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
-import { UsersModule } from '../users/users.module';
 import { ProjectMemberService } from './projectMember.service';
 import { ProjectController } from './projects.controller';
 import { ProjectsRepository } from './projects.repository';
@@ -17,8 +16,7 @@ import { ProjectService } from './projects.service';
 
 @Module({
     imports: [
-        forwardRef(() => UsersModule),
-        OrganizationsModule,
+        OrganizationsModule, // For OrganizationLoggerService
         FileModule,
         IntegrationsModule,
         GithubModule,

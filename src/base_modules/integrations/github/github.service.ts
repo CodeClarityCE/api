@@ -11,8 +11,12 @@ import {
     IntegrationProvider
 } from 'src/base_modules/integrations/integrations.entity';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
-import { UsersRepository } from 'src/base_modules/users/users.repository';
+import {
+    IntegrationsRepository,
+    MembershipsRepository,
+    OrganizationsRepository,
+    UsersRepository
+} from 'src/base_modules/shared/repositories';
 import {
     DuplicateIntegration,
     EntityNotFound,
@@ -25,7 +29,6 @@ import {
     NotAMember,
     NotAuthorized
 } from 'src/types/error.types';
-import { IntegrationsRepository } from '../integrations.repository';
 import { GithubIntegrationToken } from '../Token';
 import { GithubIntegrationTokenService } from './githubToken.service';
 
@@ -33,6 +36,7 @@ import { GithubIntegrationTokenService } from './githubToken.service';
 export class GithubIntegrationService {
     constructor(
         private readonly githubIntegrationTokenService: GithubIntegrationTokenService,
+        private readonly membershipsRepository: MembershipsRepository,
         private readonly usersRepository: UsersRepository,
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly integrationsRepository: IntegrationsRepository
@@ -144,7 +148,7 @@ export class GithubIntegrationService {
             throw new NotAuthorized();
         }
 
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
         if (linkGithubPatch.token_type !== GithubTokenType.CLASSIC_TOKEN) {
             throw new IntegrationWrongTokenType();
@@ -196,7 +200,7 @@ export class GithubIntegrationService {
         }
 
         // Check if the user has permission to access the organization
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         return await this.integrationsRepository.getIntegrationById(integrationId);
     }
@@ -223,7 +227,7 @@ export class GithubIntegrationService {
         }
 
         // Check if the user has permission to remove the integration
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.ADMIN);
 
         // TODO: Implement the removal of the GitHub integration from the organization
         throw new Error('Not implemented');

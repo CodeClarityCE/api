@@ -6,12 +6,14 @@ import {
     getTypeClassOfAction
 } from 'src/base_modules/organizations/log/orgAuditLog.types';
 import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
+import {
+    LogsRepository,
+    MembershipsRepository,
+    UsersRepository
+} from 'src/base_modules/shared/repositories';
 import { TypedPaginatedData, PaginationUserSuppliedConf } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
-import { UsersRepository } from '../../users/users.repository';
-import { OrganizationsRepository } from '../organizations.repository';
 import { Log } from './log.entity';
-import { LogsRepository } from './logs.repository';
 
 /**
  * This service provides methods for working with organization audit logs
@@ -20,7 +22,7 @@ import { LogsRepository } from './logs.repository';
 export class OrganizationLoggerService {
     constructor(
         private readonly usersRepository: UsersRepository,
-        private readonly organizationsRepository: OrganizationsRepository,
+        private readonly membershipsRepository: MembershipsRepository,
         private readonly logsRepository: LogsRepository
     ) {}
 
@@ -80,7 +82,7 @@ export class OrganizationLoggerService {
         // }
 
         // Only owners and admins can view audit logs
-        await this.organizationsRepository.hasRequiredRole(
+        await this.membershipsRepository.hasRequiredRole(
             organizationId,
             user.userId,
             MemberRole.ADMIN

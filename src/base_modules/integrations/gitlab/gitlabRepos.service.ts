@@ -2,8 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import ms from 'ms';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
-import { MemberRole } from 'src/base_modules/organizations/memberships/organization.memberships.entity';
-import { OrganizationsRepository } from 'src/base_modules/organizations/organizations.repository';
+import { MemberRole } from 'src/base_modules/organizations/memberships/orgMembership.types';
+import {
+    IntegrationsRepository,
+    MembershipsRepository,
+    OrganizationsRepository
+} from 'src/base_modules/shared/repositories';
 import { RepositoryCache, RepositoryType } from 'src/base_modules/projects/repositoryCache.entity';
 import { TypedPaginatedResponse } from 'src/types/apiResponses.types';
 import { EntityNotFound, NotAuthorized } from 'src/types/error.types';
@@ -11,7 +15,6 @@ import { PaginationConfig, PaginationUserSuppliedConf } from 'src/types/paginati
 import { SortDirection } from 'src/types/sort.types';
 import { Repository } from 'typeorm';
 import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from '../github/constants';
-import { IntegrationsRepository } from '../integrations.repository';
 import { GitlabIntegrationService } from './gitlab.service';
 
 /** GitLab API project response structure */
@@ -28,6 +31,7 @@ interface GitLabProject {
 export class GitlabRepositoriesService {
     constructor(
         private readonly gitlabIntegrationService: GitlabIntegrationService,
+        private readonly membershipsRepository: MembershipsRepository,
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly integrationsRepository: IntegrationsRepository,
         @InjectRepository(RepositoryCache, 'codeclarity')
@@ -149,7 +153,7 @@ export class GitlabRepositoriesService {
         const typedSortBy = sortBy as AllowedOrderBy | undefined;
 
         // (1) Check that the user has the right to access the org
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check that the integration belongs to the org
         if (
@@ -281,7 +285,7 @@ export class GitlabRepositoriesService {
         forceRefresh?: boolean
     ): Promise<RepositoryCache> {
         // (1) Check that the user has the right to access the org
-        await this.organizationsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
 
         // (2) Check that the integration belongs to the org
         if (
