@@ -1,3 +1,4 @@
+import { Expose } from 'class-transformer';
 import type { Source } from 'src/codeclarity_modules/knowledge/package/package.entity';
 
 export interface SeverityDist {
@@ -38,19 +39,19 @@ export interface Dependency {
 }
 
 export class SbomDependency {
-    name!: string;
-    version!: string;
-    newest_release!: string;
-    dev!: boolean;
-    prod!: boolean;
-    is_direct_count!: number;
-    is_transitive_count!: number;
+    @Expose() name!: string;
+    @Expose() version!: string;
+    @Expose() newest_release!: string;
+    @Expose() dev!: boolean;
+    @Expose() prod!: boolean;
+    @Expose() is_direct_count!: number;
+    @Expose() is_transitive_count!: number;
     // Multi-language support
-    ecosystem?: string; // e.g., 'npm', 'packagist', 'pypi', 'cargo', etc.
-    source_plugin?: string; // e.g., 'js-sbom', 'php-sbom', 'python-sbom', etc.
+    @Expose() ecosystem?: string; // e.g., 'npm', 'packagist', 'pypi', 'cargo', etc.
+    @Expose() source_plugin?: string; // e.g., 'js-sbom', 'php-sbom', 'python-sbom', etc.
     // Deprecation information
-    deprecated?: boolean;
-    deprecated_message?: string;
+    @Expose() deprecated?: boolean;
+    @Expose() deprecated_message?: string;
 }
 
 export interface DependencyDetails {
