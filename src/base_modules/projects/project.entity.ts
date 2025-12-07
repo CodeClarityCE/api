@@ -106,4 +106,7 @@ export class Project {
     @ApiProperty()
     @Expose()
     added_by!: Relation<User>;
+
+    @OneToMany('Ticket', 'project')
+    tickets!: Relation<unknown[]>;
 }

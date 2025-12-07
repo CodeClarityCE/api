@@ -56,6 +56,11 @@ export class Organization {
     @Column()
     personal!: boolean;
 
+    @ApiProperty()
+    @Expose()
+    @Column({ default: false })
+    auto_resolve_tickets!: boolean;
+
     // Foreign keys
     @ApiProperty()
     @Expose()
@@ -101,4 +106,7 @@ export class Organization {
 
     @OneToMany('Log', 'organization')
     logs!: Relation<Log[]>;
+
+    @OneToMany('Ticket', 'organization')
+    tickets!: Relation<unknown[]>;
 }
