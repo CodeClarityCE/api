@@ -1,9 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Analysis } from 'src/base_modules/analyses/analysis.entity';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { TicketAutomationService } from './automation/ticket-automation.service';
+import { ClickUpService } from './integrations/clickup/clickup.service';
+import { TicketIntegrationService } from './integrations/ticket-integration.service';
 import { TicketEvent } from './ticket-event.entity';
 import { TicketExternalLink } from './ticket-external-link.entity';
 import { TicketIntegrationConfig } from './ticket-integration-config.entity';
@@ -29,7 +31,17 @@ import { TicketsService } from './tickets.service';
         )
     ],
     controllers: [TicketsController, ProjectTicketsController],
-    providers: [TicketsService, TicketAutomationService],
-    exports: [TicketsService, TicketAutomationService]
+    providers: [TicketsService, TicketAutomationService, TicketIntegrationService, ClickUpService],
+    exports: [TicketsService, TicketAutomationService, TicketIntegrationService]
 })
-export class TicketsModule {}
+export class TicketsModule implements OnModuleInit {
+    constructor(
+        private readonly ticketIntegrationService: TicketIntegrationService,
+        private readonly clickUpService: ClickUpService
+    ) {}
+
+    onModuleInit(): void {
+        // Register integration providers
+        this.ticketIntegrationService.registerProvider(this.clickUpService);
+    }
+}

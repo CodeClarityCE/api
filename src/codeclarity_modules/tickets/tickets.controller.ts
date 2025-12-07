@@ -5,6 +5,7 @@ import {
     Delete,
     Get,
     Param,
+    ParseBoolPipe,
     ParseIntPipe,
     Patch,
     Post,
@@ -21,7 +22,11 @@ import {
 } from 'src/types/apiResponses.types';
 import { SortDirection } from 'src/types/sort.types';
 import { TicketAutomationService } from './automation/ticket-automation.service';
+import { ConnectionTestResult } from './integrations/integration-provider.interface';
+import { TicketIntegrationService } from './integrations/ticket-integration.service';
 import { TicketEventFrontend } from './ticket-event.entity';
+import { ExternalTicketProvider, TicketExternalLinkFrontend } from './ticket-external-link.entity';
+import { ClickUpAuthMethod, ClickUpConfig } from './ticket-integration-config.entity';
 import { TicketStatus, TicketPriority, TicketType } from './ticket.entity';
 import { TicketsService } from './tickets.service';
 import {
@@ -34,7 +39,12 @@ import {
     TicketDashboardStats,
     BulkUpdateResult,
     DuplicateCheckResult,
-    TicketSortField
+    TicketSortField,
+    ConfigureClickUpBody,
+    IntegrationConfigSummary,
+    IntegrationHierarchyItem,
+    SyncResult,
+    BulkSyncResult
 } from './tickets.types';
 
 /** Response type for auto-resolve operation */
@@ -62,7 +72,8 @@ function getPerformerName(
 export class TicketsController {
     constructor(
         private readonly ticketsService: TicketsService,
-        private readonly ticketAutomationService: TicketAutomationService
+        private readonly ticketAutomationService: TicketAutomationService,
+        private readonly ticketIntegrationService: TicketIntegrationService
     ) {}
 
     @Post('')
@@ -313,6 +324,325 @@ export class TicketsController {
             performed_by_name: getPerformerName(e.performed_by)
         }));
         return { data: eventsFrontend };
+    }
+
+    // ============================================
+    // Integration Endpoints
+    // ============================================
+
+    @Get('integrations')
+    @ApiOperation({ summary: 'Get all configured integrations for the organization' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiResponse({ status: 200, description: 'Integrations retrieved successfully' })
+    async getIntegrations(
+        @AuthUser() _user: AuthenticatedUser,
+        @Param('org_id') org_id: string
+    ): Promise<TypedResponse<IntegrationConfigSummary[]>> {
+        const configs = await this.ticketIntegrationService.getIntegrationConfigs(org_id);
+        const summaries: IntegrationConfigSummary[] = configs.map((c) => ({
+            id: c.id,
+            provider: c.provider,
+            enabled: c.enabled,
+            created_on: c.created_on,
+            updated_on: c.updated_on,
+            has_config: !!c.config
+        }));
+        return { data: summaries };
+    }
+
+    @Post('integrations/clickup')
+    @ApiOperation({ summary: 'Configure ClickUp integration' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiResponse({ status: 200, description: 'Integration configured successfully' })
+    async configureClickUp(
+        @AuthUser() _user: AuthenticatedUser,
+        @Param('org_id') org_id: string,
+        @Body() body: ConfigureClickUpBody
+    ): Promise<NoDataResponse> {
+        const config: ClickUpConfig = {
+            auth_method:
+                body.auth_method === 'OAUTH' ? ClickUpAuthMethod.OAUTH : ClickUpAuthMethod.API_KEY,
+            api_key: body.api_key,
+            access_token: body.access_token,
+            refresh_token: body.refresh_token,
+            workspace_id: body.workspace_id,
+            space_id: body.space_id,
+            folder_id: body.folder_id,
+            list_id: body.list_id,
+            auto_sync_on_create: body.auto_sync_on_create,
+            sync_status_changes: body.sync_status_changes
+        };
+
+        await this.ticketIntegrationService.saveIntegrationConfig(
+            org_id,
+            ExternalTicketProvider.CLICKUP,
+            config
+        );
+        return {};
+    }
+
+    @Delete('integrations/:provider')
+    @ApiOperation({ summary: 'Remove an integration' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiParam({
+        name: 'provider',
+        description: 'Integration provider',
+        enum: ExternalTicketProvider
+    })
+    @ApiResponse({ status: 200, description: 'Integration removed successfully' })
+    async removeIntegration(
+        @AuthUser() _user: AuthenticatedUser,
+        @Param('org_id') org_id: string,
+        @Param('provider') provider: ExternalTicketProvider
+    ): Promise<NoDataResponse> {
+        await this.ticketIntegrationService.deleteIntegrationConfig(org_id, provider);
+        return {};
+    }
+
+    @Post('integrations/:provider/test')
+    @ApiOperation({ summary: 'Test integration connection' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiParam({
+        name: 'provider',
+        description: 'Integration provider',
+        enum: ExternalTicketProvider
+    })
+    @ApiResponse({ status: 200, description: 'Connection test completed' })
+    async testIntegration(
+        @AuthUser() _user: AuthenticatedUser,
+        @Param('org_id') org_id: string,
+        @Param('provider') provider: ExternalTicketProvider
+    ): Promise<TypedResponse<ConnectionTestResult>> {
+        const result = await this.ticketIntegrationService.testConnection(org_id, provider);
+        return { data: result };
+    }
+
+    @Patch('integrations/:provider/toggle')
+    @ApiOperation({ summary: 'Enable or disable an integration' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiParam({
+        name: 'provider',
+        description: 'Integration provider',
+        enum: ExternalTicketProvider
+    })
+    @ApiQuery({ name: 'enabled', description: 'Enable or disable', type: Boolean })
+    @ApiResponse({ status: 200, description: 'Integration toggled successfully' })
+    async toggleIntegration(
+        @AuthUser() _user: AuthenticatedUser,
+        @Param('org_id') org_id: string,
+        @Param('provider') provider: ExternalTicketProvider,
+        @Query('enabled', ParseBoolPipe) enabled: boolean
+    ): Promise<NoDataResponse> {
+        await this.ticketIntegrationService.toggleIntegration(org_id, provider, enabled);
+        return {};
+    }
+
+    // ============================================
+    // Integration Hierarchy Endpoints (for UI selectors)
+    // ============================================
+
+    @Get('integrations/:provider/workspaces')
+    @ApiOperation({ summary: 'Get available workspaces/teams' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiParam({
+        name: 'provider',
+        description: 'Integration provider',
+        enum: ExternalTicketProvider
+    })
+    @ApiResponse({ status: 200, description: 'Workspaces retrieved successfully' })
+    async getWorkspaces(
+        @AuthUser() _user: AuthenticatedUser,
+        @Param('org_id') org_id: string,
+        @Param('provider') provider: ExternalTicketProvider
+    ): Promise<TypedResponse<IntegrationHierarchyItem[]>> {
+        const workspaces = await this.ticketIntegrationService.getWorkspaces(org_id, provider);
+        return { data: workspaces };
+    }
+
+    @Get('integrations/:provider/spaces/:workspace_id')
+    @ApiOperation({ summary: 'Get spaces within a workspace' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiParam({
+        name: 'provider',
+        description: 'Integration provider',
+        enum: ExternalTicketProvider
+    })
+    @ApiParam({ name: 'workspace_id', description: 'Workspace ID' })
+    @ApiResponse({ status: 200, description: 'Spaces retrieved successfully' })
+    async getSpaces(
+        @AuthUser() _user: AuthenticatedUser,
+        @Param('org_id') org_id: string,
+        @Param('provider') provider: ExternalTicketProvider,
+        @Param('workspace_id') workspace_id: string
+    ): Promise<TypedResponse<IntegrationHierarchyItem[]>> {
+        const spaces = await this.ticketIntegrationService.getSpaces(
+            org_id,
+            provider,
+            workspace_id
+        );
+        return { data: spaces };
+    }
+
+    @Get('integrations/:provider/folders/:space_id')
+    @ApiOperation({ summary: 'Get folders within a space' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiParam({
+        name: 'provider',
+        description: 'Integration provider',
+        enum: ExternalTicketProvider
+    })
+    @ApiParam({ name: 'space_id', description: 'Space ID' })
+    @ApiResponse({ status: 200, description: 'Folders retrieved successfully' })
+    async getFolders(
+        @AuthUser() _user: AuthenticatedUser,
+        @Param('org_id') org_id: string,
+        @Param('provider') provider: ExternalTicketProvider,
+        @Param('space_id') space_id: string
+    ): Promise<TypedResponse<IntegrationHierarchyItem[]>> {
+        const folders = await this.ticketIntegrationService.getFolders(org_id, provider, space_id);
+        return { data: folders };
+    }
+
+    @Get('integrations/:provider/lists/:parent_id')
+    @ApiOperation({ summary: 'Get lists within a folder or space' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiParam({
+        name: 'provider',
+        description: 'Integration provider',
+        enum: ExternalTicketProvider
+    })
+    @ApiParam({ name: 'parent_id', description: 'Parent (Folder or Space) ID' })
+    @ApiResponse({ status: 200, description: 'Lists retrieved successfully' })
+    async getLists(
+        @AuthUser() _user: AuthenticatedUser,
+        @Param('org_id') org_id: string,
+        @Param('provider') provider: ExternalTicketProvider,
+        @Param('parent_id') parent_id: string
+    ): Promise<TypedResponse<IntegrationHierarchyItem[]>> {
+        const lists = await this.ticketIntegrationService.getLists(org_id, provider, parent_id);
+        return { data: lists };
+    }
+
+    // ============================================
+    // Ticket Sync Endpoints
+    // ============================================
+
+    @Get(':ticket_id/external-links')
+    @ApiOperation({ summary: 'Get external links for a ticket' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiParam({ name: 'ticket_id', description: 'Ticket ID' })
+    @ApiResponse({ status: 200, description: 'External links retrieved successfully' })
+    async getExternalLinks(
+        @AuthUser() _user: AuthenticatedUser,
+        @Param('org_id') _org_id: string,
+        @Param('ticket_id') ticket_id: string
+    ): Promise<TypedResponse<TicketExternalLinkFrontend[]>> {
+        const links = await this.ticketIntegrationService.getExternalLinks(ticket_id);
+        const linksFrontend: TicketExternalLinkFrontend[] = links.map((l) => ({
+            id: l.id,
+            provider: l.provider,
+            external_id: l.external_id,
+            external_url: l.external_url,
+            synced_on: l.synced_on,
+            sync_enabled: l.sync_enabled
+        }));
+        return { data: linksFrontend };
+    }
+
+    @Post(':ticket_id/sync/:provider')
+    @ApiOperation({ summary: 'Sync a ticket to an external provider' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiParam({ name: 'ticket_id', description: 'Ticket ID' })
+    @ApiParam({
+        name: 'provider',
+        description: 'Integration provider',
+        enum: ExternalTicketProvider
+    })
+    @ApiResponse({ status: 200, description: 'Ticket synced successfully' })
+    async syncTicket(
+        @AuthUser() user: AuthenticatedUser,
+        @Param('org_id') _org_id: string,
+        @Param('ticket_id') ticket_id: string,
+        @Param('provider') provider: ExternalTicketProvider
+    ): Promise<TypedResponse<SyncResult>> {
+        const link = await this.ticketIntegrationService.syncTicketToExternal(
+            ticket_id,
+            provider,
+            user.userId
+        );
+        return {
+            data: {
+                ticket_id,
+                external_id: link.external_id,
+                external_url: link.external_url,
+                provider: link.provider
+            }
+        };
+    }
+
+    @Delete(':ticket_id/sync/:link_id')
+    @ApiOperation({ summary: 'Unlink a ticket from an external provider' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiParam({ name: 'ticket_id', description: 'Ticket ID' })
+    @ApiParam({ name: 'link_id', description: 'External link ID' })
+    @ApiQuery({
+        name: 'delete_external',
+        required: false,
+        description: 'Also delete from external system'
+    })
+    @ApiResponse({ status: 200, description: 'Ticket unlinked successfully' })
+    async unlinkTicket(
+        @AuthUser() user: AuthenticatedUser,
+        @Param('org_id') _org_id: string,
+        @Param('ticket_id') ticket_id: string,
+        @Param('link_id') link_id: string,
+        @Query('delete_external', new DefaultValuePipe(false), ParseBoolPipe)
+        delete_external: boolean
+    ): Promise<NoDataResponse> {
+        await this.ticketIntegrationService.unlinkTicket(
+            ticket_id,
+            link_id,
+            delete_external,
+            user.userId
+        );
+        return {};
+    }
+
+    @Post('bulk-sync/:provider')
+    @ApiOperation({ summary: 'Bulk sync multiple tickets to an external provider' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiParam({
+        name: 'provider',
+        description: 'Integration provider',
+        enum: ExternalTicketProvider
+    })
+    @ApiResponse({ status: 200, description: 'Bulk sync completed' })
+    async bulkSync(
+        @AuthUser() user: AuthenticatedUser,
+        @Param('org_id') _org_id: string,
+        @Param('provider') provider: ExternalTicketProvider,
+        @Body() body: { ticket_ids: string[] }
+    ): Promise<TypedResponse<BulkSyncResult>> {
+        const result = await this.ticketIntegrationService.bulkSyncTickets(
+            body.ticket_ids,
+            provider,
+            user.userId
+        );
+
+        return {
+            data: {
+                synced: result.synced.map((id) => ({
+                    ticket_id: id,
+                    external_id: '',
+                    external_url: '',
+                    provider
+                })),
+                failed: result.failed.map((f) => ({
+                    ticket_id: f.id,
+                    error: f.error
+                }))
+            }
+        };
     }
 }
 

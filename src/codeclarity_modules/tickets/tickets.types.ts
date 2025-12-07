@@ -265,3 +265,83 @@ export type TicketSortField =
     | 'severity_score'
     | 'title'
     | 'due_date';
+
+// ============================================
+// Integration Types
+// ============================================
+
+export class ConfigureClickUpBody {
+    @ApiProperty({ description: 'Authentication method: API_KEY or OAUTH' })
+    @IsString()
+    auth_method!: 'API_KEY' | 'OAUTH';
+
+    @ApiPropertyOptional({ description: 'ClickUp API key (for API_KEY auth)' })
+    @IsOptional()
+    @IsString()
+    api_key?: string;
+
+    @ApiPropertyOptional({ description: 'OAuth access token (for OAUTH auth)' })
+    @IsOptional()
+    @IsString()
+    access_token?: string;
+
+    @ApiPropertyOptional({ description: 'OAuth refresh token (for OAUTH auth)' })
+    @IsOptional()
+    @IsString()
+    refresh_token?: string;
+
+    @ApiPropertyOptional({ description: 'ClickUp Workspace/Team ID' })
+    @IsOptional()
+    @IsString()
+    workspace_id?: string;
+
+    @ApiPropertyOptional({ description: 'ClickUp Space ID' })
+    @IsOptional()
+    @IsString()
+    space_id?: string;
+
+    @ApiPropertyOptional({ description: 'ClickUp Folder ID' })
+    @IsOptional()
+    @IsString()
+    folder_id?: string;
+
+    @ApiProperty({ description: 'ClickUp List ID where tasks will be created' })
+    @IsString()
+    list_id!: string;
+
+    @ApiPropertyOptional({ description: 'Auto-sync new tickets to ClickUp' })
+    @IsOptional()
+    auto_sync_on_create?: boolean;
+
+    @ApiPropertyOptional({ description: 'Sync status changes to ClickUp' })
+    @IsOptional()
+    sync_status_changes?: boolean;
+}
+
+export interface IntegrationConfigSummary {
+    id: string;
+    provider: string;
+    enabled: boolean;
+    created_on: Date;
+    updated_on?: Date | undefined;
+    has_config: boolean;
+    workspace_name?: string | undefined;
+    list_name?: string | undefined;
+}
+
+export interface IntegrationHierarchyItem {
+    id: string;
+    name: string;
+}
+
+export interface SyncResult {
+    ticket_id: string;
+    external_id: string;
+    external_url: string;
+    provider: string;
+}
+
+export interface BulkSyncResult {
+    synced: SyncResult[];
+    failed: { ticket_id: string; error: string }[];
+}

@@ -11,17 +11,17 @@ export enum ClickUpAuthMethod {
 
 export interface ClickUpConfig {
     auth_method: ClickUpAuthMethod;
-    api_key?: string;
-    access_token?: string;
-    refresh_token?: string;
-    token_expiry?: Date;
-    workspace_id?: string;
-    space_id?: string;
-    folder_id?: string;
-    list_id?: string;
-    auto_sync_on_create?: boolean;
-    sync_status_changes?: boolean;
-    priority_mapping?: Record<string, number>;
+    api_key?: string | undefined;
+    access_token?: string | undefined;
+    refresh_token?: string | undefined;
+    token_expiry?: Date | undefined;
+    workspace_id?: string | undefined;
+    space_id?: string | undefined;
+    folder_id?: string | undefined;
+    list_id?: string | undefined;
+    auto_sync_on_create?: boolean | undefined;
+    sync_status_changes?: boolean | undefined;
+    priority_mapping?: Record<string, number> | undefined;
 }
 
 export interface JiraConfig {
