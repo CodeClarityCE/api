@@ -181,6 +181,52 @@ export interface ITicketIntegrationProvider {
      * @param config The integration configuration
      */
     getLists?(parentId: string, config: IntegrationConfig): Promise<ExternalList[]>;
+
+    // Hierarchy creation methods (for creating workspaces, lists, etc.)
+
+    /**
+     * Create a space within a workspace
+     * @param name The name of the space
+     * @param workspaceId The workspace ID
+     * @param config The integration configuration
+     */
+    createSpace?(
+        name: string,
+        workspaceId: string,
+        config: IntegrationConfig
+    ): Promise<ExternalSpace>;
+
+    /**
+     * Create a folder within a space
+     * @param name The name of the folder
+     * @param spaceId The space ID
+     * @param config The integration configuration
+     */
+    createFolder?(
+        name: string,
+        spaceId: string,
+        config: IntegrationConfig
+    ): Promise<ExternalFolder>;
+
+    /**
+     * Create a list within a folder
+     * @param name The name of the list
+     * @param folderId The folder ID
+     * @param config The integration configuration
+     */
+    createList?(name: string, folderId: string, config: IntegrationConfig): Promise<ExternalList>;
+
+    /**
+     * Create a folderless list directly in a space
+     * @param name The name of the list
+     * @param spaceId The space ID
+     * @param config The integration configuration
+     */
+    createFolderlessList?(
+        name: string,
+        spaceId: string,
+        config: IntegrationConfig
+    ): Promise<ExternalList>;
 }
 
 /**

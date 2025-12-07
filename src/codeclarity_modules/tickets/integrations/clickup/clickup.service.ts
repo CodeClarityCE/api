@@ -30,7 +30,13 @@ import {
     ClickUpTask,
     ClickUpCreateTaskRequest,
     ClickUpUpdateTaskRequest,
-    ClickUpOAuthTokenResponse
+    ClickUpOAuthTokenResponse,
+    ClickUpCreateSpaceRequest,
+    ClickUpCreateFolderRequest,
+    ClickUpCreateListRequest,
+    ClickUpSpace,
+    ClickUpFolder,
+    ClickUpList
 } from './clickup.types';
 
 /**
@@ -139,7 +145,8 @@ export class ClickUpService implements ITicketIntegrationProvider {
             code
         });
 
-        const response = await fetch(`${CLICKUP_OAUTH_URL}/v2/oauth/token?${params.toString()}`, {
+        // Token endpoint is on api.clickup.com, not app.clickup.com
+        const response = await fetch(`${CLICKUP_API_BASE_URL}/oauth/token?${params.toString()}`, {
             method: 'POST'
         });
 
@@ -226,6 +233,121 @@ export class ClickUpService implements ITicketIntegrationProvider {
         }
 
         return lists;
+    }
+
+    // ============================================
+    // Hierarchy Creation
+    // ============================================
+
+    async createSpace(
+        name: string,
+        workspaceId: string,
+        config: IntegrationConfig
+    ): Promise<ExternalSpace> {
+        const clickUpConfig = config as ClickUpConfig;
+
+        const requestData: ClickUpCreateSpaceRequest = {
+            name,
+            multiple_assignees: true,
+            features: {
+                due_dates: { enabled: true },
+                time_tracking: { enabled: true },
+                tags: { enabled: true },
+                custom_fields: { enabled: true }
+            }
+        };
+
+        const response = await this.makeRequest<ClickUpSpace>(
+            `/team/${workspaceId}/space`,
+            clickUpConfig,
+            'POST',
+            requestData
+        );
+
+        this.logger.log(`Created ClickUp space: ${response.id} - ${response.name}`);
+
+        return {
+            id: response.id,
+            name: response.name
+        };
+    }
+
+    async createFolder(
+        name: string,
+        spaceId: string,
+        config: IntegrationConfig
+    ): Promise<ExternalFolder> {
+        const clickUpConfig = config as ClickUpConfig;
+
+        const requestData: ClickUpCreateFolderRequest = {
+            name
+        };
+
+        const response = await this.makeRequest<ClickUpFolder>(
+            `/space/${spaceId}/folder`,
+            clickUpConfig,
+            'POST',
+            requestData
+        );
+
+        this.logger.log(`Created ClickUp folder: ${response.id} - ${response.name}`);
+
+        return {
+            id: response.id,
+            name: response.name
+        };
+    }
+
+    async createList(
+        name: string,
+        folderId: string,
+        config: IntegrationConfig
+    ): Promise<ExternalList> {
+        const clickUpConfig = config as ClickUpConfig;
+
+        const requestData: ClickUpCreateListRequest = {
+            name
+        };
+
+        const response = await this.makeRequest<ClickUpList>(
+            `/folder/${folderId}/list`,
+            clickUpConfig,
+            'POST',
+            requestData
+        );
+
+        this.logger.log(`Created ClickUp list: ${response.id} - ${response.name}`);
+
+        return {
+            id: response.id,
+            name: response.name
+        };
+    }
+
+    async createFolderlessList(
+        name: string,
+        spaceId: string,
+        config: IntegrationConfig
+    ): Promise<ExternalList> {
+        const clickUpConfig = config as ClickUpConfig;
+
+        const requestData: ClickUpCreateListRequest = {
+            name
+        };
+
+        const response = await this.makeRequest<ClickUpList>(
+            `/space/${spaceId}/list`,
+            clickUpConfig,
+            'POST',
+            requestData
+        );
+
+        this.logger.log(`Created ClickUp folderless list: ${response.id} - ${response.name}`);
+
+        return {
+            id: response.id,
+            name: response.name
+        };
     }
 
     // ============================================

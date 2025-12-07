@@ -110,11 +110,7 @@ export class TicketIntegrationService {
         config: IntegrationConfig,
         enabled = true
     ): Promise<TicketIntegrationConfig> {
-        // Validate config with provider
-        const providerInstance = this.getProvider(provider);
-        await providerInstance.validateConfig(config);
-
-        // Check for existing config
+        // Check for existing config first
         let integrationConfig = await this.configRepository.findOne({
             where: {
                 organization: { id: organizationId },
@@ -122,11 +118,33 @@ export class TicketIntegrationService {
             }
         });
 
+        // Merge with existing config to preserve fields not being updated
+        // This is important for OAuth tokens which are stored on backend
+        // Filter out undefined and empty string values to avoid overwriting with empty data
+        let mergedConfig = config;
+        if (integrationConfig?.config) {
+            const newValues = Object.fromEntries(
+                Object.entries(config).filter(([, v]) => v !== undefined && v !== '')
+            );
+            mergedConfig = {
+                ...integrationConfig.config,
+                ...newValues
+            } as IntegrationConfig;
+
+            this.logger.debug(
+                `Merging config - existing keys: ${Object.keys(integrationConfig.config).join(', ')}, new keys: ${Object.keys(newValues).join(', ')}`
+            );
+        }
+
+        // Validate the merged config with provider
+        const providerInstance = this.getProvider(provider);
+        await providerInstance.validateConfig(mergedConfig);
+
         const now = new Date();
 
         if (integrationConfig) {
             // Update existing
-            integrationConfig.config = config;
+            integrationConfig.config = mergedConfig;
             integrationConfig.enabled = enabled;
             integrationConfig.updated_on = now;
         } else {
@@ -134,7 +152,7 @@ export class TicketIntegrationService {
             integrationConfig = this.configRepository.create({
                 organization: { id: organizationId },
                 provider,
-                config,
+                config: mergedConfig,
                 enabled,
                 created_on: now
             });
@@ -363,6 +381,100 @@ export class TicketIntegrationService {
         }
 
         return providerInstance.getLists(parentId, config.config);
+    }
+
+    // ============================================
+    // Hierarchy Creation
+    // ============================================
+
+    /**
+     * Create a space within a workspace
+     */
+    async createSpace(
+        organizationId: string,
+        provider: ExternalTicketProvider,
+        workspaceId: string,
+        name: string
+    ): Promise<ExternalSpace> {
+        const config = await this.getIntegrationConfig(organizationId, provider);
+        if (!config) {
+            throw new NotFoundException(`Integration config for ${provider} not found`);
+        }
+
+        const providerInstance = this.getProvider(provider);
+        if (!providerInstance.createSpace) {
+            throw new BadRequestException(`Provider ${provider} does not support creating spaces`);
+        }
+
+        return providerInstance.createSpace(name, workspaceId, config.config);
+    }
+
+    /**
+     * Create a folder within a space
+     */
+    async createFolder(
+        organizationId: string,
+        provider: ExternalTicketProvider,
+        spaceId: string,
+        name: string
+    ): Promise<ExternalFolder> {
+        const config = await this.getIntegrationConfig(organizationId, provider);
+        if (!config) {
+            throw new NotFoundException(`Integration config for ${provider} not found`);
+        }
+
+        const providerInstance = this.getProvider(provider);
+        if (!providerInstance.createFolder) {
+            throw new BadRequestException(`Provider ${provider} does not support creating folders`);
+        }
+
+        return providerInstance.createFolder(name, spaceId, config.config);
+    }
+
+    /**
+     * Create a list within a folder
+     */
+    async createList(
+        organizationId: string,
+        provider: ExternalTicketProvider,
+        folderId: string,
+        name: string
+    ): Promise<ExternalList> {
+        const config = await this.getIntegrationConfig(organizationId, provider);
+        if (!config) {
+            throw new NotFoundException(`Integration config for ${provider} not found`);
+        }
+
+        const providerInstance = this.getProvider(provider);
+        if (!providerInstance.createList) {
+            throw new BadRequestException(`Provider ${provider} does not support creating lists`);
+        }
+
+        return providerInstance.createList(name, folderId, config.config);
+    }
+
+    /**
+     * Create a folderless list directly in a space
+     */
+    async createFolderlessList(
+        organizationId: string,
+        provider: ExternalTicketProvider,
+        spaceId: string,
+        name: string
+    ): Promise<ExternalList> {
+        const config = await this.getIntegrationConfig(organizationId, provider);
+        if (!config) {
+            throw new NotFoundException(`Integration config for ${provider} not found`);
+        }
+
+        const providerInstance = this.getProvider(provider);
+        if (!providerInstance.createFolderlessList) {
+            throw new BadRequestException(
+                `Provider ${provider} does not support creating folderless lists`
+            );
+        }
+
+        return providerInstance.createFolderlessList(name, spaceId, config.config);
     }
 
     // ============================================

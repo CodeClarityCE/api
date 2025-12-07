@@ -399,6 +399,45 @@ export class TicketsController {
         return {};
     }
 
+    // ============================================
+    // OAuth Endpoints
+    // ============================================
+
+    @Get('integrations/clickup/oauth/url')
+    @ApiOperation({ summary: 'Get ClickUp OAuth authorization URL' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiQuery({ name: 'redirect_uri', description: 'OAuth redirect URI' })
+    @ApiResponse({ status: 200, description: 'OAuth URL generated successfully' })
+    getClickUpOAuthUrl(
+        @AuthUser() _user: AuthenticatedUser,
+        @Param('org_id') org_id: string,
+        @Query('redirect_uri') redirect_uri: string
+    ): TypedResponse<{ url: string }> {
+        const url = this.ticketIntegrationService.getOAuthUrl(
+            ExternalTicketProvider.CLICKUP,
+            redirect_uri,
+            org_id
+        );
+        return { data: { url } };
+    }
+
+    @Post('integrations/clickup/oauth/callback')
+    @ApiOperation({ summary: 'Handle ClickUp OAuth callback' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiResponse({ status: 200, description: 'OAuth tokens exchanged successfully' })
+    async handleClickUpOAuthCallback(
+        @AuthUser() _user: AuthenticatedUser,
+        @Param('org_id') _org_id: string,
+        @Body() body: { code: string; redirect_uri: string }
+    ): Promise<TypedResponse<{ access_token: string }>> {
+        const tokens = await this.ticketIntegrationService.exchangeOAuthCode(
+            ExternalTicketProvider.CLICKUP,
+            body.code,
+            body.redirect_uri
+        );
+        return { data: { access_token: tokens.access_token } };
+    }
+
     @Post('integrations/:provider/test')
     @ApiOperation({ summary: 'Test integration connection' })
     @ApiParam({ name: 'org_id', description: 'Organization ID' })
@@ -521,6 +560,114 @@ export class TicketsController {
     ): Promise<TypedResponse<IntegrationHierarchyItem[]>> {
         const lists = await this.ticketIntegrationService.getLists(org_id, provider, parent_id);
         return { data: lists };
+    }
+
+    // ============================================
+    // Integration Hierarchy Creation Endpoints
+    // ============================================
+
+    @Post('integrations/:provider/workspaces/:workspace_id/spaces')
+    @ApiOperation({ summary: 'Create a space in a workspace' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiParam({
+        name: 'provider',
+        description: 'Integration provider',
+        enum: ExternalTicketProvider
+    })
+    @ApiParam({ name: 'workspace_id', description: 'Workspace ID' })
+    @ApiResponse({ status: 201, description: 'Space created successfully' })
+    async createSpace(
+        @AuthUser() _user: AuthenticatedUser,
+        @Param('org_id') org_id: string,
+        @Param('provider') provider: ExternalTicketProvider,
+        @Param('workspace_id') workspace_id: string,
+        @Body() body: { name: string }
+    ): Promise<TypedResponse<IntegrationHierarchyItem>> {
+        const space = await this.ticketIntegrationService.createSpace(
+            org_id,
+            provider,
+            workspace_id,
+            body.name
+        );
+        return { data: space };
+    }
+
+    @Post('integrations/:provider/spaces/:space_id/folders')
+    @ApiOperation({ summary: 'Create a folder in a space' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiParam({
+        name: 'provider',
+        description: 'Integration provider',
+        enum: ExternalTicketProvider
+    })
+    @ApiParam({ name: 'space_id', description: 'Space ID' })
+    @ApiResponse({ status: 201, description: 'Folder created successfully' })
+    async createFolder(
+        @AuthUser() _user: AuthenticatedUser,
+        @Param('org_id') org_id: string,
+        @Param('provider') provider: ExternalTicketProvider,
+        @Param('space_id') space_id: string,
+        @Body() body: { name: string }
+    ): Promise<TypedResponse<IntegrationHierarchyItem>> {
+        const folder = await this.ticketIntegrationService.createFolder(
+            org_id,
+            provider,
+            space_id,
+            body.name
+        );
+        return { data: folder };
+    }
+
+    @Post('integrations/:provider/folders/:folder_id/lists')
+    @ApiOperation({ summary: 'Create a list in a folder' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiParam({
+        name: 'provider',
+        description: 'Integration provider',
+        enum: ExternalTicketProvider
+    })
+    @ApiParam({ name: 'folder_id', description: 'Folder ID' })
+    @ApiResponse({ status: 201, description: 'List created successfully' })
+    async createList(
+        @AuthUser() _user: AuthenticatedUser,
+        @Param('org_id') org_id: string,
+        @Param('provider') provider: ExternalTicketProvider,
+        @Param('folder_id') folder_id: string,
+        @Body() body: { name: string }
+    ): Promise<TypedResponse<IntegrationHierarchyItem>> {
+        const list = await this.ticketIntegrationService.createList(
+            org_id,
+            provider,
+            folder_id,
+            body.name
+        );
+        return { data: list };
+    }
+
+    @Post('integrations/:provider/spaces/:space_id/lists')
+    @ApiOperation({ summary: 'Create a folderless list directly in a space' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiParam({
+        name: 'provider',
+        description: 'Integration provider',
+        enum: ExternalTicketProvider
+    })
+    @ApiParam({ name: 'space_id', description: 'Space ID' })
+    @ApiResponse({ status: 201, description: 'List created successfully' })
+    async createFolderlessList(
+        @AuthUser() _user: AuthenticatedUser,
+        @Param('org_id') org_id: string,
+        @Param('provider') provider: ExternalTicketProvider,
+        @Param('space_id') space_id: string,
+        @Body() body: { name: string }
+    ): Promise<TypedResponse<IntegrationHierarchyItem>> {
+        const list = await this.ticketIntegrationService.createFolderlessList(
+            org_id,
+            provider,
+            space_id,
+            body.name
+        );
+        return { data: list };
     }
 
     // ============================================

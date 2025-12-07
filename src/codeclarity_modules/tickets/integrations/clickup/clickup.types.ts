@@ -331,6 +331,40 @@ export interface ClickUpUpdateTaskRequest {
 }
 
 // ============================================
+// Space/Folder/List Creation
+// ============================================
+
+export interface ClickUpCreateSpaceRequest {
+    name: string;
+    multiple_assignees?: boolean;
+    features?: {
+        due_dates?: { enabled: boolean };
+        time_tracking?: { enabled: boolean };
+        tags?: { enabled: boolean };
+        time_estimates?: { enabled: boolean };
+        checklists?: { enabled: boolean };
+        custom_fields?: { enabled: boolean };
+        remap_dependencies?: { enabled: boolean };
+        dependency_warning?: { enabled: boolean };
+        portfolios?: { enabled: boolean };
+    };
+}
+
+export interface ClickUpCreateFolderRequest {
+    name: string;
+}
+
+export interface ClickUpCreateListRequest {
+    name: string;
+    content?: string;
+    due_date?: number;
+    due_date_time?: boolean;
+    priority?: number;
+    assignee?: number;
+    status?: string;
+}
+
+// ============================================
 // Priority Mappings
 // ============================================
 
