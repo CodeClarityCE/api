@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { VulnerabilityDetailsReport } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import {
     CreatedResponse,
@@ -20,7 +21,6 @@ import {
     TypedPaginatedResponse,
     TypedResponse
 } from 'src/types/apiResponses.types';
-import { VulnerabilityDetailsReport } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { SortDirection } from 'src/types/sort.types';
 import { TicketAutomationService } from './automation/ticket-automation.service';
 import { ConnectionTestResult } from './integrations/integration-provider.interface';

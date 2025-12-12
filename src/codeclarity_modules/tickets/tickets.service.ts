@@ -8,18 +8,19 @@ import {
     UsersRepository,
     ProjectsRepository
 } from 'src/base_modules/shared/repositories';
+import type { CVSS2, CVSS31 } from 'src/codeclarity_modules/knowledge/cvss.types';
 import { EPSSRepository } from 'src/codeclarity_modules/knowledge/epss/epss.repository';
 import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
 import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
 import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
 import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.repository';
-import { VulnerabilityService } from 'src/codeclarity_modules/results/vulnerabilities/vulnerability.service';
 import {
     VulnerabilityDetailsReport,
     SeverityInfo,
     ReferenceInfo,
     VulnSourceInfo
 } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
+import { VulnerabilityService } from 'src/codeclarity_modules/results/vulnerabilities/vulnerability.service';
 import { EntityNotFound } from 'src/types/error.types';
 import {
     PaginationConfig,
@@ -28,10 +29,10 @@ import {
 } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
 import { Repository, In } from 'typeorm';
+import { TicketIntegrationService } from './integrations/ticket-integration.service';
 import { TicketEvent, TicketEventType } from './ticket-event.entity';
 import { TicketVulnerabilityOccurrence } from './ticket-occurrence.entity';
 import { Ticket, TicketStatus } from './ticket.entity';
-import { TicketIntegrationService } from './integrations/ticket-integration.service';
 import {
     CreateTicketBody,
     UpdateTicketBody,
@@ -347,6 +348,42 @@ export class TicketsService {
     }
 
     /**
+     * Build a CVSS v3.x object from raw metrics data
+     */
+    private buildCvssV3(data: Record<string, unknown>): CVSS31 {
+        return {
+            base_score: (data['baseScore'] as number) ?? 0,
+            exploitability_score: (data['exploitabilityScore'] as number) ?? 0,
+            impact_score: (data['impactScore'] as number) ?? 0,
+            attack_vector: (data['attackVector'] as string) ?? '',
+            attack_complexity: (data['attackComplexity'] as string) ?? '',
+            privileges_required: (data['privilegesRequired'] as string) ?? '',
+            user_interaction: (data['userInteraction'] as string) ?? '',
+            scope: (data['scope'] as string) ?? '',
+            confidentiality_impact: (data['confidentialityImpact'] as string) ?? '',
+            integrity_impact: (data['integrityImpact'] as string) ?? '',
+            availability_impact: (data['availabilityImpact'] as string) ?? ''
+        };
+    }
+
+    /**
+     * Build a CVSS v2 object from raw metrics data
+     */
+    private buildCvssV2(data: Record<string, unknown>): CVSS2 {
+        return {
+            base_score: (data['baseScore'] as number) ?? 0,
+            exploitability_score: (data['exploitabilityScore'] as number) ?? 0,
+            impact_score: (data['impactScore'] as number) ?? 0,
+            access_vector: (data['accessVector'] as string) ?? '',
+            access_complexity: (data['accessComplexity'] as string) ?? '',
+            authentication: (data['authentication'] as string) ?? '',
+            confidentiality_impact: (data['confidentialityImpact'] as string) ?? '',
+            integrity_impact: (data['integrityImpact'] as string) ?? '',
+            availability_impact: (data['availabilityImpact'] as string) ?? ''
+        };
+    }
+
+    /**
      * Extract CVSS scores from NVD metrics JSON
      */
     private extractSeveritiesFromNVD(nvdData: NVD | null): SeverityInfo {
@@ -360,56 +397,16 @@ export class TicketsService {
 
         const severities: SeverityInfo = {};
 
-        // CVSS v3.1
         if (metrics.cvssMetricV31?.[0]?.cvssData) {
-            const d = metrics.cvssMetricV31[0].cvssData;
-            severities.cvss_31 = {
-                base_score: (d['baseScore'] as number) ?? 0,
-                exploitability_score: (d['exploitabilityScore'] as number) ?? 0,
-                impact_score: (d['impactScore'] as number) ?? 0,
-                attack_vector: (d['attackVector'] as string) ?? '',
-                attack_complexity: (d['attackComplexity'] as string) ?? '',
-                privileges_required: (d['privilegesRequired'] as string) ?? '',
-                user_interaction: (d['userInteraction'] as string) ?? '',
-                scope: (d['scope'] as string) ?? '',
-                confidentiality_impact: (d['confidentialityImpact'] as string) ?? '',
-                integrity_impact: (d['integrityImpact'] as string) ?? '',
-                availability_impact: (d['availabilityImpact'] as string) ?? ''
-            };
+            severities.cvss_31 = this.buildCvssV3(metrics.cvssMetricV31[0].cvssData);
         }
 
-        // CVSS v3.0
         if (metrics.cvssMetricV30?.[0]?.cvssData) {
-            const d = metrics.cvssMetricV30[0].cvssData;
-            severities.cvss_3 = {
-                base_score: (d['baseScore'] as number) ?? 0,
-                exploitability_score: (d['exploitabilityScore'] as number) ?? 0,
-                impact_score: (d['impactScore'] as number) ?? 0,
-                attack_vector: (d['attackVector'] as string) ?? '',
-                attack_complexity: (d['attackComplexity'] as string) ?? '',
-                privileges_required: (d['privilegesRequired'] as string) ?? '',
-                user_interaction: (d['userInteraction'] as string) ?? '',
-                scope: (d['scope'] as string) ?? '',
-                confidentiality_impact: (d['confidentialityImpact'] as string) ?? '',
-                integrity_impact: (d['integrityImpact'] as string) ?? '',
-                availability_impact: (d['availabilityImpact'] as string) ?? ''
-            };
+            severities.cvss_3 = this.buildCvssV3(metrics.cvssMetricV30[0].cvssData);
         }
 
-        // CVSS v2
         if (metrics.cvssMetricV2?.[0]?.cvssData) {
-            const d = metrics.cvssMetricV2[0].cvssData;
-            severities.cvss_2 = {
-                base_score: (d['baseScore'] as number) ?? 0,
-                exploitability_score: (d['exploitabilityScore'] as number) ?? 0,
-                impact_score: (d['impactScore'] as number) ?? 0,
-                access_vector: (d['accessVector'] as string) ?? '',
-                access_complexity: (d['accessComplexity'] as string) ?? '',
-                authentication: (d['authentication'] as string) ?? '',
-                confidentiality_impact: (d['confidentialityImpact'] as string) ?? '',
-                integrity_impact: (d['integrityImpact'] as string) ?? '',
-                availability_impact: (d['availabilityImpact'] as string) ?? ''
-            };
+            severities.cvss_2 = this.buildCvssV2(metrics.cvssMetricV2[0].cvssData);
         }
 
         return severities;
