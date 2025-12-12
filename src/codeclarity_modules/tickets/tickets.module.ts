@@ -2,6 +2,7 @@ import { forwardRef, Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Analysis } from 'src/base_modules/analyses/analysis.entity';
 import { Organization } from 'src/base_modules/organizations/organization.entity';
+import { KnowledgeModule } from 'src/codeclarity_modules/knowledge/knowledge.module';
 import { Result } from 'src/codeclarity_modules/results/result.entity';
 import { VulnerabilitiesModule } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.module';
 import { TicketAutomationService } from './automation/ticket-automation.service';
@@ -30,7 +31,8 @@ import { TicketsService } from './tickets.service';
             ],
             'codeclarity'
         ),
-        forwardRef(() => VulnerabilitiesModule)
+        forwardRef(() => VulnerabilitiesModule),
+        KnowledgeModule
     ],
     controllers: [TicketsController, ProjectTicketsController],
     providers: [TicketsService, TicketAutomationService, TicketIntegrationService, ClickUpService],
