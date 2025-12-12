@@ -791,7 +791,13 @@ export class TicketIntegrationService {
         ticketId: string,
         linkId: string,
         userId?: string
-    ): Promise<{ updated: boolean; externalStatusUpdated: boolean; oldStatus?: TicketStatus; newStatus?: TicketStatus; externalStatus?: string }> {
+    ): Promise<{
+        updated: boolean;
+        externalStatusUpdated: boolean;
+        oldStatus?: TicketStatus;
+        newStatus?: TicketStatus;
+        externalStatus?: string;
+    }> {
         const externalLink = await this.externalLinkRepository.findOne({
             where: { id: linkId, ticket: { id: ticketId } },
             relations: ['ticket', 'ticket.organization']
@@ -824,7 +830,12 @@ export class TicketIntegrationService {
         }
 
         const { status: externalStatus, externalStatus: rawExternalStatus } = await (
-            provider as { getExternalTaskStatus: (id: string, config: IntegrationConfig) => Promise<{ status: TicketStatus; externalStatus: string }> }
+            provider as {
+                getExternalTaskStatus: (
+                    id: string,
+                    config: IntegrationConfig
+                ) => Promise<{ status: TicketStatus; externalStatus: string }>;
+            }
         ).getExternalTaskStatus(externalLink.external_id, config.config);
 
         // Check what changed
@@ -849,7 +860,8 @@ export class TicketIntegrationService {
             // If reopening (was RESOLVED, now OPEN or IN_PROGRESS), clear resolved_on
             isReopening =
                 oldStatus === TicketStatus.RESOLVED &&
-                (externalStatus === TicketStatus.OPEN || externalStatus === TicketStatus.IN_PROGRESS);
+                (externalStatus === TicketStatus.OPEN ||
+                    externalStatus === TicketStatus.IN_PROGRESS);
             if (isReopening) {
                 ticket.resolved_on = undefined;
             }
@@ -891,16 +903,20 @@ export class TicketIntegrationService {
                 `Synced ticket ${ticketId} from ${externalLink.provider}: ${oldStatus} -> ${externalStatus}`
             );
         } else if (externalStatusChanged) {
-            this.logger.log(
-                `Updated external_status for ticket ${ticketId}: ${rawExternalStatus}`
-            );
+            this.logger.log(`Updated external_status for ticket ${ticketId}: ${rawExternalStatus}`);
         } else {
             this.logger.log(
                 `Ticket ${ticketId} unchanged (status: ${ticket.status}, external: ${rawExternalStatus})`
             );
         }
 
-        const result: { updated: boolean; externalStatusUpdated: boolean; oldStatus?: TicketStatus; newStatus?: TicketStatus; externalStatus?: string } = {
+        const result: {
+            updated: boolean;
+            externalStatusUpdated: boolean;
+            oldStatus?: TicketStatus;
+            newStatus?: TicketStatus;
+            externalStatus?: string;
+        } = {
             updated: statusChanged,
             externalStatusUpdated: externalStatusChanged,
             externalStatus: rawExternalStatus

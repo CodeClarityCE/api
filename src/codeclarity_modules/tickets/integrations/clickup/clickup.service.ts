@@ -479,7 +479,10 @@ export class ClickUpService implements ITicketIntegrationProvider {
         );
 
         const externalStatus = task.status?.status?.toLowerCase() ?? '';
-        const mappedStatus = this.mapClickUpStatusToCodeClarity(externalStatus, task.archived ?? false);
+        const mappedStatus = this.mapClickUpStatusToCodeClarity(
+            externalStatus,
+            task.archived ?? false
+        );
 
         this.logger.log(
             `Fetched ClickUp task ${externalId}: status="${externalStatus}", archived=${task.archived}, mapped="${mappedStatus}"`

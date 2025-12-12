@@ -335,7 +335,8 @@ export class TicketsController {
     @ApiParam({ name: 'ticket_id', description: 'Ticket ID' })
     @ApiResponse({
         status: 200,
-        description: 'Vulnerability details retrieved successfully (null if not a vulnerability ticket)'
+        description:
+            'Vulnerability details retrieved successfully (null if not a vulnerability ticket)'
     })
     @ApiResponse({ status: 404, description: 'Ticket not found' })
     async getVulnerabilityDetails(
