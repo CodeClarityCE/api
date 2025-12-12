@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { AuthenticatedUser } from 'src/base_modules/auth/auth.types';
+import { VulnerabilityDetailsReport } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { AuthUser } from 'src/decorators/UserDecorator';
 import {
     CreatedResponse,
@@ -44,7 +45,9 @@ import {
     IntegrationConfigSummary,
     IntegrationHierarchyItem,
     SyncResult,
-    BulkSyncResult
+    BulkSyncResult,
+    SyncFromExternalResult,
+    BulkSyncFromExternalResult
 } from './tickets.types';
 
 /** Response type for auto-resolve operation */
@@ -324,6 +327,29 @@ export class TicketsController {
             performed_by_name: getPerformerName(e.performed_by)
         }));
         return { data: eventsFrontend };
+    }
+
+    @Get(':ticket_id/vulnerability')
+    @ApiOperation({ summary: 'Get vulnerability details for a ticket' })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiParam({ name: 'ticket_id', description: 'Ticket ID' })
+    @ApiResponse({
+        status: 200,
+        description:
+            'Vulnerability details retrieved successfully (null if not a vulnerability ticket)'
+    })
+    @ApiResponse({ status: 404, description: 'Ticket not found' })
+    async getVulnerabilityDetails(
+        @AuthUser() user: AuthenticatedUser,
+        @Param('org_id') org_id: string,
+        @Param('ticket_id') ticket_id: string
+    ): Promise<TypedResponse<VulnerabilityDetailsReport | null>> {
+        const vulnDetails = await this.ticketsService.getVulnerabilityDetails(
+            org_id,
+            ticket_id,
+            user
+        );
+        return { data: vulnDetails };
     }
 
     // ============================================
@@ -786,6 +812,87 @@ export class TicketsController {
                 })),
                 failed: result.failed.map((f) => ({
                     ticket_id: f.id,
+                    error: f.error
+                }))
+            }
+        };
+    }
+
+    // ============================================
+    // Sync FROM External Provider Endpoints
+    // ============================================
+
+    @Post(':ticket_id/sync-from-external/:link_id')
+    @ApiOperation({
+        summary: 'Sync ticket status from external provider',
+        description:
+            'Fetches the current status from the external provider and updates the CodeClarity ticket if changed. ' +
+            'Use this for pull-based synchronization when webhooks are not available.'
+    })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiParam({ name: 'ticket_id', description: 'Ticket ID' })
+    @ApiParam({ name: 'link_id', description: 'External link ID' })
+    @ApiResponse({ status: 200, description: 'Sync from external completed' })
+    @ApiResponse({ status: 404, description: 'Ticket or external link not found' })
+    async syncFromExternal(
+        @AuthUser() user: AuthenticatedUser,
+        @Param('org_id') _org_id: string,
+        @Param('ticket_id') ticket_id: string,
+        @Param('link_id') link_id: string
+    ): Promise<TypedResponse<SyncFromExternalResult>> {
+        const result = await this.ticketIntegrationService.syncFromExternal(
+            ticket_id,
+            link_id,
+            user.userId
+        );
+
+        const data: SyncFromExternalResult = {
+            ticket_id,
+            updated: result.updated
+        };
+
+        if (result.oldStatus !== undefined) {
+            data.old_status = result.oldStatus;
+        }
+        if (result.newStatus !== undefined) {
+            data.new_status = result.newStatus;
+        }
+        if (result.externalStatus !== undefined) {
+            data.external_status = result.externalStatus;
+        }
+
+        return { data };
+    }
+
+    @Post('bulk-sync-from-external')
+    @ApiOperation({
+        summary: 'Bulk sync ticket statuses from external providers',
+        description:
+            'Fetches current status from external providers for multiple tickets and updates CodeClarity tickets if changed. ' +
+            'Use this to sync all linked tickets at once.'
+    })
+    @ApiParam({ name: 'org_id', description: 'Organization ID' })
+    @ApiResponse({ status: 200, description: 'Bulk sync from external completed' })
+    async bulkSyncFromExternal(
+        @AuthUser() user: AuthenticatedUser,
+        @Param('org_id') _org_id: string,
+        @Body() body: { ticket_ids: string[] }
+    ): Promise<TypedResponse<BulkSyncFromExternalResult>> {
+        const result = await this.ticketIntegrationService.bulkSyncFromExternal(
+            body.ticket_ids,
+            user.userId
+        );
+        return {
+            data: {
+                updated: result.updated.map((u) => ({
+                    ticket_id: u.ticketId,
+                    updated: true,
+                    old_status: u.oldStatus,
+                    new_status: u.newStatus
+                })),
+                unchanged: result.unchanged,
+                failed: result.failed.map((f) => ({
+                    ticket_id: f.ticketId,
                     error: f.error
                 }))
             }

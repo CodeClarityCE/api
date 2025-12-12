@@ -25,7 +25,7 @@ import { VulnerabilityService } from './vulnerability.service';
         forwardRef(() => VulnerabilityPolicyModule),
         TypeOrmModule.forFeature([Result], 'codeclarity')
     ],
-    exports: [VulnerabilitiesRepository, VulnerabilitiesUtilsService],
+    exports: [VulnerabilitiesRepository, VulnerabilitiesUtilsService, VulnerabilityService],
     providers: [
         VulnerabilityService,
         VulnerabilitiesService,

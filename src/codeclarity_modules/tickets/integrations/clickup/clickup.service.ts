@@ -438,8 +438,9 @@ export class ClickUpService implements ITicketIntegrationProvider {
             status: clickUpStatus
         };
 
-        // If resolved or closed, also archive in ClickUp
-        if (status === TicketStatus.RESOLVED || status === TicketStatus.CLOSED) {
+        // Archive in ClickUp only for CLOSED and WONT_FIX (not RESOLVED)
+        // RESOLVED stays visible as "complete", CLOSED/WONT_FIX get archived
+        if (status === TicketStatus.CLOSED || status === TicketStatus.WONT_FIX) {
             updateData.archived = true;
         }
 
@@ -459,6 +460,92 @@ export class ClickUpService implements ITicketIntegrationProvider {
         await this.makeRequest<void>(`/task/${externalId}`, clickUpConfig, 'DELETE');
 
         this.logger.log(`Deleted ClickUp task: ${externalId}`);
+    }
+
+    /**
+     * Get external task status from ClickUp
+     * Returns the mapped CodeClarity status and the external task details
+     */
+    async getExternalTaskStatus(
+        externalId: string,
+        config: IntegrationConfig
+    ): Promise<{ status: TicketStatus; externalStatus: string; archived: boolean }> {
+        const clickUpConfig = config as ClickUpConfig;
+
+        const task = await this.makeRequest<ClickUpTask>(
+            `/task/${externalId}`,
+            clickUpConfig,
+            'GET'
+        );
+
+        const externalStatus = task.status?.status?.toLowerCase() ?? '';
+        const mappedStatus = this.mapClickUpStatusToCodeClarity(
+            externalStatus,
+            task.archived ?? false
+        );
+
+        this.logger.log(
+            `Fetched ClickUp task ${externalId}: status="${externalStatus}", archived=${task.archived}, mapped="${mappedStatus}"`
+        );
+
+        return {
+            status: mappedStatus,
+            externalStatus: task.status?.status ?? 'unknown',
+            archived: task.archived ?? false
+        };
+    }
+
+    /**
+     * Map ClickUp status to CodeClarity status
+     */
+    mapClickUpStatusToCodeClarity(clickUpStatus: string, archived: boolean): TicketStatus {
+        const normalizedStatus = clickUpStatus.toLowerCase().trim();
+
+        // If archived, it's either resolved or closed
+        if (archived) {
+            if (normalizedStatus.includes('complete') || normalizedStatus.includes('done')) {
+                return TicketStatus.RESOLVED;
+            }
+            return TicketStatus.CLOSED;
+        }
+
+        // Map common ClickUp status names to CodeClarity statuses
+        if (
+            normalizedStatus.includes('to do') ||
+            normalizedStatus.includes('todo') ||
+            normalizedStatus.includes('open') ||
+            normalizedStatus.includes('backlog')
+        ) {
+            return TicketStatus.OPEN;
+        }
+
+        if (
+            normalizedStatus.includes('in progress') ||
+            normalizedStatus.includes('doing') ||
+            normalizedStatus.includes('working')
+        ) {
+            return TicketStatus.IN_PROGRESS;
+        }
+
+        if (
+            normalizedStatus.includes('complete') ||
+            normalizedStatus.includes('done') ||
+            normalizedStatus.includes('resolved')
+        ) {
+            return TicketStatus.RESOLVED;
+        }
+
+        if (
+            normalizedStatus.includes('closed') ||
+            normalizedStatus.includes('cancelled') ||
+            normalizedStatus.includes('canceled')
+        ) {
+            return TicketStatus.CLOSED;
+        }
+
+        // Default to OPEN if status is unrecognized
+        this.logger.warn(`Unknown ClickUp status "${clickUpStatus}", defaulting to OPEN`);
+        return TicketStatus.OPEN;
     }
 
     // ============================================
@@ -525,14 +612,15 @@ export class ClickUpService implements ITicketIntegrationProvider {
     }
 
     private mapStatus(status: TicketStatus): string {
-        // ClickUp uses custom status names per list
-        // These are common defaults, but may need customization per workspace
+        // ClickUp default statuses: TO DO, IN PROGRESS, COMPLETE
+        // Note: ClickUp doesn't have a "closed" status by default, so we map
+        // CLOSED and WONT_FIX to "complete" and use the archive flag to distinguish them
         const statusMapping: Record<TicketStatus, string> = {
             [TicketStatus.OPEN]: 'to do',
             [TicketStatus.IN_PROGRESS]: 'in progress',
             [TicketStatus.RESOLVED]: 'complete',
-            [TicketStatus.CLOSED]: 'closed',
-            [TicketStatus.WONT_FIX]: 'closed'
+            [TicketStatus.CLOSED]: 'complete',
+            [TicketStatus.WONT_FIX]: 'complete'
         };
 
         return statusMapping[status];

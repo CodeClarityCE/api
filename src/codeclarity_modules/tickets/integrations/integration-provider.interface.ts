@@ -128,6 +128,17 @@ export interface ITicketIntegrationProvider {
      */
     deleteExternalTicket(externalId: string, config: IntegrationConfig): Promise<void>;
 
+    /**
+     * Get the current status of an external ticket (for pull-based sync)
+     * @param externalId The external ticket ID
+     * @param config The integration configuration
+     * @returns The mapped status, external status string, and whether it's archived
+     */
+    getExternalTaskStatus?(
+        externalId: string,
+        config: IntegrationConfig
+    ): Promise<{ status: TicketStatus; externalStatus: string; archived: boolean }>;
+
     // OAuth methods (optional - only for providers that support OAuth)
 
     /**

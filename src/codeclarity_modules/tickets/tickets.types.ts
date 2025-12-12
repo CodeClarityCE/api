@@ -185,6 +185,7 @@ export interface TicketSummary {
     assigned_to_id: string | undefined;
     assigned_to_name: string | undefined;
     has_external_links: boolean;
+    external_status: string | undefined;
 }
 
 export interface TicketDetails extends TicketSummary {
@@ -343,5 +344,21 @@ export interface SyncResult {
 
 export interface BulkSyncResult {
     synced: SyncResult[];
+    failed: { ticket_id: string; error: string }[];
+}
+
+/** Result from syncing a single ticket FROM external provider */
+export interface SyncFromExternalResult {
+    ticket_id: string;
+    updated: boolean;
+    old_status?: TicketStatus;
+    new_status?: TicketStatus;
+    external_status?: string;
+}
+
+/** Result from bulk syncing tickets FROM external provider */
+export interface BulkSyncFromExternalResult {
+    updated: SyncFromExternalResult[];
+    unchanged: string[];
     failed: { ticket_id: string; error: string }[];
 }

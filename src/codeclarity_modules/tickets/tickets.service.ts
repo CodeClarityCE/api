@@ -8,6 +8,19 @@ import {
     UsersRepository,
     ProjectsRepository
 } from 'src/base_modules/shared/repositories';
+import type { CVSS2, CVSS31 } from 'src/codeclarity_modules/knowledge/cvss.types';
+import { EPSSRepository } from 'src/codeclarity_modules/knowledge/epss/epss.repository';
+import { NVD } from 'src/codeclarity_modules/knowledge/nvd/nvd.entity';
+import { NVDRepository } from 'src/codeclarity_modules/knowledge/nvd/nvd.repository';
+import { OSV } from 'src/codeclarity_modules/knowledge/osv/osv.entity';
+import { OSVRepository } from 'src/codeclarity_modules/knowledge/osv/osv.repository';
+import {
+    VulnerabilityDetailsReport,
+    SeverityInfo,
+    ReferenceInfo,
+    VulnSourceInfo
+} from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
+import { VulnerabilityService } from 'src/codeclarity_modules/results/vulnerabilities/vulnerability.service';
 import { EntityNotFound } from 'src/types/error.types';
 import {
     PaginationConfig,
@@ -16,6 +29,7 @@ import {
 } from 'src/types/pagination.types';
 import { SortDirection } from 'src/types/sort.types';
 import { Repository, In } from 'typeorm';
+import { TicketIntegrationService } from './integrations/ticket-integration.service';
 import { TicketEvent, TicketEventType } from './ticket-event.entity';
 import { TicketVulnerabilityOccurrence } from './ticket-occurrence.entity';
 import { Ticket, TicketStatus } from './ticket.entity';
@@ -67,13 +81,17 @@ export class TicketsService {
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly usersRepository: UsersRepository,
         private readonly projectsRepository: ProjectsRepository,
+        private readonly vulnerabilityService: VulnerabilityService,
+        private readonly ticketIntegrationService: TicketIntegrationService,
+        private readonly nvdRepository: NVDRepository,
+        private readonly osvRepository: OSVRepository,
+        private readonly epssRepository: EPSSRepository,
         @InjectRepository(Ticket, 'codeclarity')
         private ticketRepository: Repository<Ticket>,
         @InjectRepository(TicketEvent, 'codeclarity')
         private ticketEventRepository: Repository<TicketEvent>,
         @InjectRepository(TicketVulnerabilityOccurrence, 'codeclarity')
         private ticketOccurrenceRepository: Repository<TicketVulnerabilityOccurrence>
-        // Note: TicketExternalLink repository will be added in Phase 7 for ClickUp integration
     ) {}
 
     /**
@@ -182,6 +200,243 @@ export class TicketsService {
         ]);
 
         return this.mapTicketToDetails(ticket, occurrenceCount, activeOccurrenceCount);
+    }
+
+    /**
+     * Get vulnerability details for a ticket
+     * Returns full vulnerability information including CVSS, EPSS, VLAI, weaknesses, and references
+     */
+    async getVulnerabilityDetails(
+        orgId: string,
+        ticketId: string,
+        user: AuthenticatedUser
+    ): Promise<VulnerabilityDetailsReport | null> {
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+
+        // Get the ticket with its analysis reference
+        const ticket = await this.ticketRepository.findOne({
+            where: {
+                id: ticketId,
+                organization: { id: orgId }
+            },
+            relations: ['project', 'source_analysis']
+        });
+
+        if (!ticket) {
+            throw new EntityNotFound();
+        }
+
+        // If ticket has no vulnerability_id, we can't fetch details
+        if (!ticket.vulnerability_id) {
+            return null;
+        }
+
+        // If ticket has source_analysis, use the full vulnerability service
+        if (ticket.source_analysis) {
+            try {
+                // Use the vulnerability service to get detailed info
+                // Default workspace is 'default' for single-workspace analyses
+                const vulnDetails = await this.vulnerabilityService.getVulnerability(
+                    orgId,
+                    ticket.project.id,
+                    ticket.source_analysis.id,
+                    user,
+                    ticket.vulnerability_id,
+                    'default'
+                );
+
+                return vulnDetails;
+            } catch (error) {
+                // If vulnerability details can't be fetched, try fallback
+                console.error(
+                    `Failed to fetch vulnerability details for ticket ${ticketId}:`,
+                    (error as Error).message
+                );
+                // Fall through to knowledge DB fallback
+            }
+        }
+
+        // Fallback: fetch vulnerability data directly from knowledge database
+        // This handles tickets without source_analysis or when the full service fails
+        return this.getVulnerabilityFromKnowledge(ticket.vulnerability_id);
+    }
+
+    /**
+     * Fetch vulnerability details directly from knowledge database
+     * Used as fallback when ticket doesn't have a source_analysis
+     */
+    private async getVulnerabilityFromKnowledge(
+        vulnerabilityId: string
+    ): Promise<VulnerabilityDetailsReport | null> {
+        try {
+            const nvdData = await this.nvdRepository.getVulnWithoutFailing(vulnerabilityId);
+
+            let osvData: OSV | null = null;
+            if (vulnerabilityId.startsWith('CVE')) {
+                osvData = await this.osvRepository.getVulnByCVEIDWithoutFailing(vulnerabilityId);
+            }
+
+            if (!nvdData && !osvData) {
+                return null;
+            }
+
+            const epssData = await this.epssRepository.getByCVE(vulnerabilityId);
+
+            // Extract CVSS from NVD metrics JSON
+            const severities = this.extractSeveritiesFromNVD(nvdData);
+
+            // Extract description from NVD or OSV
+            const description = this.extractDescription(nvdData, osvData);
+
+            // Extract references
+            const references = this.extractReferences(nvdData, osvData);
+
+            // Build sources array
+            const sources: VulnSourceInfo[] = [];
+            if (nvdData) {
+                sources.push({
+                    name: 'NVD',
+                    vuln_url: `https://nvd.nist.gov/vuln/detail/${vulnerabilityId}`
+                });
+            }
+            if (osvData) {
+                sources.push({
+                    name: 'OSV',
+                    vuln_url: `https://osv.dev/vulnerability/${osvData.osv_id}`
+                });
+            }
+
+            // Build other info with EPSS and VLAI (extended OtherInfo)
+            const otherInfo = {
+                package_manager: 'unknown',
+                epss_score: epssData?.score ?? undefined,
+                epss_percentile: epssData?.percentile ?? undefined,
+                vlai_score: nvdData?.vlai_score ?? undefined,
+                vlai_confidence: nvdData?.vlai_confidence ?? undefined
+            };
+
+            return {
+                vulnerability_info: {
+                    vulnerability_id: vulnerabilityId,
+                    description,
+                    version_info: {
+                        affected_versions_string: '',
+                        patched_versions_string: '',
+                        versions: []
+                    },
+                    published: nvdData?.published ?? osvData?.published ?? '',
+                    last_modified: nvdData?.lastModified ?? osvData?.modified ?? '',
+                    sources,
+                    aliases: []
+                },
+                severities,
+                owasp_top_10: null,
+                weaknesses: [],
+                patch: null as unknown as VulnerabilityDetailsReport['patch'],
+                common_consequences: {},
+                references,
+                location: [],
+                other: otherInfo as unknown as VulnerabilityDetailsReport['other']
+            };
+        } catch (error) {
+            console.error(
+                `Failed to fetch vulnerability from knowledge DB for ${vulnerabilityId}:`,
+                (error as Error).message
+            );
+            return null;
+        }
+    }
+
+    /**
+     * Build a CVSS v3.x object from raw metrics data
+     */
+    private buildCvssV3(data: Record<string, unknown>): CVSS31 {
+        return {
+            base_score: (data['baseScore'] as number) ?? 0,
+            exploitability_score: (data['exploitabilityScore'] as number) ?? 0,
+            impact_score: (data['impactScore'] as number) ?? 0,
+            attack_vector: (data['attackVector'] as string) ?? '',
+            attack_complexity: (data['attackComplexity'] as string) ?? '',
+            privileges_required: (data['privilegesRequired'] as string) ?? '',
+            user_interaction: (data['userInteraction'] as string) ?? '',
+            scope: (data['scope'] as string) ?? '',
+            confidentiality_impact: (data['confidentialityImpact'] as string) ?? '',
+            integrity_impact: (data['integrityImpact'] as string) ?? '',
+            availability_impact: (data['availabilityImpact'] as string) ?? ''
+        };
+    }
+
+    /**
+     * Build a CVSS v2 object from raw metrics data
+     */
+    private buildCvssV2(data: Record<string, unknown>): CVSS2 {
+        return {
+            base_score: (data['baseScore'] as number) ?? 0,
+            exploitability_score: (data['exploitabilityScore'] as number) ?? 0,
+            impact_score: (data['impactScore'] as number) ?? 0,
+            access_vector: (data['accessVector'] as string) ?? '',
+            access_complexity: (data['accessComplexity'] as string) ?? '',
+            authentication: (data['authentication'] as string) ?? '',
+            confidentiality_impact: (data['confidentialityImpact'] as string) ?? '',
+            integrity_impact: (data['integrityImpact'] as string) ?? '',
+            availability_impact: (data['availabilityImpact'] as string) ?? ''
+        };
+    }
+
+    /**
+     * Extract CVSS scores from NVD metrics JSON
+     */
+    private extractSeveritiesFromNVD(nvdData: NVD | null): SeverityInfo {
+        if (!nvdData?.metrics) return {};
+
+        const metrics = nvdData.metrics as {
+            cvssMetricV31?: { cvssData: Record<string, unknown> }[];
+            cvssMetricV30?: { cvssData: Record<string, unknown> }[];
+            cvssMetricV2?: { cvssData: Record<string, unknown> }[];
+        };
+
+        const severities: SeverityInfo = {};
+
+        if (metrics.cvssMetricV31?.[0]?.cvssData) {
+            severities.cvss_31 = this.buildCvssV3(metrics.cvssMetricV31[0].cvssData);
+        }
+
+        if (metrics.cvssMetricV30?.[0]?.cvssData) {
+            severities.cvss_3 = this.buildCvssV3(metrics.cvssMetricV30[0].cvssData);
+        }
+
+        if (metrics.cvssMetricV2?.[0]?.cvssData) {
+            severities.cvss_2 = this.buildCvssV2(metrics.cvssMetricV2[0].cvssData);
+        }
+
+        return severities;
+    }
+
+    /**
+     * Extract description from NVD or OSV
+     */
+    private extractDescription(nvdData: NVD | null, osvData: OSV | null): string {
+        if (nvdData?.descriptions) {
+            const descriptions = nvdData.descriptions as { lang: string; value: string }[];
+            const en = descriptions.find((d) => d.lang === 'en');
+            if (en) return en.value;
+        }
+        return osvData?.details ?? '';
+    }
+
+    /**
+     * Extract references from NVD or OSV
+     */
+    private extractReferences(nvdData: NVD | null, osvData: OSV | null): ReferenceInfo[] {
+        if (nvdData?.references) {
+            const refs = nvdData.references as { url: string; tags?: string[] }[];
+            return refs.map((r) => ({ url: r.url, tags: r.tags ?? [] }));
+        }
+        if (osvData?.references) {
+            const refs = osvData.references as { url: string; type?: string }[];
+            return refs.map((r) => ({ url: r.url, tags: r.type ? [r.type] : [] }));
+        }
+        return [];
     }
 
     /**
@@ -321,7 +576,8 @@ export class TicketsService {
             project_name: ticket.project?.name ?? '',
             assigned_to_id: ticket.assigned_to?.id,
             assigned_to_name: getUserFullName(ticket.assigned_to),
-            has_external_links: parseInt(rawRows[index]?.external_link_count ?? '0') > 0
+            has_external_links: parseInt(rawRows[index]?.external_link_count ?? '0') > 0,
+            external_status: ticket.external_status
         }));
 
         return {
@@ -362,9 +618,13 @@ export class TicketsService {
         const performer = await this.usersRepository.getUserById(user.userId);
         const now = new Date();
         const events: Partial<TicketEvent>[] = [];
+        let statusChanged = false;
+        let newStatus: TicketStatus | undefined;
 
         // Track status change
         if (updateBody.status && updateBody.status !== ticket.status) {
+            statusChanged = true;
+            newStatus = updateBody.status;
             events.push({
                 ticket,
                 event_type: TicketEventType.STATUS_CHANGED,
@@ -400,6 +660,17 @@ export class TicketsService {
             }
 
             ticket.status = updateBody.status;
+
+            // Also update external_status synchronously for immediate UI feedback
+            // The async ClickUp sync will update the actual external system
+            const statusToExternalMap: Record<TicketStatus, string> = {
+                [TicketStatus.OPEN]: 'to do',
+                [TicketStatus.IN_PROGRESS]: 'in progress',
+                [TicketStatus.RESOLVED]: 'complete',
+                [TicketStatus.CLOSED]: 'complete',
+                [TicketStatus.WONT_FIX]: 'complete'
+            };
+            ticket.external_status = statusToExternalMap[updateBody.status];
         }
 
         // Track priority change
@@ -483,6 +754,17 @@ export class TicketsService {
         // Save events
         if (events.length > 0) {
             await this.ticketEventRepository.save(events);
+        }
+
+        // Sync status change to external providers (ClickUp, etc.)
+        if (statusChanged && newStatus) {
+            // Fire and forget - don't block the response
+            this.ticketIntegrationService
+                .updateExternalTicketStatus(ticketId, newStatus)
+                .catch((error) => {
+                    // Log but don't fail the update
+                    console.error('Failed to sync status to external provider:', error);
+                });
         }
     }
 
@@ -766,7 +1048,8 @@ export class TicketsService {
                 project_name: t.project?.name ?? '',
                 assigned_to_id: t.assigned_to?.id,
                 assigned_to_name: getUserFullName(t.assigned_to),
-                has_external_links: false
+                has_external_links: false,
+                external_status: t.external_status
             })),
             avg_resolution_time_days: resolvedTickets?.avg_days
                 ? parseFloat(resolvedTickets.avg_days)
@@ -819,6 +1102,7 @@ export class TicketsService {
                 synced_on: link.synced_on
             })),
             has_external_links: (ticket.external_links?.length || 0) > 0,
+            external_status: ticket.external_status,
             occurrence_count: occurrenceCount,
             active_occurrence_count: activeOccurrenceCount
         };

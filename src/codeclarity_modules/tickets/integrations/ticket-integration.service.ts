@@ -617,6 +617,8 @@ export class TicketIntegrationService {
             throw new NotFoundException(`Ticket ${ticketId} not found`);
         }
 
+        let externalStatusUpdated = false;
+
         for (const link of ticket.external_links || []) {
             if (!link.sync_enabled) continue;
 
@@ -639,6 +641,14 @@ export class TicketIntegrationService {
                 link.synced_on = new Date();
                 await this.externalLinkRepository.save(link);
 
+                // Also update the ticket's external_status to reflect what we sent to the provider
+                // Map CodeClarity status to external provider status name
+                const externalStatusName = this.mapCodeClarityStatusToExternal(status);
+                if (externalStatusName && ticket.external_status !== externalStatusName) {
+                    ticket.external_status = externalStatusName;
+                    externalStatusUpdated = true;
+                }
+
                 this.logger.log(`Updated external ticket ${link.external_id} status to ${status}`);
             } catch (error) {
                 this.logger.error(
@@ -647,6 +657,26 @@ export class TicketIntegrationService {
                 );
             }
         }
+
+        // Save the ticket if external_status was updated
+        if (externalStatusUpdated) {
+            await this.ticketRepository.save(ticket);
+        }
+    }
+
+    /**
+     * Map CodeClarity status to external provider status name
+     */
+    private mapCodeClarityStatusToExternal(status: TicketStatus): string {
+        // These are the ClickUp default status names
+        const statusMapping: Record<TicketStatus, string> = {
+            [TicketStatus.OPEN]: 'to do',
+            [TicketStatus.IN_PROGRESS]: 'in progress',
+            [TicketStatus.RESOLVED]: 'complete',
+            [TicketStatus.CLOSED]: 'complete',
+            [TicketStatus.WONT_FIX]: 'complete'
+        };
+        return statusMapping[status];
     }
 
     /**
@@ -745,6 +775,202 @@ export class TicketIntegrationService {
             } catch (error) {
                 results.failed.push({
                     id: ticketId,
+                    error: error instanceof Error ? error.message : 'Unknown error'
+                });
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * Sync ticket status from external provider
+     * Fetches the current status from the external system and updates the local ticket if changed
+     */
+    async syncFromExternal(
+        ticketId: string,
+        linkId: string,
+        userId?: string
+    ): Promise<{
+        updated: boolean;
+        externalStatusUpdated: boolean;
+        oldStatus?: TicketStatus;
+        newStatus?: TicketStatus;
+        externalStatus?: string;
+    }> {
+        const externalLink = await this.externalLinkRepository.findOne({
+            where: { id: linkId, ticket: { id: ticketId } },
+            relations: ['ticket', 'ticket.organization']
+        });
+
+        if (!externalLink) {
+            throw new NotFoundException(`External link ${linkId} not found`);
+        }
+
+        const ticket = externalLink.ticket;
+        const config = await this.getIntegrationConfig(
+            ticket.organization.id,
+            externalLink.provider
+        );
+
+        if (!config) {
+            throw new BadRequestException(
+                `Integration ${externalLink.provider} is not configured for this organization`
+            );
+        }
+
+        // Get the provider and fetch external status
+        const provider = this.getProvider(externalLink.provider);
+
+        // Check if provider supports getExternalTaskStatus
+        if (!('getExternalTaskStatus' in provider)) {
+            throw new BadRequestException(
+                `Provider ${externalLink.provider} does not support status sync from external`
+            );
+        }
+
+        const { status: externalStatus, externalStatus: rawExternalStatus } = await (
+            provider as {
+                getExternalTaskStatus: (
+                    id: string,
+                    config: IntegrationConfig
+                ) => Promise<{ status: TicketStatus; externalStatus: string }>;
+            }
+        ).getExternalTaskStatus(externalLink.external_id, config.config);
+
+        // Check what changed
+        const statusChanged = ticket.status !== externalStatus;
+        const externalStatusChanged = ticket.external_status !== rawExternalStatus;
+        const oldStatus = ticket.status;
+
+        // Always update external_status (raw status from provider like "to do", "in progress")
+        ticket.external_status = rawExternalStatus;
+
+        // Handle status change if the mapped status changed
+        let isReopening = false;
+        if (statusChanged) {
+            ticket.status = externalStatus;
+            ticket.updated_on = new Date();
+
+            // If status changed to RESOLVED, set resolved_on
+            if (externalStatus === TicketStatus.RESOLVED && !ticket.resolved_on) {
+                ticket.resolved_on = new Date();
+            }
+
+            // If reopening (was RESOLVED, now OPEN or IN_PROGRESS), clear resolved_on
+            isReopening =
+                oldStatus === TicketStatus.RESOLVED &&
+                (externalStatus === TicketStatus.OPEN ||
+                    externalStatus === TicketStatus.IN_PROGRESS);
+            if (isReopening) {
+                ticket.resolved_on = undefined;
+            }
+        }
+
+        // Save ticket if anything changed
+        if (statusChanged || externalStatusChanged) {
+            await this.ticketRepository.save(ticket);
+        }
+
+        // Always update sync timestamp on the link
+        externalLink.synced_on = new Date();
+        await this.externalLinkRepository.save(externalLink);
+
+        // Only create event if status changed (not for external_status only changes)
+        if (statusChanged) {
+            const eventType = isReopening
+                ? TicketEventType.REOPENED
+                : TicketEventType.SYNCED_FROM_EXTERNAL;
+            const eventData = {
+                ticket: { id: ticketId },
+                event_type: eventType,
+                event_data: {
+                    external_provider: externalLink.provider,
+                    external_id: externalLink.external_id,
+                    old_status: oldStatus,
+                    new_status: externalStatus,
+                    external_status: rawExternalStatus,
+                    source: 'sync' as const
+                },
+                created_on: new Date()
+            };
+            const event = userId
+                ? this.eventRepository.create({ ...eventData, performed_by: { id: userId } })
+                : this.eventRepository.create(eventData);
+            await this.eventRepository.save(event);
+
+            this.logger.log(
+                `Synced ticket ${ticketId} from ${externalLink.provider}: ${oldStatus} -> ${externalStatus}`
+            );
+        } else if (externalStatusChanged) {
+            this.logger.log(`Updated external_status for ticket ${ticketId}: ${rawExternalStatus}`);
+        } else {
+            this.logger.log(
+                `Ticket ${ticketId} unchanged (status: ${ticket.status}, external: ${rawExternalStatus})`
+            );
+        }
+
+        const result: {
+            updated: boolean;
+            externalStatusUpdated: boolean;
+            oldStatus?: TicketStatus;
+            newStatus?: TicketStatus;
+            externalStatus?: string;
+        } = {
+            updated: statusChanged,
+            externalStatusUpdated: externalStatusChanged,
+            externalStatus: rawExternalStatus
+        };
+        if (statusChanged) {
+            result.oldStatus = oldStatus;
+            result.newStatus = externalStatus;
+        }
+        return result;
+    }
+
+    /**
+     * Bulk sync tickets from external providers
+     */
+    async bulkSyncFromExternal(
+        ticketIds: string[],
+        userId?: string
+    ): Promise<{
+        updated: { ticketId: string; oldStatus: TicketStatus; newStatus: TicketStatus }[];
+        unchanged: string[];
+        failed: { ticketId: string; error: string }[];
+    }> {
+        const results = {
+            updated: [] as { ticketId: string; oldStatus: TicketStatus; newStatus: TicketStatus }[],
+            unchanged: [] as string[],
+            failed: [] as { ticketId: string; error: string }[]
+        };
+
+        for (const ticketId of ticketIds) {
+            try {
+                // Get all external links for this ticket
+                const links = await this.getExternalLinks(ticketId);
+
+                if (links.length === 0) {
+                    results.unchanged.push(ticketId);
+                    continue;
+                }
+
+                // Sync from the first (most recent) link
+                const link = links[0]!;
+                const result = await this.syncFromExternal(ticketId, link.id, userId);
+
+                if (result.updated && result.oldStatus && result.newStatus) {
+                    results.updated.push({
+                        ticketId,
+                        oldStatus: result.oldStatus,
+                        newStatus: result.newStatus
+                    });
+                } else {
+                    results.unchanged.push(ticketId);
+                }
+            } catch (error) {
+                results.failed.push({
+                    ticketId,
                     error: error instanceof Error ? error.message : 'Unknown error'
                 });
             }
