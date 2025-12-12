@@ -8,6 +8,8 @@ import {
     UsersRepository,
     ProjectsRepository
 } from 'src/base_modules/shared/repositories';
+import { VulnerabilityService } from 'src/codeclarity_modules/results/vulnerabilities/vulnerability.service';
+import { VulnerabilityDetailsReport } from 'src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types';
 import { EntityNotFound } from 'src/types/error.types';
 import {
     PaginationConfig,
@@ -19,6 +21,7 @@ import { Repository, In } from 'typeorm';
 import { TicketEvent, TicketEventType } from './ticket-event.entity';
 import { TicketVulnerabilityOccurrence } from './ticket-occurrence.entity';
 import { Ticket, TicketStatus } from './ticket.entity';
+import { TicketIntegrationService } from './integrations/ticket-integration.service';
 import {
     CreateTicketBody,
     UpdateTicketBody,
@@ -67,13 +70,14 @@ export class TicketsService {
         private readonly organizationsRepository: OrganizationsRepository,
         private readonly usersRepository: UsersRepository,
         private readonly projectsRepository: ProjectsRepository,
+        private readonly vulnerabilityService: VulnerabilityService,
+        private readonly ticketIntegrationService: TicketIntegrationService,
         @InjectRepository(Ticket, 'codeclarity')
         private ticketRepository: Repository<Ticket>,
         @InjectRepository(TicketEvent, 'codeclarity')
         private ticketEventRepository: Repository<TicketEvent>,
         @InjectRepository(TicketVulnerabilityOccurrence, 'codeclarity')
         private ticketOccurrenceRepository: Repository<TicketVulnerabilityOccurrence>
-        // Note: TicketExternalLink repository will be added in Phase 7 for ClickUp integration
     ) {}
 
     /**
@@ -182,6 +186,58 @@ export class TicketsService {
         ]);
 
         return this.mapTicketToDetails(ticket, occurrenceCount, activeOccurrenceCount);
+    }
+
+    /**
+     * Get vulnerability details for a ticket
+     * Returns full vulnerability information including CVSS, EPSS, VLAI, weaknesses, and references
+     */
+    async getVulnerabilityDetails(
+        orgId: string,
+        ticketId: string,
+        user: AuthenticatedUser
+    ): Promise<VulnerabilityDetailsReport | null> {
+        await this.membershipsRepository.hasRequiredRole(orgId, user.userId, MemberRole.USER);
+
+        // Get the ticket with its analysis reference
+        const ticket = await this.ticketRepository.findOne({
+            where: {
+                id: ticketId,
+                organization: { id: orgId }
+            },
+            relations: ['project', 'source_analysis']
+        });
+
+        if (!ticket) {
+            throw new EntityNotFound();
+        }
+
+        // If ticket has no vulnerability_id or source_analysis, return null
+        if (!ticket.vulnerability_id || !ticket.source_analysis) {
+            return null;
+        }
+
+        try {
+            // Use the vulnerability service to get detailed info
+            // Default workspace is 'default' for single-workspace analyses
+            const vulnDetails = await this.vulnerabilityService.getVulnerability(
+                orgId,
+                ticket.project.id,
+                ticket.source_analysis.id,
+                user,
+                ticket.vulnerability_id,
+                'default'
+            );
+
+            return vulnDetails;
+        } catch (error) {
+            // If vulnerability details can't be fetched, return null instead of throwing
+            console.error(
+                `Failed to fetch vulnerability details for ticket ${ticketId}:`,
+                (error as Error).message
+            );
+            return null;
+        }
     }
 
     /**
@@ -321,7 +377,8 @@ export class TicketsService {
             project_name: ticket.project?.name ?? '',
             assigned_to_id: ticket.assigned_to?.id,
             assigned_to_name: getUserFullName(ticket.assigned_to),
-            has_external_links: parseInt(rawRows[index]?.external_link_count ?? '0') > 0
+            has_external_links: parseInt(rawRows[index]?.external_link_count ?? '0') > 0,
+            external_status: ticket.external_status
         }));
 
         return {
@@ -362,9 +419,13 @@ export class TicketsService {
         const performer = await this.usersRepository.getUserById(user.userId);
         const now = new Date();
         const events: Partial<TicketEvent>[] = [];
+        let statusChanged = false;
+        let newStatus: TicketStatus | undefined;
 
         // Track status change
         if (updateBody.status && updateBody.status !== ticket.status) {
+            statusChanged = true;
+            newStatus = updateBody.status;
             events.push({
                 ticket,
                 event_type: TicketEventType.STATUS_CHANGED,
@@ -400,6 +461,17 @@ export class TicketsService {
             }
 
             ticket.status = updateBody.status;
+
+            // Also update external_status synchronously for immediate UI feedback
+            // The async ClickUp sync will update the actual external system
+            const statusToExternalMap: Record<TicketStatus, string> = {
+                [TicketStatus.OPEN]: 'to do',
+                [TicketStatus.IN_PROGRESS]: 'in progress',
+                [TicketStatus.RESOLVED]: 'complete',
+                [TicketStatus.CLOSED]: 'complete',
+                [TicketStatus.WONT_FIX]: 'complete'
+            };
+            ticket.external_status = statusToExternalMap[updateBody.status];
         }
 
         // Track priority change
@@ -483,6 +555,17 @@ export class TicketsService {
         // Save events
         if (events.length > 0) {
             await this.ticketEventRepository.save(events);
+        }
+
+        // Sync status change to external providers (ClickUp, etc.)
+        if (statusChanged && newStatus) {
+            // Fire and forget - don't block the response
+            this.ticketIntegrationService
+                .updateExternalTicketStatus(ticketId, newStatus)
+                .catch((error) => {
+                    // Log but don't fail the update
+                    console.error('Failed to sync status to external provider:', error);
+                });
         }
     }
 
@@ -766,7 +849,8 @@ export class TicketsService {
                 project_name: t.project?.name ?? '',
                 assigned_to_id: t.assigned_to?.id,
                 assigned_to_name: getUserFullName(t.assigned_to),
-                has_external_links: false
+                has_external_links: false,
+                external_status: t.external_status
             })),
             avg_resolution_time_days: resolvedTickets?.avg_days
                 ? parseFloat(resolvedTickets.avg_days)
@@ -819,6 +903,7 @@ export class TicketsService {
                 synced_on: link.synced_on
             })),
             has_external_links: (ticket.external_links?.length || 0) > 0,
+            external_status: ticket.external_status,
             occurrence_count: occurrenceCount,
             active_occurrence_count: activeOccurrenceCount
         };

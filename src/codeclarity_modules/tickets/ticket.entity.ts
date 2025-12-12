@@ -136,6 +136,11 @@ export class Ticket {
     @Column('timestamptz', { nullable: true })
     due_date?: Date | undefined;
 
+    @ApiProperty({ description: 'External status from linked provider (e.g., ClickUp)' })
+    @Expose()
+    @Column({ length: 100, nullable: true })
+    external_status?: string;
+
     // Foreign keys
     @ApiProperty()
     @Expose()
@@ -188,6 +193,7 @@ export interface TicketFrontend {
     updated_on?: Date;
     resolved_on?: Date;
     due_date?: Date;
+    external_status?: string;
     project_id: string;
     project_name: string;
     created_by_id: string;
