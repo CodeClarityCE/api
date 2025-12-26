@@ -73,8 +73,7 @@
     "semver": "7.7.3",
     "socket.io": "4.8.3",
     "tslib": "2.8.1",
-    "typeorm": "0.3.28",
-    "uuid": "13.0.0"
+    "typeorm": "0.3.28"
   },
   "devDependencies": {
     "@eslint/js": "9.39.2",
@@ -82,7 +81,6 @@
     "@nestjs/schematics": "11.0.9",
     "@nestjs/testing": "11.1.10",
     "@octokit/types": "16.0.0",
-    "@rushstack/eslint-patch": "1.15.0",
     "@types/amqplib": "0.10.8",
     "@types/bcrypt": "6.0.0",
     "@types/cvss-parser": "file:cvss-parser-js/",
@@ -96,12 +94,9 @@
     "@types/passport-jwt": "4.0.1",
     "@types/pg": "8.16.0",
     "@types/semver": "7.7.1",
-    "@types/supertest": "6.0.3",
-    "@types/uuid": "11.0.0",
     "@typescript-eslint/parser": "8.50.1",
     "eslint": "9.39.2",
     "eslint-config-prettier": "10.1.8",
-    "eslint-plugin-cypress": "5.2.0",
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-security": "3.0.1",
     "globals": "16.5.0",
@@ -109,14 +104,11 @@
     "jest-util": "30.2.0",
     "prettier": "3.7.4",
     "source-map-support": "0.5.21",
-    "supertest": "7.1.4",
     "ts-jest": "29.4.6",
-    "ts-loader": "9.5.4",
     "ts-node": "10.9.2",
     "tsconfig-paths": "4.2.0",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.50.1",
-    "webpack": "5.104.1"
+    "typescript-eslint": "8.50.1"
   },
   "jest": {
     "moduleFileExtensions": [
