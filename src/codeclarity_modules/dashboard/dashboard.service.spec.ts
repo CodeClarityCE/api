@@ -492,13 +492,14 @@ describe("DashboardService", () => {
   });
 
   describe("getQuickStats", () => {
-    it('should throw "Not implemented" error', async () => {
+    it("should return quick stats with grade based on vulnerability severity", async () => {
       membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
       const mockQueryBuilder = {
         where: jest.fn().mockReturnThis(),
         leftJoinAndSelect: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
         getOne: jest.fn().mockResolvedValue(mockOrganization),
       };
 
@@ -506,28 +507,43 @@ describe("DashboardService", () => {
         mockQueryBuilder as any,
       );
 
-      await expect(
-        service.getQuickStats(mockOrgId, mockAuthenticatedUser),
-      ).rejects.toThrow("Not implemented");
+      const result = await service.getQuickStats(
+        mockOrgId,
+        mockAuthenticatedUser,
+      );
+
+      expect(result).toBeDefined();
+      expect(result.nmb_projects).toBe(1);
+      expect(result.max_grade).toBeDefined();
+      expect(result.max_grade.score).toBeDefined();
+      expect(result.max_grade.class).toBeDefined();
+      expect(result.max_grade_trend).toBeDefined();
     });
 
-    it("should use default date ranges when not provided", async () => {
+    it("should return default values when no organization data exists", async () => {
       membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
 
       const mockQueryBuilder = {
         where: jest.fn().mockReturnThis(),
         leftJoinAndSelect: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
-        getOne: jest.fn().mockResolvedValue(mockOrganization),
+        orderBy: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
       };
 
       organizationRepository.createQueryBuilder.mockReturnValue(
         mockQueryBuilder as any,
       );
 
-      await expect(
-        service.getQuickStats(mockOrgId, mockAuthenticatedUser),
-      ).rejects.toThrow("Not implemented");
+      const result = await service.getQuickStats(
+        mockOrgId,
+        mockAuthenticatedUser,
+      );
+
+      expect(result).toBeDefined();
+      expect(result.nmb_projects).toBe(0);
+      expect(result.max_grade.score).toBe(10);
+      expect(result.max_grade.class).toBe(ProjectGradeClass.A_PLUS);
     });
   });
 

@@ -547,36 +547,22 @@ export class DashboardService {
       });
     }
 
-    // Calculate security score: 10 = best (no vulnerabilities), 0 = worst
-    // Average severity is 0-10, so score = 10 - avgSeverity
+    // Calculate security score: 100 = best (no vulnerabilities), 0 = worst
+    // Average severity is 0-10 (CVSS scale), convert to 0-100% scale
     const avgSeverity =
       totalVulnCount > 0 ? totalVulnSeverity / totalVulnCount : 0;
-    const securityScore = Math.max(0, Math.min(10, 10 - avgSeverity));
+    const securityScorePercent = Math.max(
+      0,
+      Math.min(100, (10 - avgSeverity) * 10),
+    );
 
-    // Map score to grade class
-    const normalizedScore = avgSeverity / 10; // Convert to 0-1 range for grade calculation
-    let gradeClass: ProjectGradeClass;
-    if (normalizedScore === 0) {
-      gradeClass = ProjectGradeClass.A_PLUS;
-    } else if (normalizedScore < 0.1) {
-      gradeClass = ProjectGradeClass.A;
-    } else if (normalizedScore < 0.25) {
-      gradeClass = ProjectGradeClass.B_PLUS;
-    } else if (normalizedScore < 0.4) {
-      gradeClass = ProjectGradeClass.B;
-    } else if (normalizedScore < 0.55) {
-      gradeClass = ProjectGradeClass.C_PLUS;
-    } else if (normalizedScore < 0.7) {
-      gradeClass = ProjectGradeClass.C;
-    } else if (normalizedScore < 0.85) {
-      gradeClass = ProjectGradeClass.D_PLUS;
-    } else {
-      gradeClass = ProjectGradeClass.D;
-    }
+    // Map percentage score to grade class
+    // These thresholds match frontend/src/utils/gradeUtils.ts
+    const gradeClass = this.scoreToGradeClass(securityScorePercent);
 
     const quickStats: QuickStats = {
       max_grade: {
-        score: Math.round(securityScore * 10) / 10, // Round to 1 decimal place
+        score: Math.round(securityScorePercent) / 10, // Return as 0-10 scale for backwards compatibility
         class: gradeClass,
       },
       max_grade_trend: {
@@ -707,5 +693,20 @@ export class DashboardService {
       matching_count: 2,
       filter_count: {},
     };
+  }
+
+  /**
+   * Convert a percentage score (0-100) to a ProjectGradeClass
+   * These thresholds match frontend/src/utils/gradeUtils.ts
+   */
+  private scoreToGradeClass(scorePercent: number): ProjectGradeClass {
+    if (scorePercent >= 95) return ProjectGradeClass.A_PLUS;
+    if (scorePercent >= 90) return ProjectGradeClass.A;
+    if (scorePercent >= 85) return ProjectGradeClass.B_PLUS;
+    if (scorePercent >= 75) return ProjectGradeClass.B;
+    if (scorePercent >= 65) return ProjectGradeClass.C_PLUS;
+    if (scorePercent >= 55) return ProjectGradeClass.C;
+    if (scorePercent >= 45) return ProjectGradeClass.D_PLUS;
+    return ProjectGradeClass.D;
   }
 }
