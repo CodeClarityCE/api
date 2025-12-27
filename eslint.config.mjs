@@ -25,7 +25,9 @@ export default [
       "**/coverage/**",
       "**/*.config.js",
       "**/*.config.mjs",
-      "**/migrations/**" // Don't lint generated migrations
+      "**/migrations/**", // Don't lint generated migrations
+      ".pnp.cjs", // Yarn PnP generated file
+      ".pnp.loader.mjs" // Yarn PnP generated file
     ]
   },
 

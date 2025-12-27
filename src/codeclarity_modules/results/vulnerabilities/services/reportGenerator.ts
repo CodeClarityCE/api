@@ -834,7 +834,7 @@ abstract class BaseReportGenerator {
 
   async parseCVSS31Vector(vector: string): Promise<CVSS3> {
     const { createCVSS31Parser, createCVSS31Calculator } =
-      await import("cvss-parser");
+      await import("../../../../lib/cvss-parser");
     const cvss31Parser = createCVSS31Parser();
     const parsedVector = cvss31Parser.parse(vector);
     const cvss31Calculator = createCVSS31Calculator();
@@ -863,7 +863,7 @@ abstract class BaseReportGenerator {
 
   async parseCVSS3Vector(vector: string): Promise<CVSS3> {
     const { createCVSS3Parser, createCVSS3Calculator } =
-      await import("cvss-parser");
+      await import("../../../../lib/cvss-parser");
     const cvss3Parser = createCVSS3Parser();
     const parsedVector = cvss3Parser.parse(vector);
     const cvss3Calculator = createCVSS3Calculator();
@@ -892,7 +892,7 @@ abstract class BaseReportGenerator {
 
   async parseCVSS2Vector(vector: string): Promise<CVSS2> {
     const { createCVSS2Parser, createCVSS2Calculator } =
-      await import("cvss-parser");
+      await import("../../../../lib/cvss-parser");
     const cvss2Parser = createCVSS2Parser();
     const parsedVector = cvss2Parser.parse(vector);
     const cvss2Calculator = createCVSS2Calculator();
