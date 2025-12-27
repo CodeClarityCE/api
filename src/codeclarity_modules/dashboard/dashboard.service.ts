@@ -511,59 +511,71 @@ export class DashboardService {
     if (!res) {
       return {
         max_grade: {
-          score: 0,
-          class: ProjectGradeClass.D,
+          score: 10,
+          class: ProjectGradeClass.A_PLUS,
         },
         max_grade_trend: {
-          trend: Trend.UP,
+          trend: Trend.EQUAL,
           diff: 0,
         },
         nmb_deprecated: 0,
         nmb_deprecated_trend: {
-          trend: Trend.UP,
+          trend: Trend.EQUAL,
           diff: 0,
         },
+        nmb_projects: 0,
       };
     }
 
-    const quickStats: QuickStats = {
-      max_grade: {
-        score: 0,
-        class: ProjectGradeClass.D,
-      },
-      max_grade_trend: {
-        trend: Trend.UP,
-        diff: 0,
-      },
-      nmb_deprecated: 0,
-      nmb_deprecated_trend: {
-        trend: Trend.UP,
-        diff: 0,
-      },
-    };
+    const nmb_projects = res.projects.length;
+    let totalVulnSeverity = 0;
+    let totalVulnCount = 0;
 
     for (const project of res.projects) {
       project.analyses.forEach((analysis) => {
         analysis.results.forEach((result) => {
-          const res = result.result as unknown as VulnsOutput;
+          const vulnOutput = result.result as unknown as VulnsOutput;
 
-          for (const workspace_name of Object.keys(res.workspaces)) {
-            const workspace = res.workspaces[workspace_name]!;
-            workspace.Vulnerabilities.forEach((_vuln) => {
-              // const _severity = vuln.Severity.Severity;
-              // const _cia = vuln.Severity.ConfidentialityImpact;
-              // const _impact = vuln.Severity.Impact;
-              // const _cwe = vuln.VulnerabilityId;
-
-              throw new Error("Not implemented");
-
-              // TODO: implement this feature
-              // if (_cwe === 'DEPRECATED') quickStats.nmb_deprecated++;
+          for (const workspace_name of Object.keys(vulnOutput.workspaces)) {
+            const workspace = vulnOutput.workspaces[workspace_name]!;
+            workspace.Vulnerabilities.forEach((vuln) => {
+              totalVulnSeverity += vuln.Severity.Severity;
+              totalVulnCount++;
             });
           }
         });
       });
     }
+
+    // Calculate security score: 100 = best (no vulnerabilities), 0 = worst
+    // Average severity is 0-10 (CVSS scale), convert to 0-100% scale
+    const avgSeverity =
+      totalVulnCount > 0 ? totalVulnSeverity / totalVulnCount : 0;
+    const securityScorePercent = Math.max(
+      0,
+      Math.min(100, (10 - avgSeverity) * 10),
+    );
+
+    // Map percentage score to grade class
+    // These thresholds match frontend/src/utils/gradeUtils.ts
+    const gradeClass = this.scoreToGradeClass(securityScorePercent);
+
+    const quickStats: QuickStats = {
+      max_grade: {
+        score: Math.round(securityScorePercent) / 10, // Return as 0-10 scale for backwards compatibility
+        class: gradeClass,
+      },
+      max_grade_trend: {
+        trend: Trend.EQUAL,
+        diff: 0,
+      },
+      nmb_deprecated: 0,
+      nmb_deprecated_trend: {
+        trend: Trend.EQUAL,
+        diff: 0,
+      },
+      nmb_projects,
+    };
 
     return quickStats;
   }
@@ -681,5 +693,20 @@ export class DashboardService {
       matching_count: 2,
       filter_count: {},
     };
+  }
+
+  /**
+   * Convert a percentage score (0-100) to a ProjectGradeClass
+   * These thresholds match frontend/src/utils/gradeUtils.ts
+   */
+  private scoreToGradeClass(scorePercent: number): ProjectGradeClass {
+    if (scorePercent >= 95) return ProjectGradeClass.A_PLUS;
+    if (scorePercent >= 90) return ProjectGradeClass.A;
+    if (scorePercent >= 85) return ProjectGradeClass.B_PLUS;
+    if (scorePercent >= 75) return ProjectGradeClass.B;
+    if (scorePercent >= 65) return ProjectGradeClass.C_PLUS;
+    if (scorePercent >= 55) return ProjectGradeClass.C;
+    if (scorePercent >= 45) return ProjectGradeClass.D_PLUS;
+    return ProjectGradeClass.D;
   }
 }
