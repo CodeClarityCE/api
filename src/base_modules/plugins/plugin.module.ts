@@ -16,7 +16,7 @@ import { PluginService } from "./plugin.service";
         ...defaultOptions,
         database: "plugins",
         entities: [Plugin],
-        migrations: ["dist/src/migrations/plugins/*.js"],
+        migrations: ["dist/migrations/plugins/*.js"],
       }),
     }),
     TypeOrmModule.forFeature([Plugin], "plugin"),

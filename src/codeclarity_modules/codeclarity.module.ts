@@ -22,7 +22,7 @@ import { TicketsModule } from "./tickets/tickets.module";
         ...defaultOptions,
         autoLoadEntities: true,
         database: "knowledge",
-        migrations: ["dist/src/migrations/knowledge/*.js"],
+        migrations: ["dist/migrations/knowledge/*.js"],
       }),
     }),
     TypeOrmModule.forRootAsync({
@@ -39,15 +39,15 @@ import { TicketsModule } from "./tickets/tickets.module";
             // Base modules (excluding plugins entity which belongs to 'plugins' DB)
             isTs
               ? "src/base_modules/!(plugins)/**/*.entity.ts"
-              : "dist/src/base_modules/!(plugins)/**/*.entity.js",
+              : "dist/base_modules/!(plugins)/**/*.entity.js",
             // CodeClarity modules: results, policies, dashboard (excluding knowledge)
             // Knowledge entities belong in 'knowledge' DB only
             isTs
               ? "src/codeclarity_modules/!(knowledge)/**/*.entity.ts"
-              : "dist/src/codeclarity_modules/!(knowledge)/**/*.entity.js",
+              : "dist/codeclarity_modules/!(knowledge)/**/*.entity.js",
           ],
           database: "codeclarity",
-          migrations: ["dist/src/migrations/codeclarity/*.js"],
+          migrations: ["dist/migrations/codeclarity/*.js"],
         };
       },
     }),
