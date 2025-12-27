@@ -95,6 +95,7 @@ describe("DashboardController", () => {
       trend: Trend.DOWN,
       diff: 3,
     },
+    nmb_projects: 5,
     owasp_top_10: "A01",
     most_affected_cia: "Confidentiality",
   };

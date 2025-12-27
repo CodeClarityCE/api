@@ -192,6 +192,8 @@ export class QuickStats {
   @ApiProperty()
   nmb_deprecated_trend!: StatsTrend;
   @ApiProperty()
+  nmb_projects!: number;
+  @ApiProperty()
   owasp_top_10?: string;
   @ApiProperty()
   most_affected_cia?: string;
