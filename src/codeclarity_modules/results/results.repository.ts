@@ -91,18 +91,13 @@ export class AnalysisResultsRepository {
     analysisId: string,
     requestedType?: string,
   ): Promise<Result | null> {
-    // If a specific type is requested and exists, return it
+    // If a specific type is requested, only return that exact type (no fallback)
     if (requestedType) {
-      const specificResult = await this.getByAnalysisIdAndPluginType(
-        analysisId,
-        requestedType,
-      );
-      if (specificResult) {
-        return specificResult;
-      }
+      return await this.getByAnalysisIdAndPluginType(analysisId, requestedType);
     }
 
-    // Fallback logic: prefer js-sbom, then php-sbom
+    // Fallback logic only applies when no specific type is requested
+    // Prefer js-sbom, then php-sbom
     const preferenceOrder = ["js-sbom", "php-sbom"];
 
     for (const pluginType of preferenceOrder) {
