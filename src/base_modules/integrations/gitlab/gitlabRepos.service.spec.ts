@@ -1,848 +1,970 @@
-import { Test, type TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { Test, type TestingModule } from "@nestjs/testing";
+import { getRepositoryToken } from "@nestjs/typeorm";
 import {
-    IntegrationsRepository,
-    MembershipsRepository,
-    OrganizationsRepository
-} from 'src/base_modules/shared/repositories';
-import type { Repository } from 'typeorm';
-import { EntityNotFound, NotAuthorized } from '../../../types/error.types';
-import type { PaginationUserSuppliedConf } from '../../../types/pagination.types';
-import { SortDirection } from '../../../types/sort.types';
-import { AuthenticatedUser, ROLE } from '../../auth/auth.types';
-import { MemberRole } from '../../organizations/memberships/organization.memberships.entity';
-import { RepositoryCache, RepositoryType } from '../../projects/repositoryCache.entity';
-import { IntegrationProvider, IntegrationType, type Integration } from '../integrations.entity';
-import type { GitlabIntegrationToken } from '../Token';
-import { GitlabIntegrationService } from './gitlab.service';
-import { GitlabTokenType } from './gitlabIntegration.types';
-import { GitlabRepositoriesService } from './gitlabRepos.service';
+  IntegrationsRepository,
+  MembershipsRepository,
+  OrganizationsRepository,
+} from "src/base_modules/shared/repositories";
+import type { Repository } from "typeorm";
+import { EntityNotFound, NotAuthorized } from "../../../types/error.types";
+import type { PaginationUserSuppliedConf } from "../../../types/pagination.types";
+import { SortDirection } from "../../../types/sort.types";
+import { AuthenticatedUser, ROLE } from "../../auth/auth.types";
+import { MemberRole } from "../../organizations/memberships/organization.memberships.entity";
+import {
+  RepositoryCache,
+  RepositoryType,
+} from "../../projects/repositoryCache.entity";
+import {
+  IntegrationProvider,
+  IntegrationType,
+  type Integration,
+} from "../integrations.entity";
+import type { GitlabIntegrationToken } from "../Token";
+import { GitlabIntegrationService } from "./gitlab.service";
+import { GitlabTokenType } from "./gitlabIntegration.types";
+import { GitlabRepositoriesService } from "./gitlabRepos.service";
 
 // Mock fetch globally
 global.fetch = jest.fn();
 
 // Mock ms module
-jest.mock('ms', () => ({
-    __esModule: true,
-    default: (time: string) => {
-        if (time === '-90m') return -90 * 60 * 1000;
-        if (time === '-7d') return -7 * 24 * 60 * 60 * 1000;
-        if (time === '-10m') return -10 * 60 * 1000;
-        return 1000;
-    }
+jest.mock("ms", () => ({
+  __esModule: true,
+  default: (time: string) => {
+    if (time === "-90m") return -90 * 60 * 1000;
+    if (time === "-7d") return -7 * 24 * 60 * 60 * 1000;
+    if (time === "-10m") return -10 * 60 * 1000;
+    return 1000;
+  },
 }));
 
-describe('GitlabRepositoriesService', () => {
-    let service: GitlabRepositoriesService;
-    let gitlabIntegrationService: jest.Mocked<GitlabIntegrationService>;
-    let organizationsRepository: jest.Mocked<OrganizationsRepository>;
-    let membershipsRepository: MembershipsRepository;
-    let integrationsRepository: jest.Mocked<IntegrationsRepository>;
-    let repositoryCacheRepository: jest.Mocked<Repository<RepositoryCache>>;
+describe("GitlabRepositoriesService", () => {
+  let service: GitlabRepositoriesService;
+  let gitlabIntegrationService: jest.Mocked<GitlabIntegrationService>;
+  let organizationsRepository: jest.Mocked<OrganizationsRepository>;
+  let membershipsRepository: MembershipsRepository;
+  let integrationsRepository: jest.Mocked<IntegrationsRepository>;
+  let repositoryCacheRepository: jest.Mocked<Repository<RepositoryCache>>;
 
-    const mockAuthenticatedUser: AuthenticatedUser = new AuthenticatedUser(
-        'test-user-id',
-        [ROLE.USER],
-        true
-    );
+  const mockAuthenticatedUser: AuthenticatedUser = new AuthenticatedUser(
+    "test-user-id",
+    [ROLE.USER],
+    true,
+  );
 
-    const mockIntegration: Integration = {
-        id: 'test-integration-id',
-        integration_type: IntegrationType.VCS,
-        integration_provider: IntegrationProvider.GITLAB,
-        access_token: 'glpat-test-token',
-        invalid: false,
-        added_on: new Date(),
-        service_domain: 'https://gitlab.com',
-        token_type: GitlabTokenType.PERSONAL_ACCESS_TOKEN,
-        organizations: [],
-        owner: {} as any,
-        users: [],
-        last_repository_sync: new Date(),
-        repository_cache: [] as any,
-        projects: [],
-        analyses: []
+  const mockIntegration: Integration = {
+    id: "test-integration-id",
+    integration_type: IntegrationType.VCS,
+    integration_provider: IntegrationProvider.GITLAB,
+    access_token: "glpat-test-token",
+    invalid: false,
+    added_on: new Date(),
+    service_domain: "https://gitlab.com",
+    token_type: GitlabTokenType.PERSONAL_ACCESS_TOKEN,
+    organizations: [],
+    owner: {} as any,
+    users: [],
+    last_repository_sync: new Date(),
+    repository_cache: [] as any,
+    projects: [],
+    analyses: [],
+  };
+
+  const mockRepositoryCache: RepositoryCache = {
+    id: "test-repo-id",
+    fully_qualified_name: "test-user/test-repo",
+    url: "https://gitlab.com/test-user/test-repo",
+    default_branch: "main",
+    visibility: "public",
+    description: "Test repository",
+    created_at: new Date(),
+    repository_type: RepositoryType.GITLAB,
+    integration: mockIntegration,
+    service_domain: "https://gitlab.com",
+  };
+
+  const mockGitlabProjects = [
+    {
+      id: 1,
+      name: "test-repo",
+      name_with_namespace: "test-user/test-repo",
+      http_url_to_repo: "https://gitlab.com/test-user/test-repo.git",
+      default_branch: "main",
+      visibility: "public",
+      description: "Test repository",
+      created_at: "2023-01-01T00:00:00.000Z",
+    },
+    {
+      id: 2,
+      name: "another-repo",
+      name_with_namespace: "test-user/another-repo",
+      http_url_to_repo: "https://gitlab.com/test-user/another-repo.git",
+      default_branch: "master",
+      visibility: "private",
+      description: "Another test repository",
+      created_at: "2023-01-02T00:00:00.000Z",
+    },
+  ];
+
+  const mockGitlabIntegrationToken: GitlabIntegrationToken = {
+    getToken: jest.fn().mockReturnValue("glpat-test-token"),
+    validate: jest.fn().mockResolvedValue(undefined),
+    refresh: jest.fn().mockResolvedValue(undefined),
+  } as any;
+
+  beforeEach(async () => {
+    const mockGitlabIntegrationService = {
+      getToken: jest.fn(),
+      getGitlabIntegration: jest.fn(),
+      addGitlabIntegration: jest.fn(),
+      modifyGitlabIntegration: jest.fn(),
+      removeGitlabIntegration: jest.fn(),
     };
 
-    const mockRepositoryCache: RepositoryCache = {
-        id: 'test-repo-id',
-        fully_qualified_name: 'test-user/test-repo',
-        url: 'https://gitlab.com/test-user/test-repo',
-        default_branch: 'main',
-        visibility: 'public',
-        description: 'Test repository',
-        created_at: new Date(),
-        repository_type: RepositoryType.GITLAB,
-        integration: mockIntegration,
-        service_domain: 'https://gitlab.com'
+    const mockOrganizationsRepository = {
+      doesIntegrationBelongToOrg: jest.fn(),
+      getOrganizationById: jest.fn(),
+      saveOrganization: jest.fn(),
     };
 
-    const mockGitlabProjects = [
+    const mockMembershipsRepository = {
+      hasRequiredRole: jest.fn(),
+    };
+
+    const mockIntegrationsRepository = {
+      getIntegrationById: jest.fn(),
+      saveIntegration: jest.fn(),
+    };
+
+    const mockRepositoryCacheRepository = {
+      existsBy: jest.fn(),
+      save: jest.fn(),
+      createQueryBuilder: jest.fn(),
+      findOne: jest.fn(),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        GitlabRepositoriesService,
         {
-            id: 1,
-            name: 'test-repo',
-            name_with_namespace: 'test-user/test-repo',
-            http_url_to_repo: 'https://gitlab.com/test-user/test-repo.git',
-            default_branch: 'main',
-            visibility: 'public',
-            description: 'Test repository',
-            created_at: '2023-01-01T00:00:00.000Z'
+          provide: GitlabIntegrationService,
+          useValue: mockGitlabIntegrationService,
         },
         {
-            id: 2,
-            name: 'another-repo',
-            name_with_namespace: 'test-user/another-repo',
-            http_url_to_repo: 'https://gitlab.com/test-user/another-repo.git',
-            default_branch: 'master',
-            visibility: 'private',
-            description: 'Another test repository',
-            created_at: '2023-01-02T00:00:00.000Z'
-        }
-    ];
+          provide: OrganizationsRepository,
+          useValue: mockOrganizationsRepository,
+        },
+        {
+          provide: MembershipsRepository,
+          useValue: mockMembershipsRepository,
+        },
+        {
+          provide: IntegrationsRepository,
+          useValue: mockIntegrationsRepository,
+        },
+        {
+          provide: getRepositoryToken(RepositoryCache, "codeclarity"),
+          useValue: mockRepositoryCacheRepository,
+        },
+      ],
+    }).compile();
 
-    const mockGitlabIntegrationToken: GitlabIntegrationToken = {
-        getToken: jest.fn().mockReturnValue('glpat-test-token'),
+    service = module.get<GitlabRepositoriesService>(GitlabRepositoriesService);
+    gitlabIntegrationService = module.get(GitlabIntegrationService);
+    organizationsRepository = module.get(OrganizationsRepository);
+    membershipsRepository = module.get<MembershipsRepository>(
+      MembershipsRepository,
+    );
+    integrationsRepository = module.get(IntegrationsRepository);
+    repositoryCacheRepository = module.get(
+      getRepositoryToken(RepositoryCache, "codeclarity"),
+    );
+
+    // Reset mocks
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  it("should be defined", () => {
+    expect(service).toBeDefined();
+  });
+
+  describe("syncGitlabRepos", () => {
+    beforeEach(() => {
+      (fetch as jest.Mock).mockClear();
+    });
+
+    it("should successfully sync GitLab repositories", async () => {
+      const tokenMock = {
+        getToken: jest.fn().mockReturnValue("glpat-test-token"),
         validate: jest.fn().mockResolvedValue(undefined),
-        refresh: jest.fn().mockResolvedValue(undefined)
-    } as any;
+      } as any;
 
-    beforeEach(async () => {
-        const mockGitlabIntegrationService = {
-            getToken: jest.fn(),
-            getGitlabIntegration: jest.fn(),
-            addGitlabIntegration: jest.fn(),
-            modifyGitlabIntegration: jest.fn(),
-            removeGitlabIntegration: jest.fn()
-        };
+      gitlabIntegrationService.getToken.mockResolvedValue(tokenMock);
+      integrationsRepository.getIntegrationById.mockResolvedValue(
+        mockIntegration,
+      );
+      repositoryCacheRepository.existsBy.mockResolvedValue(false);
+      repositoryCacheRepository.save.mockResolvedValue(mockRepositoryCache);
+      integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
 
-        const mockOrganizationsRepository = {
-            doesIntegrationBelongToOrg: jest.fn(),
-            getOrganizationById: jest.fn(),
-            saveOrganization: jest.fn()
-        };
+      (fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue(mockGitlabProjects),
+      });
 
-        const mockMembershipsRepository = {
-            hasRequiredRole: jest.fn()
-        };
+      await service.syncGitlabRepos("test-integration-id");
 
-        const mockIntegrationsRepository = {
-            getIntegrationById: jest.fn(),
-            saveIntegration: jest.fn()
-        };
-
-        const mockRepositoryCacheRepository = {
-            existsBy: jest.fn(),
-            save: jest.fn(),
-            createQueryBuilder: jest.fn(),
-            findOne: jest.fn()
-        };
-
-        const module: TestingModule = await Test.createTestingModule({
-            providers: [
-                GitlabRepositoriesService,
-                {
-                    provide: GitlabIntegrationService,
-                    useValue: mockGitlabIntegrationService
-                },
-                {
-                    provide: OrganizationsRepository,
-                    useValue: mockOrganizationsRepository
-                },
-                {
-                    provide: MembershipsRepository,
-                    useValue: mockMembershipsRepository
-                },
-                {
-                    provide: IntegrationsRepository,
-                    useValue: mockIntegrationsRepository
-                },
-                {
-                    provide: getRepositoryToken(RepositoryCache, 'codeclarity'),
-                    useValue: mockRepositoryCacheRepository
-                }
-            ]
-        }).compile();
-
-        service = module.get<GitlabRepositoriesService>(GitlabRepositoriesService);
-        gitlabIntegrationService = module.get(GitlabIntegrationService);
-        organizationsRepository = module.get(OrganizationsRepository);
-        membershipsRepository = module.get<MembershipsRepository>(MembershipsRepository);
-        integrationsRepository = module.get(IntegrationsRepository);
-        repositoryCacheRepository = module.get(getRepositoryToken(RepositoryCache, 'codeclarity'));
-
-        // Reset mocks
-        jest.clearAllMocks();
+      expect(gitlabIntegrationService.getToken).toHaveBeenCalledWith(
+        "test-integration-id",
+      );
+      expect(integrationsRepository.getIntegrationById).toHaveBeenCalledWith(
+        "test-integration-id",
+      );
+      expect(fetch).toHaveBeenCalledWith(
+        "https://gitlab.com/api/v4/projects?owned=true&membership=true&per_page=100",
+        {
+          headers: {
+            "PRIVATE-TOKEN": "glpat-test-token",
+          },
+        },
+      );
+      expect(repositoryCacheRepository.existsBy).toHaveBeenCalledTimes(2);
+      expect(repositoryCacheRepository.save).toHaveBeenCalledTimes(2);
+      expect(integrationsRepository.saveIntegration).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ...mockIntegration,
+          last_repository_sync: expect.any(Date),
+        }),
+      );
     });
 
-    afterEach(() => {
-        jest.resetAllMocks();
+    it("should skip existing repositories during sync", async () => {
+      gitlabIntegrationService.getToken.mockResolvedValue(
+        mockGitlabIntegrationToken,
+      );
+      integrationsRepository.getIntegrationById.mockResolvedValue(
+        mockIntegration,
+      );
+      repositoryCacheRepository.existsBy.mockResolvedValue(true);
+      integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
+
+      (fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue(mockGitlabProjects),
+      });
+
+      await service.syncGitlabRepos("test-integration-id");
+
+      expect(repositoryCacheRepository.existsBy).toHaveBeenCalledTimes(2);
+      expect(repositoryCacheRepository.save).not.toHaveBeenCalled();
     });
 
-    it('should be defined', () => {
-        expect(service).toBeDefined();
+    it("should throw error when GitLab API request fails", async () => {
+      gitlabIntegrationService.getToken.mockResolvedValue(
+        mockGitlabIntegrationToken,
+      );
+      integrationsRepository.getIntegrationById.mockResolvedValue(
+        mockIntegration,
+      );
+
+      (fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 401,
+      });
+
+      await expect(
+        service.syncGitlabRepos("test-integration-id"),
+      ).rejects.toThrow(
+        "Failed to fetch repositories from GitLab. Status: 401",
+      );
     });
 
-    describe('syncGitlabRepos', () => {
-        beforeEach(() => {
-            (fetch as jest.Mock).mockClear();
-        });
+    it("should handle network errors", async () => {
+      gitlabIntegrationService.getToken.mockResolvedValue(
+        mockGitlabIntegrationToken,
+      );
+      integrationsRepository.getIntegrationById.mockResolvedValue(
+        mockIntegration,
+      );
 
-        it('should successfully sync GitLab repositories', async () => {
-            const tokenMock = {
-                getToken: jest.fn().mockReturnValue('glpat-test-token'),
-                validate: jest.fn().mockResolvedValue(undefined)
-            } as any;
+      (fetch as jest.Mock).mockRejectedValue(new Error("Network error"));
 
-            gitlabIntegrationService.getToken.mockResolvedValue(tokenMock);
-            integrationsRepository.getIntegrationById.mockResolvedValue(mockIntegration);
-            repositoryCacheRepository.existsBy.mockResolvedValue(false);
-            repositoryCacheRepository.save.mockResolvedValue(mockRepositoryCache);
-            integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
-
-            (fetch as jest.Mock).mockResolvedValue({
-                ok: true,
-                json: jest.fn().mockResolvedValue(mockGitlabProjects)
-            });
-
-            await service.syncGitlabRepos('test-integration-id');
-
-            expect(gitlabIntegrationService.getToken).toHaveBeenCalledWith('test-integration-id');
-            expect(integrationsRepository.getIntegrationById).toHaveBeenCalledWith(
-                'test-integration-id'
-            );
-            expect(fetch).toHaveBeenCalledWith(
-                'https://gitlab.com/api/v4/projects?owned=true&membership=true&per_page=100',
-                {
-                    headers: {
-                        'PRIVATE-TOKEN': 'glpat-test-token'
-                    }
-                }
-            );
-            expect(repositoryCacheRepository.existsBy).toHaveBeenCalledTimes(2);
-            expect(repositoryCacheRepository.save).toHaveBeenCalledTimes(2);
-            expect(integrationsRepository.saveIntegration).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    ...mockIntegration,
-                    last_repository_sync: expect.any(Date)
-                })
-            );
-        });
-
-        it('should skip existing repositories during sync', async () => {
-            gitlabIntegrationService.getToken.mockResolvedValue(mockGitlabIntegrationToken);
-            integrationsRepository.getIntegrationById.mockResolvedValue(mockIntegration);
-            repositoryCacheRepository.existsBy.mockResolvedValue(true);
-            integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
-
-            (fetch as jest.Mock).mockResolvedValue({
-                ok: true,
-                json: jest.fn().mockResolvedValue(mockGitlabProjects)
-            });
-
-            await service.syncGitlabRepos('test-integration-id');
-
-            expect(repositoryCacheRepository.existsBy).toHaveBeenCalledTimes(2);
-            expect(repositoryCacheRepository.save).not.toHaveBeenCalled();
-        });
-
-        it('should throw error when GitLab API request fails', async () => {
-            gitlabIntegrationService.getToken.mockResolvedValue(mockGitlabIntegrationToken);
-            integrationsRepository.getIntegrationById.mockResolvedValue(mockIntegration);
-
-            (fetch as jest.Mock).mockResolvedValue({
-                ok: false,
-                status: 401
-            });
-
-            await expect(service.syncGitlabRepos('test-integration-id')).rejects.toThrow(
-                'Failed to fetch repositories from GitLab. Status: 401'
-            );
-        });
-
-        it('should handle network errors', async () => {
-            gitlabIntegrationService.getToken.mockResolvedValue(mockGitlabIntegrationToken);
-            integrationsRepository.getIntegrationById.mockResolvedValue(mockIntegration);
-
-            (fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
-
-            await expect(service.syncGitlabRepos('test-integration-id')).rejects.toThrow(
-                'Network error'
-            );
-        });
-
-        it('should handle repositories with missing optional fields', async () => {
-            const incompleteProjects = [
-                {
-                    id: 1,
-                    name: 'test-repo',
-                    name_with_namespace: 'test-user/test-repo',
-                    http_url_to_repo: 'https://gitlab.com/test-user/test-repo.git',
-                    default_branch: 'main'
-                    // Missing visibility, description, created_at
-                }
-            ];
-
-            gitlabIntegrationService.getToken.mockResolvedValue(mockGitlabIntegrationToken);
-            integrationsRepository.getIntegrationById.mockResolvedValue(mockIntegration);
-            repositoryCacheRepository.existsBy.mockResolvedValue(false);
-            repositoryCacheRepository.save.mockResolvedValue(mockRepositoryCache);
-            integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
-
-            (fetch as jest.Mock).mockResolvedValue({
-                ok: true,
-                json: jest.fn().mockResolvedValue(incompleteProjects)
-            });
-
-            await service.syncGitlabRepos('test-integration-id');
-
-            expect(repositoryCacheRepository.save).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    repository_type: RepositoryType.GITLAB,
-                    url: 'https://gitlab.com/test-user/test-repo.git',
-                    default_branch: 'main',
-                    visibility: 'public',
-                    fully_qualified_name: 'test-user/test-repo',
-                    description: '',
-                    created_at: expect.any(Date),
-                    integration: mockIntegration
-                })
-            );
-        });
+      await expect(
+        service.syncGitlabRepos("test-integration-id"),
+      ).rejects.toThrow("Network error");
     });
 
-    describe('getGitlabRepositories', () => {
-        const createMockQueryBuilder = () => ({
-            where: jest.fn().mockReturnThis(),
-            andWhere: jest.fn().mockReturnThis(),
-            orderBy: jest.fn().mockReturnThis(),
-            skip: jest.fn().mockReturnThis(),
-            take: jest.fn().mockReturnThis(),
-            getCount: jest.fn(),
-            getMany: jest.fn()
-        });
-
-        const mockQueryBuilder = createMockQueryBuilder();
-
-        const paginationConfig: PaginationUserSuppliedConf = {
-            currentPage: 0,
-            entriesPerPage: 20
-        };
-
-        beforeEach(() => {
-            const freshMockQueryBuilder = createMockQueryBuilder();
-            repositoryCacheRepository.createQueryBuilder.mockReturnValue(
-                freshMockQueryBuilder as any
-            );
-
-            // Reset mock implementations
-            Object.assign(mockQueryBuilder, freshMockQueryBuilder);
-        });
-
-        it('should successfully retrieve GitLab repositories with default parameters', async () => {
-            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
-            organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-
-            // Mock areGitlabReposSynced to return true
-            integrationsRepository.getIntegrationById.mockResolvedValue({
-                ...mockIntegration,
-                last_repository_sync: new Date()
-            });
-
-            mockQueryBuilder.getCount.mockResolvedValue(1);
-            mockQueryBuilder.getMany.mockResolvedValue([mockRepositoryCache]);
-
-            const result = await service.getGitlabRepositories(
-                'test-org-id',
-                'test-integration-id',
-                paginationConfig,
-                mockAuthenticatedUser
-            );
-
-            expect(result).toEqual({
-                data: [mockRepositoryCache],
-                page: 0,
-                entry_count: 1,
-                entries_per_page: 20,
-                total_entries: 1,
-                total_pages: 1,
-                matching_count: 1,
-                filter_count: {}
-            });
-
-            expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
-                'test-org-id',
-                'test-user-id',
-                MemberRole.USER
-            );
-            expect(organizationsRepository.doesIntegrationBelongToOrg).toHaveBeenCalledWith(
-                'test-integration-id',
-                'test-org-id'
-            );
-            expect(repositoryCacheRepository.createQueryBuilder).toHaveBeenCalledWith('repo');
-            expect(mockQueryBuilder.where).toHaveBeenCalledWith(
-                'repo.integration = :integrationId',
-                { integrationId: 'test-integration-id' }
-            );
-        });
-
-        it('should retrieve repositories with custom pagination parameters', async () => {
-            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
-            organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-
-            integrationsRepository.getIntegrationById.mockResolvedValue({
-                ...mockIntegration,
-                last_repository_sync: new Date()
-            });
-
-            mockQueryBuilder.getCount.mockResolvedValue(50);
-            mockQueryBuilder.getMany.mockResolvedValue([mockRepositoryCache]);
-
-            const customPaginationConfig: PaginationUserSuppliedConf = {
-                currentPage: 2,
-                entriesPerPage: 10
-            };
-
-            const result = await service.getGitlabRepositories(
-                'test-org-id',
-                'test-integration-id',
-                customPaginationConfig,
-                mockAuthenticatedUser
-            );
-
-            expect(mockQueryBuilder.skip).toHaveBeenCalledWith(20);
-            expect(mockQueryBuilder.take).toHaveBeenCalledWith(10);
-            expect(result.page).toBe(2);
-            expect(result.entries_per_page).toBe(10);
-        });
-
-        it('should handle search functionality', async () => {
-            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
-            organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-
-            integrationsRepository.getIntegrationById.mockResolvedValue({
-                ...mockIntegration,
-                last_repository_sync: new Date()
-            });
-
-            mockQueryBuilder.getCount.mockResolvedValue(1);
-            mockQueryBuilder.getMany.mockResolvedValue([mockRepositoryCache]);
-
-            await service.getGitlabRepositories(
-                'test-org-id',
-                'test-integration-id',
-                paginationConfig,
-                mockAuthenticatedUser,
-                'test-search'
-            );
-
-            expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-                'repo.fully_qualified_name LIKE :searchValue',
-                { searchValue: '%test-search%' }
-            );
-        });
-
-        it('should handle sorting by fully_qualified_name', async () => {
-            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
-            organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-
-            integrationsRepository.getIntegrationById.mockResolvedValue({
-                ...mockIntegration,
-                last_repository_sync: new Date()
-            });
-
-            mockQueryBuilder.getCount.mockResolvedValue(1);
-            mockQueryBuilder.getMany.mockResolvedValue([mockRepositoryCache]);
-
-            await service.getGitlabRepositories(
-                'test-org-id',
-                'test-integration-id',
-                paginationConfig,
-                mockAuthenticatedUser,
-                undefined,
-                false,
-                [],
-                'fully_qualified_name',
-                SortDirection.DESC
-            );
-
-            expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('fully_qualified_name', 'DESC');
-        });
-
-        it('should handle sorting by description', async () => {
-            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
-            organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-
-            integrationsRepository.getIntegrationById.mockResolvedValue({
-                ...mockIntegration,
-                last_repository_sync: new Date()
-            });
-
-            mockQueryBuilder.getCount.mockResolvedValue(1);
-            mockQueryBuilder.getMany.mockResolvedValue([mockRepositoryCache]);
-
-            await service.getGitlabRepositories(
-                'test-org-id',
-                'test-integration-id',
-                paginationConfig,
-                mockAuthenticatedUser,
-                undefined,
-                false,
-                [],
-                'description',
-                SortDirection.ASC
-            );
-
-            expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('description', 'ASC');
-        });
-
-        it('should handle sorting by created_at', async () => {
-            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
-            organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-
-            integrationsRepository.getIntegrationById.mockResolvedValue({
-                ...mockIntegration,
-                last_repository_sync: new Date()
-            });
-
-            mockQueryBuilder.getCount.mockResolvedValue(1);
-            mockQueryBuilder.getMany.mockResolvedValue([mockRepositoryCache]);
-
-            await service.getGitlabRepositories(
-                'test-org-id',
-                'test-integration-id',
-                paginationConfig,
-                mockAuthenticatedUser,
-                undefined,
-                false,
-                [],
-                'created_at',
-                SortDirection.ASC
-            );
-
-            expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('created_at', 'ASC');
-        });
-
-        it('should handle sorting by imported status', async () => {
-            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
-            organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-
-            integrationsRepository.getIntegrationById.mockResolvedValue({
-                ...mockIntegration,
-                last_repository_sync: new Date()
-            });
-
-            mockQueryBuilder.getCount.mockResolvedValue(1);
-            mockQueryBuilder.getMany.mockResolvedValue([mockRepositoryCache]);
-
-            await service.getGitlabRepositories(
-                'test-org-id',
-                'test-integration-id',
-                paginationConfig,
-                mockAuthenticatedUser,
-                undefined,
-                false,
-                [],
-                'imported',
-                SortDirection.ASC
-            );
-
-            expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('imported_already', 'ASC');
-        });
-
-        it('should force refresh when forceRefresh is true', async () => {
-            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
-            organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-
-            gitlabIntegrationService.getToken.mockResolvedValue(mockGitlabIntegrationToken);
-            integrationsRepository.getIntegrationById.mockResolvedValue(mockIntegration);
-            repositoryCacheRepository.existsBy.mockResolvedValue(true);
-            integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
-
-            (fetch as jest.Mock).mockResolvedValue({
-                ok: true,
-                json: jest.fn().mockResolvedValue([])
-            });
-
-            mockQueryBuilder.getCount.mockResolvedValue(0);
-            mockQueryBuilder.getMany.mockResolvedValue([]);
-
-            await service.getGitlabRepositories(
-                'test-org-id',
-                'test-integration-id',
-                paginationConfig,
-                mockAuthenticatedUser,
-                undefined,
-                true
-            );
-
-            expect(fetch).toHaveBeenCalled();
-        });
-
-        it('should sync repositories when not synced', async () => {
-            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
-            organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-
-            // Mock areGitlabReposSynced to return false
-            integrationsRepository.getIntegrationById.mockResolvedValue({
-                ...mockIntegration,
-                last_repository_sync: new Date(0)
-            });
-
-            gitlabIntegrationService.getToken.mockResolvedValue(mockGitlabIntegrationToken);
-            repositoryCacheRepository.existsBy.mockResolvedValue(true);
-            integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
-
-            (fetch as jest.Mock).mockResolvedValue({
-                ok: true,
-                json: jest.fn().mockResolvedValue([])
-            });
-
-            mockQueryBuilder.getCount.mockResolvedValue(0);
-            mockQueryBuilder.getMany.mockResolvedValue([]);
-
-            await service.getGitlabRepositories(
-                'test-org-id',
-                'test-integration-id',
-                paginationConfig,
-                mockAuthenticatedUser
-            );
-
-            expect(fetch).toHaveBeenCalled();
-        });
-
-        it('should throw NotAuthorized when user lacks required role', async () => {
-            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockRejectedValue(
-                new NotAuthorized()
-            );
-
-            await expect(
-                service.getGitlabRepositories(
-                    'test-org-id',
-                    'test-integration-id',
-                    paginationConfig,
-                    mockAuthenticatedUser
-                )
-            ).rejects.toThrow(NotAuthorized);
-        });
-
-        it('should throw NotAuthorized when integration does not belong to org', async () => {
-            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
-            organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(false);
-
-            await expect(
-                service.getGitlabRepositories(
-                    'test-org-id',
-                    'test-integration-id',
-                    paginationConfig,
-                    mockAuthenticatedUser
-                )
-            ).rejects.toThrow(NotAuthorized);
-        });
-
-        it('should respect maximum entries per page limit', async () => {
-            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
-            organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-
-            integrationsRepository.getIntegrationById.mockResolvedValue({
-                ...mockIntegration,
-                last_repository_sync: new Date()
-            });
-
-            mockQueryBuilder.getCount.mockResolvedValue(1);
-            mockQueryBuilder.getMany.mockResolvedValue([mockRepositoryCache]);
-
-            const largePaginationConfig: PaginationUserSuppliedConf = {
-                currentPage: 0,
-                entriesPerPage: 200 // Exceeds maximum of 100
-            };
-
-            await service.getGitlabRepositories(
-                'test-org-id',
-                'test-integration-id',
-                largePaginationConfig,
-                mockAuthenticatedUser
-            );
-
-            expect(mockQueryBuilder.take).toHaveBeenCalledWith(100);
-        });
+    it("should handle repositories with missing optional fields", async () => {
+      const incompleteProjects = [
+        {
+          id: 1,
+          name: "test-repo",
+          name_with_namespace: "test-user/test-repo",
+          http_url_to_repo: "https://gitlab.com/test-user/test-repo.git",
+          default_branch: "main",
+          // Missing visibility, description, created_at
+        },
+      ];
+
+      gitlabIntegrationService.getToken.mockResolvedValue(
+        mockGitlabIntegrationToken,
+      );
+      integrationsRepository.getIntegrationById.mockResolvedValue(
+        mockIntegration,
+      );
+      repositoryCacheRepository.existsBy.mockResolvedValue(false);
+      repositoryCacheRepository.save.mockResolvedValue(mockRepositoryCache);
+      integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
+
+      (fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue(incompleteProjects),
+      });
+
+      await service.syncGitlabRepos("test-integration-id");
+
+      expect(repositoryCacheRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          repository_type: RepositoryType.GITLAB,
+          url: "https://gitlab.com/test-user/test-repo.git",
+          default_branch: "main",
+          visibility: "public",
+          fully_qualified_name: "test-user/test-repo",
+          description: "",
+          created_at: expect.any(Date),
+          integration: mockIntegration,
+        }),
+      );
+    });
+  });
+
+  describe("getGitlabRepositories", () => {
+    const createMockQueryBuilder = () => ({
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      getCount: jest.fn(),
+      getMany: jest.fn(),
     });
 
-    describe('areGitlabReposSynced', () => {
-        it('should return false when last_repository_sync is null', async () => {
-            integrationsRepository.getIntegrationById.mockResolvedValue({
-                ...mockIntegration,
-                last_repository_sync: null as any
-            });
+    const mockQueryBuilder = createMockQueryBuilder();
 
-            const result = await service.areGitlabReposSynced('test-integration-id');
+    const paginationConfig: PaginationUserSuppliedConf = {
+      currentPage: 0,
+      entriesPerPage: 20,
+    };
 
-            expect(result).toBe(false);
-        });
+    beforeEach(() => {
+      const freshMockQueryBuilder = createMockQueryBuilder();
+      repositoryCacheRepository.createQueryBuilder.mockReturnValue(
+        freshMockQueryBuilder as any,
+      );
 
-        it('should return false when last sync is older than invalidation time', async () => {
-            const oldDate = new Date(Date.now() - 700000); // 11+ minutes ago
-
-            integrationsRepository.getIntegrationById.mockResolvedValue({
-                ...mockIntegration,
-                last_repository_sync: oldDate
-            });
-
-            const result = await service.areGitlabReposSynced('test-integration-id');
-
-            expect(result).toBe(false);
-        });
-
-        it('should return true when last sync is recent', async () => {
-            const recentDate = new Date(Date.now() - 300000); // 5 minutes ago
-
-            integrationsRepository.getIntegrationById.mockResolvedValue({
-                ...mockIntegration,
-                last_repository_sync: recentDate
-            });
-
-            const result = await service.areGitlabReposSynced('test-integration-id');
-
-            expect(result).toBe(true);
-        });
+      // Reset mock implementations
+      Object.assign(mockQueryBuilder, freshMockQueryBuilder);
     });
 
-    describe('getGitlabRepository', () => {
-        it('should successfully retrieve a specific GitLab repository', async () => {
-            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
-            organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
+    it("should successfully retrieve GitLab repositories with default parameters", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+        true,
+      );
 
-            integrationsRepository.getIntegrationById.mockResolvedValue({
-                ...mockIntegration,
-                last_repository_sync: new Date()
-            });
+      // Mock areGitlabReposSynced to return true
+      integrationsRepository.getIntegrationById.mockResolvedValue({
+        ...mockIntegration,
+        last_repository_sync: new Date(),
+      });
 
-            repositoryCacheRepository.findOne.mockResolvedValue(mockRepositoryCache);
+      mockQueryBuilder.getCount.mockResolvedValue(1);
+      mockQueryBuilder.getMany.mockResolvedValue([mockRepositoryCache]);
 
-            const result = await service.getGitlabRepository(
-                'test-org-id',
-                'test-integration-id',
-                'https://gitlab.com/test-user/test-repo',
-                mockAuthenticatedUser
-            );
+      const result = await service.getGitlabRepositories(
+        "test-org-id",
+        "test-integration-id",
+        paginationConfig,
+        mockAuthenticatedUser,
+      );
 
-            expect(result).toEqual(mockRepositoryCache);
-            expect(repositoryCacheRepository.findOne).toHaveBeenCalledWith({
-                relations: ['integration'],
-                where: {
-                    url: 'https://gitlab.com/test-user/test-repo',
-                    integration: {
-                        id: 'test-integration-id'
-                    }
-                }
-            });
-        });
+      expect(result).toEqual({
+        data: [mockRepositoryCache],
+        page: 0,
+        entry_count: 1,
+        entries_per_page: 20,
+        total_entries: 1,
+        total_pages: 1,
+        matching_count: 1,
+        filter_count: {},
+      });
 
-        it('should sync repositories before retrieving when not synced', async () => {
-            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
-            organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-
-            // Mock areGitlabReposSynced to return false
-            integrationsRepository.getIntegrationById.mockResolvedValue({
-                ...mockIntegration,
-                last_repository_sync: new Date(0)
-            });
-
-            gitlabIntegrationService.getToken.mockResolvedValue(mockGitlabIntegrationToken);
-            repositoryCacheRepository.existsBy.mockResolvedValue(true);
-            integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
-            repositoryCacheRepository.findOne.mockResolvedValue(mockRepositoryCache);
-
-            (fetch as jest.Mock).mockResolvedValue({
-                ok: true,
-                json: jest.fn().mockResolvedValue([])
-            });
-
-            const result = await service.getGitlabRepository(
-                'test-org-id',
-                'test-integration-id',
-                'https://gitlab.com/test-user/test-repo',
-                mockAuthenticatedUser
-            );
-
-            expect(fetch).toHaveBeenCalled();
-            expect(result).toEqual(mockRepositoryCache);
-        });
-
-        it('should force refresh when forceRefresh is true', async () => {
-            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
-            organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-
-            gitlabIntegrationService.getToken.mockResolvedValue(mockGitlabIntegrationToken);
-            integrationsRepository.getIntegrationById.mockResolvedValue(mockIntegration);
-            repositoryCacheRepository.existsBy.mockResolvedValue(true);
-            integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
-            repositoryCacheRepository.findOne.mockResolvedValue(mockRepositoryCache);
-
-            (fetch as jest.Mock).mockResolvedValue({
-                ok: true,
-                json: jest.fn().mockResolvedValue([])
-            });
-
-            const result = await service.getGitlabRepository(
-                'test-org-id',
-                'test-integration-id',
-                'https://gitlab.com/test-user/test-repo',
-                mockAuthenticatedUser,
-                true
-            );
-
-            expect(fetch).toHaveBeenCalled();
-            expect(result).toEqual(mockRepositoryCache);
-        });
-
-        it('should throw NotAuthorized when user lacks required role', async () => {
-            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockRejectedValue(
-                new NotAuthorized()
-            );
-
-            await expect(
-                service.getGitlabRepository(
-                    'test-org-id',
-                    'test-integration-id',
-                    'https://gitlab.com/test-user/test-repo',
-                    mockAuthenticatedUser
-                )
-            ).rejects.toThrow(NotAuthorized);
-        });
-
-        it('should throw NotAuthorized when integration does not belong to org', async () => {
-            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
-            organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(false);
-
-            await expect(
-                service.getGitlabRepository(
-                    'test-org-id',
-                    'test-integration-id',
-                    'https://gitlab.com/test-user/test-repo',
-                    mockAuthenticatedUser
-                )
-            ).rejects.toThrow(NotAuthorized);
-        });
-
-        it('should throw EntityNotFound when repository is not found', async () => {
-            jest.spyOn(membershipsRepository, 'hasRequiredRole').mockResolvedValue(undefined);
-            organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(true);
-
-            integrationsRepository.getIntegrationById.mockResolvedValue({
-                ...mockIntegration,
-                last_repository_sync: new Date()
-            });
-
-            repositoryCacheRepository.findOne.mockResolvedValue(null);
-
-            await expect(
-                service.getGitlabRepository(
-                    'test-org-id',
-                    'test-integration-id',
-                    'https://gitlab.com/test-user/nonexistent-repo',
-                    mockAuthenticatedUser
-                )
-            ).rejects.toThrow(EntityNotFound);
-        });
+      expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
+        "test-org-id",
+        "test-user-id",
+        MemberRole.USER,
+      );
+      expect(
+        organizationsRepository.doesIntegrationBelongToOrg,
+      ).toHaveBeenCalledWith("test-integration-id", "test-org-id");
+      expect(repositoryCacheRepository.createQueryBuilder).toHaveBeenCalledWith(
+        "repo",
+      );
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        "repo.integration = :integrationId",
+        { integrationId: "test-integration-id" },
+      );
     });
+
+    it("should retrieve repositories with custom pagination parameters", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+        true,
+      );
+
+      integrationsRepository.getIntegrationById.mockResolvedValue({
+        ...mockIntegration,
+        last_repository_sync: new Date(),
+      });
+
+      mockQueryBuilder.getCount.mockResolvedValue(50);
+      mockQueryBuilder.getMany.mockResolvedValue([mockRepositoryCache]);
+
+      const customPaginationConfig: PaginationUserSuppliedConf = {
+        currentPage: 2,
+        entriesPerPage: 10,
+      };
+
+      const result = await service.getGitlabRepositories(
+        "test-org-id",
+        "test-integration-id",
+        customPaginationConfig,
+        mockAuthenticatedUser,
+      );
+
+      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(20);
+      expect(mockQueryBuilder.take).toHaveBeenCalledWith(10);
+      expect(result.page).toBe(2);
+      expect(result.entries_per_page).toBe(10);
+    });
+
+    it("should handle search functionality", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+        true,
+      );
+
+      integrationsRepository.getIntegrationById.mockResolvedValue({
+        ...mockIntegration,
+        last_repository_sync: new Date(),
+      });
+
+      mockQueryBuilder.getCount.mockResolvedValue(1);
+      mockQueryBuilder.getMany.mockResolvedValue([mockRepositoryCache]);
+
+      await service.getGitlabRepositories(
+        "test-org-id",
+        "test-integration-id",
+        paginationConfig,
+        mockAuthenticatedUser,
+        "test-search",
+      );
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        "repo.fully_qualified_name LIKE :searchValue",
+        { searchValue: "%test-search%" },
+      );
+    });
+
+    it("should handle sorting by fully_qualified_name", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+        true,
+      );
+
+      integrationsRepository.getIntegrationById.mockResolvedValue({
+        ...mockIntegration,
+        last_repository_sync: new Date(),
+      });
+
+      mockQueryBuilder.getCount.mockResolvedValue(1);
+      mockQueryBuilder.getMany.mockResolvedValue([mockRepositoryCache]);
+
+      await service.getGitlabRepositories(
+        "test-org-id",
+        "test-integration-id",
+        paginationConfig,
+        mockAuthenticatedUser,
+        undefined,
+        false,
+        [],
+        "fully_qualified_name",
+        SortDirection.DESC,
+      );
+
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
+        "fully_qualified_name",
+        "DESC",
+      );
+    });
+
+    it("should handle sorting by description", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+        true,
+      );
+
+      integrationsRepository.getIntegrationById.mockResolvedValue({
+        ...mockIntegration,
+        last_repository_sync: new Date(),
+      });
+
+      mockQueryBuilder.getCount.mockResolvedValue(1);
+      mockQueryBuilder.getMany.mockResolvedValue([mockRepositoryCache]);
+
+      await service.getGitlabRepositories(
+        "test-org-id",
+        "test-integration-id",
+        paginationConfig,
+        mockAuthenticatedUser,
+        undefined,
+        false,
+        [],
+        "description",
+        SortDirection.ASC,
+      );
+
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
+        "description",
+        "ASC",
+      );
+    });
+
+    it("should handle sorting by created_at", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+        true,
+      );
+
+      integrationsRepository.getIntegrationById.mockResolvedValue({
+        ...mockIntegration,
+        last_repository_sync: new Date(),
+      });
+
+      mockQueryBuilder.getCount.mockResolvedValue(1);
+      mockQueryBuilder.getMany.mockResolvedValue([mockRepositoryCache]);
+
+      await service.getGitlabRepositories(
+        "test-org-id",
+        "test-integration-id",
+        paginationConfig,
+        mockAuthenticatedUser,
+        undefined,
+        false,
+        [],
+        "created_at",
+        SortDirection.ASC,
+      );
+
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
+        "created_at",
+        "ASC",
+      );
+    });
+
+    it("should handle sorting by imported status", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+        true,
+      );
+
+      integrationsRepository.getIntegrationById.mockResolvedValue({
+        ...mockIntegration,
+        last_repository_sync: new Date(),
+      });
+
+      mockQueryBuilder.getCount.mockResolvedValue(1);
+      mockQueryBuilder.getMany.mockResolvedValue([mockRepositoryCache]);
+
+      await service.getGitlabRepositories(
+        "test-org-id",
+        "test-integration-id",
+        paginationConfig,
+        mockAuthenticatedUser,
+        undefined,
+        false,
+        [],
+        "imported",
+        SortDirection.ASC,
+      );
+
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
+        "imported_already",
+        "ASC",
+      );
+    });
+
+    it("should force refresh when forceRefresh is true", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+        true,
+      );
+
+      gitlabIntegrationService.getToken.mockResolvedValue(
+        mockGitlabIntegrationToken,
+      );
+      integrationsRepository.getIntegrationById.mockResolvedValue(
+        mockIntegration,
+      );
+      repositoryCacheRepository.existsBy.mockResolvedValue(true);
+      integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
+
+      (fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue([]),
+      });
+
+      mockQueryBuilder.getCount.mockResolvedValue(0);
+      mockQueryBuilder.getMany.mockResolvedValue([]);
+
+      await service.getGitlabRepositories(
+        "test-org-id",
+        "test-integration-id",
+        paginationConfig,
+        mockAuthenticatedUser,
+        undefined,
+        true,
+      );
+
+      expect(fetch).toHaveBeenCalled();
+    });
+
+    it("should sync repositories when not synced", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+        true,
+      );
+
+      // Mock areGitlabReposSynced to return false
+      integrationsRepository.getIntegrationById.mockResolvedValue({
+        ...mockIntegration,
+        last_repository_sync: new Date(0),
+      });
+
+      gitlabIntegrationService.getToken.mockResolvedValue(
+        mockGitlabIntegrationToken,
+      );
+      repositoryCacheRepository.existsBy.mockResolvedValue(true);
+      integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
+
+      (fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue([]),
+      });
+
+      mockQueryBuilder.getCount.mockResolvedValue(0);
+      mockQueryBuilder.getMany.mockResolvedValue([]);
+
+      await service.getGitlabRepositories(
+        "test-org-id",
+        "test-integration-id",
+        paginationConfig,
+        mockAuthenticatedUser,
+      );
+
+      expect(fetch).toHaveBeenCalled();
+    });
+
+    it("should throw NotAuthorized when user lacks required role", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockRejectedValue(new NotAuthorized());
+
+      await expect(
+        service.getGitlabRepositories(
+          "test-org-id",
+          "test-integration-id",
+          paginationConfig,
+          mockAuthenticatedUser,
+        ),
+      ).rejects.toThrow(NotAuthorized);
+    });
+
+    it("should throw NotAuthorized when integration does not belong to org", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+        false,
+      );
+
+      await expect(
+        service.getGitlabRepositories(
+          "test-org-id",
+          "test-integration-id",
+          paginationConfig,
+          mockAuthenticatedUser,
+        ),
+      ).rejects.toThrow(NotAuthorized);
+    });
+
+    it("should respect maximum entries per page limit", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+        true,
+      );
+
+      integrationsRepository.getIntegrationById.mockResolvedValue({
+        ...mockIntegration,
+        last_repository_sync: new Date(),
+      });
+
+      mockQueryBuilder.getCount.mockResolvedValue(1);
+      mockQueryBuilder.getMany.mockResolvedValue([mockRepositoryCache]);
+
+      const largePaginationConfig: PaginationUserSuppliedConf = {
+        currentPage: 0,
+        entriesPerPage: 200, // Exceeds maximum of 100
+      };
+
+      await service.getGitlabRepositories(
+        "test-org-id",
+        "test-integration-id",
+        largePaginationConfig,
+        mockAuthenticatedUser,
+      );
+
+      expect(mockQueryBuilder.take).toHaveBeenCalledWith(100);
+    });
+  });
+
+  describe("areGitlabReposSynced", () => {
+    it("should return false when last_repository_sync is null", async () => {
+      integrationsRepository.getIntegrationById.mockResolvedValue({
+        ...mockIntegration,
+        last_repository_sync: null as any,
+      });
+
+      const result = await service.areGitlabReposSynced("test-integration-id");
+
+      expect(result).toBe(false);
+    });
+
+    it("should return false when last sync is older than invalidation time", async () => {
+      const oldDate = new Date(Date.now() - 700000); // 11+ minutes ago
+
+      integrationsRepository.getIntegrationById.mockResolvedValue({
+        ...mockIntegration,
+        last_repository_sync: oldDate,
+      });
+
+      const result = await service.areGitlabReposSynced("test-integration-id");
+
+      expect(result).toBe(false);
+    });
+
+    it("should return true when last sync is recent", async () => {
+      const recentDate = new Date(Date.now() - 300000); // 5 minutes ago
+
+      integrationsRepository.getIntegrationById.mockResolvedValue({
+        ...mockIntegration,
+        last_repository_sync: recentDate,
+      });
+
+      const result = await service.areGitlabReposSynced("test-integration-id");
+
+      expect(result).toBe(true);
+    });
+  });
+
+  describe("getGitlabRepository", () => {
+    it("should successfully retrieve a specific GitLab repository", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+        true,
+      );
+
+      integrationsRepository.getIntegrationById.mockResolvedValue({
+        ...mockIntegration,
+        last_repository_sync: new Date(),
+      });
+
+      repositoryCacheRepository.findOne.mockResolvedValue(mockRepositoryCache);
+
+      const result = await service.getGitlabRepository(
+        "test-org-id",
+        "test-integration-id",
+        "https://gitlab.com/test-user/test-repo",
+        mockAuthenticatedUser,
+      );
+
+      expect(result).toEqual(mockRepositoryCache);
+      expect(repositoryCacheRepository.findOne).toHaveBeenCalledWith({
+        relations: ["integration"],
+        where: {
+          url: "https://gitlab.com/test-user/test-repo",
+          integration: {
+            id: "test-integration-id",
+          },
+        },
+      });
+    });
+
+    it("should sync repositories before retrieving when not synced", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+        true,
+      );
+
+      // Mock areGitlabReposSynced to return false
+      integrationsRepository.getIntegrationById.mockResolvedValue({
+        ...mockIntegration,
+        last_repository_sync: new Date(0),
+      });
+
+      gitlabIntegrationService.getToken.mockResolvedValue(
+        mockGitlabIntegrationToken,
+      );
+      repositoryCacheRepository.existsBy.mockResolvedValue(true);
+      integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
+      repositoryCacheRepository.findOne.mockResolvedValue(mockRepositoryCache);
+
+      (fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue([]),
+      });
+
+      const result = await service.getGitlabRepository(
+        "test-org-id",
+        "test-integration-id",
+        "https://gitlab.com/test-user/test-repo",
+        mockAuthenticatedUser,
+      );
+
+      expect(fetch).toHaveBeenCalled();
+      expect(result).toEqual(mockRepositoryCache);
+    });
+
+    it("should force refresh when forceRefresh is true", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+        true,
+      );
+
+      gitlabIntegrationService.getToken.mockResolvedValue(
+        mockGitlabIntegrationToken,
+      );
+      integrationsRepository.getIntegrationById.mockResolvedValue(
+        mockIntegration,
+      );
+      repositoryCacheRepository.existsBy.mockResolvedValue(true);
+      integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
+      repositoryCacheRepository.findOne.mockResolvedValue(mockRepositoryCache);
+
+      (fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue([]),
+      });
+
+      const result = await service.getGitlabRepository(
+        "test-org-id",
+        "test-integration-id",
+        "https://gitlab.com/test-user/test-repo",
+        mockAuthenticatedUser,
+        true,
+      );
+
+      expect(fetch).toHaveBeenCalled();
+      expect(result).toEqual(mockRepositoryCache);
+    });
+
+    it("should throw NotAuthorized when user lacks required role", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockRejectedValue(new NotAuthorized());
+
+      await expect(
+        service.getGitlabRepository(
+          "test-org-id",
+          "test-integration-id",
+          "https://gitlab.com/test-user/test-repo",
+          mockAuthenticatedUser,
+        ),
+      ).rejects.toThrow(NotAuthorized);
+    });
+
+    it("should throw NotAuthorized when integration does not belong to org", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+        false,
+      );
+
+      await expect(
+        service.getGitlabRepository(
+          "test-org-id",
+          "test-integration-id",
+          "https://gitlab.com/test-user/test-repo",
+          mockAuthenticatedUser,
+        ),
+      ).rejects.toThrow(NotAuthorized);
+    });
+
+    it("should throw EntityNotFound when repository is not found", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+        true,
+      );
+
+      integrationsRepository.getIntegrationById.mockResolvedValue({
+        ...mockIntegration,
+        last_repository_sync: new Date(),
+      });
+
+      repositoryCacheRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.getGitlabRepository(
+          "test-org-id",
+          "test-integration-id",
+          "https://gitlab.com/test-user/nonexistent-repo",
+          mockAuthenticatedUser,
+        ),
+      ).rejects.toThrow(EntityNotFound);
+    });
+  });
 });

@@ -1,14 +1,14 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class UpdateAnalyzerPluginNames1754764000000 implements MigrationInterface {
-    name = 'UpdateAnalyzerPluginNames1754764000000';
+  name = "UpdateAnalyzerPluginNames1754764000000";
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        // Update analyzer configurations to use new generic plugin names
-        // This updates the 'steps' JSONB field in the analyzer table
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    // Update analyzer configurations to use new generic plugin names
+    // This updates the 'steps' JSONB field in the analyzer table
 
-        // Update js-sbom to include both js-sbom and php-sbom plugins
-        await queryRunner.query(`
+    // Update js-sbom to include both js-sbom and php-sbom plugins
+    await queryRunner.query(`
             UPDATE "analyzer" 
             SET "steps" = jsonb_set(
                 jsonb_set(
@@ -78,11 +78,11 @@ export class UpdateAnalyzerPluginNames1754764000000 implements MigrationInterfac
                OR "steps"::text LIKE '%js-license%'
                OR "steps"::text LIKE '%js-sbom%'
         `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        // Revert to old plugin names
-        await queryRunner.query(`
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    // Revert to old plugin names
+    await queryRunner.query(`
             UPDATE "analyzer" 
             SET "steps" = jsonb_set(
                 jsonb_set(
@@ -134,5 +134,5 @@ export class UpdateAnalyzerPluginNames1754764000000 implements MigrationInterfac
                OR "steps"::text LIKE '%license-finder%' 
                OR "steps"::text LIKE '%php-sbom%'
         `);
-    }
+  }
 }

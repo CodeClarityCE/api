@@ -1,13 +1,13 @@
-import { Injectable, LoggerService as NestLoggerService } from '@nestjs/common';
+import { Injectable, LoggerService as NestLoggerService } from "@nestjs/common";
 
 export interface LogContext {
-    service?: string;
-    userId?: string;
-    organizationId?: string;
-    projectId?: string;
-    analysisId?: string;
-    requestId?: string;
-    [key: string]: unknown;
+  service?: string;
+  userId?: string;
+  organizationId?: string;
+  projectId?: string;
+  analysisId?: string;
+  requestId?: string;
+  [key: string]: unknown;
 }
 
 /**
@@ -16,137 +16,143 @@ export interface LogContext {
  */
 @Injectable()
 export class CodeClarityLogger implements NestLoggerService {
-    private defaultContext?: LogContext;
+  private defaultContext?: LogContext;
 
-    /**
-     * Log an informational message
-     */
-    log(message: string, context?: LogContext): void {
-        this.writeLog('info', message, this.getFullContext(context));
+  /**
+   * Log an informational message
+   */
+  log(message: string, context?: LogContext): void {
+    this.writeLog("info", message, this.getFullContext(context));
+  }
+
+  /**
+   * Log an error message
+   */
+  error(message: string, error?: Error | string, context?: LogContext): void {
+    let errorDetails: Record<string, unknown> = {};
+
+    if (error instanceof Error) {
+      errorDetails = { error: error.message, stack: error.stack };
+    } else if (error) {
+      errorDetails = { error };
     }
 
-    /**
-     * Log an error message
-     */
-    error(message: string, error?: Error | string, context?: LogContext): void {
-        let errorDetails: Record<string, unknown> = {};
+    this.writeLog(
+      "error",
+      message,
+      this.getFullContext({ ...context, ...errorDetails }),
+    );
+  }
 
-        if (error instanceof Error) {
-            errorDetails = { error: error.message, stack: error.stack };
-        } else if (error) {
-            errorDetails = { error };
+  /**
+   * Log a warning message
+   */
+  warn(message: string, context?: LogContext): void {
+    this.writeLog("warn", message, this.getFullContext(context));
+  }
+
+  /**
+   * Log a debug message
+   */
+  debug(message: string, context?: LogContext): void {
+    this.writeLog("debug", message, this.getFullContext(context));
+  }
+
+  /**
+   * Log a verbose message
+   */
+  verbose(message: string, context?: LogContext): void {
+    this.writeLog("debug", message, this.getFullContext(context));
+  }
+
+  /**
+   * Write structured log entry in JSON format
+   * Format matches Go services: {"level":"info","service":"api","time":"2024-01-01T10:00:00Z","msg":"message","fields":{...}}
+   */
+  private writeLog(level: string, message: string, context?: LogContext): void {
+    const logEntry = {
+      level,
+      service: context?.service ?? "api",
+      time: new Date().toISOString(),
+      msg: message,
+      ...(context &&
+        Object.keys(context).length > 0 && {
+          fields: this.sanitizeContext(context),
+        }),
+    };
+
+    // Output JSON to stdout for Alloy to collect
+    // eslint-disable-next-line no-console
+    console.log(JSON.stringify(logEntry));
+  }
+
+  /**
+   * Remove undefined/null values and sanitize sensitive data
+   */
+  private sanitizeContext(context: LogContext): Record<string, unknown> {
+    const sanitized: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(context)) {
+      if (value !== undefined && value !== null) {
+        // Skip service as it's already at top level
+        if (key === "service") continue;
+
+        // Sanitize sensitive fields
+        if (this.isSensitiveField(key)) {
+          sanitized[key] = "[REDACTED]";
+        } else {
+          sanitized[key] = value;
         }
-
-        this.writeLog('error', message, this.getFullContext({ ...context, ...errorDetails }));
+      }
     }
 
-    /**
-     * Log a warning message
-     */
-    warn(message: string, context?: LogContext): void {
-        this.writeLog('warn', message, this.getFullContext(context));
-    }
+    return sanitized;
+  }
 
-    /**
-     * Log a debug message
-     */
-    debug(message: string, context?: LogContext): void {
-        this.writeLog('debug', message, this.getFullContext(context));
-    }
+  /**
+   * Check if field contains sensitive information
+   */
+  private isSensitiveField(fieldName: string): boolean {
+    const sensitivePatterns = [
+      "password",
+      "token",
+      "key",
+      "secret",
+      "auth",
+      "credential",
+      "session",
+      "cookie",
+      "bearer",
+    ];
 
-    /**
-     * Log a verbose message
-     */
-    verbose(message: string, context?: LogContext): void {
-        this.writeLog('debug', message, this.getFullContext(context));
-    }
+    const lowerFieldName = fieldName.toLowerCase();
+    return sensitivePatterns.some((pattern) =>
+      lowerFieldName.includes(pattern),
+    );
+  }
 
-    /**
-     * Write structured log entry in JSON format
-     * Format matches Go services: {"level":"info","service":"api","time":"2024-01-01T10:00:00Z","msg":"message","fields":{...}}
-     */
-    private writeLog(level: string, message: string, context?: LogContext): void {
-        const logEntry = {
-            level,
-            service: context?.service ?? 'api',
-            time: new Date().toISOString(),
-            msg: message,
-            ...(context &&
-                Object.keys(context).length > 0 && {
-                    fields: this.sanitizeContext(context)
-                })
-        };
+  /**
+   * Create a logger instance with default context
+   */
+  static forService(serviceName: string): CodeClarityLogger {
+    const logger = new CodeClarityLogger();
+    // Store default context
+    logger.defaultContext = { service: serviceName };
+    return logger;
+  }
 
-        // Output JSON to stdout for Alloy to collect
-        // eslint-disable-next-line no-console
-        console.log(JSON.stringify(logEntry));
-    }
+  /**
+   * Create child logger with inherited context
+   */
+  child(additionalContext: LogContext): CodeClarityLogger {
+    const childLogger = new CodeClarityLogger();
+    const parentContext = this.defaultContext ?? {};
+    childLogger.defaultContext = { ...parentContext, ...additionalContext };
+    return childLogger;
+  }
 
-    /**
-     * Remove undefined/null values and sanitize sensitive data
-     */
-    private sanitizeContext(context: LogContext): Record<string, unknown> {
-        const sanitized: Record<string, unknown> = {};
-
-        for (const [key, value] of Object.entries(context)) {
-            if (value !== undefined && value !== null) {
-                // Skip service as it's already at top level
-                if (key === 'service') continue;
-
-                // Sanitize sensitive fields
-                if (this.isSensitiveField(key)) {
-                    sanitized[key] = '[REDACTED]';
-                } else {
-                    sanitized[key] = value;
-                }
-            }
-        }
-
-        return sanitized;
-    }
-
-    /**
-     * Check if field contains sensitive information
-     */
-    private isSensitiveField(fieldName: string): boolean {
-        const sensitivePatterns = [
-            'password',
-            'token',
-            'key',
-            'secret',
-            'auth',
-            'credential',
-            'session',
-            'cookie',
-            'bearer'
-        ];
-
-        const lowerFieldName = fieldName.toLowerCase();
-        return sensitivePatterns.some((pattern) => lowerFieldName.includes(pattern));
-    }
-
-    /**
-     * Create a logger instance with default context
-     */
-    static forService(serviceName: string): CodeClarityLogger {
-        const logger = new CodeClarityLogger();
-        // Store default context
-        logger.defaultContext = { service: serviceName };
-        return logger;
-    }
-
-    /**
-     * Create child logger with inherited context
-     */
-    child(additionalContext: LogContext): CodeClarityLogger {
-        const childLogger = new CodeClarityLogger();
-        const parentContext = this.defaultContext ?? {};
-        childLogger.defaultContext = { ...parentContext, ...additionalContext };
-        return childLogger;
-    }
-
-    private getFullContext(context?: LogContext): LogContext {
-        const defaultContext = this.defaultContext ?? {};
-        return { ...defaultContext, ...context };
-    }
+  private getFullContext(context?: LogContext): LogContext {
+    const defaultContext = this.defaultContext ?? {};
+    return { ...defaultContext, ...context };
+  }
 }

@@ -1,3 +1,3 @@
-describe('NotificationsController', () => {
-    it('empty', () => {});
+describe("NotificationsController", () => {
+  it("empty", () => {});
 });

@@ -1,3 +1,3 @@
-describe('EmailUnsubscriptionsController', () => {
-    it('empty', () => {});
+describe("EmailUnsubscriptionsController", () => {
+  it("empty", () => {});
 });

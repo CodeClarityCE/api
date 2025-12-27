@@ -1,28 +1,28 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsUrl } from 'class-validator';
-import { IntegrationProvider } from '../integrations/integration.types';
+import { ApiProperty } from "@nestjs/swagger";
+import { IsOptional, IsUrl } from "class-validator";
+import { IntegrationProvider } from "../integrations/integration.types";
 
 /********************************************/
 /*             HTTP Post bodies             */
 /********************************************/
 
 export class ProjectImportBody {
-    @ApiProperty()
-    @IsOptional()
-    integration_id!: string;
+  @ApiProperty()
+  @IsOptional()
+  integration_id!: string;
 
-    @ApiProperty()
-    @IsUrl()
-    @IsOptional()
-    url!: string;
+  @ApiProperty()
+  @IsUrl()
+  @IsOptional()
+  url!: string;
 
-    @ApiProperty()
-    @IsOptional()
-    name!: string;
+  @ApiProperty()
+  @IsOptional()
+  name!: string;
 
-    @ApiProperty()
-    @IsOptional()
-    description!: string;
+  @ApiProperty()
+  @IsOptional()
+  description!: string;
 }
 
 /********************************************/
@@ -30,7 +30,7 @@ export class ProjectImportBody {
 /********************************************/
 
 export interface ProjectUpdateBody {
-    description: string;
+  description: string;
 }
 
 /********************************************/
@@ -38,16 +38,16 @@ export interface ProjectUpdateBody {
 /********************************************/
 
 export interface ProjectCreate {
-    name: string;
-    description: string;
-    integration_id: string;
-    url: string;
-    type: IntegrationProvider;
-    downloaded: boolean;
-    imported_on: Date;
-    imported_by: string;
-    organization_id: string;
-    default_branch: string;
+  name: string;
+  description: string;
+  integration_id: string;
+  url: string;
+  type: IntegrationProvider;
+  downloaded: boolean;
+  imported_on: Date;
+  imported_by: string;
+  organization_id: string;
+  default_branch: string;
 }
 
 /********************************************/

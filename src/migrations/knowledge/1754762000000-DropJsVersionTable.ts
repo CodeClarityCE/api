@@ -1,16 +1,16 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class DropJsVersionTable1754762000000 implements MigrationInterface {
-    name = 'DropJsVersionTable1754762000000';
+  name = "DropJsVersionTable1754762000000";
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        // Drop the obsolete js_version table since all data has been migrated to the generic version table
-        await queryRunner.query(`DROP TABLE IF EXISTS "js_version" CASCADE`);
-    }
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    // Drop the obsolete js_version table since all data has been migrated to the generic version table
+    await queryRunner.query(`DROP TABLE IF EXISTS "js_version" CASCADE`);
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        // Recreate js_version table and migrate JavaScript versions back from generic version table
-        await queryRunner.query(`
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    // Recreate js_version table and migrate JavaScript versions back from generic version table
+    await queryRunner.query(`
             CREATE TABLE "js_version" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "packageId" uuid,
@@ -23,8 +23,8 @@ export class DropJsVersionTable1754762000000 implements MigrationInterface {
             )
         `);
 
-        // Migrate JavaScript versions back from generic version table
-        await queryRunner.query(`
+    // Migrate JavaScript versions back from generic version table
+    await queryRunner.query(`
             INSERT INTO "js_version" ("packageId", "version", "dependencies", "dev_dependencies", "extra")
             SELECT 
                 v."package_id" as "packageId",
@@ -36,5 +36,5 @@ export class DropJsVersionTable1754762000000 implements MigrationInterface {
             INNER JOIN "package" p ON p.id = v.package_id
             WHERE p.language = 'javascript'
         `);
-    }
+  }
 }

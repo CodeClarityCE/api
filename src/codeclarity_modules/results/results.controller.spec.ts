@@ -1,3 +1,3 @@
-describe('ResultsController', () => {
-    it('empty', () => {});
+describe("ResultsController", () => {
+  it("empty", () => {});
 });
