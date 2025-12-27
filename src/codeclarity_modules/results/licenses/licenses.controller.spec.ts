@@ -1,3 +1,3 @@
-describe('LicensesController', () => {
-    it('empty', () => {});
+describe("LicensesController", () => {
+  it("empty", () => {});
 });

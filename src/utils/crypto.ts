@@ -1,4 +1,4 @@
-import * as crypto from 'crypto';
+import * as crypto from "crypto";
 
 /**
  * Generate a hash of a given string using SHA-256 by default.
@@ -9,15 +9,17 @@ import * as crypto from 'crypto';
  * @returns {Promise<string>} A promise that resolves with the hexadecimal representation of the hash.
  */
 export async function hash(
-    string: string,
-    { algorithm = 'SHA-256' }: { algorithm?: string }
+  string: string,
+  { algorithm = "SHA-256" }: { algorithm?: string },
 ): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(string);
-    const hashBuffer = await crypto.subtle.digest(algorithm, data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-    return hashHex;
+  const encoder = new TextEncoder();
+  const data = encoder.encode(string);
+  const hashBuffer = await crypto.subtle.digest(algorithm, data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return hashHex;
 }
 
 /**
@@ -27,12 +29,12 @@ export async function hash(
  * @returns {Promise<string>} A promise that resolves with the hexadecimal string representation of the random number.
  */
 export async function genRandomString(size: number): Promise<string> {
-    return new Promise((resolve, reject) => {
-        crypto.randomBytes(size, (err: Error | null, bytes: Buffer) => {
-            if (err) {
-                reject(err);
-            }
-            resolve(bytes.toString('hex'));
-        });
+  return new Promise((resolve, reject) => {
+    crypto.randomBytes(size, (err: Error | null, bytes: Buffer) => {
+      if (err) {
+        reject(err);
+      }
+      resolve(bytes.toString("hex"));
     });
+  });
 }

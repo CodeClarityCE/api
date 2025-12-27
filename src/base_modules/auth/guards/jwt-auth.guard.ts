@@ -1,35 +1,38 @@
-import { ExecutionContext, Injectable } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { AuthGuard } from '@nestjs/passport';
-import { SKIP_AUTH_KEY } from 'src/decorators/SkipAuthDecorator';
-import { NotAuthenticated } from 'src/types/error.types';
-import { JwtValidationResult } from '../auth.types';
+import { ExecutionContext, Injectable } from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
+import { AuthGuard } from "@nestjs/passport";
+import { SKIP_AUTH_KEY } from "src/decorators/SkipAuthDecorator";
+import { NotAuthenticated } from "src/types/error.types";
+import { JwtValidationResult } from "../auth.types";
 
 @Injectable()
-export class JwtAuthGuard extends AuthGuard('jwt') {
-    constructor(private reflector: Reflector) {
-        super();
+export class JwtAuthGuard extends AuthGuard("jwt") {
+  constructor(private reflector: Reflector) {
+    super();
+  }
+
+  canActivate(context: ExecutionContext): boolean | Promise<boolean> {
+    // Check if this endpoint is a public / non-auth endpoint
+    const isNonAuthEndpoint = this.reflector.getAllAndOverride<boolean>(
+      SKIP_AUTH_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    if (isNonAuthEndpoint) {
+      return true;
     }
 
-    canActivate(context: ExecutionContext): boolean | Promise<boolean> {
-        // Check if this endpoint is a public / non-auth endpoint
-        const isNonAuthEndpoint = this.reflector.getAllAndOverride<boolean>(SKIP_AUTH_KEY, [
-            context.getHandler(),
-            context.getClass()
-        ]);
-        if (isNonAuthEndpoint) {
-            return true;
-        }
+    // Othwerwise check the jwt with the defined jwt strategy
+    return super.canActivate(context) as boolean | Promise<boolean>;
+  }
 
-        // Othwerwise check the jwt with the defined jwt strategy
-        return super.canActivate(context) as boolean | Promise<boolean>;
+  handleRequest<TUser = JwtValidationResult>(
+    err: Error | null,
+    user: TUser | false,
+  ): TUser {
+    // You can throw an exception based on either "info" or "err" arguments
+    if (err || !user) {
+      throw err ?? new NotAuthenticated();
     }
-
-    handleRequest<TUser = JwtValidationResult>(err: Error | null, user: TUser | false): TUser {
-        // You can throw an exception based on either "info" or "err" arguments
-        if (err || !user) {
-            throw err ?? new NotAuthenticated();
-        }
-        return user;
-    }
+    return user;
+  }
 }

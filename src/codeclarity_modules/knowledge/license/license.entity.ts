@@ -1,97 +1,97 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
-import { Entity, Column, PrimaryGeneratedColumn, Index } from 'typeorm';
+import { ApiProperty } from "@nestjs/swagger";
+import { Expose } from "class-transformer";
+import { Entity, Column, PrimaryGeneratedColumn, Index } from "typeorm";
 
-@Entity('licenses')
+@Entity("licenses")
 export class License {
-    @PrimaryGeneratedColumn('uuid')
-    @ApiProperty()
-    @Expose()
-    id!: string;
+  @PrimaryGeneratedColumn("uuid")
+  @ApiProperty()
+  @Expose()
+  id!: string;
 
-    @Column({
-        length: 250,
-        nullable: true
-    })
-    @Index('idx_license_name')
-    @ApiProperty()
-    @Expose()
-    name!: string;
+  @Column({
+    length: 250,
+    nullable: true,
+  })
+  @Index("idx_license_name")
+  @ApiProperty()
+  @Expose()
+  name!: string;
 
-    @Column({
-        length: 250,
-        nullable: true
-    })
-    @ApiProperty()
-    @Expose()
-    reference!: string;
+  @Column({
+    length: 250,
+    nullable: true,
+  })
+  @ApiProperty()
+  @Expose()
+  reference!: string;
 
-    @Column({ nullable: true })
-    @ApiProperty()
-    @Expose()
-    isDeprecatedLicenseId!: boolean;
+  @Column({ nullable: true })
+  @ApiProperty()
+  @Expose()
+  isDeprecatedLicenseId!: boolean;
 
-    @Column({ nullable: true })
-    @ApiProperty()
-    @Expose()
-    detailsUrl!: string;
+  @Column({ nullable: true })
+  @ApiProperty()
+  @Expose()
+  detailsUrl!: string;
 
-    @Column({ nullable: true })
-    @ApiProperty()
-    @Expose()
-    referenceNumber!: number;
+  @Column({ nullable: true })
+  @ApiProperty()
+  @Expose()
+  referenceNumber!: number;
 
-    @Column({ nullable: true })
-    @Index({ unique: true })
-    @ApiProperty()
-    @Expose()
-    licenseId!: string;
+  @Column({ nullable: true })
+  @Index({ unique: true })
+  @ApiProperty()
+  @Expose()
+  licenseId!: string;
 
-    @Column('simple-array', { nullable: true })
-    @ApiProperty()
-    @Expose()
-    seeAlso!: string[];
+  @Column("simple-array", { nullable: true })
+  @ApiProperty()
+  @Expose()
+  seeAlso!: string[];
 
-    @Column({ nullable: true })
-    @ApiProperty()
-    @Expose()
-    isOsiApproved!: boolean;
+  @Column({ nullable: true })
+  @ApiProperty()
+  @Expose()
+  isOsiApproved!: boolean;
 
-    @Column('jsonb', { nullable: true })
-    @ApiProperty()
-    @Expose()
-    details!: Details;
+  @Column("jsonb", { nullable: true })
+  @ApiProperty()
+  @Expose()
+  details!: Details;
 }
 
 interface Details {
-    crossRef: CrossRef[];
-    isDeprecatedLicenseId: boolean;
-    isOsiApproved: boolean;
-    licenseId: string;
-    licenseText: string;
-    licenseTextHtml: string;
-    licenseTextNormalized: string;
-    licenseTextNormalizedDigest: string;
-    name: string;
-    seeAlso: string[];
-    standardLicenseTemplate: string;
-    description: string;
-    classification: string;
-    licenseProperties: LicenseProperties;
+  crossRef: CrossRef[];
+  isDeprecatedLicenseId: boolean;
+  isOsiApproved: boolean;
+  licenseId: string;
+  licenseText: string;
+  licenseTextHtml: string;
+  licenseTextNormalized: string;
+  licenseTextNormalizedDigest: string;
+  name: string;
+  seeAlso: string[];
+  standardLicenseTemplate: string;
+  description: string;
+  classification: string;
+  licenseProperties: LicenseProperties;
 }
 
 interface LicenseProperties {
-    permissions: string[];
-    conditions: string[];
-    limitations: string[];
+  permissions: string[];
+  conditions: string[];
+  limitations: string[];
 }
 
 interface CrossRef {
-    IsLive: boolean;
-    IsValid: boolean;
-    IsWayBackLink: boolean;
-    Match: string;
-    Order: number;
-    Timestamp: Date;
-    URL: string;
+  IsLive: boolean;
+  IsValid: boolean;
+  IsWayBackLink: boolean;
+  Match: string;
+  Order: number;
+  Timestamp: Date;
+  URL: string;
 }

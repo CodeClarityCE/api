@@ -1,7 +1,12 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException } from '@nestjs/common';
-import { FastifyReply } from 'fastify';
-import { Status } from 'src/types/apiResponses.types';
-import { PrivateAPIError, PublicAPIError } from 'src/types/error.types';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+} from "@nestjs/common";
+import { FastifyReply } from "fastify";
+import { Status } from "src/types/apiResponses.types";
+import { PrivateAPIError, PublicAPIError } from "src/types/error.types";
 
 /**
  * The goal of this filter is to filter the information we expose to users in case of an exception
@@ -10,67 +15,70 @@ import { PrivateAPIError, PublicAPIError } from 'src/types/error.types';
  */
 @Catch(Error)
 export class ErrorFilter implements ExceptionFilter {
-    /**
-     * Catches and processes exceptions thrown by routes.
-     *
-     * The goal of this method is to filter out sensitive information from error responses,
-     * as well as convert them to snake_case format (underscores instead of camel case).
-     */
-    catch(exception: Error, host: ArgumentsHost): void {
-        const ctx = host.switchToHttp();
-        const response = ctx.getResponse<FastifyReply>();
-        let status = 500;
+  /**
+   * Catches and processes exceptions thrown by routes.
+   *
+   * The goal of this method is to filter out sensitive information from error responses,
+   * as well as convert them to snake_case format (underscores instead of camel case).
+   */
+  catch(exception: Error, host: ArgumentsHost): void {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<FastifyReply>();
+    let status = 500;
 
-        let errorCode = 'InternalError';
-        let message = 'We encountered a problem while processing your request.';
+    let errorCode = "InternalError";
+    let message = "We encountered a problem while processing your request.";
 
-        // Check if the exception is an instance of PublicAPIError
-        if (exception instanceof PublicAPIError) {
-            const error: PublicAPIError = exception;
-            status = error.getHttpStatusCode();
-            const rawError = error as unknown as Record<string, unknown>;
-            delete rawError['errorCause'];
-            const object = snakeCase(rawError);
-            response.status(status).send(JSON.stringify(object));
-            return;
-        } else if (exception instanceof PrivateAPIError) {
-            // Check if the exception is an instance of PrivateAPIError
-            const error: PrivateAPIError = exception;
-            status = error.getHttpStatusCode();
-            errorCode = error.getErrorCode();
-            message = error.getMessage();
-            console.error('[PrivateAPIError]', error);
-        } else if (exception instanceof HttpException) {
-            // Check if the exception is an instance of HttpException
-            const error: HttpException = exception;
-            status = error.getStatus();
-            message = error.message;
-            console.error('[HttpException]', error);
-        } else {
-            console.error('[UnhandledException]', exception);
-            // Catch any other unexpected exceptions and return a generic InternalError response
-            if ('name' in exception && exception.name === 'FastifyError') {
-                const fastifyException = exception as unknown as {
-                    statusCode: number;
-                    message: string;
-                };
-                if (fastifyException.statusCode >= 400 && fastifyException.statusCode < 500) {
-                    errorCode = 'BadRequest';
-                    status = 400;
-                    message = fastifyException.message;
-                }
-            }
+    // Check if the exception is an instance of PublicAPIError
+    if (exception instanceof PublicAPIError) {
+      const error: PublicAPIError = exception;
+      status = error.getHttpStatusCode();
+      const rawError = error as unknown as Record<string, unknown>;
+      delete rawError["errorCause"];
+      const object = snakeCase(rawError);
+      response.status(status).send(JSON.stringify(object));
+      return;
+    } else if (exception instanceof PrivateAPIError) {
+      // Check if the exception is an instance of PrivateAPIError
+      const error: PrivateAPIError = exception;
+      status = error.getHttpStatusCode();
+      errorCode = error.getErrorCode();
+      message = error.getMessage();
+      console.error("[PrivateAPIError]", error);
+    } else if (exception instanceof HttpException) {
+      // Check if the exception is an instance of HttpException
+      const error: HttpException = exception;
+      status = error.getStatus();
+      message = error.message;
+      console.error("[HttpException]", error);
+    } else {
+      console.error("[UnhandledException]", exception);
+      // Catch any other unexpected exceptions and return a generic InternalError response
+      if ("name" in exception && exception.name === "FastifyError") {
+        const fastifyException = exception as unknown as {
+          statusCode: number;
+          message: string;
+        };
+        if (
+          fastifyException.statusCode >= 400 &&
+          fastifyException.statusCode < 500
+        ) {
+          errorCode = "BadRequest";
+          status = 400;
+          message = fastifyException.message;
         }
-
-        response.status(status).send(
-            JSON.stringify({
-                status_code: status,
-                status: Status.Failure,
-                error_code: errorCode,
-                error_message: message
-            })
-        );
+      }
     }
+
+    response.status(status).send(
+      JSON.stringify({
+        status_code: status,
+        status: Status.Failure,
+        error_code: errorCode,
+        error_message: message,
+      }),
+    );
+  }
 }
 
 /**
@@ -79,37 +87,37 @@ export class ErrorFilter implements ExceptionFilter {
  * This function is used to convert the error objects returned in API responses from NestJS's default camel case format to snake case, which is what our API clients expect.
  */
 function snakeCase(fields: Record<string, unknown>): Record<string, unknown> {
-    for (const key in fields) {
-        const value = fields[key];
+  for (const key in fields) {
+    const value = fields[key];
 
-        // Handle arrays - recursively process each item
-        if (Array.isArray(value)) {
-            fields[key] = value.map((item: unknown) => {
-                if (item !== null && typeof item === 'object' && !Array.isArray(item)) {
-                    return snakeCase(item as Record<string, unknown>);
-                }
-                return item;
-            });
+    // Handle arrays - recursively process each item
+    if (Array.isArray(value)) {
+      fields[key] = value.map((item: unknown) => {
+        if (item !== null && typeof item === "object" && !Array.isArray(item)) {
+          return snakeCase(item as Record<string, unknown>);
         }
-        // Handle nested objects
-        else if (value !== null && typeof value === 'object') {
-            fields[key] = snakeCase(value as Record<string, unknown>);
-        }
-
-        const snakeKey = key
-            .replace(/\.?([A-Z]+)/g, function (_x, y: string) {
-                return `_${y.toLowerCase()}`;
-            })
-            .replace(/^_/, '');
-
-        // Put the new snake_case property name into the object
-        fields[snakeKey] = fields[key];
-
-        // Remove the old camelCase property name from the object
-        if (snakeKey !== key) {
-            delete fields[key];
-        }
+        return item;
+      });
+    }
+    // Handle nested objects
+    else if (value !== null && typeof value === "object") {
+      fields[key] = snakeCase(value as Record<string, unknown>);
     }
 
-    return fields;
+    const snakeKey = key
+      .replace(/\.?([A-Z]+)/g, function (_x, y: string) {
+        return `_${y.toLowerCase()}`;
+      })
+      .replace(/^_/, "");
+
+    // Put the new snake_case property name into the object
+    fields[snakeKey] = fields[key];
+
+    // Remove the old camelCase property name from the object
+    if (snakeKey !== key) {
+      delete fields[key];
+    }
+  }
+
+  return fields;
 }

@@ -1,3 +1,3 @@
-describe('IntegrationsController', () => {
-    it('empty', () => {});
+describe("IntegrationsController", () => {
+  it("empty", () => {});
 });

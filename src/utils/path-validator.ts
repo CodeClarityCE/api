@@ -1,4 +1,4 @@
-import { resolve, join, basename, isAbsolute, sep } from 'path';
+import { resolve, join, basename, isAbsolute, sep } from "path";
 
 /**
  * Safely constructs a file path by joining a base directory with user-provided segments.
@@ -25,52 +25,58 @@ import { resolve, join, basename, isAbsolute, sep } from 'path';
  * validateAndJoinPath('/var/data', '../../etc/passwd');
  * // Throws: Error('Path segment became empty after sanitization')
  */
-export function validateAndJoinPath(baseDir: string, ...pathSegments: string[]): string {
-    // Validate base directory is absolute
-    if (!isAbsolute(baseDir)) {
-        throw new Error('Base directory must be an absolute path');
+export function validateAndJoinPath(
+  baseDir: string,
+  ...pathSegments: string[]
+): string {
+  // Validate base directory is absolute
+  if (!isAbsolute(baseDir)) {
+    throw new Error("Base directory must be an absolute path");
+  }
+
+  // Sanitize each segment individually
+  const sanitizedSegments = pathSegments.map((segment) => {
+    if (!segment || typeof segment !== "string") {
+      throw new Error("Invalid path segment");
     }
 
-    // Sanitize each segment individually
-    const sanitizedSegments = pathSegments.map((segment) => {
-        if (!segment || typeof segment !== 'string') {
-            throw new Error('Invalid path segment');
-        }
+    // Remove dangerous characters and patterns
+    let sanitized = segment
+      .replace(/\.\./g, "") // Remove parent directory references
+      .replace(/^\.+/, "") // Remove leading dots
+      .replace(/\/+/g, "") // Remove forward slashes
+      .replace(/\\+/g, "") // Remove backslashes
+      .replace(/\0/g, "") // Remove null bytes
+      .replace(/^~/, ""); // Remove home directory reference
 
-        // Remove dangerous characters and patterns
-        let sanitized = segment
-            .replace(/\.\./g, '') // Remove parent directory references
-            .replace(/^\.+/, '') // Remove leading dots
-            .replace(/\/+/g, '') // Remove forward slashes
-            .replace(/\\+/g, '') // Remove backslashes
-            .replace(/\0/g, '') // Remove null bytes
-            .replace(/^~/, ''); // Remove home directory reference
+    // Use basename to extract just the filename/dirname component
+    // This handles any remaining edge cases
+    sanitized = basename(sanitized);
 
-        // Use basename to extract just the filename/dirname component
-        // This handles any remaining edge cases
-        sanitized = basename(sanitized);
-
-        if (!sanitized) {
-            throw new Error('Path segment became empty after sanitization');
-        }
-
-        return sanitized;
-    });
-
-    // Construct the path
-    const constructedPath = join(baseDir, ...sanitizedSegments);
-
-    // Resolve to absolute path (resolves any remaining relative components)
-    const resolvedPath = resolve(constructedPath);
-    const resolvedBase = resolve(baseDir);
-
-    // Verify the resolved path is within the base directory
-    // Must either start with base + separator OR be exactly equal to base
-    if (!resolvedPath.startsWith(resolvedBase + sep) && resolvedPath !== resolvedBase) {
-        throw new Error(
-            `Path traversal detected: attempted to access ${resolvedPath} outside of ${resolvedBase}`
-        );
+    if (!sanitized) {
+      throw new Error("Path segment became empty after sanitization");
     }
 
-    return resolvedPath;
+    return sanitized;
+  });
+
+  // Construct the path
+  const constructedPath = join(baseDir, ...sanitizedSegments);
+
+  // Resolve to absolute path (resolves any remaining relative components)
+  const resolvedPath = resolve(constructedPath);
+  const resolvedBase = resolve(baseDir);
+
+  // Verify the resolved path is within the base directory
+  // Must either start with base + separator OR be exactly equal to base
+  if (
+    !resolvedPath.startsWith(resolvedBase + sep) &&
+    resolvedPath !== resolvedBase
+  ) {
+    throw new Error(
+      `Path traversal detected: attempted to access ${resolvedPath} outside of ${resolvedBase}`,
+    );
+  }
+
+  return resolvedPath;
 }

@@ -1,30 +1,30 @@
-import { IsNotEmpty, Length } from 'class-validator';
+import { IsNotEmpty, Length } from "class-validator";
 
 /********************************************/
 /*             HTTP Post bodies             */
 /********************************************/
 
 export class AnalyzerCreateBody {
-    @IsNotEmpty()
-    steps!: Stage[][];
+  @IsNotEmpty()
+  steps!: Stage[][];
 
-    @IsNotEmpty()
-    @Length(5, 50)
-    name!: string;
+  @IsNotEmpty()
+  @Length(5, 50)
+  name!: string;
 
-    @IsNotEmpty()
-    @Length(10, 250)
-    description!: string;
+  @IsNotEmpty()
+  @Length(10, 250)
+  description!: string;
 
-    supported_languages?: string[];
+  supported_languages?: string[];
 
-    language_config?: {
-        javascript?: { plugins: string[] };
-        php?: { plugins: string[] };
-        [key: string]: { plugins: string[] } | undefined;
-    };
+  language_config?: {
+    javascript?: { plugins: string[] };
+    php?: { plugins: string[] };
+    [key: string]: { plugins: string[] } | undefined;
+  };
 
-    logo?: string;
+  logo?: string;
 }
 
 /********************************************/
@@ -32,11 +32,11 @@ export class AnalyzerCreateBody {
 /********************************************/
 
 export interface StageBase {
-    name: string;
-    version: string;
+  name: string;
+  version: string;
 }
 
 export interface Stage extends StageBase {
-    config: Record<string, unknown>;
-    persistant_config: Record<string, unknown>;
+  config: Record<string, unknown>;
+  persistant_config: Record<string, unknown>;
 }
