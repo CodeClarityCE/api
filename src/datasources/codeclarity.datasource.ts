@@ -15,9 +15,7 @@ const entities = [
     : "dist/codeclarity_modules/!(knowledge)/**/*.entity.js",
 ];
 const migrations = [
-  isTs
-    ? "src/migrations/codeclarity/*.ts"
-    : "dist/migrations/codeclarity/*.js",
+  isTs ? "src/migrations/codeclarity/*.ts" : "dist/migrations/codeclarity/*.js",
 ];
 
 export const CodeClarityDataSource = new DataSource({
