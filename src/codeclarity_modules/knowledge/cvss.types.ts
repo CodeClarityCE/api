@@ -41,3 +41,35 @@ export interface CVSS31 {
   scope: string;
   privileges_required: string;
 }
+
+export interface CVSS4 {
+  base_score: number;
+
+  // Base Metrics - Exploitability
+  attack_vector: string;
+  attack_complexity: string;
+  attack_requirements: string;
+  privileges_required: string;
+  user_interaction: string;
+
+  // Base Metrics - Vulnerable System Impact
+  confidentiality_impact_vulnerable: string;
+  integrity_impact_vulnerable: string;
+  availability_impact_vulnerable: string;
+
+  // Base Metrics - Subsequent System Impact
+  confidentiality_impact_subsequent: string;
+  integrity_impact_subsequent: string;
+  availability_impact_subsequent: string;
+
+  // Threat Metric
+  exploit_maturity?: string;
+
+  // Supplemental Metrics (informational, do not affect score)
+  safety?: string;
+  automatable?: string;
+  recovery?: string;
+  value_density?: string;
+  response_effort?: string;
+  provider_urgency?: string;
+}

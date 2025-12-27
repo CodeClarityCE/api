@@ -29,10 +29,10 @@ describe("AppModule", () => {
         "utf8",
       );
 
-      expect(moduleContent).toContain("process.env['PG_DB_PASSWORD']");
-      expect(moduleContent).toContain("process.env['PG_DB_HOST']");
-      expect(moduleContent).toContain("process.env['PG_DB_USER']");
-      expect(moduleContent).toContain("process.env['PG_DB_PORT']");
+      expect(moduleContent).toContain('process.env["PG_DB_PASSWORD"]');
+      expect(moduleContent).toContain('process.env["PG_DB_HOST"]');
+      expect(moduleContent).toContain('process.env["PG_DB_USER"]');
+      expect(moduleContent).toContain('process.env["PG_DB_PORT"]');
     });
 
     it("should use default port fallback", () => {
@@ -42,7 +42,7 @@ describe("AppModule", () => {
       );
 
       expect(moduleContent).toContain(
-        "parseInt(process.env['PG_DB_PORT'] ?? '6432', 10)",
+        'parseInt(process.env["PG_DB_PORT"] ?? "6432", 10)',
       );
     });
 

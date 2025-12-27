@@ -172,7 +172,7 @@ describe("Main.ts Bootstrap Configuration and Testing", () => {
     it("should configure CORS for all origins", () => {
       const mainContent = readFileSync(join(__dirname, "main.ts"), "utf8");
 
-      expect(mainContent).toContain("origin: ['*']");
+      expect(mainContent).toContain('origin: ["*"]');
     });
 
     it("should set up Swagger documentation", () => {
@@ -180,14 +180,14 @@ describe("Main.ts Bootstrap Configuration and Testing", () => {
 
       expect(mainContent).toContain("API Documentation");
       expect(mainContent).toContain("addBearerAuth()");
-      expect(mainContent).toContain("addServer('/api')");
-      expect(mainContent).toContain("SwaggerModule.setup('api_doc'");
+      expect(mainContent).toContain('addServer("/api")');
+      expect(mainContent).toContain('SwaggerModule.setup("api_doc"');
     });
 
     it("should configure compression middleware", () => {
       const mainContent = readFileSync(join(__dirname, "main.ts"), "utf8");
 
-      expect(mainContent).toContain("encodings: ['gzip', 'deflate']");
+      expect(mainContent).toContain('encodings: ["gzip", "deflate"]');
     });
   });
 
@@ -209,7 +209,7 @@ describe("Main.ts Bootstrap Configuration and Testing", () => {
     it("should listen on environment PORT", () => {
       const mainContent = readFileSync(join(__dirname, "main.ts"), "utf8");
 
-      expect(mainContent).toContain("process.env['PORT']!, '0.0.0.0'");
+      expect(mainContent).toContain('process.env["PORT"]!, "0.0.0.0"');
     });
 
     it("should use Fastify as HTTP adapter", () => {
@@ -243,7 +243,7 @@ describe("Main.ts Bootstrap Configuration and Testing", () => {
     it("should configure Passport.js compatibility hook", () => {
       const mainContent = readFileSync(join(__dirname, "main.ts"), "utf8");
 
-      expect(mainContent).toContain("addHook('onRequest'");
+      expect(mainContent).toContain('addHook("onRequest"');
       expect(mainContent).toContain(".setHeader = function");
       expect(mainContent).toContain(".end = function");
       expect(mainContent).toContain(".res = reply");
@@ -256,7 +256,7 @@ describe("Main.ts Bootstrap Configuration and Testing", () => {
 
       const mainContent = readFileSync(join(__dirname, "main.ts"), "utf8");
 
-      expect(mainContent).toContain("process.env['PORT']!");
+      expect(mainContent).toContain('process.env["PORT"]!');
     });
 
     it("should require PORT environment variable", () => {
@@ -272,31 +272,31 @@ describe("Main.ts Bootstrap Configuration and Testing", () => {
 
       // Core NestJS imports
       expect(mainContent).toContain(
-        "import { NestFactory, Reflector } from '@nestjs/core'",
+        'import { NestFactory, Reflector } from "@nestjs/core"',
+      );
+      expect(mainContent).toContain("FastifyAdapter");
+      expect(mainContent).toContain("NestFastifyApplication");
+      expect(mainContent).toContain('"@nestjs/platform-fastify"');
+      expect(mainContent).toContain(
+        'import { ClassSerializerInterceptor, ValidationPipe } from "@nestjs/common"',
       );
       expect(mainContent).toContain(
-        "import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'",
-      );
-      expect(mainContent).toContain(
-        "import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common'",
-      );
-      expect(mainContent).toContain(
-        "import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'",
+        'import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger"',
       );
     });
 
     it("should import custom components", () => {
       const mainContent = readFileSync(join(__dirname, "main.ts"), "utf8");
 
-      expect(mainContent).toContain("import { AppModule } from './app.module'");
+      expect(mainContent).toContain('import { AppModule } from "./app.module"');
       expect(mainContent).toContain(
-        "import { ErrorFilter } from './filters/ExceptionFilter'",
+        'import { ErrorFilter } from "./filters/ExceptionFilter"',
       );
       expect(mainContent).toContain(
-        "import { ResponseBodyInterceptor } from './interceptors/ResponseBodyInterceptor'",
+        'import { ResponseBodyInterceptor } from "./interceptors/ResponseBodyInterceptor"',
       );
       expect(mainContent).toContain(
-        "import { ValidationFailed } from './types/error.types'",
+        'import { ValidationFailed } from "./types/error.types"',
       );
     });
 
@@ -304,10 +304,10 @@ describe("Main.ts Bootstrap Configuration and Testing", () => {
       const mainContent = readFileSync(join(__dirname, "main.ts"), "utf8");
 
       expect(mainContent).toContain(
-        "import compression from '@fastify/compress'",
+        'import compression from "@fastify/compress"',
       );
       expect(mainContent).toContain(
-        "import multipart from '@fastify/multipart'",
+        'import multipart from "@fastify/multipart"',
       );
     });
   });
@@ -521,7 +521,7 @@ describe("Main.ts Bootstrap Configuration and Testing", () => {
     it("should await app.listen with correct parameters", () => {
       const mainContent = readFileSync(join(__dirname, "main.ts"), "utf8");
       expect(mainContent).toContain(
-        "await app.listen(process.env['PORT']!, '0.0.0.0')",
+        'await app.listen(process.env["PORT"]!, "0.0.0.0")',
       );
     });
   });

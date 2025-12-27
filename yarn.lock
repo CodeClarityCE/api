@@ -4088,13 +4088,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/cvss-parser@file:cvss-parser-js/::locator=api%40workspace%3A.":
-  version: 0.0.2-alpha
-  resolution: "@types/cvss-parser@file:cvss-parser-js/#cvss-parser-js/::hash=15cf1a&locator=api%40workspace%3A."
-  checksum: 10/419e45cca8654c80077b0bb7608dd9082758a7399957135dc090face6abfd625999615e0b6f1a09eacb132d60edc7b0c7e54783ee7d372769ee53d804c1526e6
-  languageName: node
-  linkType: hard
-
 "@types/ejs@npm:^3.1.5":
   version: 3.1.5
   resolution: "@types/ejs@npm:3.1.5"
@@ -5172,7 +5165,6 @@ __metadata:
     "@octokit/types": "npm:16.0.0"
     "@types/amqplib": "npm:0.10.8"
     "@types/bcrypt": "npm:6.0.0"
-    "@types/cvss-parser": "file:cvss-parser-js/"
     "@types/eslint-plugin-security": "npm:3.0.0"
     "@types/express": "npm:5.0.6"
     "@types/jest": "npm:30.0.0"
@@ -5190,7 +5182,6 @@ __metadata:
     bcrypt: "npm:6.0.0"
     class-transformer: "npm:0.5.1"
     class-validator: "npm:0.14.3"
-    cvss-parser: "file:cvss-parser-js/"
     dotenv: "npm:17.2.3"
     eslint: "npm:9.39.2"
     eslint-config-prettier: "npm:10.1.8"
@@ -6293,13 +6284,6 @@ __metadata:
   version: 6.2.2
   resolution: "css-what@npm:6.2.2"
   checksum: 10/3c5a53be94728089bd1716f915f7f96adde5dd8bf374610eb03982266f3d860bf1ebaf108cda30509d02ef748fe33eaa59aa75911e2c49ee05a85ef1f9fb5223
-  languageName: node
-  linkType: hard
-
-"cvss-parser@file:cvss-parser-js/::locator=api%40workspace%3A.":
-  version: 0.0.2-alpha
-  resolution: "cvss-parser@file:cvss-parser-js/#cvss-parser-js/::hash=943e1b&locator=api%40workspace%3A."
-  checksum: 10/341f900be30b444bc0801a160665c029b0fe0d120575483c97bb7cb6e7345df4b0dc590e72bc1acc97e742469f1b66de1a5f67c062a95c0d0266581f3fb97106
   languageName: node
   linkType: hard
 

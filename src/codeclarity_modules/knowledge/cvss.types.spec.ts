@@ -1,4 +1,4 @@
-import type { CVSS2, CVSS3, CVSS31 } from "./cvss.types";
+import type { CVSS2, CVSS3, CVSS31, CVSS4 } from "./cvss.types";
 
 describe("CVSS Types", () => {
   describe("CVSS2", () => {
@@ -472,6 +472,215 @@ describe("CVSS Types", () => {
       expect(localPrivEsc.base_score).toBe(7.8);
       expect(localPrivEsc.attack_vector).toBe("LOCAL");
       expect(localPrivEsc.privileges_required).toBe("LOW");
+    });
+  });
+
+  describe("CVSS4", () => {
+    it("should accept valid CVSS4 objects with all required base metrics", () => {
+      const cvss4: CVSS4 = {
+        base_score: 9.3,
+        attack_vector: "NETWORK",
+        attack_complexity: "LOW",
+        attack_requirements: "NONE",
+        privileges_required: "NONE",
+        user_interaction: "NONE",
+        confidentiality_impact_vulnerable: "HIGH",
+        integrity_impact_vulnerable: "HIGH",
+        availability_impact_vulnerable: "HIGH",
+        confidentiality_impact_subsequent: "HIGH",
+        integrity_impact_subsequent: "HIGH",
+        availability_impact_subsequent: "HIGH",
+      };
+
+      expect(cvss4.base_score).toBe(9.3);
+      expect(cvss4.attack_vector).toBe("NETWORK");
+      expect(cvss4.attack_complexity).toBe("LOW");
+      expect(cvss4.attack_requirements).toBe("NONE");
+      expect(cvss4.privileges_required).toBe("NONE");
+      expect(cvss4.user_interaction).toBe("NONE");
+      expect(cvss4.confidentiality_impact_vulnerable).toBe("HIGH");
+      expect(cvss4.integrity_impact_vulnerable).toBe("HIGH");
+      expect(cvss4.availability_impact_vulnerable).toBe("HIGH");
+      expect(cvss4.confidentiality_impact_subsequent).toBe("HIGH");
+      expect(cvss4.integrity_impact_subsequent).toBe("HIGH");
+      expect(cvss4.availability_impact_subsequent).toBe("HIGH");
+    });
+
+    it("should accept CVSS4 objects with optional threat metrics", () => {
+      const cvss4WithThreat: CVSS4 = {
+        base_score: 8.7,
+        attack_vector: "NETWORK",
+        attack_complexity: "LOW",
+        attack_requirements: "NONE",
+        privileges_required: "NONE",
+        user_interaction: "PASSIVE",
+        confidentiality_impact_vulnerable: "HIGH",
+        integrity_impact_vulnerable: "HIGH",
+        availability_impact_vulnerable: "LOW",
+        confidentiality_impact_subsequent: "LOW",
+        integrity_impact_subsequent: "LOW",
+        availability_impact_subsequent: "LOW",
+        exploit_maturity: "ATTACKED",
+      };
+
+      expect(cvss4WithThreat.exploit_maturity).toBe("ATTACKED");
+      expect(cvss4WithThreat.base_score).toBe(8.7);
+    });
+
+    it("should accept CVSS4 objects with optional supplemental metrics", () => {
+      const cvss4WithSupplemental: CVSS4 = {
+        base_score: 7.5,
+        attack_vector: "ADJACENT_NETWORK",
+        attack_complexity: "HIGH",
+        attack_requirements: "PRESENT",
+        privileges_required: "LOW",
+        user_interaction: "ACTIVE",
+        confidentiality_impact_vulnerable: "HIGH",
+        integrity_impact_vulnerable: "LOW",
+        availability_impact_vulnerable: "NONE",
+        confidentiality_impact_subsequent: "NEGLIGIBLE",
+        integrity_impact_subsequent: "NEGLIGIBLE",
+        availability_impact_subsequent: "NEGLIGIBLE",
+        safety: "PRESENT",
+        automatable: "YES",
+        recovery: "IRRECOVERABLE",
+        value_density: "CONCENTRATED",
+        response_effort: "HIGH",
+        provider_urgency: "RED",
+      };
+
+      expect(cvss4WithSupplemental.safety).toBe("PRESENT");
+      expect(cvss4WithSupplemental.automatable).toBe("YES");
+      expect(cvss4WithSupplemental.recovery).toBe("IRRECOVERABLE");
+      expect(cvss4WithSupplemental.value_density).toBe("CONCENTRATED");
+      expect(cvss4WithSupplemental.response_effort).toBe("HIGH");
+      expect(cvss4WithSupplemental.provider_urgency).toBe("RED");
+    });
+
+    it("should handle different user interaction values in CVSS 4.0", () => {
+      const noInteraction: CVSS4 = {
+        base_score: 10.0,
+        attack_vector: "NETWORK",
+        attack_complexity: "LOW",
+        attack_requirements: "NONE",
+        privileges_required: "NONE",
+        user_interaction: "NONE",
+        confidentiality_impact_vulnerable: "HIGH",
+        integrity_impact_vulnerable: "HIGH",
+        availability_impact_vulnerable: "HIGH",
+        confidentiality_impact_subsequent: "HIGH",
+        integrity_impact_subsequent: "HIGH",
+        availability_impact_subsequent: "HIGH",
+      };
+
+      const passiveInteraction: CVSS4 = {
+        ...noInteraction,
+        user_interaction: "PASSIVE",
+        base_score: 9.5,
+      };
+
+      const activeInteraction: CVSS4 = {
+        ...noInteraction,
+        user_interaction: "ACTIVE",
+        base_score: 9.0,
+      };
+
+      expect(noInteraction.user_interaction).toBe("NONE");
+      expect(passiveInteraction.user_interaction).toBe("PASSIVE");
+      expect(activeInteraction.user_interaction).toBe("ACTIVE");
+    });
+
+    it("should handle attack requirements metric (new in CVSS 4.0)", () => {
+      const noRequirements: CVSS4 = {
+        base_score: 9.8,
+        attack_vector: "NETWORK",
+        attack_complexity: "LOW",
+        attack_requirements: "NONE",
+        privileges_required: "NONE",
+        user_interaction: "NONE",
+        confidentiality_impact_vulnerable: "HIGH",
+        integrity_impact_vulnerable: "HIGH",
+        availability_impact_vulnerable: "HIGH",
+        confidentiality_impact_subsequent: "HIGH",
+        integrity_impact_subsequent: "HIGH",
+        availability_impact_subsequent: "HIGH",
+      };
+
+      const presentRequirements: CVSS4 = {
+        ...noRequirements,
+        attack_requirements: "PRESENT",
+        base_score: 8.5,
+      };
+
+      expect(noRequirements.attack_requirements).toBe("NONE");
+      expect(presentRequirements.attack_requirements).toBe("PRESENT");
+    });
+
+    it("should handle separate vulnerable and subsequent system impacts", () => {
+      const mixedImpact: CVSS4 = {
+        base_score: 7.2,
+        attack_vector: "NETWORK",
+        attack_complexity: "LOW",
+        attack_requirements: "NONE",
+        privileges_required: "NONE",
+        user_interaction: "NONE",
+        confidentiality_impact_vulnerable: "HIGH",
+        integrity_impact_vulnerable: "LOW",
+        availability_impact_vulnerable: "NONE",
+        confidentiality_impact_subsequent: "NEGLIGIBLE",
+        integrity_impact_subsequent: "HIGH",
+        availability_impact_subsequent: "LOW",
+      };
+
+      expect(mixedImpact.confidentiality_impact_vulnerable).toBe("HIGH");
+      expect(mixedImpact.confidentiality_impact_subsequent).toBe("NEGLIGIBLE");
+      expect(mixedImpact.integrity_impact_vulnerable).toBe("LOW");
+      expect(mixedImpact.integrity_impact_subsequent).toBe("HIGH");
+    });
+
+    it("should handle zero impact scenarios in CVSS 4.0", () => {
+      const noImpact: CVSS4 = {
+        base_score: 0.0,
+        attack_vector: "NETWORK",
+        attack_complexity: "LOW",
+        attack_requirements: "NONE",
+        privileges_required: "NONE",
+        user_interaction: "NONE",
+        confidentiality_impact_vulnerable: "NONE",
+        integrity_impact_vulnerable: "NONE",
+        availability_impact_vulnerable: "NONE",
+        confidentiality_impact_subsequent: "NEGLIGIBLE",
+        integrity_impact_subsequent: "NEGLIGIBLE",
+        availability_impact_subsequent: "NEGLIGIBLE",
+      };
+
+      expect(noImpact.base_score).toBe(0.0);
+      expect(noImpact.confidentiality_impact_vulnerable).toBe("NONE");
+      expect(noImpact.confidentiality_impact_subsequent).toBe("NEGLIGIBLE");
+    });
+
+    it("should handle critical severity CVSS 4.0 score (like Log4Shell equivalent)", () => {
+      const criticalVuln: CVSS4 = {
+        base_score: 10.0,
+        attack_vector: "NETWORK",
+        attack_complexity: "LOW",
+        attack_requirements: "NONE",
+        privileges_required: "NONE",
+        user_interaction: "NONE",
+        confidentiality_impact_vulnerable: "HIGH",
+        integrity_impact_vulnerable: "HIGH",
+        availability_impact_vulnerable: "HIGH",
+        confidentiality_impact_subsequent: "HIGH",
+        integrity_impact_subsequent: "HIGH",
+        availability_impact_subsequent: "HIGH",
+        exploit_maturity: "ATTACKED",
+        automatable: "YES",
+        recovery: "IRRECOVERABLE",
+      };
+
+      expect(criticalVuln.base_score).toBe(10.0);
+      expect(criticalVuln.exploit_maturity).toBe("ATTACKED");
+      expect(criticalVuln.automatable).toBe("YES");
     });
   });
 });

@@ -6,7 +6,7 @@
     "assets": [
       {
         "include": "base_modules/email/templates/**/*",
-        "outDir": "dist/src"
+        "outDir": "dist"
       }
     ],
     "deleteOutDir": true

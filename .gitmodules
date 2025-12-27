@@ -1,3 +1,0 @@
-[submodule "cvss-parser-js"]
-	path = cvss-parser-js
-	url = https://github.com/CodeClarityCE/cvss-parser-js.git

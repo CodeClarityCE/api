@@ -6,10 +6,10 @@ const isTs = __filename.endsWith(".ts");
 const entities = [
   isTs
     ? "src/base_modules/plugins/plugin.entity.ts"
-    : "dist/src/base_modules/plugins/plugin.entity.js",
+    : "dist/base_modules/plugins/plugin.entity.js",
 ];
 const migrations = [
-  isTs ? "src/migrations/plugins/*.ts" : "dist/src/migrations/plugins/*.js",
+  isTs ? "src/migrations/plugins/*.ts" : "dist/migrations/plugins/*.js",
 ];
 
 export const PluginsDataSource = new DataSource({
