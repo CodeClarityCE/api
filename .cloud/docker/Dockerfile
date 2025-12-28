@@ -3,7 +3,7 @@
 ARG USERNAME=codeclarity
 
 # Dev image
-FROM node:25.0.0-alpine AS api-dev
+FROM node:25.2.1-alpine AS api-dev
 RUN npm i -g @nestjs/cli
 WORKDIR /app
 RUN npm install -g corepack --force
@@ -12,7 +12,7 @@ ENTRYPOINT ["/bin/sh", "-c" , "yarn set version stable && yarn install && yarn r
 # CMD  /bin/sh -c "while sleep 1000; do :; done"
 
 # Build image
-FROM node:25.0.0-alpine AS api-build
+FROM node:25.2.1-alpine AS api-build
 WORKDIR /app
 COPY . .
 # RUN yarn set version stable
@@ -21,7 +21,7 @@ RUN yarn build
 # RUN apk --no-cache add --virtual builds-dependencies build-base python3 make && npm rebuild bcrypt --build-from-source
 
 # Prod image
-FROM node:25.0.0-alpine AS api
+FROM node:25.2.1-alpine AS api
 ARG USERNAME
 RUN adduser -D ${USERNAME}
 USER ${USERNAME}
