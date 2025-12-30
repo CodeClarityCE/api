@@ -8,26 +8,40 @@ export class Init1754648228805 implements MigrationInterface {
     // The knowledge database should only contain knowledge-specific tables
     // All tables here have been removed as they belong in the codeclarity database
 
-    // Check if indexes already exist (from database restore) before creating
-    // This prevents errors when the database is restored from dumps
-    const osvIndexExists = await queryRunner.query(`
-            SELECT 1 FROM pg_indexes WHERE indexname = 'osv_affected_gin_pathops_idx'
-        `);
+    // Check if tables exist (they are created by Go knowledge service, not TypeORM)
+    // If tables don't exist yet, skip index creation - they'll be indexed when populated
+    const osvTableExists = await queryRunner.query(`
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'osv'
+    `);
 
-    if (!osvIndexExists || osvIndexExists.length === 0) {
-      await queryRunner.query(
-        `CREATE INDEX "osv_affected_gin_pathops_idx" ON "osv" USING gin ("affected" jsonb_path_ops)`,
-      );
+    if (osvTableExists && osvTableExists.length > 0) {
+      const osvIndexExists = await queryRunner.query(`
+        SELECT 1 FROM pg_indexes WHERE indexname = 'osv_affected_gin_pathops_idx'
+      `);
+
+      if (!osvIndexExists || osvIndexExists.length === 0) {
+        await queryRunner.query(
+          `CREATE INDEX "osv_affected_gin_pathops_idx" ON "osv" USING gin ("affected" jsonb_path_ops)`,
+        );
+      }
     }
 
-    const nvdIndexExists = await queryRunner.query(`
-            SELECT 1 FROM pg_indexes WHERE indexname = 'nvd_affectedflattened_gin_pathops_idx'
-        `);
+    const nvdTableExists = await queryRunner.query(`
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'nvd'
+    `);
 
-    if (!nvdIndexExists || nvdIndexExists.length === 0) {
-      await queryRunner.query(
-        `CREATE INDEX "nvd_affectedflattened_gin_pathops_idx" ON "nvd" USING gin ("affectedFlattened" jsonb_path_ops)`,
-      );
+    if (nvdTableExists && nvdTableExists.length > 0) {
+      const nvdIndexExists = await queryRunner.query(`
+        SELECT 1 FROM pg_indexes WHERE indexname = 'nvd_affectedflattened_gin_pathops_idx'
+      `);
+
+      if (!nvdIndexExists || nvdIndexExists.length === 0) {
+        await queryRunner.query(
+          `CREATE INDEX "nvd_affectedflattened_gin_pathops_idx" ON "nvd" USING gin ("affectedFlattened" jsonb_path_ops)`,
+        );
+      }
     }
   }
 
