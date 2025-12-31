@@ -29,16 +29,26 @@ import { OutdatedController } from "./package/outdated.controller";
 import { OutdatedCheckService } from "./package/outdated.service";
 import { PackageRepository } from "./package/package.repository";
 import { VersionsRepository } from "./package/packageVersions.repository";
-import { VulnerabilityController } from "./vulnerability/vulnerability.controller";
-import { VulnerabilitySearchService } from "./vulnerability/vulnerability.service";
 import { PackageVulnerability } from "./package-vulnerability/package-vulnerability.entity";
 import { VulnerabilityCheckController } from "./package-vulnerability/vulnerability-check.controller";
 import { VulnerabilityCheckService } from "./package-vulnerability/vulnerability-check.service";
+import { VulnerabilityController } from "./vulnerability/vulnerability.controller";
+import { VulnerabilitySearchService } from "./vulnerability/vulnerability.service";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature(
-      [License, CWE, Package, NVD, OSV, Version, EPSS, FriendsOfPhp, PackageVulnerability],
+      [
+        License,
+        CWE,
+        Package,
+        NVD,
+        OSV,
+        Version,
+        EPSS,
+        FriendsOfPhp,
+        PackageVulnerability,
+      ],
       "knowledge",
     ),
   ],
@@ -78,6 +88,11 @@ import { VulnerabilityCheckService } from "./package-vulnerability/vulnerability
     OutdatedCheckService,
     VulnerabilityCheckService,
   ],
-  controllers: [LicenseController, VulnerabilityController, OutdatedController, VulnerabilityCheckController],
+  controllers: [
+    LicenseController,
+    VulnerabilityController,
+    OutdatedController,
+    VulnerabilityCheckController,
+  ],
 })
 export class KnowledgeModule {}

@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { compare as semverCompare, valid as semverValid } from "semver";
 import { Repository, In } from "typeorm";
-import { Package } from "./package.entity";
 import {
   OutdatedCheckRequestBody,
   OutdatedCheckResponse,
@@ -10,6 +9,7 @@ import {
   PackageVersionResult,
   PackageVersionRequestItem,
 } from "./outdated.types";
+import { Package } from "./package.entity";
 
 @Injectable()
 export class OutdatedCheckService {
@@ -131,7 +131,7 @@ export class OutdatedCheckService {
 
     // Build results
     for (const pkg of packages) {
-      const latestVersion = packageMap.get(pkg.name) || null;
+      const latestVersion = packageMap.get(pkg.name) ?? null;
       const result: PackageVersionResult = {
         name: pkg.name,
         currentVersion: pkg.currentVersion,

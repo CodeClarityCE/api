@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class AddExternalStatusToTicket1765100000000
-  implements MigrationInterface
-{
+export class AddExternalStatusToTicket1765100000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Add external_status column to ticket table
     await queryRunner.query(
