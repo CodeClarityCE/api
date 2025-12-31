@@ -1,11 +1,12 @@
 import { Injectable } from "@nestjs/common";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { LicenseRepository } from "src/codeclarity_modules/knowledge/license/license.repository";
 import { Version } from "src/codeclarity_modules/knowledge/package/package.entity";
 import {
-  Output as LicensesOutput,
-  LicenseInfo,
   DepShortInfo,
+  LicenseInfo,
+  Output as LicensesOutput,
 } from "src/codeclarity_modules/results/licenses/licenses.types";
 import { filter } from "src/codeclarity_modules/results/licenses/utils/filter";
 import { sort } from "src/codeclarity_modules/results/licenses/utils/sort";
@@ -17,8 +18,10 @@ import {
 import { paginate } from "src/codeclarity_modules/results/utils/utils";
 import { PaginatedResponse } from "src/types/apiResponses.types";
 import { UnknownWorkspace } from "src/types/error.types";
+
 import { AnalysisResultsService } from "../results.service";
 import { SbomUtilsService } from "../sbom/utils/utils";
+
 import { LicensesUtilsService } from "./utils/utils";
 
 /** Query options for licenses list endpoint */

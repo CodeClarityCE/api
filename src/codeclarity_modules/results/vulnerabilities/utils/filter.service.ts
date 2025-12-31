@@ -1,10 +1,11 @@
 import { Injectable } from "@nestjs/common";
+
 import {
-  isNoneSeverity,
+  isCriticalSeverity,
+  isHighSeverity,
   isLowSeverity,
   isMediumSeverity,
-  isHighSeverity,
-  isCriticalSeverity,
+  isNoneSeverity,
 } from "src/codeclarity_modules/results/utils/utils";
 import {
   ConflictFlag,

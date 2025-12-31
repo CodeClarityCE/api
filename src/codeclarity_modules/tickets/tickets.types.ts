@@ -1,16 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
+  IsArray,
+  IsDateString,
   IsEnum,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
   MaxLength,
-  IsNumber,
-  IsDateString,
-  IsArray,
 } from "class-validator";
-import { ExternalTicketProvider } from "./ticket-external-link.entity";
+
 import { TicketPriority, TicketStatus, TicketType } from "./ticket.entity";
+import { ExternalTicketProvider } from "./ticket-external-link.entity";
 
 // ============================================
 // Request DTOs

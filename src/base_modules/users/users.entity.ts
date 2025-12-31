@@ -1,17 +1,18 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Expose } from "class-transformer";
 import {
-  Entity,
   Column,
-  PrimaryGeneratedColumn,
-  OneToMany,
-  Relation,
-  ManyToMany,
-  JoinTable,
-  ManyToOne,
-  JoinColumn,
+  Entity,
   Index,
+  JoinColumn,
+  JoinTable,
+  ManyToMany,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  Relation,
 } from "typeorm";
+
 import type { Policy } from "../../codeclarity_modules/policies/policy.entity";
 import type { Analysis } from "../analyses/analysis.entity";
 import type { Analyzer } from "../analyzers/analyzer.entity";

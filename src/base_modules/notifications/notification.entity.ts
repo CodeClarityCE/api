@@ -1,13 +1,14 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Expose } from "class-transformer";
 import {
-  Entity,
   Column,
-  PrimaryGeneratedColumn,
-  ManyToMany,
-  Relation,
+  Entity,
   JoinTable,
+  ManyToMany,
+  PrimaryGeneratedColumn,
+  Relation,
 } from "typeorm";
+
 import type { User } from "../users/users.entity";
 
 enum NotificationType {

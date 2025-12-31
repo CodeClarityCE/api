@@ -1,16 +1,18 @@
 import { Reflector } from "@nestjs/core";
 import { JwtService } from "@nestjs/jwt";
 import { Test, type TestingModule } from "@nestjs/testing";
+
 import {
-  EntityNotFound,
-  NotAuthorized,
-  NotAuthenticated,
   CannotLeaveAsOwner,
+  EntityNotFound,
+  NotAuthenticated,
+  NotAuthorized,
   PersonalOrgCannotBeModified,
 } from "../../types/error.types";
 import { SortDirection } from "../../types/sort.types";
 import { AuthenticatedUser, ROLE } from "../auth/auth.types";
 import { CombinedAuthGuard } from "../auth/guards/combined.guard";
+
 import { OrganizationLoggerService } from "./log/organizationLogger.service";
 import type { OrganizationCreateBody } from "./org.types";
 import type { Organization } from "./organization.entity";

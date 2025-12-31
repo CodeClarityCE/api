@@ -1,6 +1,7 @@
 import { createParamDecorator, type ExecutionContext } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import type { Socket } from "socket.io";
+
 import type { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 
 /** Extended FastifyRequest with user property from auth guard */

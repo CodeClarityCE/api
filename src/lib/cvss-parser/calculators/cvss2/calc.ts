@@ -4,17 +4,17 @@
  */
 
 import {
-  type CVSS2Info,
-  AccessVector,
   AccessComplexity,
+  AccessVector,
   Authentication,
-  Impact,
+  CollateralDamagePotential,
+  type CVSS2Info,
   Exploitability,
+  Impact,
   RemediationLevel,
   ReportConfidence,
-  CollateralDamagePotential,
-  TargetDistribution,
   SecurityRequirements,
+  TargetDistribution,
 } from "../../types/fields/cvss2";
 import { roundUp } from "../../utils/utils";
 

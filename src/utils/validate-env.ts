@@ -1,15 +1,16 @@
 // Import necessary modules and utilities
-import "reflect-metadata";
-import { Transform, plainToInstance } from "class-transformer";
+import { plainToInstance, Transform } from "class-transformer";
 import {
   IsEmail,
   IsEnum,
   IsNotEmpty,
   IsNumber,
-  ValidationError,
   validateSync,
+  ValidationError,
 } from "class-validator";
 import * as dotenv from "dotenv";
+
+import "reflect-metadata";
 
 /**
  * Enum representing the different environments.

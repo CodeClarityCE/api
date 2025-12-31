@@ -1,5 +1,7 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
+import { In, type Repository } from "typeorm";
+
 import type { Package } from "src/codeclarity_modules/knowledge/package/package.entity";
 import { PackageRepository } from "src/codeclarity_modules/knowledge/package/package.repository";
 import { Result } from "src/codeclarity_modules/results/result.entity";
@@ -8,11 +10,12 @@ import {
   PluginResultNotAvailable,
   UnknownWorkspace,
 } from "src/types/error.types";
-import { In, type Repository } from "typeorm";
+
 import { LicensesUtilsService } from "../../licenses/utils/utils";
 import { VulnerabilitiesUtilsService } from "../../vulnerabilities/utils/utils.service";
 import type { Output as VulnsOutput } from "../../vulnerabilities/vulnerabilities.types";
-import { Status, type Output as SBOMOutput } from "../sbom.types";
+import { type Output as SBOMOutput, Status } from "../sbom.types";
+
 import { SbomUtilsService } from "./utils";
 
 describe("SbomUtilsService", () => {

@@ -1,4 +1,4 @@
-import { hash, genRandomString } from "./crypto";
+import { genRandomString, hash } from "./crypto";
 
 describe("crypto utilities", () => {
   describe("hash", () => {

@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import {
   ActionType,
@@ -12,10 +13,11 @@ import {
   UsersRepository,
 } from "src/base_modules/shared/repositories";
 import {
-  TypedPaginatedData,
   PaginationUserSuppliedConf,
+  TypedPaginatedData,
 } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
+
 import { Log } from "./log.entity";
 
 /**

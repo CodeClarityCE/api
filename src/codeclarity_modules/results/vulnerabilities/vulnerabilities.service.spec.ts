@@ -1,4 +1,5 @@
 import { Test, type TestingModule } from "@nestjs/testing";
+
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
 import { AnalysesRepository } from "src/base_modules/shared/repositories";
 import { CWERepository } from "src/codeclarity_modules/knowledge/cwe/cwe.repository";
@@ -7,8 +8,10 @@ import { NVDRepository } from "src/codeclarity_modules/knowledge/nvd/nvd.reposit
 import { OSVRepository } from "src/codeclarity_modules/knowledge/osv/osv.repository";
 import { VulnerabilityPolicyService } from "src/codeclarity_modules/policies/vulnerability/vulnerability.service";
 import { UnknownWorkspace } from "src/types/error.types";
+
 import { AnalysisResultsService } from "../results.service";
 import { SbomUtilsService } from "../sbom/utils/utils";
+
 import { VulnerabilitiesFilterService } from "./utils/filter.service";
 import { VulnerabilitiesSortService } from "./utils/sort.service";
 import { VulnerabilitiesUtilsService } from "./utils/utils.service";

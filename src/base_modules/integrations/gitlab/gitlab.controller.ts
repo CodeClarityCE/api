@@ -11,6 +11,7 @@ import {
   Query,
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import {
   GitlabIntegration,
@@ -45,6 +46,7 @@ import {
   NotAuthorized,
 } from "src/types/error.types";
 import { SortDirection } from "src/types/sort.types";
+
 import { GitlabIntegrationService } from "./gitlab.service";
 import { GitlabRepositoriesService } from "./gitlabRepos.service";
 

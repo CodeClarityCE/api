@@ -1,13 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { compare as semverCompare, valid as semverValid } from "semver";
-import { Repository, In } from "typeorm";
+import { In, Repository } from "typeorm";
+
 import {
   OutdatedCheckRequestBody,
   OutdatedCheckResponse,
   PackageEcosystem,
-  PackageVersionResult,
   PackageVersionRequestItem,
+  PackageVersionResult,
 } from "./outdated.types";
 import { Package } from "./package.entity";
 

@@ -1,10 +1,11 @@
 import {
-  Entity,
   Column,
+  Entity,
+  ManyToOne,
   PrimaryGeneratedColumn,
   Relation,
-  ManyToOne,
 } from "typeorm";
+
 import type { User } from "../users/users.entity";
 
 export enum EmailType {

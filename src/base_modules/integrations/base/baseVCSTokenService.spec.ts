@@ -4,6 +4,7 @@ import {
   IntegrationTokenMissingPermissions,
   IntegrationTokenRetrievalFailed,
 } from "src/types/error.types";
+
 import { BaseVCSTokenService } from "./baseVCSTokenService";
 
 // Mock implementation for testing

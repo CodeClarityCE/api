@@ -1,16 +1,16 @@
 import {
-  newVulnerabilityAnalysisStats,
-  type VulnSourceInfo,
-  type VersionInfoReport,
-  type VulnerableVersionInfoReport,
-  type DependencyInfoReport,
-  type PackageManagerLink,
-  type SeverityInfo,
-  type WeaknessInfoReport,
   type CommonConsequencesInfo,
-  type ReferenceInfo,
+  type DependencyInfoReport,
+  newVulnerabilityAnalysisStats,
   type OtherInfo,
+  type PackageManagerLink,
+  type ReferenceInfo,
+  type SeverityInfo,
+  type VersionInfoReport,
   type VulnerabilityDetailsReport,
+  type VulnerableVersionInfoReport,
+  type VulnSourceInfo,
+  type WeaknessInfoReport,
 } from "./vulnerabilities.types";
 
 describe("vulnerabilities.types (report generation)", () => {

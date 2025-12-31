@@ -1,9 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { In, Repository } from "typeorm";
+
 import { Analysis } from "src/base_modules/analyses/analysis.entity";
 import { EntityNotFound, NotAuthorized } from "src/types/error.types";
 import { TypedPaginatedData } from "src/types/pagination.types";
-import { Repository, In } from "typeorm";
 
 /**
  * A repository for handling analysis-related database operations.

@@ -1,7 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { EntityNotFound } from "src/types/error.types";
 import { Repository } from "typeorm";
+
+import { EntityNotFound } from "src/types/error.types";
+
 import { Invitation } from "./invitation.entity";
 
 /**

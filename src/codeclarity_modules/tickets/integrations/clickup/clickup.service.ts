@@ -1,42 +1,44 @@
-import { Injectable, Logger, BadRequestException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+
+import { Ticket, TicketPriority, TicketStatus } from "../../ticket.entity";
 import { ExternalTicketProvider } from "../../ticket-external-link.entity";
 import {
-  IntegrationConfig,
-  ClickUpConfig,
   ClickUpAuthMethod,
+  ClickUpConfig,
+  IntegrationConfig,
 } from "../../ticket-integration-config.entity";
-import { Ticket, TicketPriority, TicketStatus } from "../../ticket.entity";
 import {
-  ITicketIntegrationProvider,
-  ExternalTicketResult,
   ConnectionTestResult,
-  OAuthTokenResponse,
-  ExternalWorkspace,
-  ExternalSpace,
   ExternalFolder,
   ExternalList,
+  ExternalSpace,
+  ExternalTicketResult,
+  ExternalWorkspace,
   formatTicketDescription,
+  ITicketIntegrationProvider,
+  OAuthTokenResponse,
 } from "../integration-provider.interface";
+
 import {
   CLICKUP_API_BASE_URL,
   CLICKUP_OAUTH_URL,
-  ClickUpPriorityValue,
   ClickUpAuthorizedUserResponse,
-  ClickUpTeamsResponse,
-  ClickUpSpacesResponse,
-  ClickUpFoldersResponse,
-  ClickUpListsResponse,
-  ClickUpTask,
-  ClickUpCreateTaskRequest,
-  ClickUpUpdateTaskRequest,
-  ClickUpOAuthTokenResponse,
-  ClickUpCreateSpaceRequest,
   ClickUpCreateFolderRequest,
   ClickUpCreateListRequest,
-  ClickUpSpace,
+  ClickUpCreateSpaceRequest,
+  ClickUpCreateTaskRequest,
   ClickUpFolder,
+  ClickUpFoldersResponse,
   ClickUpList,
+  ClickUpListsResponse,
+  ClickUpOAuthTokenResponse,
+  ClickUpPriorityValue,
+  ClickUpSpace,
+  ClickUpSpacesResponse,
+  ClickUpTask,
+  ClickUpTeamsResponse,
+  ClickUpUpdateTaskRequest,
 } from "./clickup.types";
 
 /**

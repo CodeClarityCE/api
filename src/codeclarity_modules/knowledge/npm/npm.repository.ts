@@ -1,8 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+
 import { Package } from "src/codeclarity_modules/knowledge/package/package.entity";
 import { EntityNotFound } from "src/types/error.types";
-import { Repository } from "typeorm";
 
 @Injectable()
 export class NPMPackageRepository {

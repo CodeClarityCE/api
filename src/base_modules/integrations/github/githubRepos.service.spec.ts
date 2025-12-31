@@ -1,11 +1,13 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
+import type { Repository } from "typeorm";
+
 import {
   IntegrationsRepository,
   MembershipsRepository,
   OrganizationsRepository,
 } from "src/base_modules/shared/repositories";
-import type { Repository } from "typeorm";
+
 import {
   EntityNotFound,
   FailedToRetrieveReposFromProvider,
@@ -20,6 +22,7 @@ import {
   RepositoryType,
 } from "../../projects/repositoryCache.entity";
 import type { GithubIntegrationToken } from "../Token";
+
 import { GithubIntegrationService } from "./github.service";
 import type { GithubRepositorySchema } from "./github.types";
 import { GithubRepositoriesService } from "./githubRepos.service";

@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+
 import { AnalysesModule } from "../base_modules/analyses/analyses.module";
 import { AnalyzersModule } from "../base_modules/analyzers/analyzers.module";
 import { ApiKeysModule } from "../base_modules/apiKeys/apiKeys.module";

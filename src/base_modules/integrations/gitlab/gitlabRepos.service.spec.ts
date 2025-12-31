@@ -1,11 +1,13 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
+import type { Repository } from "typeorm";
+
 import {
   IntegrationsRepository,
   MembershipsRepository,
   OrganizationsRepository,
 } from "src/base_modules/shared/repositories";
-import type { Repository } from "typeorm";
+
 import { EntityNotFound, NotAuthorized } from "../../../types/error.types";
 import type { PaginationUserSuppliedConf } from "../../../types/pagination.types";
 import { SortDirection } from "../../../types/sort.types";
@@ -16,11 +18,12 @@ import {
   RepositoryType,
 } from "../../projects/repositoryCache.entity";
 import {
+  type Integration,
   IntegrationProvider,
   IntegrationType,
-  type Integration,
 } from "../integrations.entity";
 import type { GitlabIntegrationToken } from "../Token";
+
 import { GitlabIntegrationService } from "./gitlab.service";
 import { GitlabTokenType } from "./gitlabIntegration.types";
 import { GitlabRepositoriesService } from "./gitlabRepos.service";

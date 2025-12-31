@@ -1,10 +1,13 @@
 import { Test, type TestingModule } from "@nestjs/testing";
+
 import {
   IntegrationInvalidToken,
   IntegrationTokenMissingPermissions,
   IntegrationTokenRetrievalFailed,
 } from "src/types/error.types";
+
 import type { User } from "../../users/users.entity";
+
 import { GitlabIntegrationTokenService } from "./gitlabToken.service";
 
 // Mock fetch globally

@@ -1,15 +1,15 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Delete,
   Body,
-  Param,
-  Query,
-  ValidationPipe,
-  UseGuards,
   CanActivate,
+  Controller,
+  Delete,
   ExecutionContext,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+  ValidationPipe,
 } from "@nestjs/common";
 import { APP_PIPE } from "@nestjs/core";
 import {
@@ -20,13 +20,13 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { Transform } from "class-transformer";
 import {
   IsEmail,
-  IsString,
-  MinLength,
-  IsUUID,
-  IsOptional,
   IsInt,
-  Min,
+  IsOptional,
+  IsString,
+  IsUUID,
   Max,
+  Min,
+  MinLength,
 } from "class-validator";
 
 // Mock Authorization Guard

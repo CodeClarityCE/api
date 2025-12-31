@@ -5,6 +5,7 @@ import {
   IntegrationTokenRefreshFailed,
   IntegrationWrongTokenType,
 } from "src/types/error.types";
+
 import type { GithubIntegrationTokenService } from "./github/githubToken.service";
 import type { GitlabIntegrationTokenService } from "./gitlab/gitlabToken.service";
 

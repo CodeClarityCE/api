@@ -1,4 +1,5 @@
 import { satisfies } from "semver";
+
 import type {
   PaginationConfig,
   PaginationUserSuppliedConf,

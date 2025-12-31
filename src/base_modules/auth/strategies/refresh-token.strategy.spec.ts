@@ -6,9 +6,11 @@ jest.mock("fs", () => ({
   readFileSync: jest.fn(),
 }));
 
-import * as fs from "fs";
 import { Test, type TestingModule } from "@nestjs/testing";
+import * as fs from "fs";
+
 import { type JwtPayload, ROLE } from "../auth.types";
+
 import { RefreshJWTStrategy } from "./refresh-token.strategy";
 
 describe("RefreshJWTStrategy", () => {

@@ -1,4 +1,5 @@
 import type { SbomDependency } from "../sbom.types";
+
 import { filter } from "./filter";
 
 describe("filter", () => {

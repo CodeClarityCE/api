@@ -1,10 +1,12 @@
 import { Test, type TestingModule } from "@nestjs/testing";
+
 import {
   IntegrationsRepository,
   MembershipsRepository,
   OrganizationsRepository,
   UsersRepository,
 } from "src/base_modules/shared/repositories";
+
 import {
   DuplicateIntegration,
   EntityNotFound,
@@ -22,16 +24,17 @@ import { MemberRole } from "../../organizations/memberships/orgMembership.types"
 import type { Organization } from "../../organizations/organization.entity";
 import type { User } from "../../users/users.entity";
 import {
+  type Integration,
   IntegrationProvider,
   IntegrationType,
-  type Integration,
 } from "../integrations.entity";
+
 import { GitlabIntegrationService } from "./gitlab.service";
 import {
-  type LinkGitlabCreateBody,
-  type LinkGitlabPatchBody,
   GitlabIntegration,
   GitlabTokenType,
+  type LinkGitlabCreateBody,
+  type LinkGitlabPatchBody,
 } from "./gitlabIntegration.types";
 import { GitlabIntegrationTokenService } from "./gitlabToken.service";
 

@@ -1,6 +1,7 @@
 // import { getVersionsSatisfyingConstraint } from 'src/codeclarity_modules/results/utils/utils';
 import { Injectable } from "@nestjs/common";
 import { satisfies } from "semver";
+
 import {
   CVSS2,
   CVSS3,
@@ -20,18 +21,18 @@ import { VersionsRepository } from "src/codeclarity_modules/knowledge/package/pa
 import { PatchInfo } from "src/codeclarity_modules/results/patching/patching.types";
 import { Dependency } from "src/codeclarity_modules/results/sbom/sbom.types";
 import {
-  Vulnerability,
   AffectedInfo,
   AffectedRange,
+  CommonConsequencesInfo,
+  DependencyInfoReport,
+  OtherInfo,
+  ReferenceInfo,
+  SeverityInfo,
+  Vulnerability,
   VulnerabilityDetailsReport,
   VulnerabilityInfoReport,
   VulnerableVersionInfoReport,
-  DependencyInfoReport,
-  CommonConsequencesInfo,
   WeaknessInfoReport,
-  ReferenceInfo,
-  SeverityInfo,
-  OtherInfo,
 } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
 
 // Type definitions for NVD affected data structure

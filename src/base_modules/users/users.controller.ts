@@ -1,21 +1,22 @@
 import {
-  Controller,
-  Post,
   Body,
-  Get,
-  Patch,
+  Controller,
   Delete,
+  Get,
   Param,
+  Patch,
+  Post,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import {
   DefaultOrgPatchBody,
   DeleteAccountBody,
+  RegistrationConfirmationBody,
   ResendAccountRegEmailBody,
   UserCompleteSocialCreateBody,
   UserPasswordPatchBody,
-  RegistrationConfirmationBody,
   UserPatchBody,
 } from "src/base_modules/users/user.types";
 import { User } from "src/base_modules/users/users.entity";
@@ -36,15 +37,17 @@ import {
   NotAuthorized,
   Unsupported,
 } from "src/types/error.types";
+
 import {
   AccountRegistrationVerificationTokenInvalidOrExpired,
   PasswordsDoNotMatch,
 } from "../auth/auth.errors";
+
 import {
-  SetupAlreadyDone,
-  FailedToSendAccountRegistrationVerificationEmail,
   CannotPerformActionOnNormalAccount,
   CannotPerformActionOnSocialAccount,
+  FailedToSendAccountRegistrationVerificationEmail,
+  SetupAlreadyDone,
 } from "./users.errors";
 import { UsersService } from "./users.service";
 

@@ -1,4 +1,5 @@
 import { gt, lt } from "semver";
+
 import type { SbomDependency } from "src/codeclarity_modules/results/sbom/sbom.types";
 
 function sort(

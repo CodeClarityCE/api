@@ -1,5 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { In, Not, Repository } from "typeorm";
+
 import {
   Analysis,
   AnalysisStatus,
@@ -7,9 +9,9 @@ import {
 import { Organization } from "src/base_modules/organizations/organization.entity";
 import { Result } from "src/codeclarity_modules/results/result.entity";
 import { Output as VulnsOutput } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
-import { In, Not, Repository } from "typeorm";
-import { TicketEvent, TicketEventType } from "../ticket-event.entity";
+
 import { Ticket, TicketStatus } from "../ticket.entity";
+import { TicketEvent, TicketEventType } from "../ticket-event.entity";
 
 /**
  * Service for automating ticket lifecycle operations.

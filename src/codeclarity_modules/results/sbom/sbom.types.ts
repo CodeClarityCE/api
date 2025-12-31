@@ -1,4 +1,5 @@
 import { Expose } from "class-transformer";
+
 import type { Source } from "src/codeclarity_modules/knowledge/package/package.entity";
 
 export interface SeverityDist {

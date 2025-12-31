@@ -8,6 +8,7 @@ import {
   Query,
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { Integration } from "src/base_modules/integrations/integrations.entity";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
@@ -23,7 +24,9 @@ import {
   NotAuthenticated,
   NotAuthorized,
 } from "src/types/error.types";
+
 import { OrganizationsRepository } from "../shared/repositories";
+
 import { IntegrationsRepository } from "./integrations.repository";
 import { IntegrationsService } from "./integrations.service";
 

@@ -1,6 +1,8 @@
-import "reflect-metadata";
 import { DataSource } from "typeorm";
+
 import { buildBaseOptions } from "./base-options";
+
+import "reflect-metadata";
 
 const isTs = __filename.endsWith(".ts");
 const entities = [

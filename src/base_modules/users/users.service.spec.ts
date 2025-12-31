@@ -1,4 +1,5 @@
 import { Test, type TestingModule } from "@nestjs/testing";
+
 import {
   MembershipsRepository,
   OrganizationsRepository,
@@ -7,20 +8,22 @@ import {
 } from "src/base_modules/shared/repositories";
 import { NotAuthorized } from "src/types/error.types";
 import * as crypto from "src/utils/crypto";
+
 import {
   AccountRegistrationVerificationTokenInvalidOrExpired,
   PasswordsDoNotMatch,
 } from "../auth/auth.errors";
 import { AuthService } from "../auth/auth.service";
 import { AuthenticatedUser, ROLE } from "../auth/auth.types";
-import { EmailType, type Email } from "../email/email.entity";
+import { type Email, EmailType } from "../email/email.entity";
 import { EmailRepository } from "../email/email.repository";
 import { EmailService } from "../email/email.service";
 import {
-  type OrganizationMemberships,
   MemberRole,
+  type OrganizationMemberships,
 } from "../organizations/memberships/organization.memberships.entity";
 import type { Organization } from "../organizations/organization.entity";
+
 import type {
   UserCreateBody,
   UserPasswordPatchBody,

@@ -1,4 +1,3 @@
-/* eslint-disable import/order */
 import { Global, Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 
@@ -14,14 +13,14 @@ import { User } from "src/base_modules/users/users.entity";
 
 // Shared Repositories
 import {
-  UsersRepository,
-  OrganizationsRepository,
-  MembershipsRepository,
-  InvitationsRepository,
-  ProjectsRepository,
   AnalysesRepository,
   IntegrationsRepository,
+  InvitationsRepository,
   LogsRepository,
+  MembershipsRepository,
+  OrganizationsRepository,
+  ProjectsRepository,
+  UsersRepository,
 } from "./repositories";
 
 /**

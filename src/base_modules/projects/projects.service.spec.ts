@@ -1,10 +1,12 @@
 import { Test, type TestingModule } from "@nestjs/testing";
+
 import {
   MembershipsRepository,
   OrganizationsRepository,
   ProjectsRepository,
   UsersRepository,
 } from "src/base_modules/shared/repositories";
+
 import { AnalysisResultsRepository } from "../../codeclarity_modules/results/results.repository";
 import {
   EntityNotFound,
@@ -21,10 +23,11 @@ import type { IntegrationProvider } from "../integrations/integration.types";
 import { IntegrationsRepository } from "../integrations/integrations.repository";
 import { OrganizationLoggerService } from "../organizations/log/organizationLogger.service";
 import { MemberRole } from "../organizations/memberships/orgMembership.types";
+
 import type { Project } from "./project.entity";
 import type { ProjectImportBody } from "./project.types";
 import { ProjectMemberService } from "./projectMember.service";
-import { ProjectService, AllowedOrderByGetProjects } from "./projects.service";
+import { AllowedOrderByGetProjects, ProjectService } from "./projects.service";
 
 describe("ProjectService", () => {
   let service: ProjectService;

@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import {
   GithubTokenType,
@@ -29,7 +30,9 @@ import {
   NotAMember,
   NotAuthorized,
 } from "src/types/error.types";
+
 import { GithubIntegrationToken } from "../Token";
+
 import { GithubIntegrationTokenService } from "./githubToken.service";
 
 @Injectable()

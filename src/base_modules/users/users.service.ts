@@ -1,4 +1,5 @@
-import { Inject, Injectable, forwardRef } from "@nestjs/common";
+import { forwardRef, Inject, Injectable } from "@nestjs/common";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { Email, EmailType } from "src/base_modules/email/email.entity";
 import {
@@ -22,6 +23,7 @@ import {
 import { User } from "src/base_modules/users/users.entity";
 import { NotAuthorized } from "src/types/error.types";
 import { genRandomString, hash } from "src/utils/crypto";
+
 import {
   AccountRegistrationVerificationTokenInvalidOrExpired,
   PasswordsDoNotMatch,
@@ -29,6 +31,7 @@ import {
 import { AuthService } from "../auth/auth.service";
 import { EmailRepository } from "../email/email.repository";
 import { EmailService } from "../email/email.service";
+
 import {
   CannotPerformActionOnSocialAccount,
   FailedToSendAccountRegistrationVerificationEmail,

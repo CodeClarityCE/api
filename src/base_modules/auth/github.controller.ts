@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import axios, { AxiosError } from "axios";
 import { FastifyReply } from "fastify";
+
 import {
   GithubAuthenticatedUser,
   Oauth2FinalizeBody,
@@ -20,11 +21,12 @@ import { APIDocTypedResponseDecorator } from "src/decorators/TypedResponse";
 import { TypedResponse } from "src/types/apiResponses.types";
 import {
   AlreadyExists,
+  FailedToAuthenticateSocialAccount,
   IntegrationInvalidToken,
   IntegrationTokenMissingPermissions,
   IntegrationTokenRetrievalFailed,
-  FailedToAuthenticateSocialAccount,
 } from "src/types/error.types";
+
 import { AuthService } from "./auth.service";
 
 @Controller("auth/github")

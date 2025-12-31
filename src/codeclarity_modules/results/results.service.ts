@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
 import {
@@ -7,6 +8,7 @@ import {
   ProjectsRepository,
 } from "src/base_modules/shared/repositories";
 import { EntityNotFound } from "src/types/error.types";
+
 import { Result } from "./result.entity";
 import { AnalysisResultsRepository } from "./results.repository";
 

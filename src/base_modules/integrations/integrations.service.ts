@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { Integration } from "src/base_modules/integrations/integrations.entity";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
@@ -8,10 +9,12 @@ import {
   PaginationConfig,
   PaginationUserSuppliedConf,
 } from "src/types/pagination.types";
+
 import {
   MembershipsRepository,
   OrganizationsRepository,
 } from "../shared/repositories";
+
 import { IntegrationsRepository } from "./integrations.repository";
 
 @Injectable()

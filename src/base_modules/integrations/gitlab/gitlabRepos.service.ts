@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import ms from "ms";
+import { Repository } from "typeorm";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
 import {
@@ -19,8 +21,9 @@ import {
   PaginationUserSuppliedConf,
 } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
-import { Repository } from "typeorm";
+
 import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from "../github/constants";
+
 import { GitlabIntegrationService } from "./gitlab.service";
 
 /** GitLab API project response structure */

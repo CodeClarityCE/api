@@ -1,7 +1,8 @@
-import * as fs from "fs";
 import { Injectable } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
+import * as fs from "fs";
 import { ExtractJwt, Strategy } from "passport-jwt";
+
 import { JwtPayload, JwtValidationResult } from "../auth.types";
 
 @Injectable()

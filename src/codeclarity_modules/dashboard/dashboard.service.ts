@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
 import { Organization } from "src/base_modules/organizations/organization.entity";
@@ -25,7 +27,6 @@ import {
   TypedPaginatedData,
 } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
-import { Repository } from "typeorm";
 
 // Native Date API utility functions
 function subtractMonths(date: Date, months: number): Date {

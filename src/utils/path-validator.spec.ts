@@ -1,4 +1,5 @@
 import { sep } from "path";
+
 import { validateAndJoinPath } from "./path-validator";
 
 describe("validateAndJoinPath", () => {

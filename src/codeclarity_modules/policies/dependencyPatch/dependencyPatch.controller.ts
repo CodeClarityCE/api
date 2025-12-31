@@ -10,6 +10,7 @@ import {
   Post,
   Query,
 } from "@nestjs/common";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import {
   DependencyPatchPolicy,
@@ -23,6 +24,7 @@ import {
   TypedPaginatedResponse,
   TypedResponse,
 } from "src/types/apiResponses.types";
+
 import { DependencyPatchPolicyService } from "./dependencyPatch.service";
 
 @Controller("org/:org_id/policies/dependency_patch")

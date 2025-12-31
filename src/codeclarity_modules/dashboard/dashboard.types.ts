@@ -8,8 +8,10 @@ import {
   IsOptional,
   IsString,
 } from "class-validator";
+
 import { OptionalTransform } from "src/transformers/transformer";
 import { SortDirection } from "src/types/sort.types";
+
 import { IntegrationProvider } from "../../base_modules/integrations/integration.types";
 
 export class DashboardQueryOptions {

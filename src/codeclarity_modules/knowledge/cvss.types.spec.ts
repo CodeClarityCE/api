@@ -1,4 +1,4 @@
-import type { CVSS2, CVSS3, CVSS31, CVSS4 } from "./cvss.types";
+import type { CVSS2, CVSS3, CVSS4, CVSS31 } from "./cvss.types";
 
 describe("CVSS Types", () => {
   describe("CVSS2", () => {

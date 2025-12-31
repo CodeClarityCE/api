@@ -1,12 +1,13 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Expose } from "class-transformer";
 import {
-  Entity,
   Column,
-  PrimaryGeneratedColumn,
+  Entity,
   ManyToOne,
+  PrimaryGeneratedColumn,
   Relation,
 } from "typeorm";
+
 import type { Organization } from "../organization.entity";
 
 export enum ActionSeverity {

@@ -1,12 +1,15 @@
 import { forwardRef, Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+
 import { Analysis } from "src/base_modules/analyses/analysis.entity";
 import { Policy } from "src/codeclarity_modules/policies/policy.entity";
 import { LicenseModule } from "src/codeclarity_modules/results/licenses/licenses.module";
 import { ResultsModule } from "src/codeclarity_modules/results/results.module";
 import { SbomModule } from "src/codeclarity_modules/results/sbom/sbom.module";
 import { VulnerabilitiesModule } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.module";
+
 import { AnalyzersModule } from "../analyzers/analyzers.module";
+
 import { AnalysesController } from "./analyses.controller";
 import { AnalysesRepository } from "./analyses.repository";
 import { AnalysesService } from "./analyses.service";

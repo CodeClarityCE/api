@@ -3,6 +3,7 @@ import pluginJs from "@eslint/js";
 import tseslint from "typescript-eslint";
 import security from "eslint-plugin-security";
 import importPlugin from "eslint-plugin-import";
+import simpleImportSort from "eslint-plugin-simple-import-sort";
 import prettierConfig from "eslint-config-prettier";
 
 /** @type {import('eslint').Linter.Config[]} */
@@ -58,11 +59,7 @@ export default [
 
     plugins: {
       import: importPlugin,
-    },
-
-    settings: {
-      // Explicitly mark src/** as internal modules for import/order
-      'import/internal-regex': '^src/',
+      'simple-import-sort': simpleImportSort,
     },
 
     rules: {
@@ -272,24 +269,24 @@ export default [
 
       "import/no-unresolved": "off", // TypeScript handles this
       "import/no-duplicates": ["error"],
-      "import/order": [
+
+      // Use simple-import-sort for reliable import ordering
+      // Groups: external packages first, then src/ internal imports, then relative imports
+      "simple-import-sort/imports": [
         "warn",
         {
           "groups": [
-            "builtin",  // Node.js built-in modules
-            "external", // npm packages
-            "internal", // Internal modules (src/*) - via import/internal-regex
-            "parent",   // Parent directories (../)
-            "sibling",  // Same directory (./)
-            "index"     // Index files
-          ],
-          "newlines-between": "never",
-          "alphabetize": {
-            "order": "asc",
-            "caseInsensitive": true
-          }
+            // External packages (npm modules)
+            ["^@?\\w"],
+            // Internal src/ imports
+            ["^src/"],
+            // Parent imports (..)
+            ["^\\.\\."],
+            // Sibling imports (./)
+            ["^\\./"]]
         }
       ],
+      "simple-import-sort/exports": "warn",
 
     }
   },

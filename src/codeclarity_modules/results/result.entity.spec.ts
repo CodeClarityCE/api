@@ -1,9 +1,10 @@
 import { Analysis } from "../../base_modules/analyses/analysis.entity";
+
 import {
-  Result,
-  type ResultObject,
-  type ResultByAnalysisId,
   type AnalysisInfo,
+  Result,
+  type ResultByAnalysisId,
+  type ResultObject,
 } from "./result.entity";
 
 describe("Result Entity", () => {

@@ -1,12 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+
 import { Result } from "src/codeclarity_modules/results/result.entity";
 import {
-  Status,
   Output as VulnsOutput,
+  Status,
 } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
 import { PluginFailed, PluginResultNotAvailable } from "src/types/error.types";
-import { Repository } from "typeorm";
 
 @Injectable()
 export class VulnerabilitiesRepository {

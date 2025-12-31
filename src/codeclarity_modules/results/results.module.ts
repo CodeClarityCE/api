@@ -1,8 +1,10 @@
 import { forwardRef, Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+
 import { OrganizationsModule } from "src/base_modules/organizations/organizations.module";
 import { UsersModule } from "src/base_modules/users/users.module";
 import { Result } from "src/codeclarity_modules/results/result.entity";
+
 import { LicenseModule } from "./licenses/licenses.module";
 import { PatchingModule } from "./patching/patching.module";
 import { ResultsController } from "./results.controller";

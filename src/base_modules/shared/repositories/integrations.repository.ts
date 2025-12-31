@@ -1,9 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+
 import { Integration } from "src/base_modules/integrations/integrations.entity";
 import { TypedPaginatedResponse } from "src/types/apiResponses.types";
 import { EntityNotFound, NotAuthorized } from "src/types/error.types";
-import { Repository } from "typeorm";
 
 /**
  * Pure repository for integration database operations.

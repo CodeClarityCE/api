@@ -4,10 +4,11 @@ import { JwtService } from "@nestjs/jwt";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import * as bcrypt from "bcrypt";
+import type { DataSource, Repository } from "typeorm";
+
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
 import type { Organization } from "src/base_modules/organizations/organization.entity";
 import type { User } from "src/base_modules/users/users.entity";
-import type { Repository, DataSource } from "typeorm";
 
 /**
  * Test utilities for setting up NestJS applications and modules

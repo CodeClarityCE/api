@@ -1,7 +1,10 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+
 import { Analyzer } from "src/base_modules/analyzers/analyzer.entity";
+
 import { OrganizationsModule } from "../organizations/organizations.module";
+
 import { AnalyzerTemplatesService } from "./analyzer-templates.service";
 import {
   AnalyzersController,

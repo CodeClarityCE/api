@@ -1,12 +1,13 @@
 import {
-  Entity,
   Column,
-  PrimaryGeneratedColumn,
-  ManyToMany,
-  Relation,
+  Entity,
   JoinTable,
+  ManyToMany,
   ManyToOne,
+  PrimaryGeneratedColumn,
+  Relation,
 } from "typeorm";
+
 import { Analysis } from "../../base_modules/analyses/analysis.entity";
 import { Organization } from "../../base_modules/organizations/organization.entity";
 import { User } from "../../base_modules/users/users.entity";

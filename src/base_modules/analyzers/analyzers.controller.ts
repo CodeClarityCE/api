@@ -1,16 +1,17 @@
 import {
+  Body,
   Controller,
+  DefaultValuePipe,
+  Delete,
   Get,
+  Param,
+  ParseIntPipe,
   Post,
   Put,
-  Param,
-  Delete,
-  Body,
   Query,
-  DefaultValuePipe,
-  ParseIntPipe,
 } from "@nestjs/common";
 import { ApiBearerAuth } from "@nestjs/swagger";
+
 import { Analyzer } from "src/base_modules/analyzers/analyzer.entity";
 import { AnalyzerCreateBody } from "src/base_modules/analyzers/analyzer.types";
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
@@ -21,9 +22,10 @@ import {
   TypedPaginatedResponse,
   TypedResponse,
 } from "src/types/apiResponses.types";
+
 import {
-  AnalyzerTemplatesService,
   AnalyzerTemplate,
+  AnalyzerTemplatesService,
 } from "./analyzer-templates.service";
 import { AnalyzersService } from "./analyzers.service";
 

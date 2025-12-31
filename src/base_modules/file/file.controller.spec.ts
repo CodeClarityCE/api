@@ -1,8 +1,10 @@
-import { readFile } from "fs";
 import { Test, type TestingModule } from "@nestjs/testing";
 import type { MulterFile } from "@webundsoehne/nest-fastify-file-upload";
+import { readFile } from "fs";
+
 import { InternalError } from "../../types/error.types";
 import { AuthenticatedUser, ROLE } from "../auth/auth.types";
+
 import { FileController, type UploadData } from "./file.controller";
 import { FileService } from "./file.service";
 

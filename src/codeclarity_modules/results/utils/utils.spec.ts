@@ -2,17 +2,18 @@ import type {
   PaginationConfig,
   PaginationUserSuppliedConf,
 } from "src/types/pagination.types";
+
 import {
-  isNoneSeverity,
+  getVersionsSatisfying,
+  getVersionsSatisfyingConstraint,
+  isCriticalSeverity,
+  isHighSeverity,
   isLowSeverity,
   isMediumSeverity,
-  isHighSeverity,
-  isCriticalSeverity,
-  getVersionsSatisfyingConstraint,
-  getVersionsSatisfying,
-  paginate,
+  isNoneSeverity,
   NoPreviousAnalysis,
   NoProjectAssociatedWithAnalysis,
+  paginate,
 } from "./utils";
 
 describe("utils", () => {

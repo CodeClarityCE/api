@@ -1,16 +1,17 @@
 import {
+  Body,
   Controller,
+  DefaultValuePipe,
+  Delete,
   Get,
+  Param,
+  ParseIntPipe,
   Post,
   Put,
-  Param,
-  Delete,
-  Body,
   Query,
-  ParseIntPipe,
-  DefaultValuePipe,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+
 import { Analysis } from "src/base_modules/analyses/analysis.entity";
 import {
   AnalysisCreateBody,
@@ -31,10 +32,12 @@ import {
   TypedResponse,
 } from "src/types/apiResponses.types";
 import { EntityNotFound, NotAuthorized } from "src/types/error.types";
+
 import {
   AnalyzerDoesNotExist,
   AnaylzerMissingConfigAttribute,
 } from "../analyzers/analyzers.errors";
+
 import { AnalysesService } from "./analyses.service";
 
 @ApiBearerAuth()

@@ -1,4 +1,5 @@
 import type { PatchSummary, VulnerabilitySummary } from "../patching.types";
+
 import { sort } from "./sort";
 
 describe("sort", () => {

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, ValidationPipe } from "@nestjs/common";
+import { Body, Controller, Get, Post, ValidationPipe } from "@nestjs/common";
 import { APP_PIPE } from "@nestjs/core";
 import {
   FastifyAdapter,

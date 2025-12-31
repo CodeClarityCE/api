@@ -1,15 +1,18 @@
-import * as fs from "fs";
 import { Injectable } from "@nestjs/common";
 import { MulterFile } from "@webundsoehne/nest-fastify-file-upload";
+import * as fs from "fs";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { File as FileEntity } from "src/base_modules/file/file.entity";
 import { MemberRole } from "src/base_modules/organizations/memberships/organization.memberships.entity";
 import { validateAndJoinPath } from "src/utils/path-validator";
+
 import {
   MembershipsRepository,
   ProjectsRepository,
   UsersRepository,
 } from "../shared/repositories";
+
 import { UploadData } from "./file.controller";
 import { FileRepository } from "./file.repository";
 

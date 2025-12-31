@@ -1,14 +1,16 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Expose } from "class-transformer";
 import {
-  Entity,
   Column,
-  PrimaryGeneratedColumn,
+  Entity,
   ManyToOne,
+  PrimaryGeneratedColumn,
   Relation,
   Unique,
 } from "typeorm";
+
 import type { Organization } from "../../base_modules/organizations/organization.entity";
+
 import { ExternalTicketProvider } from "./ticket-external-link.entity";
 
 export enum ClickUpAuthMethod {

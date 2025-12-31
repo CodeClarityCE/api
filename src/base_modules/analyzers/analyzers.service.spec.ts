@@ -1,4 +1,5 @@
 import { Test, type TestingModule } from "@nestjs/testing";
+
 import { AuthenticatedUser, ROLE } from "../auth/auth.types";
 import { OrganizationLoggerService } from "../organizations/log/organizationLogger.service";
 import { ActionType } from "../organizations/log/orgAuditLog.types";
@@ -8,6 +9,7 @@ import {
   OrganizationsRepository,
   UsersRepository,
 } from "../shared/repositories";
+
 import type { Analyzer } from "./analyzer.entity";
 import type { AnalyzerCreateBody } from "./analyzer.types";
 import { AnalyzersRepository } from "./analyzers.repository";

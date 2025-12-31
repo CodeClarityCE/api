@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import axios from "axios";
+
 import { IntegrationTokenMissingPermissions } from "src/types/error.types";
+
 import { BaseVCSTokenService } from "../base/baseVCSTokenService";
 import {
   parseTokenExpiry,

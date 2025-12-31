@@ -1,7 +1,9 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Expose } from "class-transformer";
 import { IsDefined, IsNotEmpty, Length } from "class-validator";
+
 import { User } from "src/base_modules/users/users.entity";
+
 import { MemberRole } from "./memberships/orgMembership.types";
 
 /********************************************/

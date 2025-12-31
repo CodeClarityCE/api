@@ -1,8 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+
 import { Email, EmailType } from "src/base_modules/email/email.entity";
 import { EntityNotFound } from "src/types/error.types";
-import { Repository } from "typeorm";
 
 @Injectable() // Marking the class as a NestJS injectable service
 export class EmailRepository {

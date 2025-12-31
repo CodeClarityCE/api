@@ -1,12 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { In, Repository } from "typeorm";
+
 import { Result } from "src/codeclarity_modules/results/result.entity";
 import {
   Output as SBOMOutput,
   Status,
 } from "src/codeclarity_modules/results/sbom/sbom.types";
 import { PluginFailed, PluginResultNotAvailable } from "src/types/error.types";
-import { Repository, In } from "typeorm";
 
 @Injectable()
 export class SBOMRepository {

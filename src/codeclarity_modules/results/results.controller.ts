@@ -1,5 +1,6 @@
 import { Controller, Get, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocTypedPaginatedResponseDecorator } from "src/decorators/TypedPaginatedResponse";
@@ -10,6 +11,7 @@ import {
   NotAuthenticated,
   NotAuthorized,
 } from "src/types/error.types";
+
 import { Result } from "./result.entity";
 import { AnalysisResultsService } from "./results.service";
 

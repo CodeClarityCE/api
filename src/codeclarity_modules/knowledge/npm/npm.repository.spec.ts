@@ -1,8 +1,11 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
-import { EntityNotFound } from "src/types/error.types";
 import type { Repository } from "typeorm";
+
+import { EntityNotFound } from "src/types/error.types";
+
 import { Package } from "../package/package.entity";
+
 import { NPMPackageRepository } from "./npm.repository";
 
 describe("NPMPackageRepository", () => {

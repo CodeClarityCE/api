@@ -1,17 +1,20 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
+
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
 import {
-  OrganizationsRepository,
   MembershipsRepository,
+  OrganizationsRepository,
   UsersRepository,
 } from "src/base_modules/shared/repositories";
+
 import { Policy, PolicyType } from "../policy.entity";
+
 import { LicensePolicyService } from "./license.service";
 import {
-  LicensePolicyType,
   type LicensePolicyCreateBody,
+  LicensePolicyType,
 } from "./licensePolicy.types";
 
 describe("LicensePolicyService", () => {

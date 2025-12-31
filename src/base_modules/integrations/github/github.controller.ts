@@ -11,6 +11,7 @@ import {
   Query,
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import {
   GithubTokenType,
@@ -43,6 +44,7 @@ import {
   NotAuthorized,
 } from "src/types/error.types";
 import { SortDirection } from "src/types/sort.types";
+
 import { GithubIntegrationService } from "./github.service";
 import { GithubRepositoriesService } from "./githubRepos.service";
 

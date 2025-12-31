@@ -1,8 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+
 import { Invitation } from "src/base_modules/organizations/invitations/invitation.entity";
 import { EntityNotFound } from "src/types/error.types";
-import { Repository } from "typeorm";
 
 /**
  * Pure repository for invitation database operations.

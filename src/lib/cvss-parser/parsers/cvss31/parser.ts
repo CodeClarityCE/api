@@ -4,17 +4,17 @@
  */
 
 import {
-  type CVSS31Info,
-  AttackVector,
   AttackComplexity,
-  PrivilegesRequired,
-  UserInteraction,
-  Scope,
-  Impact,
+  AttackVector,
+  type CVSS31Info,
   ExploitCodeMaturity,
+  Impact,
+  PrivilegesRequired,
   RemediationLevel,
   ReportConfidence,
+  Scope,
   SecurityRequirements,
+  UserInteraction,
 } from "../../types/fields/cvss31";
 
 export class CVSS31VectorParser {

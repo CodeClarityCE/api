@@ -1,12 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { In, Repository } from "typeorm";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
 import {
   MembershipsRepository,
   OrganizationsRepository,
-  UsersRepository,
   ProjectsRepository,
+  UsersRepository,
 } from "src/base_modules/shared/repositories";
 import type {
   CVSS2,
@@ -18,35 +20,35 @@ import { NVDRepository } from "src/codeclarity_modules/knowledge/nvd/nvd.reposit
 import { OSV } from "src/codeclarity_modules/knowledge/osv/osv.entity";
 import { OSVRepository } from "src/codeclarity_modules/knowledge/osv/osv.repository";
 import {
-  VulnerabilityDetailsReport,
-  SeverityInfo,
   ReferenceInfo,
+  SeverityInfo,
+  VulnerabilityDetailsReport,
   VulnSourceInfo,
 } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
 import { VulnerabilityService } from "src/codeclarity_modules/results/vulnerabilities/vulnerability.service";
 import { EntityNotFound } from "src/types/error.types";
 import {
   PaginationConfig,
-  TypedPaginatedData,
   PaginationUserSuppliedConf,
+  TypedPaginatedData,
 } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
-import { Repository, In } from "typeorm";
+
 import { TicketIntegrationService } from "./integrations/ticket-integration.service";
+import { Ticket, TicketStatus } from "./ticket.entity";
 import { TicketEvent, TicketEventType } from "./ticket-event.entity";
 import { TicketVulnerabilityOccurrence } from "./ticket-occurrence.entity";
-import { Ticket, TicketStatus } from "./ticket.entity";
 import {
-  CreateTicketBody,
-  UpdateTicketBody,
-  BulkUpdateTicketsBody,
-  TicketSummary,
-  TicketDetails,
-  TicketDashboardStats,
   BulkUpdateResult,
+  BulkUpdateTicketsBody,
+  CreateTicketBody,
   DuplicateCheckResult,
+  TicketDashboardStats,
+  TicketDetails,
   TicketFilters,
   TicketSortField,
+  TicketSummary,
+  UpdateTicketBody,
 } from "./tickets.types";
 
 // Interfaces for raw query results to avoid `any` type issues

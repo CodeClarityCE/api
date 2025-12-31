@@ -1,10 +1,12 @@
 import { Test, type TestingModule } from "@nestjs/testing";
+
 import {
   IntegrationsRepository,
   MembershipsRepository,
   OrganizationsRepository,
   UsersRepository,
 } from "src/base_modules/shared/repositories";
+
 import {
   DuplicateIntegration,
   EntityNotFound,
@@ -23,11 +25,12 @@ import type { Organization } from "../../organizations/organization.entity";
 import type { User } from "../../users/users.entity";
 import { IntegrationProvider, IntegrationType } from "../integration.types";
 import type { Integration } from "../integrations.entity";
+
 import { GithubIntegrationService } from "./github.service";
 import {
+  GithubTokenType,
   type LinkGithubCreateBody,
   type LinkGithubPatchBody,
-  GithubTokenType,
 } from "./githubIntegration.types";
 import { GithubIntegrationTokenService } from "./githubToken.service";
 

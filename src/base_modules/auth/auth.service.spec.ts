@@ -1,23 +1,26 @@
 import { JwtService } from "@nestjs/jwt";
 import { Test, type TestingModule } from "@nestjs/testing";
 import * as bcrypt from "bcrypt";
+
 import {
-  FailedToAuthenticateSocialAccount,
   EntityNotFound,
+  FailedToAuthenticateSocialAccount,
 } from "src/types/error.types";
+
 import { GitlabIntegrationTokenService } from "../integrations/gitlab/gitlabToken.service";
 import { UsersRepository } from "../shared/repositories";
 import { SocialType } from "../users/user.types";
 import type { User } from "../users/users.entity";
 import { CannotPerformActionOnSocialAccount } from "../users/users.errors";
 import { UsersService } from "../users/users.service";
-import { WrongCredentials, RegistrationNotVerified } from "./auth.errors";
+
+import { RegistrationNotVerified, WrongCredentials } from "./auth.errors";
 import { AuthService } from "./auth.service";
 import {
-  ROLE,
   AuthenticatedUser,
   type GithubAuthenticatedUser,
   type GitlabAuthenticatedUser,
+  ROLE,
 } from "./auth.types";
 
 // Mock the ms module before importing the service

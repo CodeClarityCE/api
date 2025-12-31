@@ -23,11 +23,12 @@ jest.mock("@nestjs/core", () => ({
   },
 }));
 
-import { readFileSync, existsSync } from "fs";
-import { join } from "path";
 import { ValidationPipe } from "@nestjs/common";
 import { FastifyAdapter } from "@nestjs/platform-fastify";
 import { DocumentBuilder } from "@nestjs/swagger";
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
+
 import { ErrorFilter } from "./filters/ExceptionFilter";
 import { ResponseBodyInterceptor } from "./interceptors/ResponseBodyInterceptor";
 import * as mainModule from "./main";

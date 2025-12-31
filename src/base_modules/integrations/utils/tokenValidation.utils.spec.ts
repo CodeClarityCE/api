@@ -1,9 +1,10 @@
 import { IntegrationTokenExpired } from "src/types/error.types";
+
 import {
-  parseTokenExpiry,
-  isTokenExpired,
-  validateNotExpired,
   hasRequiredScopes,
+  isTokenExpired,
+  parseTokenExpiry,
+  validateNotExpired,
 } from "./tokenValidation.utils";
 
 describe("tokenValidation.utils", () => {

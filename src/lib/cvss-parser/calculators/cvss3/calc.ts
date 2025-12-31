@@ -4,17 +4,17 @@
  */
 
 import {
-  type CVSS3Info,
-  AttackVector,
   AttackComplexity,
-  PrivilegesRequired,
-  UserInteraction,
-  Scope,
-  Impact,
+  AttackVector,
+  type CVSS3Info,
   ExploitCodeMaturity,
+  Impact,
+  PrivilegesRequired,
   RemediationLevel,
   ReportConfidence,
+  Scope,
   SecurityRequirements,
+  UserInteraction,
 } from "../../types/fields/cvss3";
 import { roundUp } from "../../utils/utils";
 

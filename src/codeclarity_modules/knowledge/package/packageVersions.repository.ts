@@ -1,12 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { compare as semverCompare } from "semver";
+import { Repository } from "typeorm";
+
 import {
   Package,
   Version,
 } from "src/codeclarity_modules/knowledge/package/package.entity";
 import { EntityNotFound } from "src/types/error.types";
-import { Repository } from "typeorm";
 
 @Injectable()
 export class VersionsRepository {

@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+
 import { Integration } from "src/base_modules/integrations/integrations.entity";
+
 import { GithubModule } from "./github/github.module";
 import { GitlabModule } from "./gitlab/gitlab.module";
 import { IntegrationsController } from "./integrations.controller";

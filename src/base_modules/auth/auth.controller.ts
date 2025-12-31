@@ -1,5 +1,6 @@
-import { Controller, Post, Body, Get, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+
 import {
   AuthenticateBody,
   AuthenticatedUser,
@@ -9,8 +10,8 @@ import {
   UserPasswordResetRequestBody,
 } from "src/base_modules/auth/auth.types";
 import {
-  UserCreateBody,
   RegistrationConfirmationBody,
+  UserCreateBody,
 } from "src/base_modules/users/user.types";
 import { User } from "src/base_modules/users/users.entity";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
@@ -25,8 +26,10 @@ import {
   TypedResponse,
 } from "src/types/apiResponses.types";
 import { EmailAlreadyExists, EntityNotFound } from "src/types/error.types";
+
 import { CannotPerformActionOnSocialAccount } from "../users/users.errors";
 import { UsersService } from "../users/users.service";
+
 import {
   AccountRegistrationVerificationTokenInvalidOrExpired,
   HandleAlreadyExists,

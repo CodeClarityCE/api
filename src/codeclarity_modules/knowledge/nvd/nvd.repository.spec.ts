@@ -1,7 +1,9 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
-import { EntityNotFound } from "src/types/error.types";
 import type { Repository } from "typeorm";
+
+import { EntityNotFound } from "src/types/error.types";
+
 import { NVD } from "./nvd.entity";
 import { NVDRepository } from "./nvd.repository";
 

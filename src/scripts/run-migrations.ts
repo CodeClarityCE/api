@@ -1,7 +1,8 @@
-import "reflect-metadata";
 import { CodeClarityDataSource } from "../datasources/codeclarity.datasource";
 import { KnowledgeDataSource } from "../datasources/knowledge.datasource";
 import { PluginsDataSource } from "../datasources/plugins.datasource";
+
+import "reflect-metadata";
 
 async function runAll(): Promise<void> {
   const sources = [

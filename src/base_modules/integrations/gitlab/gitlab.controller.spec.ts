@@ -1,27 +1,29 @@
 import { Test, type TestingModule } from "@nestjs/testing";
+
 import {
-  EntityNotFound,
-  NotAuthorized,
   DuplicateIntegration,
+  EntityNotFound,
+  FailedToRetrieveReposFromProvider,
   IntegrationInvalidToken,
   IntegrationTokenExpired,
   IntegrationTokenMissingPermissions,
   IntegrationTokenRetrievalFailed,
   IntegrationWrongTokenType,
-  FailedToRetrieveReposFromProvider,
   InternalError,
   NotAuthenticated,
+  NotAuthorized,
 } from "../../../types/error.types";
 import { SortDirection } from "../../../types/sort.types";
 import { AuthenticatedUser, ROLE } from "../../auth/auth.types";
 import type { RepositoryCache } from "../../projects/repositoryCache.entity";
+
 import { GitlabIntegrationController } from "./gitlab.controller";
 import { GitlabIntegrationService } from "./gitlab.service";
 import {
   type GitlabIntegration,
+  GitlabTokenType,
   type LinkGitlabCreateBody,
   type LinkGitlabPatchBody,
-  GitlabTokenType,
 } from "./gitlabIntegration.types";
 import { GitlabRepositoriesService } from "./gitlabRepos.service";
 

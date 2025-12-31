@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import axios, { AxiosError } from "axios";
 import { FastifyReply } from "fastify";
+
 import {
   GitlabAuthenticatedUser,
   Oauth2FinalizeBody,
@@ -18,13 +19,15 @@ import { NonAuthEndpoint } from "src/decorators/SkipAuthDecorator";
 import { APIDocTypedResponseDecorator } from "src/decorators/TypedResponse";
 import { TypedResponse } from "src/types/apiResponses.types";
 import {
+  AlreadyExists,
+  FailedToAuthenticateSocialAccount,
   IntegrationInvalidToken,
   IntegrationTokenMissingPermissions,
   IntegrationTokenRetrievalFailed,
-  AlreadyExists,
-  FailedToAuthenticateSocialAccount,
 } from "src/types/error.types";
+
 import { GitlabIntegrationTokenService } from "../integrations/gitlab/gitlabToken.service";
+
 import { AuthService } from "./auth.service";
 
 @Controller("auth/gitlab")

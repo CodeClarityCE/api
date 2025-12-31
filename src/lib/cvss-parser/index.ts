@@ -1,11 +1,11 @@
 import { CVSS2Calculator } from "./calculators/cvss2/calc";
 import { CVSS3Calculator } from "./calculators/cvss3/calc";
-import { CVSS31Calculator } from "./calculators/cvss31/calc";
 import { CVSS4Calculator } from "./calculators/cvss4/calc";
+import { CVSS31Calculator } from "./calculators/cvss31/calc";
 import { CVSS2VectorParser } from "./parsers/cvss2/parser";
 import { CVSS3VectorParser } from "./parsers/cvss3/parser";
-import { CVSS31VectorParser } from "./parsers/cvss31/parser";
 import { CVSS4VectorParser } from "./parsers/cvss4/parser";
+import { CVSS31VectorParser } from "./parsers/cvss31/parser";
 
 export function createCVSS2Parser(): CVSS2VectorParser {
   return new CVSS2VectorParser();

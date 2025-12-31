@@ -1,5 +1,6 @@
 import { Controller, Get, Param, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import {
   AttackVectorDist,
@@ -31,6 +32,7 @@ import {
   NotAuthenticated,
   NotAuthorized,
 } from "src/types/error.types";
+
 import { DashboardService } from "./dashboard.service";
 
 @Controller("/org/:org_id/dashboard")

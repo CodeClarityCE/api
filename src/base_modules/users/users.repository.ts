@@ -1,8 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+
 import { User } from "src/base_modules/users/users.entity";
 import { EntityNotFound, UserDoesNotExist } from "src/types/error.types";
-import { Repository } from "typeorm";
+
 import { OrganizationsRepository } from "../organizations/organizations.repository";
 import { ProjectsRepository } from "../projects/projects.repository";
 

@@ -11,10 +11,11 @@
 
 import type { CVSS4Info } from "../../types/fields/cvss4";
 import { roundUp } from "../../utils/utils";
+
 import {
   cvssLookup,
-  maxSeverity,
   maxComposed,
+  maxSeverity,
   severityDistance,
 } from "./lookup";
 

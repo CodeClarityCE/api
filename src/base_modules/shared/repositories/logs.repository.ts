@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Log } from "src/base_modules/organizations/log/log.entity";
 import { Repository } from "typeorm";
+
+import { Log } from "src/base_modules/organizations/log/log.entity";
 
 /**
  * Pure repository for log database operations.

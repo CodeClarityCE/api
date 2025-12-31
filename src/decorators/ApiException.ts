@@ -2,14 +2,15 @@ import { applyDecorators, type Type } from "@nestjs/common";
 import {
   ApiExtraModels,
   ApiResponse,
-  getSchemaPath,
   type ApiResponseOptions,
+  getSchemaPath,
 } from "@nestjs/swagger";
+
 import { Status } from "src/types/apiResponses.types";
 import {
-  PublicAPIError,
-  errorMessages,
   type APIError,
+  errorMessages,
+  PublicAPIError,
 } from "src/types/error.types";
 
 /** Structure for API error response examples in OpenAPI documentation */

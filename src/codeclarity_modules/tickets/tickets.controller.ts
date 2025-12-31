@@ -12,12 +12,13 @@ import {
   Query,
 } from "@nestjs/common";
 import {
-  ApiTags,
   ApiOperation,
   ApiParam,
   ApiQuery,
   ApiResponse,
+  ApiTags,
 } from "@nestjs/swagger";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { VulnerabilityDetailsReport } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
 import { AuthUser } from "src/decorators/UserDecorator";
@@ -28,9 +29,11 @@ import {
   TypedResponse,
 } from "src/types/apiResponses.types";
 import { SortDirection } from "src/types/sort.types";
+
 import { TicketAutomationService } from "./automation/ticket-automation.service";
 import { ConnectionTestResult } from "./integrations/integration-provider.interface";
 import { TicketIntegrationService } from "./integrations/ticket-integration.service";
+import { TicketPriority, TicketStatus, TicketType } from "./ticket.entity";
 import { TicketEventFrontend } from "./ticket-event.entity";
 import {
   ExternalTicketProvider,
@@ -40,26 +43,25 @@ import {
   ClickUpAuthMethod,
   ClickUpConfig,
 } from "./ticket-integration-config.entity";
-import { TicketStatus, TicketPriority, TicketType } from "./ticket.entity";
 import { TicketsService } from "./tickets.service";
 import {
-  CreateTicketBody,
-  UpdateTicketBody,
+  BulkSyncFromExternalResult,
+  BulkSyncResult,
+  BulkUpdateResult,
   BulkUpdateTicketsBody,
   CheckDuplicateBody,
-  TicketSummary,
-  TicketDetails,
-  TicketDashboardStats,
-  BulkUpdateResult,
-  DuplicateCheckResult,
-  TicketSortField,
   ConfigureClickUpBody,
+  CreateTicketBody,
+  DuplicateCheckResult,
   IntegrationConfigSummary,
   IntegrationHierarchyItem,
-  SyncResult,
-  BulkSyncResult,
   SyncFromExternalResult,
-  BulkSyncFromExternalResult,
+  SyncResult,
+  TicketDashboardStats,
+  TicketDetails,
+  TicketSortField,
+  TicketSummary,
+  UpdateTicketBody,
 } from "./tickets.types";
 
 /** Response type for auto-resolve operation */

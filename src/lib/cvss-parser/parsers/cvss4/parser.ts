@@ -4,23 +4,23 @@
  */
 
 import {
-  type CVSS4Info,
-  AttackVector,
   AttackComplexity,
   AttackRequirements,
-  PrivilegesRequired,
-  UserInteraction,
-  VulnerableSystemImpact,
-  SubsequentSystemImpact,
-  ExploitMaturity,
-  SecurityRequirements,
-  ModifiedSubsequentSystemImpact,
-  Safety,
+  AttackVector,
   Automatable,
-  Recovery,
-  ValueDensity,
-  ResponseEffort,
+  type CVSS4Info,
+  ExploitMaturity,
+  ModifiedSubsequentSystemImpact,
+  PrivilegesRequired,
   ProviderUrgency,
+  Recovery,
+  ResponseEffort,
+  Safety,
+  SecurityRequirements,
+  SubsequentSystemImpact,
+  UserInteraction,
+  ValueDensity,
+  VulnerableSystemImpact,
 } from "../../types/fields/cvss4";
 
 export class CVSS4VectorParser {

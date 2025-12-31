@@ -2,6 +2,8 @@ import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
 import * as amqp from "amqplib";
+import { Repository } from "typeorm";
+
 import {
   Analysis,
   AnalysisStage,
@@ -29,7 +31,7 @@ import {
   TypedPaginatedData,
 } from "src/types/pagination.types";
 import { AnalysisStartMessageCreate } from "src/types/rabbitMqMessages.types";
-import { Repository } from "typeorm";
+
 import { AnaylzerMissingConfigAttribute } from "../analyzers/analyzers.errors";
 import { AnalyzersRepository } from "../analyzers/analyzers.repository";
 import {
@@ -38,6 +40,7 @@ import {
   ProjectsRepository,
   UsersRepository,
 } from "../shared/repositories";
+
 import { AnalysesRepository } from "./analyses.repository";
 
 /** Configuration option for an analyzer step */

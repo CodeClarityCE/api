@@ -1,4 +1,4 @@
-import type { Package, Version, Source, LicenseNpm } from "./package.entity";
+import type { LicenseNpm, Package, Source, Version } from "./package.entity";
 
 describe("Package Entity", () => {
   describe("Package entity properties", () => {

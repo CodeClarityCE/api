@@ -1,10 +1,10 @@
-import { type ExternalTicketProvider } from "../ticket-external-link.entity";
-import { type IntegrationConfig } from "../ticket-integration-config.entity";
 import {
   type Ticket,
   TicketPriority,
   type TicketStatus,
 } from "../ticket.entity";
+import { type ExternalTicketProvider } from "../ticket-external-link.entity";
+import { type IntegrationConfig } from "../ticket-integration-config.entity";
 
 /**
  * Result returned when creating an external ticket

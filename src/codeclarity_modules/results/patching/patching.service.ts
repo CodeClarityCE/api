@@ -1,22 +1,25 @@
 import { Injectable } from "@nestjs/common";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import {
-  Output as PatchesOutput,
-  Workspace,
-  PatchingAnalysisStats,
   newPatchingAnalysisStats,
+  Output as PatchesOutput,
+  PatchingAnalysisStats,
+  Workspace,
 } from "src/codeclarity_modules/results/patching/patching.types";
 import {
-  Output as SbomOutput,
   AnalysisInfo as SbomAnalysisInfo,
+  Output as SbomOutput,
 } from "src/codeclarity_modules/results/sbom/sbom.types";
 import {
   StatusError,
   StatusResponse,
 } from "src/codeclarity_modules/results/status.types";
 import { UnknownWorkspace } from "src/types/error.types";
+
 import { AnalysisResultsService } from "../results.service";
 import { SbomUtilsService } from "../sbom/utils/utils";
+
 import { PatchingUtilsService } from "./utils/utils";
 
 /** Query options for patching list endpoint */

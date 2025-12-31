@@ -1,7 +1,9 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
-import { EntityNotFound, NotAuthorized } from "src/types/error.types";
 import type { Repository } from "typeorm";
+
+import { EntityNotFound, NotAuthorized } from "src/types/error.types";
+
 import { AnalysesRepository } from "./analyses.repository";
 import { Analysis, AnalysisStatus } from "./analysis.entity";
 

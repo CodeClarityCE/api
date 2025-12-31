@@ -10,6 +10,7 @@ import {
   Post,
   Query,
 } from "@nestjs/common";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import {
   LicensePolicyCreateBody,
@@ -26,6 +27,7 @@ import {
   TypedPaginatedResponse,
   TypedResponse,
 } from "src/types/apiResponses.types";
+
 import { LicensePolicyService } from "./license.service";
 
 @Controller("org/:org_id/policies/license_policy")

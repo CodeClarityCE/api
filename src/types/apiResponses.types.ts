@@ -1,4 +1,5 @@
 import { ApiProperty, ApiResponseProperty } from "@nestjs/swagger";
+
 import { TypedPaginatedData } from "./pagination.types";
 
 /**

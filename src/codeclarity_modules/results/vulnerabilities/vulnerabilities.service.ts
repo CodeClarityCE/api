@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { AnalysesRepository } from "src/base_modules/shared/repositories";
 import { CWERepository } from "src/codeclarity_modules/knowledge/cwe/cwe.repository";
@@ -9,27 +10,29 @@ import { VulnerabilityPolicyService } from "src/codeclarity_modules/policies/vul
 import { Output as SBOMOutput } from "src/codeclarity_modules/results/sbom/sbom.types";
 import { StatusResponse } from "src/codeclarity_modules/results/status.types";
 import {
-  isNoneSeverity,
+  isCriticalSeverity,
+  isHighSeverity,
   isLowSeverity,
   isMediumSeverity,
-  isHighSeverity,
-  isCriticalSeverity,
+  isNoneSeverity,
   paginate,
 } from "src/codeclarity_modules/results/utils/utils";
 import {
   AffectedVuln,
+  ConflictFlag,
+  newVulnerabilityAnalysisStats,
+  Output as VulnsOutput,
   Source,
   Vulnerability,
-  VulnerabilityMerged,
-  ConflictFlag,
-  Output as VulnsOutput,
   VulnerabilityAnalysisStats,
-  newVulnerabilityAnalysisStats,
+  VulnerabilityMerged,
 } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
 import { PaginatedResponse } from "src/types/apiResponses.types";
 import { UnknownWorkspace } from "src/types/error.types";
+
 import { AnalysisResultsService } from "../results.service";
 import { SbomUtilsService } from "../sbom/utils/utils";
+
 import { VulnerabilitiesFilterService } from "./utils/filter.service";
 import { VulnerabilitiesSortService } from "./utils/sort.service";
 import { VulnerabilitiesUtilsService } from "./utils/utils.service";

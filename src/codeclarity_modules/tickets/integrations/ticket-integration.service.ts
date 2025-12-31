@@ -1,29 +1,31 @@
 import {
-  Injectable,
   BadRequestException,
-  NotFoundException,
+  Injectable,
   Logger,
+  NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+
+import { Ticket, TicketStatus } from "../ticket.entity";
 import { TicketEvent, TicketEventType } from "../ticket-event.entity";
 import {
-  TicketExternalLink,
   ExternalTicketProvider,
+  TicketExternalLink,
 } from "../ticket-external-link.entity";
 import {
-  TicketIntegrationConfig,
-  IntegrationConfig,
   ClickUpConfig,
+  IntegrationConfig,
+  TicketIntegrationConfig,
 } from "../ticket-integration-config.entity";
-import { Ticket, TicketStatus } from "../ticket.entity";
+
 import {
-  ITicketIntegrationProvider,
   ConnectionTestResult,
-  ExternalWorkspace,
-  ExternalSpace,
   ExternalFolder,
   ExternalList,
+  ExternalSpace,
+  ExternalWorkspace,
+  ITicketIntegrationProvider,
   OAuthTokenResponse,
 } from "./integration-provider.interface";
 

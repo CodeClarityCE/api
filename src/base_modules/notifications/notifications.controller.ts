@@ -1,22 +1,24 @@
 import {
   Controller,
-  Get,
-  Query,
   DefaultValuePipe,
-  ParseIntPipe,
-  Param,
   Delete,
+  Get,
   HttpException,
   HttpStatus,
+  Param,
+  ParseIntPipe,
+  Query,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { AuthUser } from "src/decorators/UserDecorator";
 import {
   NoDataResponse,
   TypedPaginatedResponse,
 } from "src/types/apiResponses.types";
-import { Repository } from "typeorm";
+
 import { Notification } from "./notification.entity";
 
 @Controller("/notifications")

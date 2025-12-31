@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+
 import { CWE } from "src/codeclarity_modules/knowledge/cwe/cwe.entity";
 import { License } from "src/codeclarity_modules/knowledge/license/license.entity";
 import { LicenseRepository } from "src/codeclarity_modules/knowledge/license/license.repository";
@@ -9,11 +10,13 @@ import {
   Package,
   Version,
 } from "src/codeclarity_modules/knowledge/package/package.entity";
+
 import { DatabaseService } from "../../services/database.service";
 import {
   NVDReportGenerator,
   OSVReportGenerator,
 } from "../results/vulnerabilities/services/reportGenerator";
+
 import { CWERepository } from "./cwe/cwe.repository";
 import { EPSS } from "./epss/epss.entity";
 import { EPSSRepository } from "./epss/epss.repository";

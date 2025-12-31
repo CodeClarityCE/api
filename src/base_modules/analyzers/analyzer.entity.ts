@@ -1,14 +1,15 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Expose } from "class-transformer";
 import {
-  Entity,
   Column,
-  PrimaryGeneratedColumn,
-  OneToMany,
-  Relation,
+  Entity,
   ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  Relation,
 } from "typeorm";
-import { StageBase, type Analysis } from "../analyses/analysis.entity";
+
+import { type Analysis, StageBase } from "../analyses/analysis.entity";
 import type { Organization } from "../organizations/organization.entity";
 import type { User } from "../users/users.entity";
 

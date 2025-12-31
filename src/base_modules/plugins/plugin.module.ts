@@ -1,7 +1,9 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
+
 import { defaultOptions } from "src/app.module";
+
 import { PluginController } from "./plugin.controller";
 import { Plugin } from "./plugin.entity";
 import { PluginsRepository } from "./plugin.repository";

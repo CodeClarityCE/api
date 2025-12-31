@@ -1,11 +1,12 @@
 import { ApiProperty } from "@nestjs/swagger";
 import {
-  IsNotEmpty,
-  IsOptional,
-  IsEnum,
   IsBoolean,
   IsDateString,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
 } from "class-validator";
+
 import { StageBase } from "../analyzers/analyzer.types";
 
 /********************************************/

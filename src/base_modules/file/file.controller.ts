@@ -1,4 +1,3 @@
-import { readFile } from "fs";
 import {
   Body,
   Controller,
@@ -14,6 +13,8 @@ import {
   FileInterceptor,
   MulterFile,
 } from "@webundsoehne/nest-fastify-file-upload";
+import { readFile } from "fs";
+
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { AuthUser } from "src/decorators/UserDecorator";
@@ -25,6 +26,7 @@ import {
   NotAuthorized,
 } from "src/types/error.types";
 import { validateAndJoinPath } from "src/utils/path-validator";
+
 import { FileService } from "./file.service";
 
 export interface UploadData {

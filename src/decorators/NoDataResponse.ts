@@ -1,5 +1,6 @@
 import { applyDecorators } from "@nestjs/common";
 import { ApiExtraModels, ApiResponse, getSchemaPath } from "@nestjs/swagger";
+
 import { NoDataResponse, Status } from "src/types/apiResponses.types";
 
 export const APIDocNoDataResponseDecorator = (

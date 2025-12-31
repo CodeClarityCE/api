@@ -1,12 +1,14 @@
-import { HttpException, type ArgumentsHost } from "@nestjs/common";
+import { type ArgumentsHost, HttpException } from "@nestjs/common";
 import type { ValidationError } from "class-validator";
+
 import { Status } from "src/types/apiResponses.types";
 import {
-  PublicAPIError,
-  PrivateAPIError,
   NotAuthenticated,
+  PrivateAPIError,
+  PublicAPIError,
   ValidationFailed,
 } from "src/types/error.types";
+
 import { ErrorFilter } from "./ExceptionFilter";
 
 describe("ExceptionFilter", () => {

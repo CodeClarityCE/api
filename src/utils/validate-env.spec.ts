@@ -1,4 +1,4 @@
-import { validate, Environment } from "./validate-env";
+import { Environment, validate } from "./validate-env";
 
 describe("validate-env", () => {
   const originalEnv = process.env;

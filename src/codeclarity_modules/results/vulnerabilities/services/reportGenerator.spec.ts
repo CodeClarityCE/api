@@ -1,4 +1,5 @@
 import { Test, type TestingModule } from "@nestjs/testing";
+
 import { CWERepository } from "src/codeclarity_modules/knowledge/cwe/cwe.repository";
 import type { NVD } from "src/codeclarity_modules/knowledge/nvd/nvd.entity";
 import { NVDRepository } from "src/codeclarity_modules/knowledge/nvd/nvd.repository";
@@ -10,13 +11,14 @@ import { PackageRepository } from "src/codeclarity_modules/knowledge/package/pac
 import { VersionsRepository } from "src/codeclarity_modules/knowledge/package/packageVersions.repository";
 import type { Dependency } from "src/codeclarity_modules/results/sbom/sbom.types";
 import {
-  type Vulnerability,
-  type WeaknessInfo,
-  Source,
   ConflictFlag,
   SeverityType,
+  Source,
+  type Vulnerability,
+  type WeaknessInfo,
 } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
-import { OSVReportGenerator, NVDReportGenerator } from "./reportGenerator";
+
+import { NVDReportGenerator, OSVReportGenerator } from "./reportGenerator";
 
 describe("ReportGenerator Services", () => {
   let osvReportGenerator: OSVReportGenerator;

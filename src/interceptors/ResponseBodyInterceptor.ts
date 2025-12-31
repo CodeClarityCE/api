@@ -6,6 +6,7 @@ import type {
 import type { FastifyReply } from "fastify";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
+
 import { Status } from "src/types/apiResponses.types";
 
 /** Response body with status fields added by the interceptor */

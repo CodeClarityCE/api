@@ -1,4 +1,5 @@
 import type { PatchSummary, VulnerabilitySummary } from "../patching.types";
+
 import { filter } from "./filter";
 
 describe("filter", () => {

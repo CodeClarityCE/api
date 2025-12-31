@@ -1,7 +1,10 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
+
 import { PluginFailed, PluginResultNotAvailable } from "src/types/error.types";
+
 import { Result } from "../result.entity";
+
 import { VulnerabilitiesRepository } from "./vulnerabilities.repository";
 import { Status } from "./vulnerabilities.types";
 

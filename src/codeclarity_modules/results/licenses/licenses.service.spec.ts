@@ -1,11 +1,14 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
+
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
 import { LicenseRepository } from "src/codeclarity_modules/knowledge/license/license.repository";
 import { UnknownWorkspace } from "src/types/error.types";
+
 import { Result } from "../result.entity";
 import { AnalysisResultsService } from "../results.service";
 import { SbomUtilsService } from "../sbom/utils/utils";
+
 import { LicensesService } from "./licenses.service";
 import { LicensesUtilsService } from "./utils/utils";
 

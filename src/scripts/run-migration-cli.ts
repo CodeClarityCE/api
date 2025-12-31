@@ -1,9 +1,11 @@
-import "reflect-metadata";
 import * as dotenv from "dotenv";
 import { type DataSource } from "typeorm";
+
 import { CodeClarityDataSource } from "../datasources/codeclarity.datasource";
 import { KnowledgeDataSource } from "../datasources/knowledge.datasource";
 import { PluginsDataSource } from "../datasources/plugins.datasource";
+
+import "reflect-metadata";
 
 const ENV = process.env["ENV"] ?? "dev";
 try {

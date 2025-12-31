@@ -1,18 +1,20 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Expose } from "class-transformer";
 import {
-  Entity,
   Column,
-  PrimaryGeneratedColumn,
+  Entity,
+  Index,
   ManyToOne,
   OneToMany,
+  PrimaryGeneratedColumn,
   Relation,
-  Index,
 } from "typeorm";
+
 import type { Analysis } from "../../base_modules/analyses/analysis.entity";
 import type { Organization } from "../../base_modules/organizations/organization.entity";
 import type { Project } from "../../base_modules/projects/project.entity";
 import type { User } from "../../base_modules/users/users.entity";
+
 import type { TicketEvent } from "./ticket-event.entity";
 import type { TicketExternalLink } from "./ticket-external-link.entity";
 import type { TicketVulnerabilityOccurrence } from "./ticket-occurrence.entity";

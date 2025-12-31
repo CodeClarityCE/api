@@ -1,6 +1,6 @@
 import {
-  GraphTraversalUtils,
   type GraphDependency,
+  GraphTraversalUtils,
   type NodeTraversalResult,
 } from "./sbom_graph.types";
 

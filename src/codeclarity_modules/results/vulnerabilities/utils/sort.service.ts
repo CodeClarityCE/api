@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { gt, lt } from "semver";
+
 import { VulnerabilityMerged } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
 
 @Injectable()

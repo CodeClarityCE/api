@@ -1,7 +1,8 @@
-import { Inject, Injectable, forwardRef } from "@nestjs/common";
+import { forwardRef, Inject, Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
 import ms from "ms";
+
 import {
   AuthenticatedUser,
   GithubAuthenticatedUser,
@@ -19,7 +20,9 @@ import {
   EntityNotFound,
   FailedToAuthenticateSocialAccount,
 } from "src/types/error.types";
+
 import { CannotPerformActionOnSocialAccount } from "../users/users.errors";
+
 import { RegistrationNotVerified, WrongCredentials } from "./auth.errors";
 import {
   CONST_JWT_TOKEN_EXPIRES_IN,

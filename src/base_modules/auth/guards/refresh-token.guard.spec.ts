@@ -1,7 +1,9 @@
 import type { ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { Test, type TestingModule } from "@nestjs/testing";
+
 import { NotAuthenticated } from "src/types/error.types";
+
 import { RefreshJwtAuthGuard } from "./refresh-token.guard";
 
 describe("RefreshJwtAuthGuard", () => {

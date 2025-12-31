@@ -1,4 +1,5 @@
 import { Test, type TestingModule } from "@nestjs/testing";
+
 import type { License } from "./license.entity";
 import { LicenseRepository } from "./license.repository";
 import { LicenseService } from "./license.service";

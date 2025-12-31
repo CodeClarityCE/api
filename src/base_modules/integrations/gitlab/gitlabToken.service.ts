@@ -1,11 +1,13 @@
 import { Injectable } from "@nestjs/common";
+
 import { GitlabIntegration } from "src/base_modules/integrations/gitlab/gitlabIntegration.types";
 import { User } from "src/base_modules/users/users.entity";
 import { IntegrationTokenMissingPermissions } from "src/types/error.types";
+
 import { BaseVCSTokenService } from "../base/baseVCSTokenService";
 import {
-  parseTokenExpiry,
   hasRequiredScopes,
+  parseTokenExpiry,
 } from "../utils/tokenValidation.utils";
 
 @Injectable()
