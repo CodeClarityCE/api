@@ -58,10 +58,11 @@ export class FileService {
     const added_by = await this.usersRepository.getUserById(user.userId);
 
     // Define the folder path where the file will be saved
+    // Use the current user's ID for the folder path (user uploading the file)
     const downloadPath = process.env["DOWNLOAD_PATH"] ?? "/private";
     const folderPath = validateAndJoinPath(
       downloadPath,
-      project.added_by.id,
+      added_by.id,
       project_id,
     );
 
@@ -244,8 +245,8 @@ export class FileService {
       MemberRole.USER,
     );
 
-    // Retrieve the project by ID and organization ID
-    const project = await this.projectsRepository.getProjectByIdAndOrganization(
+    // Verify the project exists and belongs to the organization
+    await this.projectsRepository.getProjectByIdAndOrganization(
       project_id,
       organization_id,
     );
@@ -257,10 +258,11 @@ export class FileService {
     const file = await this.fileRepository.getById(file_id, added_by);
 
     // Define the file path
+    // Use the current user's ID for the folder path
     const downloadPath = process.env["DOWNLOAD_PATH"] ?? "/private";
     const filePath = validateAndJoinPath(
       downloadPath,
-      project.added_by.id,
+      added_by.id,
       project_id,
       file.name,
     );

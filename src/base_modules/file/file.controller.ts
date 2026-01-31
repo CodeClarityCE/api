@@ -38,7 +38,7 @@ export interface UploadData {
   hash: string;
 }
 
-@Controller("/file/:project_id")
+@Controller("/org/:organization_id/file/:project_id")
 export class FileController {
   constructor(private readonly fileService: FileService) {}
 
@@ -102,17 +102,17 @@ export class FileController {
   @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
   @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
-  @Get(":project_id")
+  @Get(":file_name")
   async getFileByName(
     @AuthUser() _user: AuthenticatedUser,
     @Param("project_id") project_id: string,
-    @Param("org_id") org_id: string,
+    @Param("organization_id") organization_id: string,
     @Param("file_name") file_name: string,
   ): Promise<TypedResponse<string>> {
     const downloadPath = process.env["DOWNLOAD_PATH"] ?? "/private";
     const filePath = validateAndJoinPath(
       downloadPath,
-      org_id,
+      organization_id,
       project_id,
       file_name,
     );
