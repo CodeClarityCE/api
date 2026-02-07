@@ -22,6 +22,7 @@ import { EPSS } from "./epss/epss.entity";
 import { EPSSRepository } from "./epss/epss.repository";
 import { FriendsOfPhp } from "./friendsofphp/friendsofphp.entity";
 import { FriendsOfPhpRepository } from "./friendsofphp/friendsofphp.repository";
+import { GCVE } from "./gcve/gcve.entity";
 import { LicenseController } from "./license/license.controller";
 import { LicenseService } from "./license/license.service";
 import { NPMPackageRepository } from "./npm/npm.repository";
@@ -50,6 +51,7 @@ import { VulnerabilitySearchService } from "./vulnerability/vulnerability.servic
         Version,
         EPSS,
         FriendsOfPhp,
+        GCVE,
         PackageVulnerability,
       ],
       "knowledge",

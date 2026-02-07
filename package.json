@@ -28,9 +28,11 @@
     "migration:run:codeclarity": "ts-node -r tsconfig-paths/register src/scripts/run-migration-cli.ts codeclarity",
     "migration:run:knowledge": "ts-node -r tsconfig-paths/register src/scripts/run-migration-cli.ts knowledge",
     "migration:run:plugins": "ts-node -r tsconfig-paths/register src/scripts/run-migration-cli.ts plugins",
+    "migration:run:config": "ts-node -r tsconfig-paths/register src/scripts/run-migration-cli.ts config",
     "migration:revert:codeclarity": "typeorm-ts-node-commonjs migration:revert -d src/datasources/codeclarity.datasource.ts",
     "migration:revert:knowledge": "typeorm-ts-node-commonjs migration:revert -d src/datasources/knowledge.datasource.ts",
-    "migration:revert:plugins": "typeorm-ts-node-commonjs migration:revert -d src/datasources/plugins.datasource.ts"
+    "migration:revert:plugins": "typeorm-ts-node-commonjs migration:revert -d src/datasources/plugins.datasource.ts",
+    "migration:revert:config": "typeorm-ts-node-commonjs migration:revert -d src/datasources/config.datasource.ts"
   },
   "dependencies": {
     "@css-inline/css-inline": "0.18.0",

@@ -2,6 +2,7 @@ import * as dotenv from "dotenv";
 import { type DataSource } from "typeorm";
 
 import { CodeClarityDataSource } from "../datasources/codeclarity.datasource";
+import { ConfigDataSource } from "../datasources/config.datasource";
 import { KnowledgeDataSource } from "../datasources/knowledge.datasource";
 import { PluginsDataSource } from "../datasources/plugins.datasource";
 
@@ -19,6 +20,7 @@ try {
 
 const map: Record<string, DataSource> = {
   codeclarity: CodeClarityDataSource,
+  config: ConfigDataSource,
   knowledge: KnowledgeDataSource,
   plugins: PluginsDataSource,
 };
