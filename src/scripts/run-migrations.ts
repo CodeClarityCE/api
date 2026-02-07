@@ -1,4 +1,5 @@
 import { CodeClarityDataSource } from "../datasources/codeclarity.datasource";
+import { ConfigDataSource } from "../datasources/config.datasource";
 import { KnowledgeDataSource } from "../datasources/knowledge.datasource";
 import { PluginsDataSource } from "../datasources/plugins.datasource";
 
@@ -9,6 +10,7 @@ async function runAll(): Promise<void> {
     CodeClarityDataSource,
     KnowledgeDataSource,
     PluginsDataSource,
+    ConfigDataSource,
   ];
   for (const ds of sources) {
     try {
