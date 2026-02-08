@@ -23,6 +23,7 @@ import { EPSSRepository } from "./epss/epss.repository";
 import { FriendsOfPhp } from "./friendsofphp/friendsofphp.entity";
 import { FriendsOfPhpRepository } from "./friendsofphp/friendsofphp.repository";
 import { GCVE } from "./gcve/gcve.entity";
+import { GCVERepository } from "./gcve/gcve.repository";
 import { LicenseController } from "./license/license.controller";
 import { LicenseService } from "./license/license.service";
 import { NPMPackageRepository } from "./npm/npm.repository";
@@ -70,6 +71,7 @@ import { VulnerabilitySearchService } from "./vulnerability/vulnerability.servic
     OSVReportGenerator,
     EPSSRepository,
     FriendsOfPhpRepository,
+    GCVERepository,
     VulnerabilitySearchService,
     OutdatedCheckService,
     VulnerabilityCheckService,
@@ -88,6 +90,7 @@ import { VulnerabilitySearchService } from "./vulnerability/vulnerability.servic
     OSVReportGenerator,
     EPSSRepository,
     FriendsOfPhpRepository,
+    GCVERepository,
     DatabaseService,
     VulnerabilitySearchService,
     OutdatedCheckService,

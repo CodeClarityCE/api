@@ -4,6 +4,7 @@ import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
 import { AnalysesRepository } from "src/base_modules/shared/repositories";
 import { CWERepository } from "src/codeclarity_modules/knowledge/cwe/cwe.repository";
 import { EPSSRepository } from "src/codeclarity_modules/knowledge/epss/epss.repository";
+import { GCVERepository } from "src/codeclarity_modules/knowledge/gcve/gcve.repository";
 import { NVDRepository } from "src/codeclarity_modules/knowledge/nvd/nvd.repository";
 import { OSVRepository } from "src/codeclarity_modules/knowledge/osv/osv.repository";
 import { VulnerabilityPolicyService } from "src/codeclarity_modules/policies/vulnerability/vulnerability.service";
@@ -150,6 +151,10 @@ describe("VulnerabilitiesService", () => {
     getByCVE: jest.fn().mockResolvedValue({ percentile: 0.1, score: 0.05 }),
   };
 
+  const mockGCVERepository = {
+    getVulnByCVEId: jest.fn().mockResolvedValue(null),
+  };
+
   const mockVulnerabilityPolicyService = {
     getVulnerabilityPoliciesMap: jest.fn().mockResolvedValue(new Map()),
   };
@@ -199,6 +204,10 @@ describe("VulnerabilitiesService", () => {
         {
           provide: EPSSRepository,
           useValue: mockEPSSRepository,
+        },
+        {
+          provide: GCVERepository,
+          useValue: mockGCVERepository,
         },
         {
           provide: VulnerabilityPolicyService,
