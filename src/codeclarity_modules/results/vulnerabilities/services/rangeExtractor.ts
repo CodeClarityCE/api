@@ -149,6 +149,54 @@ export function extractNVDRanges(nvdItem: NVD): SourceRangeData[] {
 // OSV extraction
 // ---------------------------------------------------------------------------
 
+/** Process a single OSV event list into ParsedRange entries (state machine). */
+function processOSVEvents(events: OSVEvent[], ranges: ParsedRange[]): void {
+  let currentIntroduced: string | null = null;
+
+  for (const event of events) {
+    if (event.introduced !== undefined) {
+      // Normalize empty string to "0" (meaning "from the earliest version")
+      currentIntroduced = event.introduced || "0";
+    }
+    if (
+      event.fixed !== undefined &&
+      event.fixed !== "" &&
+      currentIntroduced !== null
+    ) {
+      ranges.push({
+        introduced: currentIntroduced,
+        introducedInclusive: true,
+        fixed: event.fixed,
+        fixedInclusive: false,
+      });
+      currentIntroduced = null;
+    }
+    if (
+      event.last_affected !== undefined &&
+      event.last_affected !== "" &&
+      currentIntroduced !== null
+    ) {
+      ranges.push({
+        introduced: currentIntroduced,
+        introducedInclusive: true,
+        fixed: event.last_affected,
+        fixedInclusive: true,
+      });
+      currentIntroduced = null;
+    }
+  }
+
+  // Open-ended range (introduced with no closing event)
+  if (currentIntroduced !== null) {
+    ranges.push({
+      introduced: currentIntroduced,
+      introducedInclusive: true,
+      fixed: null,
+      fixedInclusive: false,
+    });
+  }
+}
+
 /**
  * Extract structured range data from an OSV entity.
  * Uses a state-machine approach for events so that multiple disjoint ranges
@@ -170,51 +218,7 @@ export function extractOSVRanges(osvItem: OSV): SourceRangeData[] {
     if (entry.ranges && Array.isArray(entry.ranges)) {
       for (const range of entry.ranges) {
         if (!range.events || !Array.isArray(range.events)) continue;
-
-        let currentIntroduced: string | null = null;
-
-        for (const event of range.events) {
-          if (event.introduced !== undefined) {
-            // Normalize empty string to "0" (meaning "from the earliest version")
-            currentIntroduced = event.introduced || "0";
-          }
-          if (
-            event.fixed !== undefined &&
-            event.fixed !== "" &&
-            currentIntroduced !== null
-          ) {
-            ranges.push({
-              introduced: currentIntroduced,
-              introducedInclusive: true,
-              fixed: event.fixed,
-              fixedInclusive: false,
-            });
-            currentIntroduced = null;
-          }
-          if (
-            event.last_affected !== undefined &&
-            event.last_affected !== "" &&
-            currentIntroduced !== null
-          ) {
-            ranges.push({
-              introduced: currentIntroduced,
-              introducedInclusive: true,
-              fixed: event.last_affected,
-              fixedInclusive: true,
-            });
-            currentIntroduced = null;
-          }
-        }
-
-        // Open-ended range (introduced with no closing event)
-        if (currentIntroduced !== null) {
-          ranges.push({
-            introduced: currentIntroduced,
-            introducedInclusive: true,
-            fixed: null,
-            fixedInclusive: false,
-          });
-        }
+        processOSVEvents(range.events, ranges);
       }
     }
 
@@ -262,9 +266,7 @@ function normalizeGCVEVersion(ver: GCVEVersionEntry): GCVEVersionEntry {
   const { version: _v, ...rest } = ver;
 
   // Compound range: ">= X, < Y" or ">= X, <= Y" (also > X variants)
-  const compoundMatch = v.match(
-    /^(>=?)\s*([^,]+?)\s*,\s*(<=?)\s*(.+)$/,
-  );
+  const compoundMatch = /^(>=?)\s*([^,]+?)\s*,\s*(<=?)\s*(.+)$/.exec(v);
   if (compoundMatch) {
     const startVer = compoundMatch[2]!.trim();
     const endOp = compoundMatch[3]!;
@@ -278,16 +280,16 @@ function normalizeGCVEVersion(ver: GCVEVersionEntry): GCVEVersionEntry {
     return result;
   }
 
-  const leMatch = v.match(/^<=\s*(.+)$/);
+  const leMatch = /^<=\s*(.+)$/.exec(v);
   if (leMatch) return { ...rest, lessThanOrEqual: leMatch[1]!.trim() };
 
-  const ltMatch = v.match(/^<\s*(.+)$/);
+  const ltMatch = /^<\s*(.+)$/.exec(v);
   if (ltMatch) return { ...rest, lessThan: ltMatch[1]!.trim() };
 
-  const geMatch = v.match(/^>=\s*(.+)$/);
+  const geMatch = /^>=\s*(.+)$/.exec(v);
   if (geMatch) return { ...ver, version: geMatch[1]!.trim() };
 
-  const gtMatch = v.match(/^>\s*(.+)$/);
+  const gtMatch = /^>\s*(.+)$/.exec(v);
   if (gtMatch) return { ...ver, version: gtMatch[1]!.trim() };
 
   return ver;
@@ -335,14 +337,14 @@ export function extractGCVERanges(gcveItem: GCVE): SourceRangeData[] {
             fixed: ver.lessThanOrEqual,
             fixedInclusive: true,
           });
-        } else if (ver.status === "affected" && ver.version) {
-          if (isSpecial) {
-            universal = true;
-          } else {
-            if (!exactVersions.includes(ver.version)) {
-              exactVersions.push(ver.version);
-            }
-          }
+        } else if (ver.status === "affected" && ver.version && isSpecial) {
+          universal = true;
+        } else if (
+          ver.status === "affected" &&
+          ver.version &&
+          !exactVersions.includes(ver.version)
+        ) {
+          exactVersions.push(ver.version);
         }
       }
     }
@@ -424,9 +426,7 @@ export function formatRange(range: ParsedRange): string {
   }
 
   if (range.fixed !== null && range.fixed !== "") {
-    parts.push(
-      range.fixedInclusive ? `<=${range.fixed}` : `<${range.fixed}`,
-    );
+    parts.push(range.fixedInclusive ? `<=${range.fixed}` : `<${range.fixed}`);
   }
 
   if (parts.length === 0) {
@@ -499,7 +499,11 @@ export function buildAffectedVersionsString(
     } else if (data.exactVersions.length > 1) {
       parts.push(`specific versions: ${data.exactVersions.join(", ")}`);
     }
-    if (data.universal && data.ranges.length === 0 && data.exactVersions.length === 0) {
+    if (
+      data.universal &&
+      data.ranges.length === 0 &&
+      data.exactVersions.length === 0
+    ) {
       parts.push("all versions");
     }
   }

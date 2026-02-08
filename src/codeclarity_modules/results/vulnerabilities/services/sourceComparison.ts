@@ -37,7 +37,7 @@ export function compareSourceVerdicts(
     definitive.length <= 1 ||
     definitive.every((v) => v.affected === definitive[0]!.affected);
 
-  const findVerdict = (source: string) =>
+  const findVerdict = (source: string): SourceVerdict | undefined =>
     verdicts.find((v) => v.source === source);
 
   const nvd = findVerdict("NVD");

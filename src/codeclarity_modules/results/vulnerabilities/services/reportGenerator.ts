@@ -26,8 +26,8 @@ import type {
   Vulnerability,
   VulnerabilityDetailsReport,
   VulnerabilityInfoReport,
-  VulnSourceInfo,
   VulnerableVersionInfoReport,
+  VulnSourceInfo,
   WeaknessInfoReport,
 } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
 
@@ -53,10 +53,14 @@ interface OSVAffectedEntry {
 }
 
 interface NVDAffectedEntry {
-  sources?: Array<{
-    criteriaDict?: { product?: string; vendor?: string; [key: string]: unknown };
+  sources?: {
+    criteriaDict?: {
+      product?: string;
+      vendor?: string;
+      [key: string]: unknown;
+    };
     [key: string]: unknown;
-  }>;
+  }[];
   [key: string]: unknown;
 }
 
@@ -122,7 +126,9 @@ abstract class BaseReportGenerator {
   protected abstract getDescription(): string;
   protected abstract getPublishedDate(): string;
   protected abstract getLastModifiedDate(): string;
-  protected abstract buildSources(friendsOfPhpItem?: FriendsOfPhp): VulnSourceInfo[];
+  protected abstract buildSources(
+    friendsOfPhpItem?: FriendsOfPhp,
+  ): VulnSourceInfo[];
   protected abstract buildAliases(): string[];
   protected abstract getReferences(): ReferenceInfo[];
   protected abstract getPrimarySeverity(): Promise<SeverityInfo>;
@@ -144,8 +150,13 @@ abstract class BaseReportGenerator {
     const affectedStringParts = this.buildAffectedStringParts(affectedData);
 
     // Final fallback for framework vulnerabilities
-    const isFramework = this.vulnsData.AffectedDependency?.startsWith("framework-");
-    if (affectedStringParts.length === 0 && isFramework && this.vulnsData.AffectedVersion) {
+    const isFramework =
+      this.vulnsData.AffectedDependency?.startsWith("framework-");
+    if (
+      affectedStringParts.length === 0 &&
+      isFramework &&
+      this.vulnsData.AffectedVersion
+    ) {
       return {
         versions: `${this.vulnsData.AffectedVersion} (check advisory for details)`,
         source,
@@ -158,12 +169,11 @@ abstract class BaseReportGenerator {
   private getDirectAffectedVersions(
     preferredSource: string,
   ): { versions: string; source: string } | null {
-    const order =
-      preferredSource === "NVD"
-        ? (["NVD", "OSV", "GCVE"] as const)
-        : preferredSource === "GCVE"
-          ? (["GCVE", "OSV", "NVD"] as const)
-          : (["OSV", "NVD", "GCVE"] as const);
+    const sourceOrders: Record<string, readonly string[]> = {
+      NVD: ["NVD", "OSV", "GCVE"],
+      GCVE: ["GCVE", "OSV", "NVD"],
+    };
+    const order = sourceOrders[preferredSource] ?? ["OSV", "NVD", "GCVE"];
 
     const packageName = this.vulnsData.AffectedDependency || "";
 
@@ -205,7 +215,7 @@ abstract class BaseReportGenerator {
       }
     } else if (source === "GCVE") {
       const gcveMatch = this.vulnsData.GCVEMatch;
-      if (gcveMatch && gcveMatch.AffectedInfo && gcveMatch.AffectedInfo.length > 0) {
+      if (gcveMatch?.AffectedInfo && gcveMatch.AffectedInfo.length > 0) {
         return gcveMatch.AffectedInfo[0]!;
       }
     } else {
@@ -323,13 +333,16 @@ abstract class BaseReportGenerator {
               .replace(/\s+/g, " ")
               .trim() ?? "",
         });
-        if (cweInfo.common_consequences && Array.isArray(cweInfo.common_consequences)) {
+        if (
+          cweInfo.common_consequences &&
+          Array.isArray(cweInfo.common_consequences)
+        ) {
           const arr: CommonConsequencesInfo[] = [];
-          for (const cc of cweInfo.common_consequences as Array<{
+          for (const cc of cweInfo.common_consequences as {
             Scope?: string[];
             Impact?: string[];
             Note?: string;
-          }>) {
+          }[]) {
             arr.push({
               scope: cc.Scope ?? [],
               impact: cc.Impact ?? [],
@@ -450,7 +463,8 @@ abstract class BaseReportGenerator {
 
     // Determine the primary source for version string
     const primarySource = this instanceof OSVReportGenerator ? "OSV" : "NVD";
-    const affectedResult = await this.getVulnerableVersionsString(primarySource);
+    const affectedResult =
+      await this.getVulnerableVersionsString(primarySource);
     const versionsStatusArray = await this.getVersionsStatusArray(
       affectedResult.versions,
       this.vulnsData.AffectedDependency,
@@ -473,7 +487,10 @@ abstract class BaseReportGenerator {
       dependencyInfo.name = displayName;
       dependencyInfo.version = this.vulnsData.AffectedVersion || "";
 
-      if (!this.vulnsData.AffectedDependency || !this.vulnsData.AffectedVersion) {
+      if (
+        !this.vulnsData.AffectedDependency ||
+        !this.vulnsData.AffectedVersion
+      ) {
         console.warn("Missing dependency info in vulnerability data:", {
           vulnId: this.vulnsData.VulnerabilityId,
           affectedDep: this.vulnsData.AffectedDependency,

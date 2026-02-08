@@ -1,5 +1,5 @@
-import type { ComparisonResult, SourceVerdict } from "./types";
 import { compareSourceVerdicts } from "./sourceComparison";
+import type { ComparisonResult, SourceVerdict } from "./types";
 
 // ---------------------------------------------------------------------------
 // Helpers

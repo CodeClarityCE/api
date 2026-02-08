@@ -53,9 +53,7 @@ describe("extractNVDRanges", () => {
   });
 
   it("should extract inclusive end range", () => {
-    const nvd = makeNVD([
-      { sources: [{ versionEndIncluding: "3.0.0" }] },
-    ]);
+    const nvd = makeNVD([{ sources: [{ versionEndIncluding: "3.0.0" }] }]);
     const result = extractNVDRanges(nvd);
     expect(result[0]!.ranges[0]!.fixedInclusive).toBe(true);
     expect(result[0]!.ranges[0]!.fixed).toBe("3.0.0");
@@ -83,9 +81,7 @@ describe("extractNVDRanges", () => {
   });
 
   it("should mark universal for wildcard version", () => {
-    const nvd = makeNVD([
-      { sources: [{ criteriaDict: { version: "*" } }] },
-    ]);
+    const nvd = makeNVD([{ sources: [{ criteriaDict: { version: "*" } }] }]);
     const result = extractNVDRanges(nvd);
     expect(result[0]!.universal).toBe(true);
   });
@@ -110,7 +106,10 @@ describe("extractNVDRanges", () => {
         sources: [
           {
             versionEndExcluding: "1.47.1",
-            criteriaDict: { product: "visual_studio_code", vendor: "microsoft" },
+            criteriaDict: {
+              product: "visual_studio_code",
+              vendor: "microsoft",
+            },
           },
         ],
       },
@@ -140,14 +139,21 @@ describe("extractNVDRanges", () => {
         sources: [
           {
             versionEndExcluding: "1.47.1",
-            criteriaDict: { product: "visual_studio_code", vendor: "microsoft" },
+            criteriaDict: {
+              product: "visual_studio_code",
+              vendor: "microsoft",
+            },
           },
         ],
       },
       {
         sources: [
           {
-            criteriaDict: { product: "typescript", vendor: "microsoft", version: "*" },
+            criteriaDict: {
+              product: "typescript",
+              vendor: "microsoft",
+              version: "*",
+            },
           },
         ],
       },
@@ -238,9 +244,7 @@ describe("extractOSVRanges", () => {
   });
 
   it("should collect specific version lists", () => {
-    const osv = makeOSV([
-      { versions: ["1.0.0", "1.0.1", "v1.0.2"] },
-    ]);
+    const osv = makeOSV([{ versions: ["1.0.0", "1.0.1", "v1.0.2"] }]);
     const result = extractOSVRanges(osv);
     expect(result[0]!.exactVersions).toEqual(["1.0.0", "1.0.1", "1.0.2"]);
   });
@@ -307,7 +311,9 @@ describe("extractOSVRanges", () => {
 describe("extractGCVERanges", () => {
   it("should handle lessThan with normal version", () => {
     const gcve = makeGCVE([
-      { versions: [{ version: "1.0.0", lessThan: "1.5.0", status: "affected" }] },
+      {
+        versions: [{ version: "1.0.0", lessThan: "1.5.0", status: "affected" }],
+      },
     ]);
     const result = extractGCVERanges(gcve);
     expect(result[0]!.ranges[0]).toEqual({
@@ -320,7 +326,11 @@ describe("extractGCVERanges", () => {
 
   it("should handle lessThanOrEqual", () => {
     const gcve = makeGCVE([
-      { versions: [{ version: "2.0.0", lessThanOrEqual: "2.4.11", status: "affected" }] },
+      {
+        versions: [
+          { version: "2.0.0", lessThanOrEqual: "2.4.11", status: "affected" },
+        ],
+      },
     ]);
     const result = extractGCVERanges(gcve);
     expect(result[0]!.ranges[0]!.fixedInclusive).toBe(true);
@@ -465,9 +475,27 @@ describe("extractGCVERanges", () => {
 
 describe("filterNVDByPackage", () => {
   const entries = [
-    { source: "NVD" as const, ranges: [], exactVersions: [], universal: false, product: "visual_studio" },
-    { source: "NVD" as const, ranges: [], exactVersions: [], universal: false, product: "visual_studio_code" },
-    { source: "NVD" as const, ranges: [], exactVersions: [], universal: false, product: "typescript" },
+    {
+      source: "NVD" as const,
+      ranges: [],
+      exactVersions: [],
+      universal: false,
+      product: "visual_studio",
+    },
+    {
+      source: "NVD" as const,
+      ranges: [],
+      exactVersions: [],
+      universal: false,
+      product: "visual_studio_code",
+    },
+    {
+      source: "NVD" as const,
+      ranges: [],
+      exactVersions: [],
+      universal: false,
+      product: "typescript",
+    },
   ];
 
   it("should filter to matching product (CVE-2020-1416 scenario)", () => {
@@ -478,7 +506,15 @@ describe("filterNVDByPackage", () => {
 
   it("should match scoped npm package", () => {
     const filtered = filterNVDByPackage(
-      [{ source: "NVD", ranges: [], exactVersions: [], universal: false, product: "passport" }],
+      [
+        {
+          source: "NVD",
+          ranges: [],
+          exactVersions: [],
+          universal: false,
+          product: "passport",
+        },
+      ],
       "@fastify/passport",
     );
     expect(filtered).toHaveLength(1);
@@ -486,8 +522,18 @@ describe("filterNVDByPackage", () => {
 
   it("should return all when no product info available", () => {
     const noProducts = [
-      { source: "NVD" as const, ranges: [], exactVersions: [], universal: false },
-      { source: "NVD" as const, ranges: [], exactVersions: [], universal: false },
+      {
+        source: "NVD" as const,
+        ranges: [],
+        exactVersions: [],
+        universal: false,
+      },
+      {
+        source: "NVD" as const,
+        ranges: [],
+        exactVersions: [],
+        universal: false,
+      },
     ];
     expect(filterNVDByPackage(noProducts, "anything")).toEqual(noProducts);
   });
@@ -498,8 +544,19 @@ describe("filterNVDByPackage", () => {
 
   it("should keep entries without product even when others have it", () => {
     const mixed = [
-      { source: "NVD" as const, ranges: [], exactVersions: [], universal: false, product: "unrelated" },
-      { source: "NVD" as const, ranges: [], exactVersions: [], universal: false },
+      {
+        source: "NVD" as const,
+        ranges: [],
+        exactVersions: [],
+        universal: false,
+        product: "unrelated",
+      },
+      {
+        source: "NVD" as const,
+        ranges: [],
+        exactVersions: [],
+        universal: false,
+      },
     ];
     const filtered = filterNVDByPackage(mixed, "my-pkg");
     // Entry without product is kept, unrelated is removed
@@ -515,43 +572,78 @@ describe("filterNVDByPackage", () => {
 describe("formatRange", () => {
   it("should format inclusive start, exclusive end", () => {
     expect(
-      formatRange({ introduced: "1.0.0", introducedInclusive: true, fixed: "2.0.0", fixedInclusive: false }),
+      formatRange({
+        introduced: "1.0.0",
+        introducedInclusive: true,
+        fixed: "2.0.0",
+        fixedInclusive: false,
+      }),
     ).toBe(">=1.0.0 <2.0.0");
   });
 
   it("should format exclusive start, inclusive end", () => {
     expect(
-      formatRange({ introduced: "1.0.0", introducedInclusive: false, fixed: "2.0.0", fixedInclusive: true }),
+      formatRange({
+        introduced: "1.0.0",
+        introducedInclusive: false,
+        fixed: "2.0.0",
+        fixedInclusive: true,
+      }),
     ).toBe(">1.0.0 <=2.0.0");
   });
 
   it("should omit lower bound when introduced is 0", () => {
     expect(
-      formatRange({ introduced: "0", introducedInclusive: true, fixed: "1.5.0", fixedInclusive: false }),
+      formatRange({
+        introduced: "0",
+        introducedInclusive: true,
+        fixed: "1.5.0",
+        fixedInclusive: false,
+      }),
     ).toBe("<1.5.0");
   });
 
   it("should return * for fully open range", () => {
     expect(
-      formatRange({ introduced: null, introducedInclusive: true, fixed: null, fixedInclusive: false }),
+      formatRange({
+        introduced: null,
+        introducedInclusive: true,
+        fixed: null,
+        fixedInclusive: false,
+      }),
     ).toBe("*");
   });
 
   it("should treat empty string introduced as no lower bound", () => {
     expect(
-      formatRange({ introduced: "", introducedInclusive: true, fixed: "1.5.0", fixedInclusive: false }),
+      formatRange({
+        introduced: "",
+        introducedInclusive: true,
+        fixed: "1.5.0",
+        fixedInclusive: false,
+      }),
     ).toBe("<1.5.0");
   });
 
   it("should treat empty string fixed as no upper bound", () => {
     expect(
-      formatRange({ introduced: "1.0.0", introducedInclusive: true, fixed: "", fixedInclusive: false }),
+      formatRange({
+        introduced: "1.0.0",
+        introducedInclusive: true,
+        fixed: "",
+        fixedInclusive: false,
+      }),
     ).toBe(">=1.0.0");
   });
 
   it("should return * for both empty strings", () => {
     expect(
-      formatRange({ introduced: "", introducedInclusive: true, fixed: "", fixedInclusive: false }),
+      formatRange({
+        introduced: "",
+        introducedInclusive: true,
+        fixed: "",
+        fixedInclusive: false,
+      }),
     ).toBe("*");
   });
 });
@@ -559,25 +651,45 @@ describe("formatRange", () => {
 describe("formatRangeHuman", () => {
   it("should produce human-readable range", () => {
     expect(
-      formatRangeHuman({ introduced: "1.0.0", introducedInclusive: true, fixed: "2.0.0", fixedInclusive: false }),
+      formatRangeHuman({
+        introduced: "1.0.0",
+        introducedInclusive: true,
+        fixed: "2.0.0",
+        fixedInclusive: false,
+      }),
     ).toBe("1.0.0 up to (but not including) 2.0.0");
   });
 
   it("should handle introduced:0 as 'all versions'", () => {
     expect(
-      formatRangeHuman({ introduced: "0", introducedInclusive: true, fixed: "1.5.0", fixedInclusive: false }),
+      formatRangeHuman({
+        introduced: "0",
+        introducedInclusive: true,
+        fixed: "1.5.0",
+        fixedInclusive: false,
+      }),
     ).toBe("all versions up to (but not including) 1.5.0");
   });
 
   it("should handle inclusive end", () => {
     expect(
-      formatRangeHuman({ introduced: "1.0.0", introducedInclusive: true, fixed: "2.0.0", fixedInclusive: true }),
+      formatRangeHuman({
+        introduced: "1.0.0",
+        introducedInclusive: true,
+        fixed: "2.0.0",
+        fixedInclusive: true,
+      }),
     ).toBe("1.0.0 up to 2.0.0 (inclusive)");
   });
 
   it("should handle open-ended range", () => {
     expect(
-      formatRangeHuman({ introduced: "3.0.0", introducedInclusive: true, fixed: null, fixedInclusive: false }),
+      formatRangeHuman({
+        introduced: "3.0.0",
+        introducedInclusive: true,
+        fixed: null,
+        fixedInclusive: false,
+      }),
     ).toBe("3.0.0 and later");
   });
 });
@@ -587,8 +699,18 @@ describe("formatRangesRaw", () => {
     const data = {
       source: "OSV" as const,
       ranges: [
-        { introduced: "0", introducedInclusive: true, fixed: "1.1.0", fixedInclusive: false },
-        { introduced: "2.0.0", introducedInclusive: true, fixed: "2.3.0", fixedInclusive: false },
+        {
+          introduced: "0",
+          introducedInclusive: true,
+          fixed: "1.1.0",
+          fixedInclusive: false,
+        },
+        {
+          introduced: "2.0.0",
+          introducedInclusive: true,
+          fixed: "2.3.0",
+          fixedInclusive: false,
+        },
       ],
       exactVersions: [],
       universal: false,
@@ -603,7 +725,12 @@ describe("buildAffectedVersionsString", () => {
       {
         source: "OSV" as const,
         ranges: [
-          { introduced: "0", introducedInclusive: true, fixed: "1.1.0", fixedInclusive: false },
+          {
+            introduced: "0",
+            introducedInclusive: true,
+            fixed: "1.1.0",
+            fixedInclusive: false,
+          },
         ],
         exactVersions: ["3.2.1"],
         universal: false,
@@ -620,13 +747,27 @@ describe("mergeSourceRangeData", () => {
     const entries = [
       {
         source: "NVD" as const,
-        ranges: [{ introduced: "1.0.0", introducedInclusive: true, fixed: "2.0.0", fixedInclusive: false }],
+        ranges: [
+          {
+            introduced: "1.0.0",
+            introducedInclusive: true,
+            fixed: "2.0.0",
+            fixedInclusive: false,
+          },
+        ],
         exactVersions: [],
         universal: false,
       },
       {
         source: "NVD" as const,
-        ranges: [{ introduced: "3.0.0", introducedInclusive: true, fixed: "4.0.0", fixedInclusive: false }],
+        ranges: [
+          {
+            introduced: "3.0.0",
+            introducedInclusive: true,
+            fixed: "4.0.0",
+            fixedInclusive: false,
+          },
+        ],
         exactVersions: ["5.0.0"],
         universal: false,
       },

@@ -48,9 +48,8 @@ interface OSVSeverity {
 // ---------------------------------------------------------------------------
 
 export async function parseCVSS31Vector(vector: string): Promise<CVSS31> {
-  const { createCVSS31Parser, createCVSS31Calculator } = await import(
-    "../../../../lib/cvss-parser"
-  );
+  const { createCVSS31Parser, createCVSS31Calculator } =
+    await import("../../../../lib/cvss-parser");
   const parser = createCVSS31Parser();
   const parsed = parser.parse(vector);
   const calc = createCVSS31Calculator();
@@ -72,9 +71,8 @@ export async function parseCVSS31Vector(vector: string): Promise<CVSS31> {
 }
 
 export async function parseCVSS3Vector(vector: string): Promise<CVSS3> {
-  const { createCVSS3Parser, createCVSS3Calculator } = await import(
-    "../../../../lib/cvss-parser"
-  );
+  const { createCVSS3Parser, createCVSS3Calculator } =
+    await import("../../../../lib/cvss-parser");
   const parser = createCVSS3Parser();
   const parsed = parser.parse(vector);
   const calc = createCVSS3Calculator();
@@ -96,9 +94,8 @@ export async function parseCVSS3Vector(vector: string): Promise<CVSS3> {
 }
 
 export async function parseCVSS2Vector(vector: string): Promise<CVSS2> {
-  const { createCVSS2Parser, createCVSS2Calculator } = await import(
-    "../../../../lib/cvss-parser"
-  );
+  const { createCVSS2Parser, createCVSS2Calculator } =
+    await import("../../../../lib/cvss-parser");
   const parser = createCVSS2Parser();
   const parsed = parser.parse(vector);
   const calc = createCVSS2Calculator();
