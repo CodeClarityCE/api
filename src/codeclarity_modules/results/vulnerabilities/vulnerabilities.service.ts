@@ -4,6 +4,7 @@ import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { AnalysesRepository } from "src/base_modules/shared/repositories";
 import { CWERepository } from "src/codeclarity_modules/knowledge/cwe/cwe.repository";
 import { EPSSRepository } from "src/codeclarity_modules/knowledge/epss/epss.repository";
+import { GCVERepository } from "src/codeclarity_modules/knowledge/gcve/gcve.repository";
 import { NVDRepository } from "src/codeclarity_modules/knowledge/nvd/nvd.repository";
 import { OSVRepository } from "src/codeclarity_modules/knowledge/osv/osv.repository";
 import { VulnerabilityPolicyService } from "src/codeclarity_modules/policies/vulnerability/vulnerability.service";
@@ -100,6 +101,7 @@ export class VulnerabilitiesService {
     private readonly nvdRepository: NVDRepository,
     private readonly cweRepository: CWERepository,
     private readonly epssRepository: EPSSRepository,
+    private readonly gcveRepository: GCVERepository,
     private readonly vulnerabilityPolicyService: VulnerabilityPolicyService,
     private readonly analysesRepository: AnalysesRepository,
   ) {}
@@ -437,6 +439,9 @@ export class VulnerabilitiesService {
         Severity: finding.Severity,
         Conflict: finding.Conflict,
       };
+      if (finding.GCVEMatch) {
+        affected.GCVEMatch = finding.GCVEMatch;
+      }
       if (finding.Weaknesses) {
         affected.Weaknesses = finding.Weaknesses;
       }
@@ -491,6 +496,20 @@ export class VulnerabilitiesService {
               Source: Source.Osv,
               Score: String(osvVuln.Vlai_score),
               Confidence: Number(osvVuln.Vlai_confidence),
+            });
+          }
+        }
+        if (finding.GCVEMatch) {
+          const gcveVuln = finding.GCVEMatch.Vulnerability;
+          if (
+            gcveVuln &&
+            typeof gcveVuln === "object" &&
+            "Vlai_score" in gcveVuln
+          ) {
+            mergedFinding.VLAI.push({
+              Source: Source.Gcve,
+              Score: String(gcveVuln.Vlai_score),
+              Confidence: Number(gcveVuln.Vlai_confidence),
             });
           }
         }
@@ -608,6 +627,30 @@ export class VulnerabilitiesService {
         if (osvVuln) {
           osvDescription = osvVuln.details;
           osvSummary = osvVuln.summary;
+        }
+      }
+
+      // Fetch GCVE data from knowledge DB to add source + VLAI
+      if (isCve) {
+        const gcveVuln = await this.gcveRepository.getVulnByCVEId(
+          finding.Vulnerability,
+        );
+        if (gcveVuln) {
+          // Add GCVE to sources if not already present
+          if (!finding.Sources.includes(Source.Gcve)) {
+            finding.Sources.push(Source.Gcve);
+          }
+          // Add VLAI score if available and not already present
+          if (
+            gcveVuln.vlai_score &&
+            !finding.VLAI.some((v) => v.Source === Source.Gcve)
+          ) {
+            finding.VLAI.push({
+              Source: Source.Gcve,
+              Score: gcveVuln.vlai_score,
+              Confidence: gcveVuln.vlai_confidence ?? 0,
+            });
+          }
         }
       }
 

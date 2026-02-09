@@ -188,6 +188,7 @@ export interface Vulnerability {
   Weaknesses?: WeaknessInfo[];
   OSVMatch: Vuln;
   NVDMatch: Vuln;
+  GCVEMatch?: Vuln;
   Conflict: Conflict;
 }
 
@@ -246,6 +247,7 @@ export interface AffectedVuln {
   Weaknesses?: WeaknessInfo[];
   OSVMatch: Vuln;
   NVDMatch: Vuln;
+  GCVEMatch?: Vuln;
   Conflict: Conflict;
 }
 
@@ -289,6 +291,7 @@ export declare interface AffectedInfo {
 export enum Source {
   Nvd = "NVD",
   Osv = "OSV",
+  Gcve = "GCVE",
 }
 
 // Types from vulnerabilities2.types.ts (for report generation)
@@ -296,16 +299,20 @@ export enum Source {
 /** Version info with source comparison details (for reports) */
 export interface VersionInfoReport {
   affected_versions_string: string;
+  affected_versions_source?: string;
   patched_versions_string: string;
   versions: VulnerableVersionInfoReport[];
   source_comparison?: {
     nvd: string;
     osv: string;
+    gcve: string;
     agree: boolean;
     nvdReason: string;
     osvReason: string;
+    gcveReason: string;
     nvdAllVersions: string;
     osvAllVersions: string;
+    gcveAllVersions: string;
   };
 }
 

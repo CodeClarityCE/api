@@ -18,6 +18,13 @@ import {
   type WeaknessInfo,
 } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
 
+import {
+  getCVSSNVDInfo,
+  getCVSSOSVInfo,
+  parseCVSS2Vector,
+  parseCVSS3Vector,
+  parseCVSS31Vector,
+} from "./cvssParser";
 import { NVDReportGenerator, OSVReportGenerator } from "./reportGenerator";
 
 describe("ReportGenerator Services", () => {
@@ -575,9 +582,10 @@ describe("ReportGenerator Services", () => {
     describe("getVulnerableVersionsString", () => {
       it("should format version ranges correctly", async () => {
         osvReportGenerator.vulnsData = mockVulnerability;
-        const versionsString =
+        const result =
           await osvReportGenerator.getVulnerableVersionsString("OSV");
-        expect(versionsString).toBe(">= 1.0.0 < 1.0.1");
+        expect(result.versions).toBe(">= 1.0.0 < 1.0.1");
+        expect(result.source).toBe("OSV");
       });
 
       it("should handle pre-release tags", async () => {
@@ -613,9 +621,9 @@ describe("ReportGenerator Services", () => {
         };
 
         osvReportGenerator.vulnsData = vulnWithPreRelease;
-        const versionsString =
+        const result =
           await osvReportGenerator.getVulnerableVersionsString("OSV");
-        expect(versionsString).toBe(">= 1.0.0-alpha < 1.0.1-beta");
+        expect(result.versions).toBe(">= 1.0.0-alpha < 1.0.1-beta");
       });
 
       it("should handle multiple ranges", async () => {
@@ -667,9 +675,9 @@ describe("ReportGenerator Services", () => {
         };
 
         osvReportGenerator.vulnsData = vulnWithMultipleRanges;
-        const versionsString =
+        const result =
           await osvReportGenerator.getVulnerableVersionsString("OSV");
-        expect(versionsString).toBe(">= 1.0.0 < 1.0.1 || >= 2.0.0 < 2.0.5");
+        expect(result.versions).toBe(">= 1.0.0 < 1.0.1 || >= 2.0.0 < 2.0.5");
       });
     });
 
@@ -801,11 +809,15 @@ describe("ReportGenerator Services", () => {
     });
   });
 
+  // =========================================================================
+  // CVSS Parsing (standalone module functions from cvssParser.ts)
+  // =========================================================================
+
   describe("CVSS Parsing Methods", () => {
     describe("parseCVSS31Vector", () => {
       it("should parse CVSS 3.1 vector", async () => {
         const vector = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H";
-        const result = await osvReportGenerator.parseCVSS31Vector(vector);
+        const result = await parseCVSS31Vector(vector);
 
         expect(result).toBeDefined();
         expect(result.base_score).toBeGreaterThan(0);
@@ -823,7 +835,7 @@ describe("ReportGenerator Services", () => {
     describe("parseCVSS3Vector", () => {
       it("should parse CVSS 3.0 vector", async () => {
         const vector = "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H";
-        const result = await osvReportGenerator.parseCVSS3Vector(vector);
+        const result = await parseCVSS3Vector(vector);
 
         expect(result).toBeDefined();
         expect(result.base_score).toBeGreaterThan(0);
@@ -841,7 +853,7 @@ describe("ReportGenerator Services", () => {
     describe("parseCVSS2Vector", () => {
       it("should parse CVSS 2.0 vector", async () => {
         const vector = "AV:N/AC:L/Au:N/C:P/I:P/A:P";
-        const result = await osvReportGenerator.parseCVSS2Vector(vector);
+        const result = await parseCVSS2Vector(vector);
 
         expect(result).toBeDefined();
         expect(result.base_score).toBeGreaterThan(0);
@@ -856,7 +868,7 @@ describe("ReportGenerator Services", () => {
 
     describe("getCVSSNVDInfo", () => {
       it("should extract CVSS info from NVD with all versions", async () => {
-        const result = await osvReportGenerator.getCVSSNVDInfo(mockNVD);
+        const result = await getCVSSNVDInfo(mockNVD);
 
         expect(result.cvss_2).toBeDefined();
         expect(result.cvss_3).toBeDefined();
@@ -882,23 +894,20 @@ describe("ReportGenerator Services", () => {
           },
         };
 
-        const result = await osvReportGenerator.getCVSSNVDInfo(
-          nvdWithMultipleSources,
-        );
+        const result = await getCVSSNVDInfo(nvdWithMultipleSources as NVD);
         expect(result.cvss_2?.access_vector).toBe("NETWORK");
       });
 
       it("should handle missing metrics", async () => {
         const nvdWithoutMetrics = { ...mockNVD, metrics: undefined };
-        const result =
-          await osvReportGenerator.getCVSSNVDInfo(nvdWithoutMetrics);
+        const result = await getCVSSNVDInfo(nvdWithoutMetrics);
         expect(result).toEqual({});
       });
     });
 
     describe("getCVSSOSVInfo", () => {
       it("should extract CVSS info from OSV", async () => {
-        const result = await osvReportGenerator.getCVSSOSVInfo(mockOSV);
+        const result = await getCVSSOSVInfo(mockOSV);
         expect(result.cvss_3).toBeDefined();
         expect(result.cvss_3?.base_score).toBeGreaterThan(0);
       });
@@ -914,17 +923,24 @@ describe("ReportGenerator Services", () => {
           ],
         };
 
-        const result = await osvReportGenerator.getCVSSOSVInfo(osvWithCVSS2);
+        const result = await getCVSSOSVInfo(osvWithCVSS2 as OSV);
         expect(result.cvss_2).toBeDefined();
         expect(result.cvss_3).toBeUndefined();
       });
 
       it("should handle OSV without severity", async () => {
         const osvWithoutSeverity = { ...mockOSV, severity: undefined };
-        const result =
-          await osvReportGenerator.getCVSSOSVInfo(osvWithoutSeverity);
+        const result = await getCVSSOSVInfo(osvWithoutSeverity as OSV);
         expect(result).toEqual({});
       });
     });
   });
+
+  // =========================================================================
+  // Range extraction, version checking, and source comparison are now
+  // tested in their own dedicated spec files:
+  //   - rangeExtractor.spec.ts
+  //   - versionChecker.spec.ts
+  //   - sourceComparison.spec.ts
+  // =========================================================================
 });
