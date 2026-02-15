@@ -349,7 +349,11 @@ export class SBOMService {
       throw new UnknownWorkspace();
     }
 
-    const [dependencyName, dependencyVersion] = dependency.split("@");
+    const lastAtIndex = dependency.lastIndexOf("@");
+    const dependencyName =
+      lastAtIndex > 0 ? dependency.substring(0, lastAtIndex) : dependency;
+    const dependencyVersion =
+      lastAtIndex > 0 ? dependency.substring(lastAtIndex + 1) : "";
 
     if (
       dependencyName &&
@@ -623,7 +627,11 @@ export class SBOMService {
       return [];
     }
 
-    const [targetName, targetVersion] = targetDependency.split("@");
+    const lastAtIdx = targetDependency.lastIndexOf("@");
+    const targetName =
+      lastAtIdx > 0 ? targetDependency.substring(0, lastAtIdx) : "";
+    const targetVersion =
+      lastAtIdx > 0 ? targetDependency.substring(lastAtIdx + 1) : "";
     if (!targetName || !targetVersion) {
       return [];
     }
