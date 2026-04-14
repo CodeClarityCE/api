@@ -1,32 +1,23 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions.js";
+import type { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions.js";
 
 import { AuthModule } from "./base_modules/auth/auth.module";
 import { BaseModule } from "./base_modules/base.module";
 import { SharedRepositoriesModule } from "./base_modules/shared/shared.module";
 import { CodeClarityModule } from "./codeclarity_modules/codeclarity.module";
+import { buildBaseOptions } from "./datasources/base-options";
 import { EnterpriseModule } from "./enterprise_modules/enterprise.module";
 import { MetricsModule } from "./metrics/metrics.module";
 import { validate } from "./utils/validate-env";
 
 const ENV = process.env["ENV"];
-const password = process.env["PG_DB_PASSWORD"];
-const host = process.env["PG_DB_HOST"];
-const user = process.env["PG_DB_USER"];
-const port = parseInt(process.env["PG_DB_PORT"] ?? "6432", 10);
 
 export const defaultOptions: PostgresConnectionOptions = {
-  type: "postgres",
-  host: host ?? "localhost",
-  port: port,
-  username: user ?? "postgres",
-  password: password ?? "",
+  ...buildBaseOptions(),
   // synchronize is now disabled by default; can be force-enabled in local/dev ONLY.
   // Use proper TypeORM migrations instead (see src/migrations/* and datasource files).
   synchronize: process.env["DB_FORCE_SYNC"] === "true",
-  logging: false,
-  // dropSchema: true
 };
 
 /**
