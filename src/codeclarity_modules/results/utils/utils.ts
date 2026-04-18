@@ -49,7 +49,7 @@ export function getVersionsSatisfying(
   upperIncluded: boolean,
 ): string[] {
   const versionToReturn: string[] = [];
-  let constraint = "";
+  let constraint: string;
 
   if (lower !== null && upper !== null) {
     if (upperIncluded) constraint = `>= ${lower}`;

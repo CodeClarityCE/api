@@ -380,7 +380,7 @@ export class ProjectService {
     // a normal user can also delete it, iff he is the one that added the project
     if (memberRole === MemberRole.USER) {
       // Get edge and check if added_by === user.userId
-      if (!project.added_by || project.added_by.id !== user.userId) {
+      if (project.added_by?.id !== user.userId) {
         throw new NotAuthorized();
       }
     }

@@ -67,11 +67,10 @@ export class DashboardService {
     orgId: string,
     user: AuthenticatedUser,
     dateRangeStart?: Date,
-    dateRangeEnd?: Date,
+    _dateRangeEnd?: Date,
     _integrationIds?: string[],
   ): Promise<SeverityInfoByWeek[]> {
     dateRangeStart ??= subtractMonths(new Date(), 1);
-    dateRangeEnd ??= new Date();
     await this.membershipsRepository.hasRequiredRole(
       orgId,
       user.userId,
@@ -168,11 +167,10 @@ export class DashboardService {
     orgId: string,
     user: AuthenticatedUser,
     dateRangeStart?: Date,
-    dateRangeEnd?: Date,
+    _dateRangeEnd?: Date,
     _integrationIds?: string[],
   ): Promise<AttackVectorDist[]> {
     dateRangeStart ??= subtractMonths(new Date(), 2);
-    dateRangeEnd ??= new Date();
     await this.membershipsRepository.hasRequiredRole(
       orgId,
       user.userId,
@@ -245,11 +243,10 @@ export class DashboardService {
     orgId: string,
     user: AuthenticatedUser,
     dateRangeStart?: Date,
-    dateRangeEnd?: Date,
+    _dateRangeEnd?: Date,
     _integrationIds?: string[],
   ): Promise<CIAImpact[]> {
     dateRangeStart ??= subtractMonths(new Date(), 2);
-    dateRangeEnd ??= new Date();
     await this.membershipsRepository.hasRequiredRole(
       orgId,
       user.userId,
@@ -321,11 +318,10 @@ export class DashboardService {
     orgId: string,
     user: AuthenticatedUser,
     dateRangeStart?: Date,
-    dateRangeEnd?: Date,
+    _dateRangeEnd?: Date,
     _integrationIds?: string[],
   ): Promise<LicenseDist> {
     dateRangeStart ??= subtractMonths(new Date(), 2);
-    dateRangeEnd ??= new Date();
     await this.membershipsRepository.hasRequiredRole(
       orgId,
       user.userId,
@@ -389,11 +385,10 @@ export class DashboardService {
     orgId: string,
     user: AuthenticatedUser,
     dateRangeStart?: Date,
-    dateRangeEnd?: Date,
+    _dateRangeEnd?: Date,
     _integrationIds?: string[],
   ): Promise<LatestVulns> {
     dateRangeStart ??= subtractMonths(new Date(), 2);
-    dateRangeEnd ??= new Date();
     await this.membershipsRepository.hasRequiredRole(
       orgId,
       user.userId,
@@ -484,11 +479,10 @@ export class DashboardService {
     orgId: string,
     user: AuthenticatedUser,
     dateRangeStart?: Date,
-    dateRangeEnd?: Date,
+    _dateRangeEnd?: Date,
     _integrationIds?: string[],
   ): Promise<QuickStats> {
     dateRangeStart ??= subtractMonths(new Date(), 2);
-    dateRangeEnd ??= new Date();
     await this.membershipsRepository.hasRequiredRole(
       orgId,
       user.userId,
@@ -595,14 +589,12 @@ export class DashboardService {
     orgId: string,
     user: AuthenticatedUser,
     pagination: PaginationUserSuppliedConf,
-    dateRangeStart?: Date,
-    dateRangeEnd?: Date,
+    _dateRangeStart?: Date,
+    _dateRangeEnd?: Date,
     _integrationIds?: string[],
     _sortBy?: string,
     _sortDirection?: SortDirection,
   ): Promise<TypedPaginatedData<ProjectQuickStats>> {
-    dateRangeStart ??= subtractMonths(new Date(), 2);
-    dateRangeEnd ??= new Date();
     await this.membershipsRepository.hasRequiredRole(
       orgId,
       user.userId,

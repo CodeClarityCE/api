@@ -2,7 +2,6 @@ import globals from "globals";
 import pluginJs from "@eslint/js";
 import tseslint from "typescript-eslint";
 import security from "eslint-plugin-security";
-import importPlugin from "eslint-plugin-import";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
 import prettierConfig from "eslint-config-prettier";
 
@@ -53,12 +52,11 @@ export default [
       },
       parserOptions: {
         tsconfigRootDir: import.meta.dirname,
-        project: './tsconfig.json',
+        projectService: true,
       },
     },
 
     plugins: {
-      import: importPlugin,
       'simple-import-sort': simpleImportSort,
     },
 
@@ -267,8 +265,7 @@ export default [
       // Import Rules
       // ==========================================
 
-      "import/no-unresolved": "off", // TypeScript handles this
-      "import/no-duplicates": ["error"],
+      "no-duplicate-imports": ["error"],
 
       // Use simple-import-sort for reliable import ordering
       // Groups: external packages first, then src/ internal imports, then relative imports

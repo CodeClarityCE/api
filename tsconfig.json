@@ -2,7 +2,7 @@
   "compilerOptions": {
     // Module System
     "module": "commonjs",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true, 
     "resolveJsonModule": true,
@@ -12,6 +12,7 @@
     "removeComments": true,
     "sourceMap": true,
     "outDir": "./dist",
+    "rootDir": "./src",
     
     // Decorators
     "emitDecoratorMetadata": true,
@@ -22,7 +23,12 @@
     "lib": ["esnext"],
     
     // Path Resolution
-    "baseUrl": "./",
+    "paths": {
+      "src/*": ["./src/*"]
+    },
+
+    // Types (explicit in TS6+ — no longer auto-includes @types/* packages)
+    "types": ["node", "jest"],
     
     // Performance
     "incremental": true,
@@ -57,5 +63,6 @@
     
     // Modern JavaScript Features
     "useDefineForClassFields": true
-  }
+  },
+  "include": ["src/**/*"]
 }

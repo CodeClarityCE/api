@@ -222,7 +222,7 @@ function validateBootstrap(): void {
   const env = process.env["ENV"];
 
   // Check if the 'ENV' environment variable is set
-  let errors: ValidationError[] = [];
+  let errors: ValidationError[];
   let validatedConfig: EnvironmentVariables;
 
   if (env === undefined || env === "") {

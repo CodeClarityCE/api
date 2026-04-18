@@ -26,7 +26,7 @@ describe("AppModule", () => {
   describe("Database Configuration", () => {
     it("should read environment variables for database connection", () => {
       const moduleContent = readFileSync(
-        join(__dirname, "app.module.ts"),
+        join(__dirname, "datasources", "base-options.ts"),
         "utf8",
       );
 
@@ -38,7 +38,7 @@ describe("AppModule", () => {
 
     it("should use default port fallback", () => {
       const moduleContent = readFileSync(
-        join(__dirname, "app.module.ts"),
+        join(__dirname, "datasources", "base-options.ts"),
         "utf8",
       );
 
@@ -49,7 +49,7 @@ describe("AppModule", () => {
 
     it("should disable logging by default", () => {
       const moduleContent = readFileSync(
-        join(__dirname, "app.module.ts"),
+        join(__dirname, "datasources", "base-options.ts"),
         "utf8",
       );
 
@@ -80,7 +80,7 @@ describe("AppModule", () => {
   describe("Environment Configuration Logic", () => {
     it("should allow force sync via DB_FORCE_SYNC variable", () => {
       const moduleContent = readFileSync(
-        join(__dirname, "app.module.ts"),
+        join(__dirname, "datasources", "base-options.ts"),
         "utf8",
       );
       expect(moduleContent).toContain("DB_FORCE_SYNC");

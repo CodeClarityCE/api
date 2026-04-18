@@ -53,3 +53,8 @@ export function buildBaseOptions(): PostgresConnectionOptions {
     logging: false,
   } as PostgresConnectionOptions;
 }
+
+export const defaultOptions: PostgresConnectionOptions = {
+  ...buildBaseOptions(),
+  synchronize: process.env["DB_FORCE_SYNC"] === "true",
+};

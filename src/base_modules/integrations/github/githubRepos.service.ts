@@ -419,11 +419,11 @@ export class GithubRepositoriesService {
     try {
       // Dynamic import has limited type inference - types are validated via OctokitReposResponse cast
       const octokit = await import("octokit");
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+       
       const client = new octokit.Octokit({
         auth: token,
       });
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+       
       const response = (await client.rest.repos.listForAuthenticatedUser({
         per_page: entriesPerPage,
         page: page,

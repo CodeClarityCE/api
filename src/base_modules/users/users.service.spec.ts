@@ -9,11 +9,17 @@ import {
 import { NotAuthorized } from "src/types/error.types";
 import * as crypto from "src/utils/crypto";
 
+jest.mock("src/utils/crypto", () => ({
+  genRandomString: jest.fn(),
+  hash: jest.fn(),
+}));
+
 import {
   AccountRegistrationVerificationTokenInvalidOrExpired,
   PasswordsDoNotMatch,
 } from "../auth/auth.errors";
-import { AuthService } from "../auth/auth.service";
+import { type AuthService } from "../auth/auth.service";
+import { AUTH_SERVICE } from "../auth/auth.tokens";
 import { AuthenticatedUser, ROLE } from "../auth/auth.types";
 import { type Email, EmailType } from "../email/email.entity";
 import { EmailRepository } from "../email/email.repository";
@@ -148,7 +154,7 @@ describe("UsersService", () => {
           },
         },
         {
-          provide: AuthService,
+          provide: AUTH_SERVICE,
           useValue: {
             hashPassword: jest.fn(),
             validateCredentials: jest.fn(),
@@ -201,7 +207,7 @@ describe("UsersService", () => {
 
     service = module.get<UsersService>(UsersService);
     emailService = module.get<EmailService>(EmailService);
-    authService = module.get<AuthService>(AuthService);
+    authService = module.get<AuthService>(AUTH_SERVICE);
     organizationsRepository = module.get<OrganizationsRepository>(
       OrganizationsRepository,
     );
@@ -374,8 +380,8 @@ describe("UsersService", () => {
 
   describe("sendUserRegistrationVerificationEmail", () => {
     beforeEach(() => {
-      jest.spyOn(crypto, "genRandomString").mockResolvedValue("random-token");
-      jest.spyOn(crypto, "hash").mockResolvedValue("hashed-value");
+      (crypto.genRandomString as jest.Mock).mockResolvedValue("random-token");
+      (crypto.hash as jest.Mock).mockResolvedValue("hashed-value");
     });
 
     it("should send registration verification email when user not verified", async () => {
@@ -453,7 +459,7 @@ describe("UsersService", () => {
 
   describe("confirmRegistration", () => {
     beforeEach(() => {
-      jest.spyOn(crypto, "hash").mockResolvedValue("hashed-token");
+      (crypto.hash as jest.Mock).mockResolvedValue("hashed-token");
     });
 
     it("should confirm registration successfully", async () => {

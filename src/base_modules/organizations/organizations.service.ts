@@ -69,12 +69,12 @@ export class OrganizationsService {
     organization =
       await this.organizationsRepository.saveOrganization(organization);
 
-    let membership = new OrganizationMemberships();
+    const membership = new OrganizationMemberships();
     membership.role = MemberRole.OWNER;
     membership.joined_on = new Date();
     membership.user = creator;
     membership.organization = organization;
-    membership = await this.membershipsRepository.saveMembership(membership);
+    await this.membershipsRepository.saveMembership(membership);
 
     return organization.id;
   }

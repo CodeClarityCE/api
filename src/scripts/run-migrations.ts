@@ -1,5 +1,6 @@
-import "reflect-metadata";
 import type { DataSource } from "typeorm";
+
+import "reflect-metadata";
 
 // Use admin credentials for migrations if available.
 // Migrations need DDL privileges (CREATE TABLE, CREATE INDEX) across databases

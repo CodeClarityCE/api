@@ -1,24 +1,17 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import type { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions.js";
 
 import { AuthModule } from "./base_modules/auth/auth.module";
 import { BaseModule } from "./base_modules/base.module";
 import { SharedRepositoriesModule } from "./base_modules/shared/shared.module";
 import { CodeClarityModule } from "./codeclarity_modules/codeclarity.module";
-import { buildBaseOptions } from "./datasources/base-options";
 import { EnterpriseModule } from "./enterprise_modules/enterprise.module";
 import { MetricsModule } from "./metrics/metrics.module";
 import { validate } from "./utils/validate-env";
 
 const ENV = process.env["ENV"];
 
-export const defaultOptions: PostgresConnectionOptions = {
-  ...buildBaseOptions(),
-  // synchronize is now disabled by default; can be force-enabled in local/dev ONLY.
-  // Use proper TypeORM migrations instead (see src/migrations/* and datasource files).
-  synchronize: process.env["DB_FORCE_SYNC"] === "true",
-};
+export { defaultOptions } from "./datasources/base-options";
 
 /**
  * The main application module, responsible for importing and configuring all other modules.

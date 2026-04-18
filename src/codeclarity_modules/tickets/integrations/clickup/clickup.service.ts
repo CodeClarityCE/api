@@ -237,7 +237,7 @@ export class ClickUpService implements ITicketIntegrationProvider {
     const clickUpConfig = config as ClickUpConfig;
 
     // Try as folder first, then as space (folderless lists)
-    let lists: ExternalList[] = [];
+    let lists: ExternalList[];
 
     try {
       const folderResponse = await this.makeRequest<ClickUpListsResponse>(

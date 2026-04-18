@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { Email, EmailType } from "src/base_modules/email/email.entity";
@@ -28,7 +28,8 @@ import {
   AccountRegistrationVerificationTokenInvalidOrExpired,
   PasswordsDoNotMatch,
 } from "../auth/auth.errors";
-import { AuthService } from "../auth/auth.service";
+import type { AuthService } from "../auth/auth.service";
+import { AUTH_SERVICE } from "../auth/auth.tokens";
 import { EmailRepository } from "../email/email.repository";
 import { EmailService } from "../email/email.service";
 
@@ -48,7 +49,7 @@ export class UsersService {
     private readonly membershipsRepository: MembershipsRepository,
     private readonly projectsRepository: ProjectsRepository,
     private readonly emailRepository: EmailRepository,
-    @Inject(forwardRef(() => AuthService))
+    @Inject(AUTH_SERVICE)
     private readonly authService: AuthService,
     private readonly usersRepository: UsersRepository,
   ) {}
