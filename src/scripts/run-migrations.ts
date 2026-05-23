@@ -23,18 +23,13 @@ const roleForDb: Record<string, string> = {
 
 async function runAll(): Promise<void> {
   // Dynamic imports so datasources pick up the overridden PG_DB_USER/PASSWORD
-  const { CodeClarityDataSource } = await import(
-    "../datasources/codeclarity.datasource"
-  );
-  const { KnowledgeDataSource } = await import(
-    "../datasources/knowledge.datasource"
-  );
-  const { PluginsDataSource } = await import(
-    "../datasources/plugins.datasource"
-  );
-  const { ConfigDataSource } = await import(
-    "../datasources/config.datasource"
-  );
+  const { CodeClarityDataSource } =
+    await import("../datasources/codeclarity.datasource");
+  const { KnowledgeDataSource } =
+    await import("../datasources/knowledge.datasource");
+  const { PluginsDataSource } =
+    await import("../datasources/plugins.datasource");
+  const { ConfigDataSource } = await import("../datasources/config.datasource");
 
   const sources: DataSource[] = [
     CodeClarityDataSource,
@@ -45,9 +40,7 @@ async function runAll(): Promise<void> {
 
   for (const ds of sources) {
     const dbName =
-      typeof ds.options.database === "string"
-        ? ds.options.database
-        : "unknown";
+      typeof ds.options.database === "string" ? ds.options.database : "unknown";
     try {
       if (!ds.isInitialized) await ds.initialize();
 

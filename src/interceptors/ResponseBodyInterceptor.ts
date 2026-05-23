@@ -52,7 +52,7 @@ export class ResponseBodyInterceptor implements NestInterceptor {
           // Arrays spread to numeric keys: [a,b] -> {0:a, 1:b}
           // Strings spread to character keys: 'ab' -> {0:'a', 1:'b'}
           // Objects spread normally
-          const spread = { ...(data) };
+          const spread = { ...data };
           for (const [key, value] of Object.entries(spread)) {
             res[key] = value;
           }

@@ -199,13 +199,11 @@ export class ProjectService {
 
       project.name = repo.fully_qualified_name;
       project.description = repo.description;
-      project.type =
-        integration.integration_provider;
+      project.type = integration.integration_provider;
       project.integration = integration;
       project.default_branch = repo.default_branch;
       project.service_domain = repo.service_domain;
-      project.integration_provider =
-        integration.integration_provider;
+      project.integration_provider = integration.integration_provider;
       project.url = projectData.url;
     } else {
       project.name = projectData.name;

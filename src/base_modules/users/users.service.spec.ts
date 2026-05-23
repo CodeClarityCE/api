@@ -173,9 +173,7 @@ describe("UsersService", () => {
           useValue: {
             hasRequiredRole: jest.fn(),
             removeUserMemberships: jest.fn().mockResolvedValue(undefined),
-            saveMembership: jest
-              .fn()
-              .mockResolvedValue({}),
+            saveMembership: jest.fn().mockResolvedValue({}),
           },
         },
         {

@@ -17,6 +17,10 @@ services:
             - ../../private:/private
             - ../../scripts:/scripts
             - pnpm-store:/pnpm/store
+            # Per-container pnpm settings (allowBuilds + minimumReleaseAge=0).
+            # Kept OUT of api/ root so the host's workspace install isn't tricked
+            # into treating api/ as a standalone sub-workspace.
+            - ../../api/.cloud/docker/pnpm-workspace.yaml:/app/pnpm-workspace.yaml:ro
         ports:
             - 9229:9229
             - 3000:3000

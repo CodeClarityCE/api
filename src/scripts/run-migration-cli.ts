@@ -31,18 +31,13 @@ const roleForDb: Record<string, string> = {
 
 // Dynamic imports so datasources pick up the overridden PG_DB_USER/PASSWORD
 async function loadDatasources(): Promise<Record<string, DataSource>> {
-  const { CodeClarityDataSource } = await import(
-    "../datasources/codeclarity.datasource"
-  );
-  const { ConfigDataSource } = await import(
-    "../datasources/config.datasource"
-  );
-  const { KnowledgeDataSource } = await import(
-    "../datasources/knowledge.datasource"
-  );
-  const { PluginsDataSource } = await import(
-    "../datasources/plugins.datasource"
-  );
+  const { CodeClarityDataSource } =
+    await import("../datasources/codeclarity.datasource");
+  const { ConfigDataSource } = await import("../datasources/config.datasource");
+  const { KnowledgeDataSource } =
+    await import("../datasources/knowledge.datasource");
+  const { PluginsDataSource } =
+    await import("../datasources/plugins.datasource");
 
   return {
     codeclarity: CodeClarityDataSource,

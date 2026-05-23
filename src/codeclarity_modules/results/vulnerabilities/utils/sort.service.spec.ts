@@ -378,11 +378,7 @@ describe("VulnerabilitiesSortService", () => {
         }),
       ];
 
-      const sorted = service.sort(
-        vulnerabilities,
-        "severity",
-        "INVALID",
-      );
+      const sorted = service.sort(vulnerabilities, "severity", "INVALID");
 
       expect(sorted[0]!.Severity.Severity).toBe(8.0);
       expect(sorted[1]!.Severity.Severity).toBe(2.0);

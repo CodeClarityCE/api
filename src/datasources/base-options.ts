@@ -21,8 +21,7 @@ export function buildSslOptions():
   }
 
   const opts: { rejectUnauthorized: boolean; ca?: string } = {
-    rejectUnauthorized:
-      sslMode === "verify-full" || sslMode === "verify-ca",
+    rejectUnauthorized: sslMode === "verify-full" || sslMode === "verify-ca",
   };
 
   const caPath = process.env["PG_DB_SSLROOTCERT"];
