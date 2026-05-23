@@ -37,7 +37,7 @@ describe("RefreshJwtAuthGuard", () => {
       switchToWs: jest.fn(),
       getArgs: jest.fn(),
       getArgByIndex: jest.fn(),
-    } as any;
+    };
   });
 
   afterEach(() => {

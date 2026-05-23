@@ -238,7 +238,7 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
       const payload = {
         userId: "test-user-id",
         roles: "USER" as unknown as ROLE[], // Should be array but is string
-      } as unknown as JwtPayload;
+      };
 
       // Act
       const result = await strategy.validate(payload);
@@ -258,7 +258,7 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
           role: "USER",
           permissions: ["READ", "WRITE"],
         } as unknown as ROLE[],
-      } as unknown as JwtPayload;
+      };
 
       // Act
       const result = await strategy.validate(payload);
@@ -276,7 +276,7 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
       const payload = {
         userId: "test-user-id",
         roles: largeArray,
-      } as unknown as JwtPayload;
+      };
 
       // Act
       const result = await strategy.validate(payload);
@@ -308,7 +308,7 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
       const payload = {
         userId: "user-with-special-chars!@#$%^&*()",
         roles: [ROLE.USER],
-      } as unknown as JwtPayload;
+      };
 
       // Act
       const result = await strategy.validate(payload);

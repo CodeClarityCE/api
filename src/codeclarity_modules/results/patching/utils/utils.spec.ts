@@ -55,7 +55,7 @@ describe("PatchingUtilsService", () => {
 
   const createMockResult = (patches: PatchesOutput): Partial<Result> => ({
     id: "result-123",
-    result: patches as any,
+    result: patches,
     plugin: "js-patching",
     analysis: {
       id: "analysis-123",

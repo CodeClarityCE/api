@@ -23,7 +23,7 @@ async function bootstrap(): Promise<void> {
     AppModule,
     new FastifyAdapter(),
   );
-  await app.register(multipart as unknown as Parameters<typeof app.register>[0], {
+  await app.register(multipart, {
     limits: {
       fileSize: 25 * 1024 * 1024, //25 MB
     },
@@ -114,7 +114,7 @@ async function bootstrap(): Promise<void> {
   SwaggerModule.setup("api_doc", app, document);
 
   // Register the compression middleware to enable gzip and deflate encoding
-  await app.register(compression as unknown as Parameters<typeof app.register>[0], {
+  await app.register(compression, {
     encodings: ["gzip", "deflate"],
   });
 

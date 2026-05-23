@@ -146,7 +146,7 @@ export class TicketIntegrationService {
       mergedConfig = {
         ...integrationConfig.config,
         ...newValues,
-      } as IntegrationConfig;
+      };
 
       this.logger.debug(
         `Merging config - existing keys: ${Object.keys(integrationConfig.config).join(", ")}, new keys: ${Object.keys(newValues).join(", ")}`,

@@ -38,7 +38,7 @@ describe("AnalyzersController", () => {
       javascript: { plugins: ["test-plugin"] },
     },
     logo: "js",
-    analyses: [] as any,
+    analyses: [],
     organization: {} as any,
     created_by: {} as any,
   };

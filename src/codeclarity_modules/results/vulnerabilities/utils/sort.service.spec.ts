@@ -39,7 +39,7 @@ describe("VulnerabilitiesSortService", () => {
           IntegrityImpactNumerical: 0.22,
           AvailabilityImpactNumerical: 0.0,
         },
-        Weaknesses: [] as any,
+        Weaknesses: [],
         OSVMatch: {} as any,
         NVDMatch: {} as any,
         Conflict: {
@@ -63,7 +63,7 @@ describe("VulnerabilitiesSortService", () => {
       IntegrityImpactNumerical: 0.22,
       AvailabilityImpactNumerical: 0.0,
     },
-    Weaknesses: [] as any,
+    Weaknesses: [],
     Description: "Test vulnerability",
     Conflict: {
       ConflictWinner: "NVD",
@@ -257,7 +257,7 @@ describe("VulnerabilitiesSortService", () => {
               OWASPTop10Id: "1347",
               OWASPTop10Name: "A03:2021 – Injection",
             },
-          ] as any,
+          ],
         }),
         createMockVulnerability({
           Weaknesses: [
@@ -269,7 +269,7 @@ describe("VulnerabilitiesSortService", () => {
               OWASPTop10Id: "1345",
               OWASPTop10Name: "A01:2021 – Broken Access Control",
             },
-          ] as any,
+          ],
         }),
       ];
 
@@ -292,7 +292,7 @@ describe("VulnerabilitiesSortService", () => {
               OWASPTop10Id: "1345",
               OWASPTop10Name: "A01:2021 – Broken Access Control",
             },
-          ] as any,
+          ],
         }),
         createMockVulnerability({}),
       ];
@@ -316,7 +316,7 @@ describe("VulnerabilitiesSortService", () => {
               OWASPTop10Id: "1345",
               OWASPTop10Name: "A01:2021 – Broken Access Control",
             },
-          ] as any,
+          ],
         }),
         createMockVulnerability({
           Weaknesses: [
@@ -328,7 +328,7 @@ describe("VulnerabilitiesSortService", () => {
               OWASPTop10Id: "1347",
               OWASPTop10Name: "A03:2021 – Injection",
             },
-          ] as any,
+          ],
         }),
       ];
 
@@ -381,7 +381,7 @@ describe("VulnerabilitiesSortService", () => {
       const sorted = service.sort(
         vulnerabilities,
         "severity",
-        "INVALID" as any,
+        "INVALID",
       );
 
       expect(sorted[0]!.Severity.Severity).toBe(8.0);

@@ -181,7 +181,7 @@ export class GithubIntegrationService {
     const integration =
       await this.integrationsRepository.getIntegrationById(integrationId);
     integration.access_token = linkGithubPatch.token;
-    integration.token_type = GithubTokenType.CLASSIC_TOKEN as string;
+    integration.token_type = GithubTokenType.CLASSIC_TOKEN;
     integration.invalid = false;
 
     if (expires && expiresAt) {

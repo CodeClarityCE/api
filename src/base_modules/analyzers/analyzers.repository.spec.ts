@@ -3,7 +3,6 @@ import { getRepositoryToken } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
 
 import { NotAuthorized } from "src/types/error.types";
-import type { TypedPaginatedData } from "src/types/pagination.types";
 
 import { Analyzer } from "./analyzer.entity";
 import { AnalyzerDoesNotExist } from "./analyzers.errors";
@@ -284,7 +283,7 @@ describe("AnalyzersRepository", () => {
         total_pages: 2,
         matching_count: 10,
         filter_count: {},
-      } as TypedPaginatedData<Analyzer>);
+      });
 
       expect(mockAnalyzerRepository.createQueryBuilder).toHaveBeenCalledWith(
         "analyzer",

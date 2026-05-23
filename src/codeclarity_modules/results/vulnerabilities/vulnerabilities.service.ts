@@ -549,7 +549,7 @@ export class VulnerabilitiesService {
         ...finding,
         is_blacklisted: isBlacklisted,
         blacklisted_by_policies: blacklistedByPolicies,
-      } as VulnerabilityMerged;
+      };
     });
 
     // Filter out blacklisted vulnerabilities if show_blacklisted is false

@@ -27,6 +27,8 @@ export function buildSslOptions():
 
   const caPath = process.env["PG_DB_SSLROOTCERT"];
   if (caPath) {
+    // Operator-supplied path from env; not user input.
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     opts.ca = fs.readFileSync(caPath, "utf-8");
   }
 

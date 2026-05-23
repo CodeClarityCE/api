@@ -175,7 +175,7 @@ describe("UsersService", () => {
             removeUserMemberships: jest.fn().mockResolvedValue(undefined),
             saveMembership: jest
               .fn()
-              .mockResolvedValue({} as OrganizationMemberships),
+              .mockResolvedValue({}),
           },
         },
         {

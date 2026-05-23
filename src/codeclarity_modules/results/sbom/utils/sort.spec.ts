@@ -502,8 +502,8 @@ describe("sort", () => {
         createMockDependency({ name: "apple" }),
       ];
 
-      const resultDesc = sort(dependencies, "name", "desc" as any);
-      const resultAsc = sort(dependencies, "name", "asc" as any);
+      const resultDesc = sort(dependencies, "name", "desc");
+      const resultAsc = sort(dependencies, "name", "asc");
 
       // Should use default DESC behavior for invalid case
       expect(resultDesc[0]!.name).toBe("zebra");

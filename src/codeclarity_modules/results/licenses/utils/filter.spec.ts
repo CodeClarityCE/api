@@ -749,7 +749,7 @@ describe("filter", () => {
       const licenses = [createMockLicenseInfo()];
 
       const [filteredLicenses] = filter(licenses, undefined, [
-        "unknown_filter" as any,
+        "unknown_filter",
       ]);
 
       expect(filteredLicenses).toHaveLength(1);
@@ -761,7 +761,7 @@ describe("filter", () => {
         createMockLicenseInfo({
           id: "",
           name: "",
-          license_category: "" as any,
+          license_category: "",
         }),
       ];
 

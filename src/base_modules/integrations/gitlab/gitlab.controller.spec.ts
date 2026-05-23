@@ -50,7 +50,7 @@ describe("GitlabIntegrationController", () => {
     added_by: "test-user-id",
     service_domain: "https://gitlab.com",
     invalid: false,
-    meta_data: {} as any,
+    meta_data: {},
   };
 
   const mockRepositoryCache: RepositoryCache = {

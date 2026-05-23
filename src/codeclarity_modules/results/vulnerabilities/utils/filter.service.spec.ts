@@ -39,7 +39,7 @@ describe("VulnerabilitiesFilterService", () => {
           IntegrityImpactNumerical: 0.22,
           AvailabilityImpactNumerical: 0.0,
         },
-        Weaknesses: [] as any,
+        Weaknesses: [],
         OSVMatch: {} as any,
         NVDMatch: {} as any,
         Conflict: {
@@ -63,7 +63,7 @@ describe("VulnerabilitiesFilterService", () => {
       IntegrityImpactNumerical: 0.22,
       AvailabilityImpactNumerical: 0.0,
     },
-    Weaknesses: [] as any,
+    Weaknesses: [],
     Description: "Test vulnerability",
     Conflict: {
       ConflictWinner: "NVD",
@@ -238,7 +238,7 @@ describe("VulnerabilitiesFilterService", () => {
               OWASPTop10Id: "1345",
               OWASPTop10Name: "A01:2021 – Broken Access Control",
             },
-          ] as any,
+          ],
         }),
         createMockVulnerability({
           Weaknesses: [
@@ -250,7 +250,7 @@ describe("VulnerabilitiesFilterService", () => {
               OWASPTop10Id: "1346",
               OWASPTop10Name: "A02:2021 – Cryptographic Failures",
             },
-          ] as any,
+          ],
         }),
       ];
 
@@ -373,7 +373,7 @@ describe("VulnerabilitiesFilterService", () => {
               OWASPTop10Id: "1345",
               OWASPTop10Name: "A01:2021 – Broken Access Control",
             },
-          ] as any,
+          ],
         }),
         createMockVulnerability({
           Severity: { ...createMockVulnerability().Severity, Severity: 5.0 },
