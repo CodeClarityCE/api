@@ -1,24 +1,30 @@
 # syntax=docker/dockerfile:1
 
 ARG USERNAME=codeclarity
+ARG PNPM_VERSION=11.2.2
 
 # Dev image
 FROM node:26.2.0-alpine AS api-dev
-RUN npm i -g @nestjs/cli
 WORKDIR /app
-RUN npm install -g corepack --force
-RUN corepack enable
-ENTRYPOINT ["/bin/sh", "-c" , "yarn set version stable && yarn install && yarn run start:debug"]
-# CMD  /bin/sh -c "while sleep 1000; do :; done"
+RUN npm install -g corepack@latest --force && corepack enable
+RUN corepack prepare pnpm@${PNPM_VERSION} --activate
+# Standalone install in /app. /app/pnpm-workspace.yaml (bind-mounted from
+# api/pnpm-workspace.yaml on host) provides allowBuilds + minimumReleaseAge=0
+# so this container does not need the repo-root workspace yaml.
+ENTRYPOINT ["/bin/sh", "-c" , "pnpm install && pnpm run start:debug"]
 
 # Build image
 FROM node:26.2.0-alpine AS api-build
 WORKDIR /app
+RUN npm install -g corepack@latest --force && corepack enable
+RUN corepack prepare pnpm@${PNPM_VERSION} --activate
+ENV PNPM_STORE_DIR=/pnpm/store
 COPY . .
-# RUN yarn set version stable
-RUN yarn
-RUN yarn build
-# RUN apk --no-cache add --virtual builds-dependencies build-base python3 make && npm rebuild bcrypt --build-from-source
+RUN --mount=type=cache,id=pnpm-store-api,target=/pnpm/store,sharing=locked \
+    pnpm install --frozen-lockfile
+RUN pnpm --filter api build
+RUN --mount=type=cache,id=pnpm-store-api,target=/pnpm/store,sharing=locked \
+    pnpm --filter api deploy --prod --legacy /out
 
 # Prod image
 FROM node:26.2.0-alpine AS api
@@ -27,14 +33,8 @@ RUN adduser -D ${USERNAME}
 USER ${USERNAME}
 RUN mkdir /home/${USERNAME}/private
 WORKDIR /home/${USERNAME}/app
-# Copy only necessary files
-COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/dist ./dist
-COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/package.json ./package.json
-COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/yarn.lock ./yarn.lock
-COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/.yarn ./.yarn
-COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/.yarnrc.yml ./.yarnrc.yml
-COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/.pnp* .
-# COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app .
+COPY --chown=${USERNAME}:${USERNAME} --from=api-build /out/dist ./dist
+COPY --chown=${USERNAME}:${USERNAME} --from=api-build /out/node_modules ./node_modules
+COPY --chown=${USERNAME}:${USERNAME} --from=api-build /out/package.json ./package.json
 # Run migrations then start the API (ENV must be set e.g. via .env.api -> ENV=prod)
-CMD ["/bin/sh", "-c", "yarn node dist/scripts/run-migrations.js && yarn node dist/main"]
-# CMD  /bin/sh -c "while sleep 1000; do :; done"
+CMD ["/bin/sh", "-c", "node dist/scripts/run-migrations.js && node dist/main"]

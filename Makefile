@@ -25,13 +25,13 @@ logs: ## Show compose logs
 migrate: migrate-codeclarity migrate-knowledge migrate-plugins migrate-config ## Run all database migrations
 
 migrate-codeclarity: ## Run codeclarity DB migrations
-	yarn migration:run:codeclarity
+	pnpm migration:run:codeclarity
 
 migrate-knowledge: ## Run knowledge DB migrations
-	yarn migration:run:knowledge
+	pnpm migration:run:knowledge
 
 migrate-plugins: ## Run plugins DB migrations
-	yarn migration:run:plugins
+	pnpm migration:run:plugins
 
 migrate-config: ## Run config DB migrations
-	yarn migration:run:config
+	pnpm migration:run:config

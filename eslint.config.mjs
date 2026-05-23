@@ -21,13 +21,11 @@ export default [
     ignores: [
       "**/node_modules/**",
       "**/dist/**",
-      "**/.yarn/**",
+      "**/.pnpm-store/**",
       "**/coverage/**",
       "**/*.config.js",
       "**/*.config.mjs",
-      "**/migrations/**", // Don't lint generated migrations
-      ".pnp.cjs", // Yarn PnP generated file
-      ".pnp.loader.mjs" // Yarn PnP generated file
+      "**/migrations/**" // Don't lint generated migrations
     ]
   },
 

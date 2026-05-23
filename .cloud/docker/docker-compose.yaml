@@ -6,14 +6,17 @@ services:
             target: api-dev
         image: codeclarityce/api-dev:latest
         restart: always
-        command: yarn run start:debug
+        command: pnpm run start:debug
         env_file:
             - ../../.cloud/env/.env.dev
+        environment:
+            - PNPM_STORE_DIR=/pnpm/store
         volumes:
             - ../../api:/app
             - ../../.cloud/env:/app/env
             - ../../private:/private
             - ../../scripts:/scripts
+            - pnpm-store:/pnpm/store
         ports:
             - 9229:9229
             - 3000:3000
@@ -34,3 +37,7 @@ services:
                     memory: 4G
         extra_hosts:
             - "host.docker.internal:host-gateway"
+
+volumes:
+    pnpm-store:
+        external: true
