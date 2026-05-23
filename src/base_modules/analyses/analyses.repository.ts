@@ -127,7 +127,7 @@ export class AnalysesRepository {
     projectId: string,
   ): Promise<void> {
     const belongs = await this.analysisRepository.findOne({
-      relations: ["project"],
+      relations: { project: true },
       where: {
         id: analysisId,
         project: {
@@ -161,7 +161,7 @@ export class AnalysesRepository {
         schedule_type: In(["daily", "weekly"]), // Only recurring schedules
         is_active: true, // Only active schedules
       },
-      relations: ["analyzer", "created_by"], // Include related data for display
+      relations: { analyzer: true, created_by: true }, // Include related data for display
       order: {
         next_scheduled_run: "ASC", // Earliest scheduled runs first
       },

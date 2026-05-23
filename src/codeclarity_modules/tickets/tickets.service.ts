@@ -204,13 +204,13 @@ export class TicketsService {
         id: ticketId,
         organization: { id: orgId },
       },
-      relations: [
-        "project",
-        "created_by",
-        "assigned_to",
-        "external_links",
-        "source_analysis",
-      ],
+      relations: {
+        project: true,
+        created_by: true,
+        assigned_to: true,
+        external_links: true,
+        source_analysis: true,
+      },
     });
 
     if (!ticket) {
@@ -255,7 +255,7 @@ export class TicketsService {
         id: ticketId,
         organization: { id: orgId },
       },
-      relations: ["project", "source_analysis"],
+      relations: { project: true, source_analysis: true },
     });
 
     if (!ticket) {
@@ -669,7 +669,7 @@ export class TicketsService {
         id: ticketId,
         organization: { id: orgId },
       },
-      relations: ["assigned_to"],
+      relations: { assigned_to: true },
     });
 
     if (!ticket) {
@@ -969,7 +969,7 @@ export class TicketsService {
 
     return this.ticketEventRepository.find({
       where: { ticket: { id: ticketId } },
-      relations: ["performed_by"],
+      relations: { performed_by: true },
       order: { created_on: "DESC" },
     });
   }
@@ -1101,7 +1101,7 @@ export class TicketsService {
     // Get recent tickets
     const recentTickets = await this.ticketRepository.find({
       where: { organization: { id: orgId } },
-      relations: ["project", "assigned_to"],
+      relations: { project: true, assigned_to: true },
       order: { created_on: "DESC" },
       take: 5,
     });

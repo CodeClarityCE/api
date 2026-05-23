@@ -903,7 +903,7 @@ export class AnalysesService {
       // Verify the policy exists and belongs to the organization
       const policy = await this.policyRepository.findOne({
         where: { id: policyId },
-        relations: ["organizations"],
+        relations: { organizations: true },
       });
 
       if (policy?.organizations.some((org) => org.id === orgId)) {

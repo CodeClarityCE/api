@@ -83,7 +83,7 @@ export class AnalysisResultsRepository {
         { analysis: { id: analysisId }, plugin: "js-sbom" },
         { analysis: { id: analysisId }, plugin: "php-sbom" },
       ],
-      select: ["plugin"],
+      select: { plugin: true },
     });
     return results.map((result) => result.plugin);
   }

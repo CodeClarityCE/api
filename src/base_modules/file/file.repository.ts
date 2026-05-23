@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { FindOptionsWhere, ObjectId, Repository } from "typeorm";
+import { FindOptionsWhere, Repository } from "typeorm";
 
 import { File } from "src/base_modules/file/file.entity";
 
@@ -42,9 +42,7 @@ export class FileRepository {
       | string[]
       | Date
       | number[]
-      | ObjectId
       | Date[]
-      | ObjectId[]
       | FindOptionsWhere<File>,
   ): Promise<void> {
     await this.fileRepository.delete(files);

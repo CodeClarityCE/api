@@ -830,7 +830,7 @@ describe("GitlabRepositoriesService", () => {
 
       expect(result).toEqual(mockRepositoryCache);
       expect(repositoryCacheRepository.findOne).toHaveBeenCalledWith({
-        relations: ["integration"],
+        relations: { integration: true },
         where: {
           url: "https://gitlab.com/test-user/test-repo",
           integration: {

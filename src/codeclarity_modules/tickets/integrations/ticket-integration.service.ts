@@ -563,7 +563,7 @@ export class TicketIntegrationService {
     // Get ticket with organization
     const ticket = await this.ticketRepository.findOne({
       where: { id: ticketId },
-      relations: ["organization", "project", "external_links"],
+      relations: { organization: true, project: true, external_links: true },
     });
 
     if (!ticket) {
@@ -641,7 +641,7 @@ export class TicketIntegrationService {
   async updateExternalTicket(ticketId: string, linkId: string): Promise<void> {
     const externalLink = await this.externalLinkRepository.findOne({
       where: { id: linkId, ticket: { id: ticketId } },
-      relations: ["ticket", "ticket.organization"],
+      relations: { ticket: { organization: true } },
     });
 
     if (!externalLink) {
@@ -657,7 +657,7 @@ export class TicketIntegrationService {
 
     const ticket = await this.ticketRepository.findOne({
       where: { id: ticketId },
-      relations: ["organization", "project"],
+      relations: { organization: true, project: true },
     });
 
     if (!ticket) {
@@ -701,7 +701,7 @@ export class TicketIntegrationService {
   ): Promise<void> {
     const ticket = await this.ticketRepository.findOne({
       where: { id: ticketId },
-      relations: ["organization", "external_links"],
+      relations: { organization: true, external_links: true },
     });
 
     if (!ticket) {
@@ -789,7 +789,7 @@ export class TicketIntegrationService {
   ): Promise<void> {
     const externalLink = await this.externalLinkRepository.findOne({
       where: { id: linkId, ticket: { id: ticketId } },
-      relations: ["ticket", "ticket.organization"],
+      relations: { ticket: { organization: true } },
     });
 
     if (!externalLink) {
@@ -902,7 +902,7 @@ export class TicketIntegrationService {
   }> {
     const externalLink = await this.externalLinkRepository.findOne({
       where: { id: linkId, ticket: { id: ticketId } },
-      relations: ["ticket", "ticket.organization"],
+      relations: { ticket: { organization: true } },
     });
 
     if (!externalLink) {

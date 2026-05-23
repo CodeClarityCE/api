@@ -17,7 +17,6 @@ const migrations = [
 
 export const KnowledgeDataSource = new DataSource({
   ...buildBaseOptions(),
-  name: "knowledge",
   database: "knowledge",
   entities,
   migrations,

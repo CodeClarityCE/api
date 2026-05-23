@@ -22,7 +22,6 @@ const migrations = [
 
 export const CodeClarityDataSource = new DataSource({
   ...buildBaseOptions(),
-  name: "codeclarity",
   database: "codeclarity",
   entities,
   migrations,

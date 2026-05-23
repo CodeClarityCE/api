@@ -1,6 +1,6 @@
 import * as dotenv from "dotenv";
 import * as fs from "fs";
-import type { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions.js";
+import type { PostgresDataSourceOptions } from "typeorm/driver/postgres/PostgresDataSourceOptions";
 
 // Load environment file similar to app.module logic
 const ENV = process.env["ENV"] ?? "dev";
@@ -33,7 +33,7 @@ export function buildSslOptions():
   return opts;
 }
 
-export function buildBaseOptions(): PostgresConnectionOptions {
+export function buildBaseOptions(): PostgresDataSourceOptions {
   if (
     ENV === "prod" &&
     process.env["PG_DB_PASSWORD"]?.startsWith("!ChangeMe")
@@ -51,10 +51,10 @@ export function buildBaseOptions(): PostgresConnectionOptions {
     password: process.env["PG_DB_PASSWORD"],
     ssl: buildSslOptions(),
     logging: false,
-  } as PostgresConnectionOptions;
+  } as PostgresDataSourceOptions;
 }
 
-export const defaultOptions: PostgresConnectionOptions = {
+export const defaultOptions: PostgresDataSourceOptions = {
   ...buildBaseOptions(),
   synchronize: process.env["DB_FORCE_SYNC"] === "true",
 };

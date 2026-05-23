@@ -473,7 +473,7 @@ describe("GithubRepositoriesService", () => {
 
       expect(result).toBe(mockRepositoryCache);
       expect(repositoryCacheRepository.findOne).toHaveBeenCalledWith({
-        relations: ["integration"],
+        relations: { integration: true },
         where: {
           url: repoUrl,
           integration: {
