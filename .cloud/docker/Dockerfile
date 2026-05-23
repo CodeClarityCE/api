@@ -9,8 +9,8 @@ WORKDIR /app
 RUN npm install -g corepack@latest --force && corepack enable
 RUN corepack prepare pnpm@${PNPM_VERSION} --activate
 # Standalone install in /app. /app/pnpm-workspace.yaml (bind-mounted from
-# api/pnpm-workspace.yaml on host) provides allowBuilds + minimumReleaseAge=0
-# so this container does not need the repo-root workspace yaml.
+# api/.cloud/docker/pnpm-workspace.yaml on host) provides allowBuilds +
+# minimumReleaseAge=0 so this container does not need the repo-root workspace yaml.
 ENTRYPOINT ["/bin/sh", "-c" , "pnpm install && pnpm run start:debug"]
 
 # Build image
@@ -20,11 +20,20 @@ RUN npm install -g corepack@latest --force && corepack enable
 RUN corepack prepare pnpm@${PNPM_VERSION} --activate
 ENV PNPM_STORE_DIR=/pnpm/store
 COPY . .
+# Stage the standalone pnpm config at the build root (allowBuilds +
+# minimumReleaseAge=0). Source of truth is .cloud/docker/pnpm-workspace.yaml;
+# this COPY makes the Dockerfile self-sufficient regardless of whether Jenkins
+# pre-staged the file or not.
+COPY .cloud/docker/pnpm-workspace.yaml ./pnpm-workspace.yaml
+# Full install (incl. devDeps for the build step).
 RUN --mount=type=cache,id=pnpm-store-api,target=/pnpm/store,sharing=locked \
     pnpm install --frozen-lockfile
-RUN pnpm --filter api build
-RUN --mount=type=cache,id=pnpm-store-api,target=/pnpm/store,sharing=locked \
-    pnpm --filter api deploy --prod --legacy /out
+# Run api's build script directly. No --filter: this stage is a STANDALONE
+# clone of the api package, not a workspace, so --filter api wouldn't match
+# anything and would silently no-op.
+RUN pnpm run build
+# Prune devDependencies post-build to slim node_modules for the prod image.
+RUN pnpm prune --prod
 
 # Prod image
 FROM node:26.2.0-alpine AS api
@@ -33,8 +42,8 @@ RUN adduser -D ${USERNAME}
 USER ${USERNAME}
 RUN mkdir /home/${USERNAME}/private
 WORKDIR /home/${USERNAME}/app
-COPY --chown=${USERNAME}:${USERNAME} --from=api-build /out/dist ./dist
-COPY --chown=${USERNAME}:${USERNAME} --from=api-build /out/node_modules ./node_modules
-COPY --chown=${USERNAME}:${USERNAME} --from=api-build /out/package.json ./package.json
+COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/dist ./dist
+COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/node_modules ./node_modules
+COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/package.json ./package.json
 # Run migrations then start the API (ENV must be set e.g. via .env.api -> ENV=prod)
 CMD ["/bin/sh", "-c", "node dist/scripts/run-migrations.js && node dist/main"]
