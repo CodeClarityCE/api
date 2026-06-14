@@ -1,6 +1,20 @@
 import * as dotenv from "dotenv";
 import * as fs from "fs";
-import type { PostgresDataSourceOptions } from "typeorm/driver/postgres/PostgresDataSourceOptions";
+
+// Shared Postgres connection options. We declare this locally instead of
+// importing typeorm's PostgresConnectionOptions: typeorm's "exports" map only
+// exposes the package root to TypeScript's module resolution, so the deep type
+// subpath (typeorm/driver/postgres/...) is not resolvable. The `type: "postgres"`
+// literal lets the spread sites narrow typeorm's DataSourceOptions union.
+export interface BaseConnectionOptions {
+  type: "postgres";
+  host?: string;
+  port: number;
+  username?: string;
+  password?: string;
+  ssl: false | { rejectUnauthorized: boolean; ca?: string };
+  logging: boolean;
+}
 
 // Load environment file similar to app.module logic
 const ENV = process.env["ENV"] ?? "dev";
@@ -34,7 +48,7 @@ export function buildSslOptions():
   return opts;
 }
 
-export function buildBaseOptions(): PostgresDataSourceOptions {
+export function buildBaseOptions(): BaseConnectionOptions {
   if (
     ENV === "prod" &&
     process.env["PG_DB_PASSWORD"]?.startsWith("!ChangeMe")
@@ -52,10 +66,10 @@ export function buildBaseOptions(): PostgresDataSourceOptions {
     password: process.env["PG_DB_PASSWORD"],
     ssl: buildSslOptions(),
     logging: false,
-  } as PostgresDataSourceOptions;
+  } as BaseConnectionOptions;
 }
 
-export const defaultOptions: PostgresDataSourceOptions = {
+export const defaultOptions: BaseConnectionOptions & { synchronize: boolean } = {
   ...buildBaseOptions(),
   synchronize: process.env["DB_FORCE_SYNC"] === "true",
 };

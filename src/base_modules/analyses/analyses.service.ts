@@ -31,6 +31,7 @@ import {
   TypedPaginatedData,
 } from "src/types/pagination.types";
 import { AnalysisStartMessageCreate } from "src/types/rabbitMqMessages.types";
+import { buildAmqpSocketOptions } from "src/utils/amqp";
 
 import { AnaylzerMissingConfigAttribute } from "../analyzers/analyzers.errors";
 import { AnalyzersRepository } from "../analyzers/analyzers.repository";
@@ -282,8 +283,13 @@ export class AnalysesService {
       )}:${this.configService.getOrThrow<string>("AMQP_PORT")}`;
 
       try {
-        // Connect to RabbitMQ using the configured settings
-        const conn = await amqp.connect(amqpHost);
+        // Connect to RabbitMQ using the configured settings.
+        // TLS socket options are derived from AMQP_SSLMODE / AMQP_SSLROOTCERT
+        // (amqps:// URLs negotiate TLS; options control verification).
+        const conn = await amqp.connect(
+          amqpHost,
+          buildAmqpSocketOptions(),
+        );
         const ch1 = await conn.createChannel();
         await ch1.assertQueue(queue);
 

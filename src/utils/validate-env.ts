@@ -5,6 +5,7 @@ import {
   IsEnum,
   IsNotEmpty,
   IsNumber,
+  IsOptional,
   validateSync,
   ValidationError,
 } from "class-validator";
@@ -126,6 +127,19 @@ class EnvironmentVariables {
    */
   @IsNotEmpty()
   AMQP_PASSWORD!: string;
+
+  /**
+   * The TLS mode for AMQP connections (disable | require | verify-ca | verify-full).
+   * Optional; defaults by ENV (verify-ca in prod, disable otherwise).
+   */
+  @IsOptional()
+  AMQP_SSLMODE?: string;
+
+  /**
+   * Path to the CA certificate used to verify the AMQP server (verify-ca/verify-full).
+   */
+  @IsOptional()
+  AMQP_SSLROOTCERT?: string;
 
   // Email
   /**
