@@ -93,7 +93,7 @@ export class Analysis {
 
   @Column({
     type: "varchar",
-    length: 25,
+    length: 64,
     nullable: true,
   })
   commit_hash?: string;
