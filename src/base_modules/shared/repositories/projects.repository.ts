@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 
+import { Organization } from "src/base_modules/organizations/organization.entity";
 import { Project } from "src/base_modules/projects/project.entity";
 import {
   EntityNotFound,
@@ -96,6 +97,51 @@ export class ProjectsRepository {
    */
   async deleteProject(projectId: string): Promise<void> {
     await this.projectRepository.delete(projectId);
+  }
+
+  /**
+   * Load the projects among `ids` that belong to the given organization,
+   * optionally with relations. Used to resolve a user-supplied id list to the
+   * subset that actually belongs to the org (ids not returned are treated as
+   * not-found / not-owned by the caller).
+   */
+  async getProjectsByIdsAndOrg(
+    ids: string[],
+    orgId: string,
+    relations?: object,
+  ): Promise<Project[]> {
+    if (ids.length === 0) return [];
+    return this.projectRepository.find({
+      where: { id: In(ids), organizations: { id: orgId } },
+      ...(relations ? { relations: relations } : {}),
+    });
+  }
+
+  /**
+   * Detach multiple projects from an organization (remove the M2M join rows) in
+   * a single set-based statement via the owning side. The junction FK has no
+   * ON DELETE CASCADE, so these rows must be removed before the project rows.
+   */
+  async detachFromOrganization(
+    orgId: string,
+    projectIds: string[],
+  ): Promise<void> {
+    if (projectIds.length === 0) return;
+    await this.projectRepository.manager
+      .createQueryBuilder()
+      .relation(Organization, "projects")
+      .of(orgId)
+      .remove(projectIds);
+  }
+
+  /**
+   * Delete multiple projects by ID in a single set-based statement.
+   * @returns The number of project rows removed.
+   */
+  async deleteByIds(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+    const res = await this.projectRepository.delete({ id: In(ids) });
+    return res.affected ?? 0;
   }
 
   /**

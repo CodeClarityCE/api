@@ -49,6 +49,23 @@ export class FileRepository {
   }
 
   /**
+   * Deletes every file row belonging to any of the given projects in a single
+   * set-based statement (no per-row entity load).
+   *
+   * @param projectIds - The IDs of the projects whose files should be deleted.
+   * @returns The number of file rows removed.
+   */
+  async deleteByProjectIds(projectIds: string[]): Promise<number> {
+    if (projectIds.length === 0) return 0;
+    const res = await this.fileRepository
+      .createQueryBuilder()
+      .delete()
+      .where('"projectId" IN (:...projectIds)', { projectIds })
+      .execute();
+    return res.affected ?? 0;
+  }
+
+  /**
    * Saves a file to the database.
    *
    * @param file - The file to be saved.

@@ -12,7 +12,11 @@ import {
   IntegrationType,
   Project,
 } from "src/base_modules/projects/project.entity";
-import { ProjectImportBody } from "src/base_modules/projects/project.types";
+import {
+  BatchItemResult,
+  BatchResponse,
+  ProjectImportBody,
+} from "src/base_modules/projects/project.types";
 import { RepositoryCache } from "src/base_modules/projects/repositoryCache.entity";
 import { AnalysisResultsRepository } from "src/codeclarity_modules/results/results.repository";
 import {
@@ -432,5 +436,125 @@ export class ProjectService {
       orgId,
       user.userId,
     );
+  }
+
+  /**
+   * Bulk-delete projects of an org in bounded, throttled batches.
+   *
+   * Replaces the per-project, per-row cascade (which overloaded the API/DB when
+   * run across many projects) with set-based bulk statements. In-flight analyses
+   * are first transitioned to `cancelled` so workers stop advancing them, then
+   * results, analyses, files and the projects themselves are removed per batch.
+   * Each id gets an independent outcome so a single bad id never fails the call.
+   *
+   * @throws {NotAuthorized} if the caller is not at least a USER of the org
+   * @param orgId The id of the org
+   * @param projectIds The ids of the projects to delete
+   * @param user The authenticated user
+   * @returns A per-id result list plus succeeded/failed counts
+   */
+  async batchDelete(
+    orgId: string,
+    projectIds: string[],
+    user: AuthenticatedUser,
+  ): Promise<BatchResponse> {
+    // (1) Authorize the caller once for the whole batch.
+    await this.repos.memberships.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.USER,
+    );
+
+    const membership = await this.repos.memberships.getMembershipRole(
+      orgId,
+      user.userId,
+    );
+    if (!membership) {
+      throw new EntityNotFound();
+    }
+    const memberRole = membership.role;
+
+    // De-duplicate the requested ids while preserving order.
+    const uniqueIds = [...new Set(projectIds)];
+
+    // (2) Resolve which ids actually belong to the org (and who added them).
+    const owned = await this.repos.projects.getProjectsByIdsAndOrg(
+      uniqueIds,
+      orgId,
+      { added_by: true },
+    );
+    const ownedById = new Map(owned.map((p) => [p.id, p]));
+
+    const results: BatchItemResult[] = [];
+    const deletableIds: string[] = [];
+
+    for (const id of uniqueIds) {
+      const project = ownedById.get(id);
+      if (!project) {
+        results.push({ id, status: "not_found" });
+        continue;
+      }
+      // A normal USER may only delete projects they imported; moderators and
+      // above may delete any project in the org.
+      if (memberRole === MemberRole.USER && project.added_by?.id !== user.userId) {
+        results.push({ id, status: "not_authorized" });
+        continue;
+      }
+      deletableIds.push(id);
+    }
+
+    // (3) Delete the authorized projects in bounded, sequential batches so a
+    // bulk clear can't starve the (pgbouncer-bounded) connection pool.
+    const batchSize = Number(process.env["BULK_DELETE_BATCH_SIZE"] ?? 50);
+    for (let i = 0; i < deletableIds.length; i += batchSize) {
+      const batch = deletableIds.slice(i, i + batchSize);
+
+      // Resolve the batch's analyses, cancel any in-flight ones (so workers
+      // stop advancing them), then bulk-remove results -> analyses -> files ->
+      // projects in FK-safe order.
+      const analysisIds =
+        await this.repos.analyses.getAnalysisIdsByProjectIds(batch);
+      if (analysisIds.length > 0) {
+        await this.repos.analyses.cancelByIds(analysisIds);
+        await this.repos.results.deleteByAnalysisIds(analysisIds);
+        await this.repos.analyses.deleteByIds(analysisIds);
+      }
+      await this.repos.file.deleteByProjectIds(batch);
+      // The org<->project M2M junction FK has no ON DELETE CASCADE, so detach
+      // the join rows (owning side) before removing the project rows.
+      await this.repos.projects.detachFromOrganization(orgId, batch);
+      await this.repos.projects.deleteByIds(batch);
+
+      // Best-effort removal of each project's download folder (no DB load).
+      const downloadPath = process.env["DOWNLOAD_PATH"] ?? "/private";
+      for (const projectId of batch) {
+        const filePath = validateAndJoinPath(
+          downloadPath,
+          orgId,
+          "projects",
+          projectId,
+        );
+        // Path is validated using validateAndJoinPath to prevent traversal attacks
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
+        if (existsSync(filePath)) {
+          await rm(filePath, { recursive: true, force: true });
+        }
+        results.push({ id: projectId, status: "deleted" });
+      }
+    }
+
+    // (4) One aggregated audit log instead of one per project.
+    const deletedCount = deletableIds.length;
+    if (deletedCount > 0) {
+      await this.organizationLoggerService.addAuditLog(
+        ActionType.ProjectDelete,
+        `The User bulk-removed ${deletedCount} project(s) from the organization.`,
+        orgId,
+        user.userId,
+      );
+    }
+
+    const failed = results.filter((r) => r.status !== "deleted").length;
+    return { results, succeeded: deletedCount, failed };
   }
 }

@@ -376,4 +376,99 @@ describe("ProjectService", () => {
       ).rejects.toThrow(NotAuthorized);
     });
   });
+
+  describe("batchDelete", () => {
+    const analysesRepo = () =>
+      service["repos"].analyses as jest.Mocked<AnalysesRepository>;
+    const resultsRepo = () =>
+      service["repos"].results as jest.Mocked<AnalysisResultsRepository>;
+    const fileRepo = () => service["repos"].file as jest.Mocked<FileRepository>;
+
+    beforeEach(() => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      jest
+        .spyOn(membershipsRepository, "getMembershipRole")
+        .mockResolvedValue({ role: MemberRole.OWNER } as any);
+      (projectsRepository as any).getProjectsByIdsAndOrg = jest.fn();
+      (projectsRepository as any).detachFromOrganization = jest
+        .fn()
+        .mockResolvedValue(undefined);
+      (projectsRepository as any).deleteByIds = jest
+        .fn()
+        .mockResolvedValue(0);
+      (analysesRepo().getAnalysisIdsByProjectIds as any) = jest
+        .fn()
+        .mockResolvedValue([]);
+      (analysesRepo().cancelByIds as any) = jest.fn().mockResolvedValue(0);
+      (analysesRepo().deleteByIds as any) = jest.fn().mockResolvedValue(0);
+      (resultsRepo().deleteByAnalysisIds as any) = jest
+        .fn()
+        .mockResolvedValue(0);
+      (fileRepo().deleteByProjectIds as any) = jest.fn().mockResolvedValue(0);
+    });
+
+    it("returns not_found for ids that do not belong to the org", async () => {
+      (projectsRepository as any).getProjectsByIdsAndOrg.mockResolvedValue([]);
+
+      const res = await service.batchDelete(
+        mockOrgId,
+        ["missing-1", "missing-2"],
+        mockAuthenticatedUser,
+      );
+
+      expect(res.succeeded).toBe(0);
+      expect(res.failed).toBe(2);
+      expect(res.results.every((r) => r.status === "not_found")).toBe(true);
+      expect((projectsRepository as any).deleteByIds).not.toHaveBeenCalled();
+    });
+
+    it("cancels in-flight analyses then bulk-deletes owned projects", async () => {
+      (projectsRepository as any).getProjectsByIdsAndOrg.mockResolvedValue([
+        { id: "p1", added_by: { id: "someone" } },
+        { id: "p2", added_by: { id: "someone" } },
+      ]);
+      (analysesRepo().getAnalysisIdsByProjectIds as any).mockResolvedValue([
+        "a1",
+      ]);
+
+      const res = await service.batchDelete(
+        mockOrgId,
+        ["p1", "p2"],
+        mockAuthenticatedUser,
+      );
+
+      expect(res.succeeded).toBe(2);
+      expect(res.failed).toBe(0);
+      expect(analysesRepo().cancelByIds).toHaveBeenCalledWith(["a1"]);
+      expect(resultsRepo().deleteByAnalysisIds).toHaveBeenCalledWith(["a1"]);
+      expect(analysesRepo().deleteByIds).toHaveBeenCalledWith(["a1"]);
+      expect(
+        (projectsRepository as any).detachFromOrganization,
+      ).toHaveBeenCalledWith(mockOrgId, ["p1", "p2"]);
+      expect((projectsRepository as any).deleteByIds).toHaveBeenCalledWith([
+        "p1",
+        "p2",
+      ]);
+    });
+
+    it("denies a USER deleting a project they did not import", async () => {
+      jest
+        .spyOn(membershipsRepository, "getMembershipRole")
+        .mockResolvedValue({ role: MemberRole.USER } as any);
+      (projectsRepository as any).getProjectsByIdsAndOrg.mockResolvedValue([
+        { id: "p1", added_by: { id: "another-user" } },
+      ]);
+
+      const res = await service.batchDelete(
+        mockOrgId,
+        ["p1"],
+        mockAuthenticatedUser,
+      );
+
+      expect(res.results).toEqual([{ id: "p1", status: "not_authorized" }]);
+      expect((projectsRepository as any).deleteByIds).not.toHaveBeenCalled();
+    });
+  });
 });

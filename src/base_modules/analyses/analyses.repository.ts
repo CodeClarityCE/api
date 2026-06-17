@@ -1,10 +1,27 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, Repository } from "typeorm";
+import { In, Not, Repository } from "typeorm";
 
-import { Analysis } from "src/base_modules/analyses/analysis.entity";
+import {
+  Analysis,
+  AnalysisStatus,
+} from "src/base_modules/analyses/analysis.entity";
 import { EntityNotFound, NotAuthorized } from "src/types/error.types";
 import { TypedPaginatedData } from "src/types/pagination.types";
+
+/**
+ * Statuses considered terminal: an analysis in one of these states is no longer
+ * advancing through stages, so it is neither cancellable nor in-flight. The list
+ * spans both the TypeScript and Go status spellings since worker-written rows use
+ * the Go enum values ("failure" vs "failed").
+ */
+export const TERMINAL_ANALYSIS_STATUSES: string[] = [
+  AnalysisStatus.COMPLETED,
+  AnalysisStatus.SUCCESS,
+  AnalysisStatus.FAILED,
+  AnalysisStatus.CANCELLED,
+  "failure",
+];
 
 /**
  * A repository for handling analysis-related database operations.
@@ -43,6 +60,61 @@ export class AnalysesRepository {
    */
   async removeAnalyses(analyses: Analysis[]): Promise<void> {
     await this.analysisRepository.remove(analyses);
+  }
+
+  /**
+   * Deletes multiple analyses in a single set-based statement.
+   * @param ids The IDs of the analyses to delete.
+   * @returns The number of rows removed.
+   */
+  async deleteByIds(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+    const res = await this.analysisRepository.delete({ id: In(ids) });
+    return res.affected ?? 0;
+  }
+
+  /**
+   * Cancels (sets status to CANCELLED) every non-terminal analysis among the
+   * given IDs in a single set-based statement. Terminal analyses are left
+   * untouched so a finished/failed run is never re-labelled.
+   * @param ids The IDs of the analyses to cancel.
+   * @returns The number of analyses transitioned to CANCELLED.
+   */
+  async cancelByIds(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+    const res = await this.analysisRepository.update(
+      { id: In(ids), status: Not(In(TERMINAL_ANALYSIS_STATUSES)) },
+      { status: AnalysisStatus.CANCELLED, ended_on: new Date() },
+    );
+    return res.affected ?? 0;
+  }
+
+  /**
+   * Returns the IDs of every analysis belonging to any of the given projects.
+   * @param projectIds The IDs of the projects to look up analyses for.
+   */
+  async getAnalysisIdsByProjectIds(projectIds: string[]): Promise<string[]> {
+    if (projectIds.length === 0) return [];
+    const rows = await this.analysisRepository.find({
+      select: { id: true },
+      where: { project: { id: In(projectIds) } },
+    });
+    return rows.map((r) => r.id);
+  }
+
+  /**
+   * Returns the id and status of every analysis belonging to a project. Used by
+   * the batch cancel/delete endpoints to validate ownership and decide per-id
+   * outcomes (cancellable vs already-terminal) in a single query.
+   * @param projectId The id of the project to look up analyses for.
+   */
+  async getIdStatusByProjectId(
+    projectId: string,
+  ): Promise<{ id: string; status: AnalysisStatus }[]> {
+    return this.analysisRepository.find({
+      select: { id: true, status: true },
+      where: { project: { id: projectId } },
+    });
   }
 
   /**

@@ -26,6 +26,7 @@ export enum AnalysisStatus {
   COMPLETED = "completed",
   FAILED = "failed",
   SUCCESS = "success",
+  CANCELLED = "cancelled",
 }
 
 export interface StageBase {
