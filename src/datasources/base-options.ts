@@ -14,6 +14,9 @@ export interface BaseConnectionOptions {
   password?: string;
   ssl: false | { rejectUnauthorized: boolean; ca?: string };
   logging: boolean;
+  // Passed through to the underlying `pg` pool. Bounds the per-DataSource
+  // connection pool so the API's footprint stays within the connection budget.
+  extra: { max: number; idleTimeoutMillis: number };
 }
 
 // Load environment file similar to app.module logic
@@ -66,6 +69,10 @@ export function buildBaseOptions(): BaseConnectionOptions {
     password: process.env["PG_DB_PASSWORD"],
     ssl: buildSslOptions(),
     logging: false,
+    extra: {
+      max: parseInt(process.env["PG_DB_POOL_MAX"] ?? "10", 10),
+      idleTimeoutMillis: 30000,
+    },
   } as BaseConnectionOptions;
 }
 
