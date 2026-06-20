@@ -44,9 +44,11 @@ describe("ProjectsRepository", () => {
     orderBy: jest.fn().mockReturnThis(),
     addOrderBy: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
     offset: jest.fn().mockReturnThis(),
     getCount: jest.fn(),
+    getRawMany: jest.fn().mockResolvedValue([]),
     getMany: jest.fn(),
   };
 
@@ -177,6 +179,40 @@ describe("ProjectsRepository", () => {
     });
   });
 
+  describe("getProjectByUrlOrgAndUser", () => {
+    it("should look up by url, org and user (per-user scope)", async () => {
+      mockProjectRepository.findOne.mockResolvedValue(mockProject);
+
+      const result = await projectsRepository.getProjectByUrlOrgAndUser(
+        "https://github.com/test/repo",
+        "org-123",
+        "user-123",
+      );
+
+      expect(result).toEqual(mockProject);
+      expect(mockProjectRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          url: "https://github.com/test/repo",
+          organizations: { id: "org-123" },
+          added_by: { id: "user-123" },
+        },
+        order: { added_on: "ASC" },
+      });
+    });
+
+    it("should return null when no matching project exists", async () => {
+      mockProjectRepository.findOne.mockResolvedValue(null);
+
+      const result = await projectsRepository.getProjectByUrlOrgAndUser(
+        "https://github.com/test/repo",
+        "org-123",
+        "user-123",
+      );
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe("doesProjectBelongToOrg", () => {
     it("should not throw when project belongs to organization", async () => {
       // Arrange
@@ -295,6 +331,7 @@ describe("ProjectsRepository", () => {
       // Arrange
       const projects = [mockProject];
       mockQueryBuilder.getCount.mockResolvedValue(1);
+      mockQueryBuilder.getRawMany.mockResolvedValue([{ id: "p1" }]);
       mockQueryBuilder.getMany.mockResolvedValue(projects);
 
       // Act
@@ -325,6 +362,7 @@ describe("ProjectsRepository", () => {
       // Arrange
       const projects = [mockProject];
       mockQueryBuilder.getCount.mockResolvedValue(1);
+      mockQueryBuilder.getRawMany.mockResolvedValue([{ id: "p1" }]);
       mockQueryBuilder.getMany.mockResolvedValue(projects);
 
       // Act
@@ -347,6 +385,13 @@ describe("ProjectsRepository", () => {
       // Arrange
       const projects = Array(5).fill(mockProject);
       mockQueryBuilder.getCount.mockResolvedValue(25);
+      mockQueryBuilder.getRawMany.mockResolvedValue([
+        { id: "p1" },
+        { id: "p2" },
+        { id: "p3" },
+        { id: "p4" },
+        { id: "p5" },
+      ]);
       mockQueryBuilder.getMany.mockResolvedValue(projects);
 
       // Act
@@ -389,9 +434,11 @@ describe("ProjectsRepository", () => {
     });
 
     it("should include all required joins", async () => {
-      // Arrange
-      mockQueryBuilder.getCount.mockResolvedValue(0);
-      mockQueryBuilder.getMany.mockResolvedValue([]);
+      // Arrange — non-empty page so the hydration query (which carries the
+      // relation joins) actually runs.
+      mockQueryBuilder.getCount.mockResolvedValue(1);
+      mockQueryBuilder.getRawMany.mockResolvedValue([{ id: "p1" }]);
+      mockQueryBuilder.getMany.mockResolvedValue([mockProject]);
 
       // Act
       await projectsRepository.getManyProjects("org-123", 0, 10);

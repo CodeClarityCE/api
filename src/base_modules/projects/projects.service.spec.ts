@@ -115,6 +115,7 @@ describe("ProjectService", () => {
           useValue: {
             saveProject: jest.fn(),
             getProjectById: jest.fn(),
+            getProjectByUrlOrgAndUser: jest.fn(),
             getManyProjects: jest.fn(),
             deleteProject: jest.fn().mockResolvedValue(undefined),
             doesProjectBelongToOrg: jest.fn().mockResolvedValue(undefined),
@@ -186,6 +187,40 @@ describe("ProjectService", () => {
       await expect(
         service.import(mockOrgId, projectImportBody, mockAuthenticatedUser),
       ).rejects.toThrow(IntegrationNotSupported);
+    });
+
+    it("should reuse an existing project (idempotent) without creating a new one", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      projectsRepository.getProjectByUrlOrgAndUser.mockResolvedValue({
+        id: "existing-project-id",
+      } as Project);
+
+      const projectImportBody: ProjectImportBody = {
+        name: "Test Project",
+        description: "A test project",
+        url: "https://github.com/test/repo",
+        integration_id: mockIntegrationId,
+      };
+
+      const result = await service.import(
+        mockOrgId,
+        projectImportBody,
+        mockAuthenticatedUser,
+      );
+
+      expect(result).toBe("existing-project-id");
+      expect(projectsRepository.getProjectByUrlOrgAndUser).toHaveBeenCalledWith(
+        projectImportBody.url,
+        mockOrgId,
+        "test-user-id",
+      );
+      // No new project is created and the repo sync is skipped.
+      expect(projectsRepository.saveProject).not.toHaveBeenCalled();
+      expect(
+        integrationsRepository.getIntegrationByIdAndOrganizationAndUser,
+      ).not.toHaveBeenCalled();
     });
   });
 

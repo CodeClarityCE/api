@@ -59,6 +59,28 @@ export class ProjectsRepository {
   }
 
   /**
+   * Get the project a user has already imported into an org from a given git URL,
+   * or null if none exists. Scoped to (url, org, added_by) — never org-wide — so
+   * each user keeps their own project (and their own download folder) when more
+   * than one user imports the same repo. Used to make import idempotent.
+   */
+  async getProjectByUrlOrgAndUser(
+    url: string,
+    orgId: string,
+    userId: string,
+  ): Promise<Project | null> {
+    return this.projectRepository.findOne({
+      where: {
+        url,
+        organizations: { id: orgId },
+        added_by: { id: userId },
+      },
+      // Deterministic pick if pre-existing duplicates remain in the DB.
+      order: { added_on: "ASC" },
+    });
+  }
+
+  /**
    * Checks whether the integration, with the given id, belongs to the organization, with the given id
    * @param integrationId The id of the integration
    * @param orgId The id of the organization
@@ -107,38 +129,44 @@ export class ProjectsRepository {
     _sortBy?: AllowedOrderByGetProjects,
     _sortDirection?: SortDirection,
   ): Promise<TypedPaginatedData<Project>> {
-    let queryBuilder = this.projectRepository
+    // Paginate over DISTINCT project ids first. Applying LIMIT/OFFSET directly to
+    // a query that leftJoinAndSelects the one-to-many analyses/files would bound
+    // the inflated raw rows, not distinct projects, so a page would hydrate to
+    // fewer than entriesPerPage projects and callers would stop paginating early.
+    let idQuery = this.projectRepository
       .createQueryBuilder("project")
       .leftJoin("project.organizations", "organizations")
       .where("organizations.id = :orgId", { orgId: orgId })
-      .leftJoinAndSelect("project.analyses", "analyses")
-      .leftJoinAndSelect("analyses.analyzer", "analyzer")
-      .leftJoinAndSelect("project.files", "files")
-      .leftJoinAndSelect("project.added_by", "added_by")
-      .orderBy("project.added_on", "DESC")
-      .addOrderBy("analyses.created_on", "DESC");
-
-    // if (sortBy && sortDirection) {
-    //     if (sortBy === AllowedOrderByGetProjects.NAME)
-    //         queryBuilder = queryBuilder.orderBy('name', sortDirection);
-    //     else if (sortBy === AllowedOrderByGetProjects.IMPORTED_ON)
-    //         queryBuilder = queryBuilder.orderBy('added_on', sortDirection);
-    // }
+      .orderBy("project.added_on", "DESC");
 
     if (searchKey) {
-      queryBuilder = queryBuilder.andWhere(
+      idQuery = idQuery.andWhere(
         "(project.name LIKE :searchKey OR project.description LIKE :searchKey)",
         { searchKey: `%${searchKey}%` },
       );
     }
 
-    const fullCount = await queryBuilder.getCount();
+    const fullCount = await idQuery.getCount();
 
-    queryBuilder = queryBuilder
+    const pageRows = await idQuery
+      .select("project.id", "id")
       .limit(entriesPerPage)
-      .offset(currentPage * entriesPerPage);
+      .offset(currentPage * entriesPerPage)
+      .getRawMany<{ id: string }>();
+    const pageIds = pageRows.map((r) => r.id);
 
-    const projects = await queryBuilder.getMany();
+    const projects = pageIds.length
+      ? await this.projectRepository
+          .createQueryBuilder("project")
+          .where("project.id IN (:...pageIds)", { pageIds })
+          .leftJoinAndSelect("project.analyses", "analyses")
+          .leftJoinAndSelect("analyses.analyzer", "analyzer")
+          .leftJoinAndSelect("project.files", "files")
+          .leftJoinAndSelect("project.added_by", "added_by")
+          .orderBy("project.added_on", "DESC")
+          .addOrderBy("analyses.created_on", "DESC")
+          .getMany()
+      : [];
 
     return {
       data: projects,

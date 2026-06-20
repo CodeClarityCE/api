@@ -143,6 +143,19 @@ export class ProjectService {
       MemberRole.USER,
     );
 
+    // Idempotent import: a repo already imported by THIS user into THIS org
+    // reuses the existing project. Scoped per-user so each user keeps their own
+    // download folder. FILE imports (empty url) are never deduped. Done before
+    // the expensive repo sync below so re-imports short-circuit cheaply.
+    if (projectData.integration_id && projectData.url) {
+      const existing = await this.repos.projects.getProjectByUrlOrgAndUser(
+        projectData.url,
+        orgId,
+        user.userId,
+      );
+      if (existing) return existing.id;
+    }
+
     const project = new Project();
 
     if (projectData.integration_id) {

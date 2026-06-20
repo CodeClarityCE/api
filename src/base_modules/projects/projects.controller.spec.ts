@@ -1,10 +1,6 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 
-import {
-  AlreadyExists,
-  EntityNotFound,
-  NotAuthorized,
-} from "../../types/error.types";
+import { EntityNotFound, NotAuthorized } from "../../types/error.types";
 import { SortDirection } from "../../types/sort.types";
 import { AuthenticatedUser, ROLE } from "../auth/auth.types";
 
@@ -74,7 +70,7 @@ describe("ProjectController", () => {
       expect(result).toEqual({ id: "new-project-id" });
     });
 
-    it("should throw AlreadyExists when project already exists", async () => {
+    it("should return the existing project id when the repo was already imported", async () => {
       const importBody: ProjectImportBody = {
         name: "Existing Project",
         description: "An existing project",
@@ -82,11 +78,17 @@ describe("ProjectController", () => {
         integration_id: "test-integration-id",
       };
 
-      projectsService.import.mockRejectedValue(new AlreadyExists());
+      // import() is idempotent per (url, org, user): it reuses the existing
+      // project rather than throwing.
+      projectsService.import.mockResolvedValue("existing-project-id");
 
-      await expect(
-        controller.import(importBody, mockAuthenticatedUser, "test-org-id"),
-      ).rejects.toThrow(AlreadyExists);
+      const result = await controller.import(
+        importBody,
+        mockAuthenticatedUser,
+        "test-org-id",
+      );
+
+      expect(result).toEqual({ id: "existing-project-id" });
     });
 
     it("should throw EntityNotFound when organization does not exist", async () => {
