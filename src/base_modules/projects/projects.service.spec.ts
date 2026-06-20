@@ -1,6 +1,7 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 
 import {
+  AllowedOrderByGetProjects,
   MembershipsRepository,
   OrganizationsRepository,
   ProjectsRepository,
@@ -27,7 +28,7 @@ import { MemberRole } from "../organizations/memberships/orgMembership.types";
 import type { Project } from "./project.entity";
 import type { ProjectImportBody } from "./project.types";
 import { ProjectMemberService } from "./projectMember.service";
-import { AllowedOrderByGetProjects, ProjectService } from "./projects.service";
+import { ProjectService } from "./projects.service";
 
 describe("ProjectService", () => {
   let service: ProjectService;

@@ -3,11 +3,12 @@ import { Test, type TestingModule } from "@nestjs/testing";
 import { EntityNotFound, NotAuthorized } from "../../types/error.types";
 import { SortDirection } from "../../types/sort.types";
 import { AuthenticatedUser, ROLE } from "../auth/auth.types";
+import { AllowedOrderByGetProjects } from "../shared/repositories";
 
 import type { Project } from "./project.entity";
 import type { ProjectImportBody } from "./project.types";
 import { ProjectController } from "./projects.controller";
-import { AllowedOrderByGetProjects, ProjectService } from "./projects.service";
+import { ProjectService } from "./projects.service";
 
 describe("ProjectController", () => {
   let controller: ProjectController;

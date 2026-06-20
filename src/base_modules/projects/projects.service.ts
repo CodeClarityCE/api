@@ -38,16 +38,12 @@ import { GithubRepositoriesService } from "../integrations/github/githubRepos.se
 import { GitlabRepositoriesService } from "../integrations/gitlab/gitlabRepos.service";
 import { IntegrationsRepository } from "../integrations/integrations.repository";
 import {
+  AllowedOrderByGetProjects,
   MembershipsRepository,
   OrganizationsRepository,
   ProjectsRepository,
   UsersRepository,
 } from "../shared/repositories";
-
-export enum AllowedOrderByGetProjects {
-  IMPORTED_ON = "imported_on",
-  NAME = "url",
-}
 
 /** Repository services grouped for dependency injection */
 interface RepositoryServices {

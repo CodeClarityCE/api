@@ -18,6 +18,7 @@ import {
   BatchResponse,
   ProjectImportBody,
 } from "src/base_modules/projects/project.types";
+import { AllowedOrderByGetProjects } from "src/base_modules/shared/repositories";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocCreatedResponseDecorator } from "src/decorators/CrudResponse";
 import { APIDocNoDataResponseDecorator } from "src/decorators/NoDataResponse";
@@ -39,7 +40,7 @@ import {
 } from "src/types/error.types";
 import { SortDirection } from "src/types/sort.types";
 
-import { AllowedOrderByGetProjects, ProjectService } from "./projects.service";
+import { ProjectService } from "./projects.service";
 
 @ApiBearerAuth()
 @Controller("org/:org_id/projects")

@@ -6,7 +6,7 @@ import { User } from "src/base_modules/users/users.entity";
 import { EntityNotFound, UserDoesNotExist } from "src/types/error.types";
 
 import { OrganizationsRepository } from "../organizations/organizations.repository";
-import { ProjectsRepository } from "../projects/projects.repository";
+import { ProjectsRepository } from "../shared/repositories";
 
 /**
  * This service offers methods for working with users
