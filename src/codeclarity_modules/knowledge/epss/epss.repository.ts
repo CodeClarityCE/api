@@ -11,6 +11,10 @@ export class EPSSRepository {
     private epssRepository: Repository<EPSS>,
   ) {}
 
+  async count(): Promise<number> {
+    return await this.epssRepository.count();
+  }
+
   async getByCVE(cveId: string): Promise<EPSS> {
     const epss = await this.epssRepository.findOne({
       where: { cve: cveId },
