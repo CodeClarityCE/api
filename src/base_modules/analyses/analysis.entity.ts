@@ -99,6 +99,20 @@ export class Analysis {
   })
   commit_hash?: string;
 
+  /**
+   * Why the analysis was marked failed, written by the backend service that
+   * failed it (e.g. downloader clone/checkout errors). Null unless failed;
+   * the writer truncates to fit the column.
+   */
+  @ApiProperty()
+  @Expose()
+  @Column({
+    type: "varchar",
+    length: 500,
+    nullable: true,
+  })
+  failure_reason?: string;
+
   // Foreign keys
   @ManyToMany(() => Policy, (policy) => policy.analyses)
   policies!: Relation<Policy[]>;
