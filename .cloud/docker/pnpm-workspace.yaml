@@ -6,9 +6,19 @@
 # Mount declaration lives in api/.cloud/docker/docker-compose.yaml:
 #   - ./pnpm-workspace.yaml:/app/pnpm-workspace.yaml:ro
 
-# Override pnpm 11's default 24h gate. Container's standalone install resolves
+# Override pnpm's default 24h gate. Container's standalone install resolves
 # fresh from the registry and may hit packages that haven't aged out yet.
 minimumReleaseAge: 0
+
+# @nestjs/platform-fastify pins fastify as an exact direct dependency (11.2.3
+# pins 5.11.3), so without this the tree carries two fastify copies and the
+# instance that actually serves requests is the older one. That matters for
+# more than tidiness: 5.11.3 is affected by GHSA-3m5p-2c4r-xxw2 (X-Forwarded-*
+# spoofing under trustProxy, patched in 5.12.1), and it also makes the
+# @fastify/* plugin types disagree with the app's FastifyInstance type.
+# Keep this in sync with the fastify version in package.json.
+overrides:
+  fastify: 5.12.3
 
 # Mirror the root workspace's allowBuilds verdicts so lifecycle scripts
 # (bcrypt native build, esbuild binary download, etc.) run for the right packages.

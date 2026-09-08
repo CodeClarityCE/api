@@ -604,8 +604,7 @@ export class VulnerabilitiesService {
 
         if (nvdVuln) {
           const descriptions = nvdVuln.descriptions as
-            | NvdDescription[]
-            | undefined;
+            NvdDescription[] | undefined;
           nvdDescription = descriptions?.[0]?.value ?? "";
         }
 

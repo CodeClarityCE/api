@@ -431,9 +431,7 @@ describe("ProjectService", () => {
       (projectsRepository as any).detachFromOrganization = jest
         .fn()
         .mockResolvedValue(undefined);
-      (projectsRepository as any).deleteByIds = jest
-        .fn()
-        .mockResolvedValue(0);
+      (projectsRepository as any).deleteByIds = jest.fn().mockResolvedValue(0);
       (analysesRepo().getAnalysisIdsByProjectIds as any) = jest
         .fn()
         .mockResolvedValue([]);

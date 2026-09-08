@@ -1,5 +1,12 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { ArrayMaxSize, ArrayNotEmpty, IsArray, IsOptional, IsUrl,IsUUID } from "class-validator";
+import {
+  ArrayMaxSize,
+  ArrayNotEmpty,
+  IsArray,
+  IsOptional,
+  IsUrl,
+  IsUUID,
+} from "class-validator";
 
 import { IntegrationProvider } from "../integrations/integration.types";
 
@@ -13,11 +20,7 @@ export const BATCH_MAX_IDS = 500;
  * already-terminal analysis on cancel).
  */
 export type BatchItemStatus =
-  | "deleted"
-  | "cancelled"
-  | "not_found"
-  | "not_authorized"
-  | "skipped";
+  "deleted" | "cancelled" | "not_found" | "not_authorized" | "skipped";
 
 export interface BatchItemResult {
   id: string;
