@@ -6,9 +6,11 @@
 # Mount declaration lives in api/.cloud/docker/docker-compose.yaml:
 #   - ./pnpm-workspace.yaml:/app/pnpm-workspace.yaml:ro
 
-# Override pnpm's default 24h gate. Container's standalone install resolves
-# fresh from the registry and may hit packages that haven't aged out yet.
-minimumReleaseAge: 0
+# Cooling-off window before a freshly published version may be resolved, in
+# minutes. 4320 is 3 days. Mirrors the root pnpm-workspace.yaml; the root
+# file, this file, its sibling on the other side, and
+# PNPM_CONFIG_MINIMUM_RELEASE_AGE in both Jenkinsfiles must move together.
+minimumReleaseAge: 4320
 
 # @nestjs/platform-fastify pins fastify as an exact direct dependency (11.2.3
 # pins 5.11.3), so without this the tree carries two fastify copies and the
