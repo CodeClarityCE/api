@@ -28,8 +28,7 @@ try {
 }
 
 export function buildSslOptions():
-  | false
-  | { rejectUnauthorized: boolean; ca?: string } {
+  false | { rejectUnauthorized: boolean; ca?: string } {
   const sslMode =
     process.env["PG_DB_SSLMODE"] ?? (ENV === "prod" ? "require" : "disable");
 
@@ -76,7 +75,8 @@ export function buildBaseOptions(): BaseConnectionOptions {
   } as BaseConnectionOptions;
 }
 
-export const defaultOptions: BaseConnectionOptions & { synchronize: boolean } = {
-  ...buildBaseOptions(),
-  synchronize: process.env["DB_FORCE_SYNC"] === "true",
-};
+export const defaultOptions: BaseConnectionOptions & { synchronize: boolean } =
+  {
+    ...buildBaseOptions(),
+    synchronize: process.env["DB_FORCE_SYNC"] === "true",
+  };

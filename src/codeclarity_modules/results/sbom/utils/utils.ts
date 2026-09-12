@@ -343,8 +343,7 @@ export class SbomUtilsService {
     }
 
     const enginesExtra = version?.extra?.["Engines"] as
-      | Record<string, string>
-      | undefined;
+      Record<string, string> | undefined;
     const timeExtra = version?.extra?.["Time"] as string | undefined;
 
     const dependency_details: DependencyDetails = {

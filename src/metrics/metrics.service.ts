@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { Gauge, register } from "prom-client";
+import { Gauge, register } from "@prometheus-io/client";
 
 @Injectable()
 export class MetricsService {

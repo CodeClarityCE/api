@@ -293,10 +293,7 @@ export class AnalysesService {
         // Connect to RabbitMQ using the configured settings.
         // TLS socket options are derived from AMQP_SSLMODE / AMQP_SSLROOTCERT
         // (amqps:// URLs negotiate TLS; options control verification).
-        const conn = await amqp.connect(
-          amqpHost,
-          buildAmqpSocketOptions(),
-        );
+        const conn = await amqp.connect(amqpHost, buildAmqpSocketOptions());
         const ch1 = await conn.createChannel();
         await ch1.assertQueue(queue);
 
@@ -666,9 +663,8 @@ export class AnalysesService {
     );
     await this.projectsRepository.doesProjectBelongToOrg(projectId, orgId);
 
-    const owned = await this.analysesRepository.getIdStatusByProjectId(
-      projectId,
-    );
+    const owned =
+      await this.analysesRepository.getIdStatusByProjectId(projectId);
     const statusById = new Map(owned.map((a) => [a.id, a.status]));
 
     const cancellable: string[] = [];

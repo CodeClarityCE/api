@@ -505,7 +505,10 @@ export class ProjectService {
       }
       // A normal USER may only delete projects they imported; moderators and
       // above may delete any project in the org.
-      if (memberRole === MemberRole.USER && project.added_by?.id !== user.userId) {
+      if (
+        memberRole === MemberRole.USER &&
+        project.added_by?.id !== user.userId
+      ) {
         results.push({ id, status: "not_authorized" });
         continue;
       }
