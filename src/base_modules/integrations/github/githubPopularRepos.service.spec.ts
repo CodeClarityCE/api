@@ -381,6 +381,28 @@ describe("GithubPopularReposService", () => {
     expect(defaults.data).toHaveLength(20);
   });
 
+  it("falls back to the default page size for non-positive sizes and starts pages at 0", async () => {
+    const items = Array.from({ length: 30 }, (_, i) =>
+      searchItem({
+        id: i + 1,
+        full_name: `a/repo-${i + 1}`,
+        stargazers_count: 1000 + 30 - i,
+      }),
+    );
+    mockSearchRepos.mockResolvedValue(searchResponse(items));
+
+    for (const entriesPerPage of [-1, 0]) {
+      const result = await list(["PHP"], { entriesPerPage });
+      expect(result.entries_per_page).toBe(20);
+      expect(result.data).toHaveLength(20);
+      expect(result.total_pages).toBe(2);
+    }
+
+    const negativePage = await list(["PHP"], { page: -3, entriesPerPage: 10 });
+    expect(negativePage.page).toBe(0);
+    expect(negativePage.data[0]!.id).toBe("1");
+  });
+
   it("sorts by the requested key and keeps the star ranking for unknown keys", async () => {
     mockSearchRepos.mockResolvedValue(
       searchResponse([

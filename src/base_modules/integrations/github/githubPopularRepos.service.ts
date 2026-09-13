@@ -99,6 +99,29 @@ enum AllowedOrderBy {
 
 const MINUTE_MS = 60_000;
 
+const PAGINATION: PaginationConfig = {
+  maxEntriesPerPage: 100,
+  defaultEntriesPerPage: 20,
+};
+
+/**
+ * Clamp the requested page and page size. The page is sliced out of an
+ * in-memory array, where a negative index counts from the end, so a
+ * non-positive size falls back to the default and pages start at 0.
+ */
+function resolvePagination(requested: PaginationUserSuppliedConf): {
+  currentPage: number;
+  entriesPerPage: number;
+} {
+  const requestedSize = requested.entriesPerPage ?? 0;
+  const entriesPerPage =
+    requestedSize > 0
+      ? Math.min(PAGINATION.maxEntriesPerPage, requestedSize)
+      : PAGINATION.defaultEntriesPerPage;
+  const currentPage = Math.max(0, requested.currentPage ?? 0);
+  return { currentPage, entriesPerPage };
+}
+
 type RepositoryComparator = (
   a: PopularGithubRepository,
   b: PopularGithubRepository,
@@ -211,22 +234,9 @@ export class GithubPopularReposService {
       throw new NotAuthorized();
     }
 
-    const paginationConfig: PaginationConfig = {
-      maxEntriesPerPage: 100,
-      defaultEntriesPerPage: 20,
-    };
-
-    let entriesPerPage = paginationConfig.defaultEntriesPerPage;
-    let currentPage = 0;
-
-    if (paginationUserSuppliedConf.entriesPerPage)
-      entriesPerPage = Math.min(
-        paginationConfig.maxEntriesPerPage,
-        paginationUserSuppliedConf.entriesPerPage,
-      );
-
-    if (paginationUserSuppliedConf.currentPage)
-      currentPage = Math.max(0, paginationUserSuppliedConf.currentPage);
+    const { currentPage, entriesPerPage } = resolvePagination(
+      paginationUserSuppliedConf,
+    );
 
     const logContext: LogContext = {
       organizationId: orgId,
