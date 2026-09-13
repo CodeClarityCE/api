@@ -88,6 +88,14 @@ interface PopularCacheEntry {
   repos: RankedPopularRepo[];
 }
 
+/** What a refresh needs from the request that triggers it. */
+interface RefreshContext {
+  integrationId: string;
+  /** Resolves the integration token, validating it at most once per request. */
+  getToken: () => Promise<string>;
+  logContext: LogContext;
+}
+
 /** Sort keys accepted by the popular listing (superset of the cache listing's). */
 enum AllowedOrderBy {
   STARS = "stars",
@@ -171,11 +179,14 @@ export class GithubPopularReposService {
   private readonly logger = CodeClarityLogger.forService(
     "GithubPopularReposService",
   );
+  /** Last good ranking per language, shared by every organization. */
   private readonly cache = new Map<PopularGithubLanguage, PopularCacheEntry>();
-  private readonly inFlight = new Map<
-    PopularGithubLanguage,
-    Promise<RankedPopularRepo[]>
-  >();
+  /**
+   * Refreshes in progress, keyed by integration and language. Keyed by
+   * integration so a refresh made with one organization's token never hands
+   * its failure (a revoked token, a rate limit) to another organization.
+   */
+  private readonly inFlight = new Map<string, Promise<RankedPopularRepo[]>>();
 
   constructor(
     private readonly githubIntegrationService: GithubIntegrationService,
@@ -238,21 +249,19 @@ export class GithubPopularReposService {
       paginationUserSuppliedConf,
     );
 
-    const logContext: LogContext = {
-      organizationId: orgId,
-      userId: user.userId,
-      integrationId,
-    };
-
     // The token is only needed when a language ranking must be (re)fetched;
     // resolving it validates it against GitHub, so do that at most once per
     // request and not at all when every ranking is served from the cache.
     let tokenPromise: Promise<string> | undefined;
-    const getToken = (): Promise<string> => {
-      tokenPromise ??= this.githubIntegrationService
-        .getToken(integrationId)
-        .then((token) => token.getToken());
-      return tokenPromise;
+    const refreshContext: RefreshContext = {
+      integrationId,
+      getToken: () => {
+        tokenPromise ??= this.githubIntegrationService
+          .getToken(integrationId)
+          .then((token) => token.getToken());
+        return tokenPromise;
+      },
+      logContext: { organizationId: orgId, userId: user.userId, integrationId },
     };
 
     const selectedLanguages =
@@ -261,9 +270,8 @@ export class GithubPopularReposService {
       selectedLanguages.map((language) =>
         this.getRankedForLanguage(
           language,
-          getToken,
           forceRefresh === true,
-          logContext,
+          refreshContext,
         ),
       ),
     );
@@ -313,13 +321,13 @@ export class GithubPopularReposService {
 
   /**
    * The ranking for one language, from the cache when fresh, otherwise
-   * refreshed from GitHub. Concurrent cold requests share one GitHub call.
+   * refreshed from GitHub. Concurrent requests through the same integration
+   * share one GitHub call.
    */
   private getRankedForLanguage(
     language: PopularGithubLanguage,
-    getToken: () => Promise<string>,
     forceRefresh: boolean,
-    logContext: LogContext,
+    context: RefreshContext,
   ): Promise<RankedPopularRepo[]> {
     const entry = this.cache.get(language);
     const age = entry ? Date.now() - entry.fetchedAt : Number.POSITIVE_INFINITY;
@@ -331,17 +339,13 @@ export class GithubPopularReposService {
       return Promise.resolve(entry.repos);
     }
 
-    let pending = this.inFlight.get(language);
+    const refreshKey = `${context.integrationId}:${language}`;
+    let pending = this.inFlight.get(refreshKey);
     if (!pending) {
-      pending = this.refreshLanguage(
-        language,
-        getToken,
-        entry,
-        logContext,
-      ).finally(() => {
-        this.inFlight.delete(language);
+      pending = this.refreshLanguage(language, entry, context).finally(() => {
+        this.inFlight.delete(refreshKey);
       });
-      this.inFlight.set(language, pending);
+      this.inFlight.set(refreshKey, pending);
     }
     return pending;
   }
@@ -353,12 +357,12 @@ export class GithubPopularReposService {
    */
   private async refreshLanguage(
     language: PopularGithubLanguage,
-    getToken: () => Promise<string>,
     stale: PopularCacheEntry | undefined,
-    logContext: LogContext,
+    context: RefreshContext,
   ): Promise<RankedPopularRepo[]> {
+    const { logContext } = context;
     try {
-      const token = await getToken();
+      const token = await context.getToken();
       const { repos, incomplete } = await this.fetchFromGithub(
         language,
         token,

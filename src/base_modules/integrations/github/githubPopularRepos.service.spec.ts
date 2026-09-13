@@ -542,7 +542,7 @@ describe("GithubPopularReposService", () => {
     await expect(list(["PHP"])).rejects.toThrow(IntegrationInvalidToken);
   });
 
-  it("coalesces concurrent cold requests into a single GitHub call", async () => {
+  it("coalesces concurrent cold requests through the same integration into a single GitHub call", async () => {
     let resolveSearch!: (value: unknown) => void;
     mockSearchRepos.mockImplementation(
       () =>
@@ -565,5 +565,37 @@ describe("GithubPopularReposService", () => {
     expect(a.data.map((repo) => repo.id)).toEqual(["1"]);
     expect(b.data.map((repo) => repo.id)).toEqual(["1"]);
     expect(mockSearchRepos).toHaveBeenCalledTimes(1);
+  });
+
+  it("refreshes separately per integration so a failing token only fails its own request", async () => {
+    let rejectFirstSearch!: (reason: unknown) => void;
+    mockSearchRepos
+      .mockImplementationOnce(
+        () =>
+          new Promise((_resolve, reject) => {
+            rejectFirstSearch = reject;
+          }),
+      )
+      .mockResolvedValueOnce(
+        searchResponse([
+          searchItem({ id: 1, full_name: "a/one", stargazers_count: 3000 }),
+        ]),
+      );
+
+    const failing = list(["PHP"]);
+    const healthy = service.getPopularGithubRepositories(
+      orgId,
+      "other-integration-id",
+      {},
+      user,
+      ["PHP"],
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(mockSearchRepos).toHaveBeenCalledTimes(2);
+
+    rejectFirstSearch({ status: 401 });
+
+    await expect(failing).rejects.toThrow(IntegrationInvalidToken);
+    await expect(healthy).resolves.toMatchObject({ total_entries: 1 });
   });
 });
