@@ -406,6 +406,27 @@ describe("GithubPopularReposService", () => {
     expect(unknown.data.map((repo) => repo.id)).toEqual(["2", "1", "3"]);
   });
 
+  it.each(["hasOwnProperty", "__proto__", "constructor", "toString"])(
+    "keeps the star ranking for the Object.prototype sort key %s",
+    async (sortBy) => {
+      // Star order (2, 1, 3) deliberately differs from name order (1, 3, 2).
+      mockSearchRepos.mockResolvedValue(
+        searchResponse([
+          searchItem({ id: 1, full_name: "a/mid", stargazers_count: 2000 }),
+          searchItem({ id: 2, full_name: "c/top", stargazers_count: 3000 }),
+          searchItem({ id: 3, full_name: "b/low", stargazers_count: 1000 }),
+        ]),
+      );
+
+      const result = await list(["PHP"], {
+        sortBy,
+        sortDirection: SortDirection.ASC,
+      });
+
+      expect(result.data.map((repo) => repo.id)).toEqual(["2", "1", "3"]);
+    },
+  );
+
   it("serves repeated requests from the cache without asking GitHub or resolving the token again", async () => {
     mockSearchRepos.mockResolvedValue(
       searchResponse([

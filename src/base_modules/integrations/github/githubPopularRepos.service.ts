@@ -99,6 +99,39 @@ enum AllowedOrderBy {
 
 const MINUTE_MS = 60_000;
 
+type RepositoryComparator = (
+  a: PopularGithubRepository,
+  b: PopularGithubRepository,
+) => number;
+
+/**
+ * Ascending comparator per supported sort key. A Map rather than an object
+ * literal: the key comes from the query string, and an object lookup would
+ * also match Object.prototype members such as "hasOwnProperty".
+ */
+const ASCENDING_COMPARATORS = new Map<string, RepositoryComparator>([
+  [AllowedOrderBy.STARS, (a, b) => a.stargazers_count - b.stargazers_count],
+  [
+    AllowedOrderBy.FULLY_QUALIFIED_NAME,
+    (a, b) => a.fully_qualified_name.localeCompare(b.fully_qualified_name),
+  ],
+  [
+    AllowedOrderBy.DESCRIPTION,
+    (a, b) => a.description.localeCompare(b.description),
+  ],
+  [
+    AllowedOrderBy.CREATED,
+    (a, b) => a.created_at.getTime() - b.created_at.getTime(),
+  ],
+  [
+    AllowedOrderBy.IMPORTED,
+    (a, b) => Number(a.imported_already) - Number(b.imported_already),
+  ],
+]);
+
+/** Keys sorted descending when no direction is given: stars are the ranking. */
+const DESCENDING_BY_DEFAULT = new Set<string>([AllowedOrderBy.STARS]);
+
 /**
  * Serves the "Popular on GitHub" import source: the most-starred public
  * repositories for the languages CodeClarity can analyse, fetched through the
@@ -474,45 +507,28 @@ export class GithubPopularReposService {
   }
 
   /**
-   * Sort a page's worth of candidates. Stars default to descending (the
-   * ranking), every other key to ascending like the cache listing; unknown
-   * keys keep the star ranking. Ties fall back to the qualified name.
+   * Sort the candidates by a supported key. Unknown keys keep the star
+   * ranking. Ties fall back to the qualified name.
    */
   private sortRepositories(
     repositories: PopularGithubRepository[],
     sortBy?: string,
     sortDirection?: SortDirection,
   ): PopularGithubRepository[] {
-    const key = (sortBy as AllowedOrderBy | undefined) ?? AllowedOrderBy.STARS;
+    const sortKey = sortBy ?? AllowedOrderBy.STARS;
+    const compareAscending = ASCENDING_COMPARATORS.get(sortKey);
+    if (!compareAscending) return repositories;
 
-    const comparators: Record<
-      AllowedOrderBy,
-      (a: PopularGithubRepository, b: PopularGithubRepository) => number
-    > = {
-      [AllowedOrderBy.STARS]: (a, b) => a.stargazers_count - b.stargazers_count,
-      [AllowedOrderBy.FULLY_QUALIFIED_NAME]: (a, b) =>
-        a.fully_qualified_name.localeCompare(b.fully_qualified_name),
-      [AllowedOrderBy.DESCRIPTION]: (a, b) =>
-        a.description.localeCompare(b.description),
-      [AllowedOrderBy.CREATED]: (a, b) =>
-        a.created_at.getTime() - b.created_at.getTime(),
-      [AllowedOrderBy.IMPORTED]: (a, b) =>
-        Number(a.imported_already) - Number(b.imported_already),
-    };
-
-    const compare = comparators[key];
-    if (!compare) return repositories;
-
-    const defaultDirection =
-      key === AllowedOrderBy.STARS ? SortDirection.DESC : SortDirection.ASC;
+    const defaultDirection = DESCENDING_BY_DEFAULT.has(sortKey)
+      ? SortDirection.DESC
+      : SortDirection.ASC;
     const direction =
       (sortDirection ?? defaultDirection) === SortDirection.ASC ? 1 : -1;
 
-    return [...repositories].sort((a, b) => {
-      const result = compare(a, b) * direction;
-      return result !== 0
-        ? result
-        : a.fully_qualified_name.localeCompare(b.fully_qualified_name);
-    });
+    return [...repositories].sort(
+      (a, b) =>
+        compareAscending(a, b) * direction ||
+        a.fully_qualified_name.localeCompare(b.fully_qualified_name),
+    );
   }
 }
