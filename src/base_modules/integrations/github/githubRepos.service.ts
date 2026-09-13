@@ -125,27 +125,6 @@ export class GithubRepositoriesService {
   }
 
   /**
-   * Sync updated and new repos from the integration
-   * @throws {NotAuthorized} If the authenticated user is not authorized to perform this action
-   * @throws {EntityNotFound} In case the integration could not be found or the integration is of the wrong type
-   * @throws {IntegrationInvalidToken} If the token could not be used to authenticate the request to gitlab
-   * @throws {FailedToRetrieveReposFromProvider} If authentication to gitlab succeeded, but a different error with the request was encountered
-   * @throws {IntegrationTokenMissingPermissions} In the case a token does not have the required permissions
-   * @throws {IntegrationTokenExpired} In case the token is already expired
-   * @throws {IntegrationTokenRetrievalFailed} In case the token could not be fetched from the provider
-   * @throws {FailedToRetrieveReposFromProvider} If authentication to gitlab succeeded, but a different error with the request was encountered
-   * @throws {IntegrationWrongTokenType} In case the token type is not supported
-   * @param integrationId The id of the integration
-   * @returns
-   */
-  async syncGithubRepos(integrationId: string): Promise<void> {
-    const synced = await this.areGithubReposSynced(integrationId);
-    if (!synced) {
-      await this.forceSyncGithubRepos(integrationId);
-    }
-  }
-
-  /**
    * Get github repositories from the integration id
    * @throws {NotAuthorized} If the authenticated user is not authorized to perform this action
    * @throws {EntityNotFound} In case the integration could not be found or the integration is of the wrong type
@@ -298,28 +277,27 @@ export class GithubRepositoriesService {
   }
 
   /**
-   * Get a specific github repository from the integration id
+   * Resolve a repository to import: from the integration's repository cache
+   * when it is there, otherwise through the GitHub API (typically a public
+   * repository the token owner does not own). The cache is not synced first:
+   * the API lookup is authoritative for anything the cache does not hold.
    * @throws {NotAuthorized} If the authenticated user is not authorized to perform this action
-   * @throws {EntityNotFound} In case the repo could not be found or the integration could not be found or the integration is of the wrong type
+   * @throws {EntityNotFound} If the url is not a github.com repository url or the repository does not exist / is not accessible
    * @throws {IntegrationInvalidToken} If the token could not be used to authenticate the request to github
-   * @throws {FailedToRetrieveReposFromProvider} If authentication to github succeeded, but a different error with the request was encountered
+   * @throws {FailedToRetrieveReposFromProvider} If github answered with any other error
    * @throws {IntegrationTokenMissingPermissions} In the case a token does not have the required permissions
    * @throws {IntegrationTokenExpired} In case the token is already expired
    * @throws {IntegrationTokenRetrievalFailed} In case the token could not be fetched from the provider
-   * @throws {FailedToRetrieveReposFromProvider} If authentication to github succeeded, but a different error with the request was encountered
    * @param orgId The id of the organization
    * @param integrationId The id of the integration
-   * @param url The url of the repository (https://github.com/user/repo)
+   * @param url The url of the repository (https://github.com/owner/repo)
    * @param user The authenticated user
-   * @param forceRefresh Optional, if set forces a re-sync with github
-   * @returns
    */
-  async getGithubRepository(
+  async resolveGithubRepository(
     orgId: string,
     integrationId: string,
     url: string,
     user: AuthenticatedUser,
-    forceRefresh?: boolean,
   ): Promise<RepositoryCache> {
     // (1) Check that the user has the right to access the org
     await this.membershipsRepository.hasRequiredRole(
@@ -338,31 +316,12 @@ export class GithubRepositoriesService {
       throw new NotAuthorized();
     }
 
-    const isSynced = await this.areGithubReposSynced(integrationId);
-
-    if (forceRefresh !== undefined && forceRefresh === true) {
-      await this.forceSyncGithubRepos(integrationId);
-    } else {
-      if (!isSynced) {
-        await this.forceSyncGithubRepos(integrationId);
-      }
-    }
-
-    const repo = await this.repositoryCacheRepository.findOne({
+    const cached = await this.repositoryCacheRepository.findOne({
       relations: { integration: true },
-      where: {
-        url: url,
-        integration: {
-          id: integrationId,
-        },
-      },
+      where: { url, integration: { id: integrationId } },
     });
 
-    if (!repo) {
-      throw new EntityNotFound();
-    }
-
-    return repo;
+    return cached ?? (await this.getGithubRepositoryRemote(integrationId, url));
   }
 
   /**

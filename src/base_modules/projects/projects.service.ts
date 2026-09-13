@@ -143,7 +143,7 @@ export class ProjectService {
     // Idempotent import: a repo already imported by THIS user into THIS org
     // reuses the existing project. Scoped per-user so each user keeps their own
     // download folder. FILE imports (empty url) are never deduped. Done before
-    // the expensive repo sync below so re-imports short-circuit cheaply.
+    // resolving the repository below so re-imports short-circuit cheaply.
     if (projectData.integration_id && projectData.url) {
       const existing = await this.repos.projects.getProjectByUrlOrgAndUser(
         projectData.url,
@@ -168,26 +168,12 @@ export class ProjectService {
       if (
         integration.integration_provider === IntegrationProviderEntity.GITHUB
       ) {
-        await this.githubRepositoriesService.syncGithubRepos(
+        repo = await this.githubRepositoriesService.resolveGithubRepository(
+          orgId,
           projectData.integration_id,
+          projectData.url,
+          user,
         );
-        try {
-          repo = await this.githubRepositoriesService.getGithubRepository(
-            orgId,
-            projectData.integration_id,
-            projectData.url,
-            user,
-          );
-        } catch (err) {
-          if (!(err instanceof EntityNotFound)) throw err;
-          // Not in the token owner's repository cache (e.g. a public repository
-          // they do not own): resolve it through the GitHub API so the default
-          // branch and metadata are accurate instead of guessed.
-          repo = await this.githubRepositoriesService.getGithubRepositoryRemote(
-            projectData.integration_id,
-            projectData.url,
-          );
-        }
       } else if (
         integration.integration_provider === IntegrationProviderEntity.GITLAB
       ) {

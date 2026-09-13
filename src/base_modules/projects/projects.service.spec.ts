@@ -12,7 +12,6 @@ import {
 import { AnalysisResultsRepository } from "../../codeclarity_modules/results/results.repository";
 import {
   EntityNotFound,
-  IntegrationInvalidToken,
   IntegrationNotSupported,
   NotAuthorized,
 } from "../../types/error.types";
@@ -31,6 +30,7 @@ import type { Project } from "./project.entity";
 import type { ProjectImportBody } from "./project.types";
 import { ProjectMemberService } from "./projectMember.service";
 import { ProjectService } from "./projects.service";
+import type { RepositoryCache } from "./repositoryCache.entity";
 
 // The import creates the project's download folder; keep the filesystem out
 // of unit tests.
@@ -75,9 +75,7 @@ describe("ProjectService", () => {
         {
           provide: GithubRepositoriesService,
           useValue: {
-            syncGithubRepos: jest.fn().mockResolvedValue(undefined),
-            getGithubRepository: jest.fn(),
-            getGithubRepositoryRemote: jest.fn(),
+            resolveGithubRepository: jest.fn(),
           },
         },
         {
@@ -153,8 +151,16 @@ describe("ProjectService", () => {
   });
 
   describe("import", () => {
-    /** A GitHub import whose repository is not in the token owner's cache. */
-    function arrangeGithubImportOutsideCache(): ProjectImportBody {
+    const legacyRepository = {
+      url: "https://github.com/octo/legacy",
+      fully_qualified_name: "octo/legacy",
+      description: "Legacy project",
+      default_branch: "master",
+      service_domain: "github.com",
+    } as RepositoryCache;
+
+    /** A GitHub import whose repository resolves to `legacyRepository`. */
+    function arrangeGithubImport(): ProjectImportBody {
       jest
         .spyOn(membershipsRepository, "hasRequiredRole")
         .mockResolvedValue(undefined);
@@ -165,8 +171,8 @@ describe("ProjectService", () => {
           integration_provider: "GITHUB" as IntegrationProvider,
         } as any,
       );
-      githubRepositoriesService.getGithubRepository.mockRejectedValue(
-        new EntityNotFound(),
+      githubRepositoriesService.resolveGithubRepository.mockResolvedValue(
+        legacyRepository,
       );
       usersRepository.getUserById.mockResolvedValue({
         id: "test-user-id",
@@ -183,15 +189,8 @@ describe("ProjectService", () => {
       } as ProjectImportBody;
     }
 
-    it("resolves a repository missing from the cache through GitHub and keeps its default branch", async () => {
-      const body = arrangeGithubImportOutsideCache();
-      githubRepositoriesService.getGithubRepositoryRemote.mockResolvedValue({
-        url: "https://github.com/octo/legacy",
-        fully_qualified_name: "octo/legacy",
-        description: "Legacy project",
-        default_branch: "master",
-        service_domain: "github.com",
-      } as any);
+    it("imports the repository the GitHub service resolves, keeping its default branch", async () => {
+      const body = arrangeGithubImport();
 
       const result = await service.import(
         mockOrgId,
@@ -201,8 +200,13 @@ describe("ProjectService", () => {
 
       expect(result).toBe("new-project-id");
       expect(
-        githubRepositoriesService.getGithubRepositoryRemote,
-      ).toHaveBeenCalledWith(mockIntegrationId, body.url);
+        githubRepositoriesService.resolveGithubRepository,
+      ).toHaveBeenCalledWith(
+        mockOrgId,
+        mockIntegrationId,
+        body.url,
+        mockAuthenticatedUser,
+      );
       const saved = projectsRepository.saveProject.mock.calls[0]![0];
       expect(saved.default_branch).toBe("master");
       expect(saved.name).toBe("octo/legacy");
@@ -214,16 +218,9 @@ describe("ProjectService", () => {
 
     it("stores the canonical url when the typed url is spelled differently", async () => {
       const body = {
-        ...arrangeGithubImportOutsideCache(),
+        ...arrangeGithubImport(),
         url: "https://github.com/Octo/Legacy/",
       };
-      githubRepositoriesService.getGithubRepositoryRemote.mockResolvedValue({
-        url: "https://github.com/octo/legacy",
-        fully_qualified_name: "octo/legacy",
-        description: "",
-        default_branch: "master",
-        service_domain: "github.com",
-      } as any);
 
       await service.import(mockOrgId, body, mockAuthenticatedUser);
 
@@ -238,16 +235,9 @@ describe("ProjectService", () => {
 
     it("reuses the project already stored under the canonical url", async () => {
       const body = {
-        ...arrangeGithubImportOutsideCache(),
+        ...arrangeGithubImport(),
         url: "https://github.com/octo/legacy.git",
       };
-      githubRepositoriesService.getGithubRepositoryRemote.mockResolvedValue({
-        url: "https://github.com/octo/legacy",
-        fully_qualified_name: "octo/legacy",
-        description: "",
-        default_branch: "master",
-        service_domain: "github.com",
-      } as any);
       projectsRepository.getProjectByUrlOrgAndUser.mockImplementation(
         async (url: string) =>
           (url === "https://github.com/octo/legacy"
@@ -266,7 +256,7 @@ describe("ProjectService", () => {
     });
 
     it("keeps the typed url for a public GitLab repository outside the cache", async () => {
-      const body = arrangeGithubImportOutsideCache();
+      const body = arrangeGithubImport();
       body.url = "https://gitlab.com/octo/legacy";
       integrationsRepository.getIntegrationByIdAndOrganizationAndUser.mockResolvedValue(
         {
@@ -288,9 +278,9 @@ describe("ProjectService", () => {
       fetchSpy.mockRestore();
     });
 
-    it("propagates EntityNotFound when GitHub does not know the repository either", async () => {
-      const body = arrangeGithubImportOutsideCache();
-      githubRepositoriesService.getGithubRepositoryRemote.mockRejectedValue(
+    it("propagates the error when the GitHub repository cannot be resolved", async () => {
+      const body = arrangeGithubImport();
+      githubRepositoriesService.resolveGithubRepository.mockRejectedValue(
         new EntityNotFound(),
       );
 
@@ -298,20 +288,6 @@ describe("ProjectService", () => {
         service.import(mockOrgId, body, mockAuthenticatedUser),
       ).rejects.toThrow(EntityNotFound);
       expect(projectsRepository.saveProject).not.toHaveBeenCalled();
-    });
-
-    it("does not fall back to GitHub when the cache lookup fails for another reason", async () => {
-      const body = arrangeGithubImportOutsideCache();
-      githubRepositoriesService.getGithubRepository.mockRejectedValue(
-        new IntegrationInvalidToken(),
-      );
-
-      await expect(
-        service.import(mockOrgId, body, mockAuthenticatedUser),
-      ).rejects.toThrow(IntegrationInvalidToken);
-      expect(
-        githubRepositoriesService.getGithubRepositoryRemote,
-      ).not.toHaveBeenCalled();
     });
 
     it("should throw NotAuthorized when user lacks permission", async () => {

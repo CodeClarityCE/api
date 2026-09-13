@@ -209,30 +209,6 @@ describe("GithubRepositoriesService", () => {
     });
   });
 
-  describe("syncGithubRepos", () => {
-    it("should not sync when repos are already synced", async () => {
-      const forceSyncSpy = jest
-        .spyOn(service as any, "forceSyncGithubRepos")
-        .mockResolvedValue(undefined);
-      jest.spyOn(service, "areGithubReposSynced").mockResolvedValue(true);
-
-      await service.syncGithubRepos("test-integration-id");
-
-      expect(forceSyncSpy).not.toHaveBeenCalled();
-    });
-
-    it("should sync when repos are not synced", async () => {
-      const forceSyncSpy = jest
-        .spyOn(service as any, "forceSyncGithubRepos")
-        .mockResolvedValue(undefined);
-      jest.spyOn(service, "areGithubReposSynced").mockResolvedValue(false);
-
-      await service.syncGithubRepos("test-integration-id");
-
-      expect(forceSyncSpy).toHaveBeenCalledWith("test-integration-id");
-    });
-  });
-
   describe("getGithubRepositories", () => {
     const orgId = "test-org-id";
     const integrationId = "test-integration-id";
@@ -452,7 +428,7 @@ describe("GithubRepositoriesService", () => {
     });
   });
 
-  describe("getGithubRepository", () => {
+  describe("resolveGithubRepository", () => {
     const orgId = "test-org-id";
     const integrationId = "test-integration-id";
     const repoUrl = "https://github.com/test/repo";
@@ -462,91 +438,74 @@ describe("GithubRepositoriesService", () => {
       organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
         true,
       );
-      jest.spyOn(service, "areGithubReposSynced").mockResolvedValue(true);
     });
 
-    it("should successfully get a specific repository", async () => {
-      repositoryCacheRepository.findOne.mockResolvedValue(mockRepositoryCache);
-
-      const result = await service.getGithubRepository(
+    function resolve(): Promise<RepositoryCache> {
+      return service.resolveGithubRepository(
         orgId,
         integrationId,
         repoUrl,
         mockAuthenticatedUser,
       );
+    }
+
+    it("returns the cached repository without asking GitHub", async () => {
+      repositoryCacheRepository.findOne.mockResolvedValue(mockRepositoryCache);
+      const remoteLookup = jest.spyOn(service, "getGithubRepositoryRemote");
+
+      const result = await resolve();
 
       expect(result).toBe(mockRepositoryCache);
       expect(repositoryCacheRepository.findOne).toHaveBeenCalledWith({
         relations: { integration: true },
-        where: {
-          url: repoUrl,
-          integration: {
-            id: integrationId,
-          },
-        },
+        where: { url: repoUrl, integration: { id: integrationId } },
       });
+      expect(remoteLookup).not.toHaveBeenCalled();
     });
 
-    it("should force refresh when requested", async () => {
-      const forceSyncSpy = jest
-        .spyOn(service as any, "forceSyncGithubRepos")
-        .mockResolvedValue(undefined);
-      repositoryCacheRepository.findOne.mockResolvedValue(mockRepositoryCache);
-
-      await service.getGithubRepository(
-        orgId,
-        integrationId,
-        repoUrl,
-        mockAuthenticatedUser,
-        true,
-      );
-
-      expect(forceSyncSpy).toHaveBeenCalledWith(integrationId);
-    });
-
-    it("should sync when repos are not synced", async () => {
-      jest.spyOn(service, "areGithubReposSynced").mockResolvedValue(false);
-      const forceSyncSpy = jest
-        .spyOn(service as any, "forceSyncGithubRepos")
-        .mockResolvedValue(undefined);
-      repositoryCacheRepository.findOne.mockResolvedValue(mockRepositoryCache);
-
-      await service.getGithubRepository(
-        orgId,
-        integrationId,
-        repoUrl,
-        mockAuthenticatedUser,
-      );
-
-      expect(forceSyncSpy).toHaveBeenCalledWith(integrationId);
-    });
-
-    it("should throw EntityNotFound when repository is not found", async () => {
+    it("looks the repository up on GitHub when the cache does not hold it", async () => {
       repositoryCacheRepository.findOne.mockResolvedValue(null);
+      const remoteRepository = {
+        ...mockRepositoryCache,
+        default_branch: "master",
+      };
+      const remoteLookup = jest
+        .spyOn(service, "getGithubRepositoryRemote")
+        .mockResolvedValue(remoteRepository);
 
-      await expect(
-        service.getGithubRepository(
-          orgId,
-          integrationId,
-          repoUrl,
-          mockAuthenticatedUser,
-        ),
-      ).rejects.toThrow(EntityNotFound);
+      const result = await resolve();
+
+      expect(result).toBe(remoteRepository);
+      expect(remoteLookup).toHaveBeenCalledWith(integrationId, repoUrl);
     });
 
-    it("should throw NotAuthorized when integration does not belong to organization", async () => {
+    it("never syncs the repository cache first", async () => {
+      repositoryCacheRepository.findOne.mockResolvedValue(mockRepositoryCache);
+      const syncedCheck = jest.spyOn(service, "areGithubReposSynced");
+      const forceSync = jest.spyOn(service as any, "forceSyncGithubRepos");
+
+      await resolve();
+
+      expect(syncedCheck).not.toHaveBeenCalled();
+      expect(forceSync).not.toHaveBeenCalled();
+    });
+
+    it("propagates EntityNotFound when GitHub does not know the repository either", async () => {
+      repositoryCacheRepository.findOne.mockResolvedValue(null);
+      jest
+        .spyOn(service, "getGithubRepositoryRemote")
+        .mockRejectedValue(new EntityNotFound());
+
+      await expect(resolve()).rejects.toThrow(EntityNotFound);
+    });
+
+    it("throws NotAuthorized when the integration does not belong to the organization", async () => {
       organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
         false,
       );
 
-      await expect(
-        service.getGithubRepository(
-          orgId,
-          integrationId,
-          repoUrl,
-          mockAuthenticatedUser,
-        ),
-      ).rejects.toThrow(NotAuthorized);
+      await expect(resolve()).rejects.toThrow(NotAuthorized);
+      expect(repositoryCacheRepository.findOne).not.toHaveBeenCalled();
     });
   });
 
@@ -873,7 +832,6 @@ describe("GithubRepositoriesService", () => {
 
   describe("forceSyncGithubRepos coalescing", () => {
     it("runs a single sync for concurrent callers of the same integration", async () => {
-      jest.spyOn(service, "areGithubReposSynced").mockResolvedValue(false);
       let finishSync!: () => void;
       const doSync = jest
         .spyOn(service as any, "doForceSyncGithubRepos")
@@ -885,8 +843,8 @@ describe("GithubRepositoriesService", () => {
         );
 
       const both = Promise.all([
-        service.syncGithubRepos("test-integration-id"),
-        service.syncGithubRepos("test-integration-id"),
+        (service as any).forceSyncGithubRepos("test-integration-id"),
+        (service as any).forceSyncGithubRepos("test-integration-id"),
       ]);
       await new Promise((resolve) => setImmediate(resolve));
       expect(doSync).toHaveBeenCalledTimes(1);
@@ -896,7 +854,7 @@ describe("GithubRepositoriesService", () => {
 
       // Once finished, the next caller syncs again
       doSync.mockResolvedValue(undefined);
-      await service.syncGithubRepos("test-integration-id");
+      await (service as any).forceSyncGithubRepos("test-integration-id");
       expect(doSync).toHaveBeenCalledTimes(2);
     });
   });
