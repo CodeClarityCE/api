@@ -33,10 +33,23 @@ import {
 
 import { GithubIntegrationToken } from "../Token";
 
+import { CONST_GITHUB_TOKEN_VALIDATION_TTL_SECONDS } from "./constants";
 import { GithubIntegrationTokenService } from "./githubToken.service";
+
+/** A token that passed validation, and when it did. */
+interface ValidatedToken {
+  token: GithubIntegrationToken;
+  validatedAt: number;
+}
 
 @Injectable()
 export class GithubIntegrationService {
+  /**
+   * Recently validated tokens per integration. Validating is a round trip to
+   * GitHub, and a bulk import resolves the same token for every repository.
+   */
+  private readonly validatedTokens = new Map<string, ValidatedToken>();
+
   constructor(
     private readonly githubIntegrationTokenService: GithubIntegrationTokenService,
     private readonly membershipsRepository: MembershipsRepository,
@@ -189,6 +202,8 @@ export class GithubIntegrationService {
     }
 
     await this.integrationsRepository.saveIntegration(integration);
+    // The previous token must not be served from the validation cache.
+    this.validatedTokens.delete(integrationId);
   }
 
   /**
@@ -263,7 +278,8 @@ export class GithubIntegrationService {
   }
 
   /**
-   * Return the GitHub integration's token.
+   * Return the GitHub integration's token. A token validated within the last
+   * minute is returned without validating it again.
    *
    * @throws {NotAuthorized} If the authenticated user is not authorized to perform this action.
    * @throws {EntityNotFound} In case the integration could not be found or the integration is of the wrong type.
@@ -277,6 +293,12 @@ export class GithubIntegrationService {
    * @returns The GitHub integration token.
    */
   async getToken(integrationId: string): Promise<GithubIntegrationToken> {
+    const recent = this.validatedTokens.get(integrationId);
+    const validationTtlMs = CONST_GITHUB_TOKEN_VALIDATION_TTL_SECONDS * 1000;
+    if (recent && Date.now() - recent.validatedAt < validationTtlMs) {
+      return recent.token;
+    }
+
     try {
       const integration =
         await this.integrationsRepository.getIntegrationById(integrationId);
@@ -290,6 +312,10 @@ export class GithubIntegrationService {
       );
 
       await token.validate();
+      this.validatedTokens.set(integrationId, {
+        token,
+        validatedAt: Date.now(),
+      });
 
       return token;
     } catch (err) {
