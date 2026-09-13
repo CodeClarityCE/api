@@ -13,3 +13,7 @@ export const CONST_POPULAR_REPOS_CACHE_TTL_MINUTES = 60;
 export const CONST_POPULAR_REPOS_INCOMPLETE_TTL_MINUTES = 5;
 /* A force_refresh is honoured only if the cached ranking is older than this */
 export const CONST_POPULAR_REPOS_MIN_REFRESH_MINUTES = 5;
+/* After a failed search, GitHub is left alone this long unless it says when to retry */
+export const CONST_POPULAR_REPOS_FAILURE_BACKOFF_MINUTES = 5;
+/* Upper bound on a retry delay requested by GitHub (retry-after or rate limit reset) */
+export const CONST_POPULAR_REPOS_MAX_BACKOFF_MINUTES = 15;

@@ -22,8 +22,10 @@ import { SortDirection } from "src/types/sort.types";
 
 import {
   CONST_POPULAR_REPOS_CACHE_TTL_MINUTES,
+  CONST_POPULAR_REPOS_FAILURE_BACKOFF_MINUTES,
   CONST_POPULAR_REPOS_INCOMPLETE_TTL_MINUTES,
   CONST_POPULAR_REPOS_LIMIT,
+  CONST_POPULAR_REPOS_MAX_BACKOFF_MINUTES,
   CONST_POPULAR_REPOS_MIN_REFRESH_MINUTES,
   CONST_POPULAR_REPOS_MIN_STARS,
 } from "./constants";
@@ -60,12 +62,14 @@ interface OctokitSearchReposResponse {
   };
 }
 
+type GithubResponseHeaders = Record<string, string | number | undefined>;
+
 /** GitHub API error with status code and (rate limit) response headers */
 interface GithubApiError {
   status?: number;
   message?: string;
   response?: {
-    headers?: Record<string, string | number | undefined>;
+    headers?: GithubResponseHeaders;
   };
 }
 
@@ -163,6 +167,39 @@ const ASCENDING_COMPARATORS = new Map<string, RepositoryComparator>([
 /** Keys sorted descending when no direction is given: stars are the ranking. */
 const DESCENDING_BY_DEFAULT = new Set<string>([AllowedOrderBy.STARS]);
 
+/** Refreshes and backoffs are tracked per integration and language. */
+function refreshKeyOf(
+  integrationId: string,
+  language: PopularGithubLanguage,
+): string {
+  return `${integrationId}:${language}`;
+}
+
+/**
+ * How long to leave GitHub alone after a failed search: the delay GitHub asks
+ * for (retry-after, or the reset of an exhausted rate limit) capped at the
+ * maximum backoff, otherwise the default backoff.
+ */
+function backoffDurationMs(
+  headers: GithubResponseHeaders,
+  now: number,
+): number {
+  const retryAfterSeconds = Number(headers["retry-after"]);
+  const rateLimitExhausted = String(headers["x-ratelimit-remaining"]) === "0";
+  const resetEpochSeconds = Number(headers["x-ratelimit-reset"]);
+
+  let requestedMs = 0;
+  if (retryAfterSeconds > 0) {
+    requestedMs = retryAfterSeconds * 1000;
+  } else if (rateLimitExhausted && resetEpochSeconds > 0) {
+    requestedMs = resetEpochSeconds * 1000 - now;
+  }
+
+  return requestedMs > 0
+    ? Math.min(requestedMs, CONST_POPULAR_REPOS_MAX_BACKOFF_MINUTES * MINUTE_MS)
+    : CONST_POPULAR_REPOS_FAILURE_BACKOFF_MINUTES * MINUTE_MS;
+}
+
 /**
  * Serves the "Popular on GitHub" import source: the most-starred public
  * repositories for the languages CodeClarity can analyse, fetched through the
@@ -187,6 +224,11 @@ export class GithubPopularReposService {
    * its failure (a revoked token, a rate limit) to another organization.
    */
   private readonly inFlight = new Map<string, Promise<RankedPopularRepo[]>>();
+  /**
+   * When GitHub may be asked again after a failed search, keyed like
+   * `inFlight`. Without it every request would retry a rate-limited search.
+   */
+  private readonly backoffUntil = new Map<string, number>();
 
   constructor(
     private readonly githubIntegrationService: GithubIntegrationService,
@@ -339,7 +381,13 @@ export class GithubPopularReposService {
       return Promise.resolve(entry.repos);
     }
 
-    const refreshKey = `${context.integrationId}:${language}`;
+    const refreshKey = refreshKeyOf(context.integrationId, language);
+    if (this.isBackingOff(refreshKey)) {
+      return entry
+        ? Promise.resolve(entry.repos)
+        : Promise.reject(new FailedToRetrieveReposFromProvider());
+    }
+
     let pending = this.inFlight.get(refreshKey);
     if (!pending) {
       pending = this.refreshLanguage(language, entry, context).finally(() => {
@@ -348,6 +396,14 @@ export class GithubPopularReposService {
       this.inFlight.set(refreshKey, pending);
     }
     return pending;
+  }
+
+  private isBackingOff(refreshKey: string): boolean {
+    const until = this.backoffUntil.get(refreshKey);
+    if (until === undefined) return false;
+    if (Date.now() < until) return true;
+    this.backoffUntil.delete(refreshKey);
+    return false;
   }
 
   /**
@@ -366,7 +422,7 @@ export class GithubPopularReposService {
       const { repos, incomplete } = await this.fetchFromGithub(
         language,
         token,
-        logContext,
+        context,
       );
       const ttlMinutes = incomplete
         ? CONST_POPULAR_REPOS_INCOMPLETE_TTL_MINUTES
@@ -405,7 +461,7 @@ export class GithubPopularReposService {
   private async fetchFromGithub(
     language: PopularGithubLanguage,
     token: string,
-    logContext: LogContext,
+    context: RefreshContext,
   ): Promise<{ repos: RankedPopularRepo[]; incomplete: boolean }> {
     try {
       // Dynamic import has limited type inference - types are validated via OctokitSearchReposResponse cast
@@ -429,37 +485,46 @@ export class GithubPopularReposService {
 
       return { repos, incomplete: response.data.incomplete_results === true };
     } catch (err) {
-      throw this.mapGithubError(err, language, logContext);
+      throw this.handleSearchFailure(err, language, context);
     }
   }
 
-  private mapGithubError(
+  /**
+   * Turn a failed search into the error to throw. A provider failure (rate
+   * limit, outage) is logged and starts a backoff for this integration and
+   * language. Token and network errors pass through without a backoff.
+   */
+  private handleSearchFailure(
     err: unknown,
     language: PopularGithubLanguage,
-    logContext: LogContext,
+    context: RefreshContext,
   ): unknown {
     const apiError = err as GithubApiError;
     if (apiError.status === undefined) return err;
     if (apiError.status === 401) return new IntegrationInvalidToken();
 
     const headers = apiError.response?.headers ?? {};
-    if (apiError.status === 403 || apiError.status === 429) {
-      this.logger.warn("GitHub search rate limited", {
-        ...logContext,
-        language,
-        status: apiError.status,
-        rateLimitRemaining: headers["x-ratelimit-remaining"],
-        rateLimitReset: headers["x-ratelimit-reset"],
-        retryAfter: headers["retry-after"],
-      });
-    } else {
-      this.logger.warn("GitHub search failed", {
-        ...logContext,
+    const now = Date.now();
+    const backoffMs = backoffDurationMs(headers, now);
+    this.backoffUntil.set(
+      refreshKeyOf(context.integrationId, language),
+      now + backoffMs,
+    );
+
+    const rateLimited = apiError.status === 403 || apiError.status === 429;
+    this.logger.warn(
+      rateLimited ? "GitHub search rate limited" : "GitHub search failed",
+      {
+        ...context.logContext,
         language,
         status: apiError.status,
         message: apiError.message,
-      });
-    }
+        rateLimitRemaining: headers["x-ratelimit-remaining"],
+        rateLimitReset: headers["x-ratelimit-reset"],
+        retryAfter: headers["retry-after"],
+        backoffMs,
+      },
+    );
     return new FailedToRetrieveReposFromProvider();
   }
 

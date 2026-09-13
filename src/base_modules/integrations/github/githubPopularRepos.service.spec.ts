@@ -498,25 +498,22 @@ describe("GithubPopularReposService", () => {
     expect(mockSearchRepos).toHaveBeenCalledTimes(2);
   });
 
-  it("maps a 401 to IntegrationInvalidToken and rate limits to FailedToRetrieveReposFromProvider", async () => {
+  it("maps a 401 to IntegrationInvalidToken", async () => {
     mockSearchRepos.mockRejectedValueOnce({ status: 401 });
+
     await expect(list(["PHP"])).rejects.toThrow(IntegrationInvalidToken);
-
-    mockSearchRepos.mockRejectedValueOnce({
-      status: 403,
-      response: {
-        headers: { "x-ratelimit-remaining": "0", "x-ratelimit-reset": "1" },
-      },
-    });
-    await expect(list(["PHP"])).rejects.toThrow(
-      FailedToRetrieveReposFromProvider,
-    );
-
-    mockSearchRepos.mockRejectedValueOnce({ status: 500 });
-    await expect(list(["PHP"])).rejects.toThrow(
-      FailedToRetrieveReposFromProvider,
-    );
   });
+
+  it.each([403, 422, 429, 500])(
+    "maps a %i to FailedToRetrieveReposFromProvider",
+    async (status) => {
+      mockSearchRepos.mockRejectedValueOnce({ status });
+
+      await expect(list(["PHP"])).rejects.toThrow(
+        FailedToRetrieveReposFromProvider,
+      );
+    },
+  );
 
   it("rethrows errors without a status untouched", async () => {
     const boom = new Error("socket hang up");
@@ -525,21 +522,137 @@ describe("GithubPopularReposService", () => {
     await expect(list(["PHP"])).rejects.toBe(boom);
   });
 
-  it("serves the stale ranking when a refresh hits a provider error, but not on token errors", async () => {
-    mockSearchRepos.mockResolvedValueOnce(
-      searchResponse([
-        searchItem({ id: 1, full_name: "a/one", stargazers_count: 3000 }),
-      ]),
-    );
-    await list(["PHP"]);
+  describe("after a failed refresh", () => {
+    async function cacheOneRepository(): Promise<void> {
+      mockSearchRepos.mockResolvedValueOnce(
+        searchResponse([
+          searchItem({ id: 1, full_name: "a/one", stargazers_count: 3000 }),
+        ]),
+      );
+      await list(["PHP"]);
+    }
 
-    nowSpy.mockReturnValue(T0 + 61 * MINUTE);
-    mockSearchRepos.mockRejectedValueOnce({ status: 403 });
-    const stale = await list(["PHP"]);
-    expect(stale.data.map((repo) => repo.id)).toEqual(["1"]);
+    it("serves the stale ranking and leaves GitHub alone until the backoff ends", async () => {
+      await cacheOneRepository();
 
-    mockSearchRepos.mockRejectedValueOnce({ status: 401 });
-    await expect(list(["PHP"])).rejects.toThrow(IntegrationInvalidToken);
+      nowSpy.mockReturnValue(T0 + 61 * MINUTE);
+      mockSearchRepos.mockRejectedValueOnce({ status: 403 });
+      const stale = await list(["PHP"]);
+      expect(stale.data.map((repo) => repo.id)).toEqual(["1"]);
+      expect(mockSearchRepos).toHaveBeenCalledTimes(2);
+
+      nowSpy.mockReturnValue(T0 + 65 * MINUTE);
+      const duringBackoff = await list(["PHP"], { forceRefresh: true });
+      expect(duringBackoff.data.map((repo) => repo.id)).toEqual(["1"]);
+      expect(mockSearchRepos).toHaveBeenCalledTimes(2);
+      expect(githubIntegrationService.getToken).toHaveBeenCalledTimes(2);
+
+      nowSpy.mockReturnValue(T0 + 67 * MINUTE);
+      mockSearchRepos.mockResolvedValueOnce(searchResponse([]));
+      await list(["PHP"]);
+      expect(mockSearchRepos).toHaveBeenCalledTimes(3);
+    });
+
+    it("keeps failing without asking GitHub when nothing is cached yet", async () => {
+      mockSearchRepos.mockRejectedValueOnce({ status: 500 });
+      await expect(list(["PHP"])).rejects.toThrow(
+        FailedToRetrieveReposFromProvider,
+      );
+
+      nowSpy.mockReturnValue(T0 + 4 * MINUTE);
+      await expect(list(["PHP"])).rejects.toThrow(
+        FailedToRetrieveReposFromProvider,
+      );
+      expect(mockSearchRepos).toHaveBeenCalledTimes(1);
+
+      nowSpy.mockReturnValue(T0 + 6 * MINUTE);
+      mockSearchRepos.mockResolvedValueOnce(searchResponse([]));
+      await list(["PHP"]);
+      expect(mockSearchRepos).toHaveBeenCalledTimes(2);
+    });
+
+    it("waits as long as GitHub's retry-after asks", async () => {
+      mockSearchRepos.mockRejectedValueOnce({
+        status: 403,
+        response: { headers: { "retry-after": "60" } },
+      });
+      await expect(list(["PHP"])).rejects.toThrow(
+        FailedToRetrieveReposFromProvider,
+      );
+
+      nowSpy.mockReturnValue(T0 + 59_000);
+      await expect(list(["PHP"])).rejects.toThrow(
+        FailedToRetrieveReposFromProvider,
+      );
+      expect(mockSearchRepos).toHaveBeenCalledTimes(1);
+
+      nowSpy.mockReturnValue(T0 + 61_000);
+      mockSearchRepos.mockResolvedValueOnce(searchResponse([]));
+      await list(["PHP"]);
+      expect(mockSearchRepos).toHaveBeenCalledTimes(2);
+    });
+
+    it("waits for an exhausted rate limit to reset, capped at 15 minutes", async () => {
+      const resetInOneHour = Math.floor((T0 + 60 * MINUTE) / 1000);
+      mockSearchRepos.mockRejectedValueOnce({
+        status: 403,
+        response: {
+          headers: {
+            "x-ratelimit-remaining": "0",
+            "x-ratelimit-reset": String(resetInOneHour),
+          },
+        },
+      });
+      await expect(list(["PHP"])).rejects.toThrow(
+        FailedToRetrieveReposFromProvider,
+      );
+
+      nowSpy.mockReturnValue(T0 + 14 * MINUTE);
+      await expect(list(["PHP"])).rejects.toThrow(
+        FailedToRetrieveReposFromProvider,
+      );
+      expect(mockSearchRepos).toHaveBeenCalledTimes(1);
+
+      nowSpy.mockReturnValue(T0 + 16 * MINUTE);
+      mockSearchRepos.mockResolvedValueOnce(searchResponse([]));
+      await list(["PHP"]);
+      expect(mockSearchRepos).toHaveBeenCalledTimes(2);
+    });
+
+    it("never masks a token error with the stale ranking or delays the next attempt", async () => {
+      await cacheOneRepository();
+
+      nowSpy.mockReturnValue(T0 + 61 * MINUTE);
+      mockSearchRepos.mockRejectedValueOnce({ status: 401 });
+      await expect(list(["PHP"])).rejects.toThrow(IntegrationInvalidToken);
+
+      mockSearchRepos.mockResolvedValueOnce(searchResponse([]));
+      await list(["PHP"]);
+      expect(mockSearchRepos).toHaveBeenCalledTimes(3);
+    });
+
+    it("backs off per integration, so another organization can still refresh", async () => {
+      mockSearchRepos.mockRejectedValueOnce({ status: 403 });
+      await expect(list(["PHP"])).rejects.toThrow(
+        FailedToRetrieveReposFromProvider,
+      );
+
+      mockSearchRepos.mockResolvedValueOnce(
+        searchResponse([
+          searchItem({ id: 1, full_name: "a/one", stargazers_count: 3000 }),
+        ]),
+      );
+      const otherOrganization = await service.getPopularGithubRepositories(
+        orgId,
+        "other-integration-id",
+        {},
+        user,
+        ["PHP"],
+      );
+
+      expect(otherOrganization.total_entries).toBe(1);
+      expect(mockSearchRepos).toHaveBeenCalledTimes(2);
+    });
   });
 
   it("coalesces concurrent cold requests through the same integration into a single GitHub call", async () => {
