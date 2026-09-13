@@ -179,10 +179,12 @@ export class ProjectService {
           );
         } catch (err) {
           if (!(err instanceof EntityNotFound)) throw err;
-          repo = await this.checkPublicRepositoryAccess(
+          // Not in the token owner's repository cache (e.g. a public repository
+          // they do not own): resolve it through the GitHub API so the default
+          // branch and metadata are accurate instead of guessed.
+          repo = await this.githubRepositoriesService.getGithubRepositoryRemote(
+            projectData.integration_id,
             projectData.url,
-            "github.com",
-            err,
           );
         }
       } else if (

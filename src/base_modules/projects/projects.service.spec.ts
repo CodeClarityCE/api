@@ -1,4 +1,5 @@
 import { Test, type TestingModule } from "@nestjs/testing";
+import { mkdir } from "fs/promises";
 
 import {
   AllowedOrderByGetProjects,
@@ -11,6 +12,7 @@ import {
 import { AnalysisResultsRepository } from "../../codeclarity_modules/results/results.repository";
 import {
   EntityNotFound,
+  IntegrationInvalidToken,
   IntegrationNotSupported,
   NotAuthorized,
 } from "../../types/error.types";
@@ -30,11 +32,21 @@ import type { ProjectImportBody } from "./project.types";
 import { ProjectMemberService } from "./projectMember.service";
 import { ProjectService } from "./projects.service";
 
+// The import creates the project's download folder; keep the filesystem out
+// of unit tests.
+jest.mock("fs/promises", () => ({
+  ...jest.requireActual("fs/promises"),
+  mkdir: jest.fn().mockResolvedValue(undefined),
+}));
+
 describe("ProjectService", () => {
   let service: ProjectService;
   let membershipsRepository: MembershipsRepository;
   let integrationsRepository: jest.Mocked<IntegrationsRepository>;
   let projectsRepository: jest.Mocked<ProjectsRepository>;
+  let githubRepositoriesService: jest.Mocked<GithubRepositoriesService>;
+  let usersRepository: jest.Mocked<UsersRepository>;
+  let organizationsRepository: jest.Mocked<OrganizationsRepository>;
 
   const mockAuthenticatedUser = new AuthenticatedUser(
     "test-user-id",
@@ -64,6 +76,7 @@ describe("ProjectService", () => {
           useValue: {
             syncGithubRepos: jest.fn().mockResolvedValue(undefined),
             getGithubRepository: jest.fn(),
+            getGithubRepositoryRemote: jest.fn(),
           },
         },
         {
@@ -131,9 +144,97 @@ describe("ProjectService", () => {
     );
     integrationsRepository = module.get(IntegrationsRepository);
     projectsRepository = module.get(ProjectsRepository);
+    githubRepositoriesService = module.get(GithubRepositoriesService);
+    usersRepository = module.get(UsersRepository);
+    organizationsRepository = module.get(OrganizationsRepository);
+    jest.mocked(mkdir).mockClear();
   });
 
   describe("import", () => {
+    /** A GitHub import whose repository is not in the token owner's cache. */
+    function arrangeGithubImportOutsideCache(): ProjectImportBody {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      projectsRepository.getProjectByUrlOrgAndUser.mockResolvedValue(null);
+      integrationsRepository.getIntegrationByIdAndOrganizationAndUser.mockResolvedValue(
+        {
+          id: mockIntegrationId,
+          integration_provider: "GITHUB" as IntegrationProvider,
+        } as any,
+      );
+      githubRepositoriesService.getGithubRepository.mockRejectedValue(
+        new EntityNotFound(),
+      );
+      usersRepository.getUserById.mockResolvedValue({
+        id: "test-user-id",
+      } as any);
+      organizationsRepository.getOrganizationById.mockResolvedValue({
+        id: mockOrgId,
+      } as any);
+      projectsRepository.saveProject.mockImplementation(
+        async (project: Project) => ({ ...project, id: "new-project-id" }),
+      );
+      return {
+        url: "https://github.com/octo/legacy",
+        integration_id: mockIntegrationId,
+      } as ProjectImportBody;
+    }
+
+    it("resolves a repository missing from the cache through GitHub and keeps its default branch", async () => {
+      const body = arrangeGithubImportOutsideCache();
+      githubRepositoriesService.getGithubRepositoryRemote.mockResolvedValue({
+        fully_qualified_name: "octo/legacy",
+        description: "Legacy project",
+        default_branch: "master",
+        service_domain: "github.com",
+      } as any);
+
+      const result = await service.import(
+        mockOrgId,
+        body,
+        mockAuthenticatedUser,
+      );
+
+      expect(result).toBe("new-project-id");
+      expect(
+        githubRepositoriesService.getGithubRepositoryRemote,
+      ).toHaveBeenCalledWith(mockIntegrationId, body.url);
+      const saved = projectsRepository.saveProject.mock.calls[0]![0];
+      expect(saved.default_branch).toBe("master");
+      expect(saved.name).toBe("octo/legacy");
+      expect(saved.description).toBe("Legacy project");
+      expect(saved.url).toBe(body.url);
+      expect(saved.type).toBe("GITHUB");
+      expect(mkdir).toHaveBeenCalledTimes(1);
+    });
+
+    it("propagates EntityNotFound when GitHub does not know the repository either", async () => {
+      const body = arrangeGithubImportOutsideCache();
+      githubRepositoriesService.getGithubRepositoryRemote.mockRejectedValue(
+        new EntityNotFound(),
+      );
+
+      await expect(
+        service.import(mockOrgId, body, mockAuthenticatedUser),
+      ).rejects.toThrow(EntityNotFound);
+      expect(projectsRepository.saveProject).not.toHaveBeenCalled();
+    });
+
+    it("does not fall back to GitHub when the cache lookup fails for another reason", async () => {
+      const body = arrangeGithubImportOutsideCache();
+      githubRepositoriesService.getGithubRepository.mockRejectedValue(
+        new IntegrationInvalidToken(),
+      );
+
+      await expect(
+        service.import(mockOrgId, body, mockAuthenticatedUser),
+      ).rejects.toThrow(IntegrationInvalidToken);
+      expect(
+        githubRepositoriesService.getGithubRepositoryRemote,
+      ).not.toHaveBeenCalled();
+    });
+
     it("should throw NotAuthorized when user lacks permission", async () => {
       jest
         .spyOn(membershipsRepository, "hasRequiredRole")
