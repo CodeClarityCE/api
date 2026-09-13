@@ -321,14 +321,17 @@ export class GithubRepositoriesService {
       where: { url, integration: { id: integrationId } },
     });
 
-    return cached ?? (await this.getGithubRepositoryRemote(integrationId, url));
+    return cached ?? (await this.fetchGithubRepository(integrationId, url));
   }
 
   /**
-   * Resolve a repository that is not in the integration's repository cache
+   * Fetch a repository that is not in the integration's repository cache
    * (typically a public repository the token owner does not own) through the
    * GitHub API, so the default branch and metadata are accurate rather than
    * guessed. The result is transient and is NOT persisted to the cache.
+   *
+   * Private because it performs no authorization: it uses the integration's
+   * token for whoever calls it. Go through resolveGithubRepository.
    * @throws {EntityNotFound} If the url is not a github.com repository url or the repository does not exist / is not accessible
    * @throws {IntegrationInvalidToken} If the token could not be used to authenticate the request to github
    * @throws {FailedToRetrieveReposFromProvider} If github answered with any other error
@@ -338,7 +341,7 @@ export class GithubRepositoriesService {
    * @param integrationId The id of the integration whose token is used
    * @param url The url of the repository (https://github.com/owner/repo)
    */
-  async getGithubRepositoryRemote(
+  private async fetchGithubRepository(
     integrationId: string,
     url: string,
   ): Promise<RepositoryCache> {
