@@ -1,3 +1,7 @@
+import {
+  FastifyAdapter,
+  type NestFastifyApplication,
+} from "@nestjs/platform-fastify";
 import { Test, type TestingModule } from "@nestjs/testing";
 
 import {
@@ -683,5 +687,70 @@ describe("GithubIntegrationController", () => {
         undefined,
       );
     });
+  });
+
+  describe("popular route query validation", () => {
+    const popularUrl =
+      "/org/test-org-id/integrations/github/test-integration-id/repositories/popular";
+    let app: NestFastifyApplication;
+
+    beforeEach(async () => {
+      const module = await Test.createTestingModule({
+        controllers: [GithubIntegrationController],
+        providers: [
+          { provide: GithubIntegrationService, useValue: {} },
+          { provide: GithubRepositoriesService, useValue: {} },
+          {
+            provide: GithubPopularReposService,
+            useValue: {
+              getPopularGithubRepositories: jest.fn().mockResolvedValue({
+                data: [],
+                page: 0,
+                entry_count: 0,
+                entries_per_page: 20,
+                total_entries: 0,
+                total_pages: 0,
+                matching_count: 0,
+                filter_count: {},
+              }),
+            },
+          },
+        ],
+      }).compile();
+
+      app = module.createNestApplication<NestFastifyApplication>(
+        new FastifyAdapter(),
+      );
+      await app.init();
+      await app.getHttpAdapter().getInstance().ready();
+    });
+
+    afterEach(async () => {
+      await app.close();
+    });
+
+    it.each(["asc", "descending", ""])(
+      "rejects the sort_direction %p with 400",
+      async (direction) => {
+        const response = await app.inject({
+          method: "GET",
+          url: `${popularUrl}?sort_direction=${direction}`,
+        });
+
+        expect(response.statusCode).toBe(400);
+      },
+    );
+
+    it.each(["", "?sort_direction=ASC", "?sort_direction=DESC"])(
+      "accepts the query %p",
+      async (query) => {
+        const response = await app.inject({
+          method: "GET",
+          url: `${popularUrl}${query}`,
+        });
+
+        expect(response.statusCode).toBe(200);
+      },
+    );
   });
 });

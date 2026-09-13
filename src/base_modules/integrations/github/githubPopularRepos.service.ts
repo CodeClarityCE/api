@@ -594,7 +594,9 @@ export class GithubPopularReposService {
     sortBy?: string,
     sortDirection?: SortDirection,
   ): PopularGithubRepository[] {
-    const sortKey = sortBy ?? AllowedOrderBy.STARS;
+    // An empty sort_key ("?sort_key=") means no preference, like a missing one.
+    const sortKey =
+      sortBy === undefined || sortBy === "" ? AllowedOrderBy.STARS : sortBy;
     const compareAscending = ASCENDING_COMPARATORS.get(sortKey);
     if (!compareAscending) return repositories;
 

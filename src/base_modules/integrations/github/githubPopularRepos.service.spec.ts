@@ -428,6 +428,23 @@ describe("GithubPopularReposService", () => {
     expect(unknown.data.map((repo) => repo.id)).toEqual(["2", "1", "3"]);
   });
 
+  it("treats an empty sort key like a missing one and sorts by stars", async () => {
+    mockSearchRepos.mockResolvedValue(
+      searchResponse([
+        searchItem({ id: 1, full_name: "b/mid", stargazers_count: 2000 }),
+        searchItem({ id: 2, full_name: "a/top", stargazers_count: 3000 }),
+        searchItem({ id: 3, full_name: "c/low", stargazers_count: 1000 }),
+      ]),
+    );
+
+    const ascending = await list(["PHP"], {
+      sortBy: "",
+      sortDirection: SortDirection.ASC,
+    });
+
+    expect(ascending.data.map((repo) => repo.id)).toEqual(["3", "1", "2"]);
+  });
+
   it.each(["hasOwnProperty", "__proto__", "constructor", "toString"])(
     "keeps the star ranking for the Object.prototype sort key %s",
     async (sortBy) => {

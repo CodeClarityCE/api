@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   ParseBoolPipe,
+  ParseEnumPipe,
   ParseIntPipe,
   Patch,
   Post,
@@ -210,7 +211,11 @@ export class GithubIntegrationController {
     @Query("active_filters") active_filters?: string,
     @Query("languages") languages?: string,
     @Query("sort_key") sort_key?: string,
-    @Query("sort_direction") sort_direction?: SortDirection,
+    @Query(
+      "sort_direction",
+      new ParseEnumPipe(SortDirection, { optional: true }),
+    )
+    sort_direction?: SortDirection,
   ): Promise<TypedPaginatedResponse<PopularGithubRepository>> {
     return await this.githubPopularReposService.getPopularGithubRepositories(
       org_id,
