@@ -108,6 +108,7 @@ export class ProjectService {
     }
 
     const repo = new RepositoryCache();
+    repo.url = url;
     repo.fully_qualified_name = url.replace(`https://${serviceDomain}/`, "");
     repo.description = "Imported manually";
     repo.default_branch = "main";
@@ -212,6 +213,18 @@ export class ProjectService {
         throw new IntegrationNotSupported();
       }
 
+      // The resolved url is canonical (GitHub's html_url for a remote lookup),
+      // while the typed one may differ in casing, a trailing slash or a
+      // "/tree/..." suffix. Reuse the project stored under the canonical url.
+      if (repo.url !== projectData.url) {
+        const existing = await this.repos.projects.getProjectByUrlOrgAndUser(
+          repo.url,
+          orgId,
+          user.userId,
+        );
+        if (existing) return existing.id;
+      }
+
       project.name = repo.fully_qualified_name;
       project.description = repo.description;
       project.type = integration.integration_provider;
@@ -219,7 +232,7 @@ export class ProjectService {
       project.default_branch = repo.default_branch;
       project.service_domain = repo.service_domain;
       project.integration_provider = integration.integration_provider;
-      project.url = projectData.url;
+      project.url = repo.url;
     } else {
       project.name = projectData.name;
       project.description = projectData.description;
@@ -258,7 +271,7 @@ export class ProjectService {
 
     await this.organizationLoggerService.addAuditLog(
       ActionType.ProjectCreate,
-      `The User imported repository ${projectData.url} to the organization.`,
+      `The User imported repository ${project.url} to the organization.`,
       orgId,
       user.userId,
     );

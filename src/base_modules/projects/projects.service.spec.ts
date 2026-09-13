@@ -45,6 +45,7 @@ describe("ProjectService", () => {
   let integrationsRepository: jest.Mocked<IntegrationsRepository>;
   let projectsRepository: jest.Mocked<ProjectsRepository>;
   let githubRepositoriesService: jest.Mocked<GithubRepositoriesService>;
+  let gitlabRepositoriesService: jest.Mocked<GitlabRepositoriesService>;
   let usersRepository: jest.Mocked<UsersRepository>;
   let organizationsRepository: jest.Mocked<OrganizationsRepository>;
 
@@ -145,6 +146,7 @@ describe("ProjectService", () => {
     integrationsRepository = module.get(IntegrationsRepository);
     projectsRepository = module.get(ProjectsRepository);
     githubRepositoriesService = module.get(GithubRepositoriesService);
+    gitlabRepositoriesService = module.get(GitlabRepositoriesService);
     usersRepository = module.get(UsersRepository);
     organizationsRepository = module.get(OrganizationsRepository);
     jest.mocked(mkdir).mockClear();
@@ -184,6 +186,7 @@ describe("ProjectService", () => {
     it("resolves a repository missing from the cache through GitHub and keeps its default branch", async () => {
       const body = arrangeGithubImportOutsideCache();
       githubRepositoriesService.getGithubRepositoryRemote.mockResolvedValue({
+        url: "https://github.com/octo/legacy",
         fully_qualified_name: "octo/legacy",
         description: "Legacy project",
         default_branch: "master",
@@ -207,6 +210,82 @@ describe("ProjectService", () => {
       expect(saved.url).toBe(body.url);
       expect(saved.type).toBe("GITHUB");
       expect(mkdir).toHaveBeenCalledTimes(1);
+    });
+
+    it("stores the canonical url when the typed url is spelled differently", async () => {
+      const body = {
+        ...arrangeGithubImportOutsideCache(),
+        url: "https://github.com/Octo/Legacy/",
+      };
+      githubRepositoriesService.getGithubRepositoryRemote.mockResolvedValue({
+        url: "https://github.com/octo/legacy",
+        fully_qualified_name: "octo/legacy",
+        description: "",
+        default_branch: "master",
+        service_domain: "github.com",
+      } as any);
+
+      await service.import(mockOrgId, body, mockAuthenticatedUser);
+
+      expect(projectsRepository.getProjectByUrlOrgAndUser).toHaveBeenCalledWith(
+        "https://github.com/octo/legacy",
+        mockOrgId,
+        "test-user-id",
+      );
+      const saved = projectsRepository.saveProject.mock.calls[0]![0];
+      expect(saved.url).toBe("https://github.com/octo/legacy");
+    });
+
+    it("reuses the project already stored under the canonical url", async () => {
+      const body = {
+        ...arrangeGithubImportOutsideCache(),
+        url: "https://github.com/octo/legacy.git",
+      };
+      githubRepositoriesService.getGithubRepositoryRemote.mockResolvedValue({
+        url: "https://github.com/octo/legacy",
+        fully_qualified_name: "octo/legacy",
+        description: "",
+        default_branch: "master",
+        service_domain: "github.com",
+      } as any);
+      projectsRepository.getProjectByUrlOrgAndUser.mockImplementation(
+        async (url: string) =>
+          (url === "https://github.com/octo/legacy"
+            ? { id: "existing-project-id" }
+            : null) as Project,
+      );
+
+      const result = await service.import(
+        mockOrgId,
+        body,
+        mockAuthenticatedUser,
+      );
+
+      expect(result).toBe("existing-project-id");
+      expect(projectsRepository.saveProject).not.toHaveBeenCalled();
+    });
+
+    it("keeps the typed url for a public GitLab repository outside the cache", async () => {
+      const body = arrangeGithubImportOutsideCache();
+      body.url = "https://gitlab.com/octo/legacy";
+      integrationsRepository.getIntegrationByIdAndOrganizationAndUser.mockResolvedValue(
+        {
+          id: mockIntegrationId,
+          integration_provider: "GITLAB" as IntegrationProvider,
+        } as any,
+      );
+      gitlabRepositoriesService.getGitlabRepository.mockRejectedValue(
+        new EntityNotFound(),
+      );
+      const fetchSpy = jest
+        .spyOn(global, "fetch")
+        .mockResolvedValue(new Response("<html>octo/legacy</html>"));
+
+      await service.import(mockOrgId, body, mockAuthenticatedUser);
+
+      const saved = projectsRepository.saveProject.mock.calls[0]![0];
+      expect(saved.url).toBe("https://gitlab.com/octo/legacy");
+      fetchSpy.mockRestore();
     });
 
     it("propagates EntityNotFound when GitHub does not know the repository either", async () => {
