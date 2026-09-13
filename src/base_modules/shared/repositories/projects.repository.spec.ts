@@ -39,6 +39,7 @@ describe("ProjectsRepository", () => {
   // Mock query builder
   const mockQueryBuilder = {
     leftJoin: jest.fn().mockReturnThis(),
+    innerJoin: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
     leftJoinAndSelect: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
@@ -471,6 +472,48 @@ describe("ProjectsRepository", () => {
       expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith(
         "analyses.created_on",
         "DESC",
+      );
+    });
+  });
+
+  describe("getImportedUrlsInOrg", () => {
+    it("returns an empty set without querying when no urls are given", async () => {
+      const result = await projectsRepository.getImportedUrlsInOrg(
+        "org-123",
+        [],
+      );
+
+      expect(result).toEqual(new Set());
+      expect(mockProjectRepository.createQueryBuilder).not.toHaveBeenCalled();
+    });
+
+    it("returns the distinct urls that already exist in the organization", async () => {
+      const urls = ["https://github.com/a/one", "https://github.com/b/two"];
+      mockQueryBuilder.getRawMany.mockResolvedValue([
+        { url: "https://github.com/a/one" },
+      ]);
+
+      const result = await projectsRepository.getImportedUrlsInOrg(
+        "org-123",
+        urls,
+      );
+
+      expect(result).toEqual(new Set(["https://github.com/a/one"]));
+      expect(mockQueryBuilder.innerJoin).toHaveBeenCalledWith(
+        "project.organizations",
+        "organizations",
+      );
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        "organizations.id = :orgId",
+        { orgId: "org-123" },
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        "project.url IN (:...urls)",
+        { urls },
+      );
+      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
+        "DISTINCT project.url",
+        "url",
       );
     });
   });

@@ -25,12 +25,14 @@ import {
   type LinkGithubCreateBody,
   type LinkGithubPatchBody,
 } from "./githubIntegration.types";
+import { GithubPopularReposService } from "./githubPopularRepos.service";
 import { GithubRepositoriesService } from "./githubRepos.service";
 
 describe("GithubIntegrationController", () => {
   let controller: GithubIntegrationController;
   let githubIntegrationService: jest.Mocked<GithubIntegrationService>;
   let githubReposService: jest.Mocked<GithubRepositoriesService>;
+  let githubPopularReposService: jest.Mocked<GithubPopularReposService>;
 
   const mockAuthenticatedUser: AuthenticatedUser = new AuthenticatedUser(
     "test-user-id",
@@ -74,6 +76,10 @@ describe("GithubIntegrationController", () => {
       getGithubRepositories: jest.fn(),
     };
 
+    const mockGithubPopularReposService = {
+      getPopularGithubRepositories: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [GithubIntegrationController],
       providers: [
@@ -85,6 +91,10 @@ describe("GithubIntegrationController", () => {
           provide: GithubRepositoriesService,
           useValue: mockGithubReposService,
         },
+        {
+          provide: GithubPopularReposService,
+          useValue: mockGithubPopularReposService,
+        },
       ],
     }).compile();
 
@@ -93,6 +103,7 @@ describe("GithubIntegrationController", () => {
     );
     githubIntegrationService = module.get(GithubIntegrationService);
     githubReposService = module.get(GithubRepositoriesService);
+    githubPopularReposService = module.get(GithubPopularReposService);
   });
 
   it("should be defined", () => {
@@ -595,6 +606,82 @@ describe("GithubIntegrationController", () => {
       await expect(
         controller.getRepositories(mockAuthenticatedUser, orgId, integrationId),
       ).rejects.toThrow(InternalError);
+    });
+  });
+
+  describe("getPopularRepositories", () => {
+    const emptyPage = {
+      data: [],
+      page: 0,
+      entry_count: 0,
+      entries_per_page: 100,
+      total_entries: 0,
+      total_pages: 0,
+      matching_count: 0,
+      filter_count: {},
+    };
+
+    it("forwards pagination, parsed languages, filters and sorting to the service", async () => {
+      githubPopularReposService.getPopularGithubRepositories.mockResolvedValue(
+        emptyPage,
+      );
+
+      const result = await controller.getPopularRepositories(
+        mockAuthenticatedUser,
+        "test-org-id",
+        "test-integration-id",
+        0,
+        100,
+        "vue",
+        false,
+        "[only_non_imported]",
+        "TypeScript,php,Rust",
+        "stars",
+        SortDirection.DESC,
+      );
+
+      expect(result).toBe(emptyPage);
+      expect(
+        githubPopularReposService.getPopularGithubRepositories,
+      ).toHaveBeenCalledWith(
+        "test-org-id",
+        "test-integration-id",
+        { currentPage: 0, entriesPerPage: 100 },
+        mockAuthenticatedUser,
+        ["TypeScript", "PHP"],
+        "vue",
+        false,
+        ["only_non_imported"],
+        "stars",
+        SortDirection.DESC,
+      );
+    });
+
+    it("defaults to every supported language and no filters", async () => {
+      githubPopularReposService.getPopularGithubRepositories.mockResolvedValue(
+        emptyPage,
+      );
+
+      await controller.getPopularRepositories(
+        mockAuthenticatedUser,
+        "test-org-id",
+        "test-integration-id",
+      );
+
+      expect(
+        githubPopularReposService.getPopularGithubRepositories,
+      ).toHaveBeenCalledWith(
+        "test-org-id",
+        "test-integration-id",
+        { currentPage: undefined, entriesPerPage: undefined },
+        mockAuthenticatedUser,
+        ["JavaScript", "TypeScript", "PHP"],
+        undefined,
+        undefined,
+        [],
+        undefined,
+        undefined,
+      );
     });
   });
 });

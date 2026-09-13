@@ -22,6 +22,7 @@ import { Integration } from "src/base_modules/integrations/integrations.entity";
 import { RepositoryCache } from "src/base_modules/projects/repositoryCache.entity";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocCreatedResponseDecorator } from "src/decorators/CrudResponse";
+import { APIDocTypedPaginatedResponseDecorator } from "src/decorators/TypedPaginatedResponse";
 import { APIDocTypedResponseDecorator } from "src/decorators/TypedResponse";
 import { AuthUser } from "src/decorators/UserDecorator";
 import {
@@ -46,6 +47,11 @@ import {
 import { SortDirection } from "src/types/sort.types";
 
 import { GithubIntegrationService } from "./github.service";
+import {
+  parsePopularLanguages,
+  PopularGithubRepository,
+} from "./githubPopular.types";
+import { GithubPopularReposService } from "./githubPopularRepos.service";
 import { GithubRepositoriesService } from "./githubRepos.service";
 
 @Controller("org/:org_id/integrations/github")
@@ -53,6 +59,7 @@ export class GithubIntegrationController {
   constructor(
     private readonly githubIntegrationService: GithubIntegrationService,
     private readonly githubReposService: GithubRepositoriesService,
+    private readonly githubPopularReposService: GithubPopularReposService,
   ) {}
 
   @ApiTags("Integrations")
@@ -160,6 +167,57 @@ export class GithubIntegrationController {
       integration_id,
       { currentPage: page, entriesPerPage: entries_per_page },
       user,
+      search_key,
+      force_refresh,
+      active_filters
+        ? active_filters.replace("[", "").replace("]", "").split(",")
+        : [],
+      sort_key,
+      sort_direction,
+    );
+  }
+
+  /**
+   * The "Popular on GitHub" import source: the most-starred public
+   * repositories per supported language, ranked and merged server-side.
+   */
+  @ApiTags("Integrations")
+  @APIDocTypedPaginatedResponseDecorator(PopularGithubRepository)
+  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
+  @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
+  @ApiErrorDecorator({
+    statusCode: 400,
+    errors: [
+      IntegrationInvalidToken,
+      FailedToRetrieveReposFromProvider,
+      IntegrationTokenMissingPermissions,
+      IntegrationTokenExpired,
+      IntegrationTokenRetrievalFailed,
+    ],
+  })
+  @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
+  @Get(":integration_id/repositories/popular")
+  async getPopularRepositories(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("integration_id") integration_id: string,
+    @Query("page", new DefaultValuePipe(0), ParseIntPipe) page?: number,
+    @Query("entries_per_page", new DefaultValuePipe(0), ParseIntPipe)
+    entries_per_page?: number,
+    @Query("search_key") search_key?: string,
+    @Query("force_refresh", new DefaultValuePipe(false), ParseBoolPipe)
+    force_refresh?: boolean,
+    @Query("active_filters") active_filters?: string,
+    @Query("languages") languages?: string,
+    @Query("sort_key") sort_key?: string,
+    @Query("sort_direction") sort_direction?: SortDirection,
+  ): Promise<TypedPaginatedResponse<PopularGithubRepository>> {
+    return await this.githubPopularReposService.getPopularGithubRepositories(
+      org_id,
+      integration_id,
+      { currentPage: page, entriesPerPage: entries_per_page },
+      user,
+      parsePopularLanguages(languages),
       search_key,
       force_refresh,
       active_filters

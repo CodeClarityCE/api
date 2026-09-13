@@ -244,4 +244,24 @@ export class ProjectsRepository {
       filter_count: {},
     };
   }
+
+  /**
+   * Distinct project urls among `urls` that already exist in the organization,
+   * regardless of which member imported them. Used to flag remote repository
+   * listings as "imported already". An empty input never touches the database.
+   */
+  async getImportedUrlsInOrg(
+    orgId: string,
+    urls: string[],
+  ): Promise<Set<string>> {
+    if (urls.length === 0) return new Set();
+    const rows = await this.projectRepository
+      .createQueryBuilder("project")
+      .innerJoin("project.organizations", "organizations")
+      .where("organizations.id = :orgId", { orgId })
+      .andWhere("project.url IN (:...urls)", { urls })
+      .select("DISTINCT project.url", "url")
+      .getRawMany<{ url: string }>();
+    return new Set(rows.map((row) => row.url));
+  }
 }

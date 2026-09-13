@@ -5,6 +5,7 @@ import { RepositoryCache } from "src/base_modules/projects/repositoryCache.entit
 
 import { GithubIntegrationController } from "./github.controller";
 import { GithubIntegrationService } from "./github.service";
+import { GithubPopularReposService } from "./githubPopularRepos.service";
 import { GithubRepositoriesService } from "./githubRepos.service";
 import { GithubIntegrationTokenService } from "./githubToken.service";
 
@@ -14,6 +15,7 @@ import { GithubIntegrationTokenService } from "./githubToken.service";
   providers: [
     GithubIntegrationService,
     GithubRepositoriesService,
+    GithubPopularReposService,
     GithubIntegrationTokenService,
   ],
   controllers: [GithubIntegrationController],
