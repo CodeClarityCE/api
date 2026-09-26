@@ -1,2 +1,13 @@
 node_modules/
 .yarn/sdks/
+# Keep VCS data, secrets, local env and build/test output out of the build
+# context (and so out of build-stage layers and the buildx cache). The prod
+# image only needs dist/, node_modules/ and package.json; env/ and jwt/ are
+# provided at runtime.
+.git
+env/
+jwt/
+dist/
+coverage/
+.pnpm-store/
+.ci-home/
