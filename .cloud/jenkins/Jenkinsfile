@@ -1,3 +1,29 @@
+// Runs `script` inside the Dockerfile's toolchain target (pinned Node, corepack
+// and the pnpm version from package.json's packageManager) instead of whatever
+// the agent host has installed. Plain `docker build` + `docker run` rather than
+// `agent { dockerfile }`, which needs the Docker Pipeline plugin (up for
+// adoption, deliberately not used). The container runs as the Jenkins uid;
+// HOME and the pnpm store live in the workspace's @tmp sibling, which stays
+// out of the lint, format and docker build contexts.
+def inToolchain(String script) {
+    if (!env.TOOLCHAIN_IMAGE) {
+        env.TOOLCHAIN_IMAGE = sh(
+            script: 'docker build -q -f .cloud/docker/Dockerfile --target toolchain .',
+            returnStdout: true
+        ).trim()
+    }
+    withEnv(["CI_SCRIPT=${script}"]) {
+        sh '''
+            mkdir -p "$WORKSPACE@tmp/ci-home"
+            docker run --rm -u "$(id -u):$(id -g)" \\
+                -v "$WORKSPACE:$WORKSPACE" -v "$WORKSPACE@tmp:$WORKSPACE@tmp" -w "$WORKSPACE" \\
+                -e HOME="$WORKSPACE@tmp/ci-home" -e WORKSPACE -e CI=true \\
+                "$TOOLCHAIN_IMAGE" \\
+                sh -ec "$CI_SCRIPT"
+        '''
+    }
+}
+
 pipeline {
     agent { label 'codeclarity' }
 
@@ -54,23 +80,6 @@ pipeline {
         }
 
         stage('Test') {
-            // Run inside the Dockerfile's toolchain target (pinned Node, corepack
-            // and the pnpm version from packageManager) instead of whatever the
-            // agent host has installed. The container runs as the Jenkins uid, so
-            // HOME and the pnpm store live in the workspace's @tmp sibling, which
-            // Jenkins mounts but which stays out of the lint/format/docker context.
-            agent {
-                dockerfile {
-                    filename '.cloud/docker/Dockerfile'
-                    dir '.'
-                    additionalBuildArgs '--target toolchain'
-                    reuseNode true
-                }
-            }
-            environment {
-                HOME = "${env.WORKSPACE}@tmp/ci-home"
-                CI = 'true'
-            }
             steps {
                 // Stage the standalone pnpm config (allowBuilds, minimumReleaseAge,
                 // verifyDepsBeforeRun) at the repo root so pnpm finds it. Source of
@@ -78,12 +87,12 @@ pipeline {
                 // parent monorepo when this submodule is consumed as part of
                 // codeclarity-dev.
                 sh 'cp .cloud/docker/pnpm-workspace.yaml pnpm-workspace.yaml'
-                sh 'pnpm install --frozen-lockfile --store-dir "$WORKSPACE@tmp/pnpm-store"'
-                sh 'pnpm lint:check'
-                sh 'pnpm type-check'
-                sh 'pnpm test'
-                sh 'pnpm test:e2e test/integration/*contract*.e2e-spec.ts'
-                sh 'pnpm exec prettier src --check'
+                inToolchain('pnpm install --frozen-lockfile --store-dir "$WORKSPACE@tmp/pnpm-store"')
+                inToolchain('pnpm lint:check')
+                inToolchain('pnpm type-check')
+                inToolchain('pnpm test')
+                inToolchain('pnpm test:e2e test/integration/*contract*.e2e-spec.ts')
+                inToolchain('pnpm exec prettier src --check')
             }
         }
 
