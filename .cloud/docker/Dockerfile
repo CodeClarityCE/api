@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1
 
 ARG USERNAME=codeclarity
-ARG PNPM_VERSION=12.4.1
+ARG PNPM_VERSION=12.6.0
 
 # Dev image
-FROM node:26.8.1-alpine@sha256:2d984a15c9b54fd0aeb608b8e0d0d83529eb34d2966db27a1fb4f1edc3d298a3 AS api-dev
+FROM node:26.10.0-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS api-dev
 WORKDIR /app
 RUN npm install -g corepack@latest --force && corepack enable
 RUN corepack prepare pnpm@${PNPM_VERSION} --activate
@@ -14,7 +14,7 @@ RUN corepack prepare pnpm@${PNPM_VERSION} --activate
 ENTRYPOINT ["/bin/sh", "-c" , "pnpm install && pnpm run start:debug"]
 
 # Build image
-FROM node:26.8.1-alpine@sha256:2d984a15c9b54fd0aeb608b8e0d0d83529eb34d2966db27a1fb4f1edc3d298a3 AS api-build
+FROM node:26.10.0-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS api-build
 WORKDIR /app
 RUN npm install -g corepack@latest --force && corepack enable
 RUN corepack prepare pnpm@${PNPM_VERSION} --activate
@@ -36,7 +36,7 @@ RUN pnpm run build
 RUN pnpm prune --prod
 
 # Prod image
-FROM node:26.8.1-alpine@sha256:2d984a15c9b54fd0aeb608b8e0d0d83529eb34d2966db27a1fb4f1edc3d298a3 AS api
+FROM node:26.10.0-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS api
 ARG USERNAME
 RUN adduser -D ${USERNAME}
 USER ${USERNAME}

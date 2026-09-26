@@ -93,7 +93,7 @@ Use Docker Compose to run the required infrastructure:
 version: '3.8'
 services:
   postgres-test:
-    image: postgres:15
+    image: postgres:18.6-alpine
     environment:
       POSTGRES_USER: codeclarity_test
       POSTGRES_PASSWORD: test_password
@@ -106,7 +106,7 @@ services:
       - ./test-init.sql:/docker-entrypoint-initdb.d/01-init.sql
 
   rabbitmq-test:
-    image: rabbitmq:3-management
+    image: rabbitmq:4.3.6-management-alpine
     ports:
       - "5673:5672"
       - "15673:15672"
