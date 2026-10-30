@@ -11,7 +11,7 @@ import { GithubIntegrationTokenService } from "./githubToken.service";
 
 @Module({
   imports: [TypeOrmModule.forFeature([RepositoryCache], "codeclarity")],
-  exports: [GithubRepositoriesService],
+  exports: [GithubRepositoriesService, GithubIntegrationService],
   providers: [
     GithubIntegrationService,
     GithubRepositoriesService,

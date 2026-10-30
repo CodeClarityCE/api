@@ -35,43 +35,17 @@ import {
   PopularGithubLanguage,
   PopularGithubRepository,
 } from "./githubPopular.types";
-
-/** The subset of a GitHub search result item this service consumes. */
-interface GithubSearchRepoItem {
-  id: number;
-  full_name: string;
-  html_url: string;
-  default_branch: string;
-  visibility?: string;
-  private?: boolean;
-  description: string | null;
-  created_at: string | null;
-  stargazers_count: number;
-  language: string | null;
-  fork: boolean;
-  archived: boolean;
-  disabled: boolean;
-}
-
-/** Response from Octokit search.repos */
-interface OctokitSearchReposResponse {
-  data: {
-    total_count: number;
-    incomplete_results: boolean;
-    items: GithubSearchRepoItem[];
-  };
-}
-
-type GithubResponseHeaders = Record<string, string | number | undefined>;
-
-/** GitHub API error with status code and (rate limit) response headers */
-interface GithubApiError {
-  status?: number;
-  message?: string;
-  response?: {
-    headers?: GithubResponseHeaders;
-  };
-}
+import {
+  GithubApiError,
+  GithubResponseHeaders,
+  requestedRetryDelayMs,
+} from "./githubRateLimit";
+import {
+  createGithubClient,
+  GithubSearchRepoItem,
+  isActiveRepo,
+  searchStarredRepos,
+} from "./githubSearch";
 
 /** An org-independent ranked repository (no imported flag yet). */
 export interface RankedPopularRepo {
@@ -184,17 +158,7 @@ function backoffDurationMs(
   headers: GithubResponseHeaders,
   now: number,
 ): number {
-  const retryAfterSeconds = Number(headers["retry-after"]);
-  const rateLimitExhausted = String(headers["x-ratelimit-remaining"]) === "0";
-  const resetEpochSeconds = Number(headers["x-ratelimit-reset"]);
-
-  let requestedMs = 0;
-  if (retryAfterSeconds > 0) {
-    requestedMs = retryAfterSeconds * 1000;
-  } else if (rateLimitExhausted && resetEpochSeconds > 0) {
-    requestedMs = resetEpochSeconds * 1000 - now;
-  }
-
+  const requestedMs = requestedRetryDelayMs(headers, now);
   return requestedMs > 0
     ? Math.min(requestedMs, CONST_POPULAR_REPOS_MAX_BACKOFF_MINUTES * MINUTE_MS)
     : CONST_POPULAR_REPOS_FAILURE_BACKOFF_MINUTES * MINUTE_MS;
@@ -464,26 +428,19 @@ export class GithubPopularReposService {
     context: RefreshContext,
   ): Promise<{ repos: RankedPopularRepo[]; incomplete: boolean }> {
     try {
-      // Dynamic import has limited type inference - types are validated via OctokitSearchReposResponse cast
-      const octokit = await import("octokit");
+      const client = await createGithubClient(token);
+      const { items, incomplete } = await searchStarredRepos(
+        client,
+        language,
+        1,
+        CONST_POPULAR_REPOS_MIN_STARS,
+      );
 
-      const client = new octokit.Octokit({
-        auth: token,
-      });
-
-      const response = (await client.rest.search.repos({
-        q: `stars:>${CONST_POPULAR_REPOS_MIN_STARS} language:${language}`,
-        sort: "stars",
-        order: "desc",
-        per_page: 100,
-        page: 1,
-      })) as unknown as OctokitSearchReposResponse;
-
-      const repos = response.data.items
-        .filter((item) => !item.fork && !item.archived && !item.disabled)
+      const repos = items
+        .filter(isActiveRepo)
         .map((item) => this.toRanked(item, language));
 
-      return { repos, incomplete: response.data.incomplete_results === true };
+      return { repos, incomplete };
     } catch (err) {
       throw this.handleSearchFailure(err, language, context);
     }
