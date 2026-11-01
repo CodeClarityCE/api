@@ -31,7 +31,9 @@ describe("DatasetsService", () => {
     datasetRepository = {
       exists: jest.fn().mockResolvedValue(false),
       create: jest.fn((value: unknown) => value),
-      save: jest.fn((value: object) => Promise.resolve({ ...value, id: "ds-1" })),
+      save: jest.fn((value: object) =>
+        Promise.resolve({ ...value, id: "ds-1" }),
+      ),
       findOne: jest.fn(),
       findAndCount: jest.fn(),
       delete: jest.fn().mockResolvedValue(undefined),
@@ -207,7 +209,11 @@ describe("DatasetsService", () => {
         skip: 200,
         take: 100,
       });
-      expect(page).toMatchObject({ page: 2, total_entries: 250, total_pages: 3 });
+      expect(page).toMatchObject({
+        page: 2,
+        total_entries: 250,
+        total_pages: 3,
+      });
     });
   });
 
@@ -228,9 +234,9 @@ describe("DatasetsService", () => {
     it("refuses a dataset of another organization", async () => {
       datasetRepository["findOne"]!.mockResolvedValue(null);
 
-      await expect(service.delete("org-1", "ds-9", user)).rejects.toBeInstanceOf(
-        EntityNotFound,
-      );
+      await expect(
+        service.delete("org-1", "ds-9", user),
+      ).rejects.toBeInstanceOf(EntityNotFound);
       expect(datasetRepository["delete"]).not.toHaveBeenCalled();
     });
   });

@@ -58,7 +58,9 @@ export interface BuildHooks {
 /** GitHub asked us to stop; the build can be retried at `retryAt` (epoch ms). */
 export class GithubRateLimited extends Error {
   constructor(readonly retryAt: number) {
-    super(`GitHub rate limit reached, retry after ${new Date(retryAt).toISOString()}`);
+    super(
+      `GitHub rate limit reached, retry after ${new Date(retryAt).toISOString()}`,
+    );
     this.name = "GithubRateLimited";
   }
 }
@@ -132,7 +134,13 @@ export async function buildDataset(
       continue;
     }
 
-    const rootFiles = await listRootFiles(client, owner, item.name, branch, hooks);
+    const rootFiles = await listRootFiles(
+      client,
+      owner,
+      item.name,
+      branch,
+      hooks,
+    );
     if (!rootFiles?.has(REQUIRED_ROOT_FILE)) {
       stats.rejected.no_package_json++;
       continue;

@@ -39,7 +39,10 @@ function searchItem(repo: FakeRepo): Record<string, unknown> {
   };
 }
 
-function httpError(status: number, headers: Record<string, string> = {}): Error {
+function httpError(
+  status: number,
+  headers: Record<string, string> = {},
+): Error {
   return Object.assign(new Error(`HTTP ${status}`), {
     status,
     response: { headers },
@@ -221,7 +224,11 @@ describe("buildDataset", () => {
       { search },
     );
 
-    const { entries } = await buildDataset(client, params({ pages: 5 }), hooks());
+    const { entries } = await buildDataset(
+      client,
+      params({ pages: 5 }),
+      hooks(),
+    );
 
     expect(search).toHaveBeenCalledTimes(2);
     expect(entries).toHaveLength(1);
@@ -232,7 +239,13 @@ describe("buildDataset", () => {
       JavaScript: [
         [
           { owner: "a", name: "fork", stars: 30, fork: true, root: NODE_ROOT },
-          { owner: "a", name: "old", stars: 20, archived: true, root: NODE_ROOT },
+          {
+            owner: "a",
+            name: "old",
+            stars: 20,
+            archived: true,
+            root: NODE_ROOT,
+          },
           { owner: "a", name: "ok", stars: 10, root: NODE_ROOT },
         ],
       ],
@@ -270,8 +283,12 @@ describe("buildDataset", () => {
 
   it("dedupes case-insensitively by owner/name, keeping the higher star count", async () => {
     const { client } = fakeClient({
-      JavaScript: [[{ owner: "Org", name: "Lib", stars: 100, root: NODE_ROOT }]],
-      TypeScript: [[{ owner: "org", name: "lib", stars: 300, root: NODE_ROOT }]],
+      JavaScript: [
+        [{ owner: "Org", name: "Lib", stars: 100, root: NODE_ROOT }],
+      ],
+      TypeScript: [
+        [{ owner: "org", name: "lib", stars: 300, root: NODE_ROOT }],
+      ],
     });
 
     const { entries, stats } = await buildDataset(
@@ -468,9 +485,11 @@ describe("buildDataset", () => {
     const search = jest.fn().mockRejectedValue(httpError(500));
     const { client } = fakeClient({ JavaScript: [] }, { search });
 
-    await expect(buildDataset(client, params(), hooks())).rejects.toMatchObject({
-      status: 500,
-    });
+    await expect(buildDataset(client, params(), hooks())).rejects.toMatchObject(
+      {
+        status: 500,
+      },
+    );
   });
 
   it("calls beforeRequest before every GitHub request", async () => {
