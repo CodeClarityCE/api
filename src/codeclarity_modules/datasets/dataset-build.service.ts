@@ -179,7 +179,7 @@ export class DatasetBuildService
       this.logger.error(
         "Dataset build failed",
         err instanceof Error ? err : message,
-        logContext,
+        { ...logContext, reason: message },
       );
     }
   }
