@@ -57,7 +57,7 @@ export class DatasetEntry {
 
   @ApiProperty()
   @Expose()
-  @Column({ length: 50, nullable: true })
+  @Column("varchar", { length: 50, nullable: true })
   language?: string | null;
 
   @ApiProperty()

@@ -98,11 +98,11 @@ export class Dataset {
 
   @ApiProperty()
   @Expose()
-  @Column({ length: 1000, nullable: true })
+  @Column("varchar", { length: 1000, nullable: true })
   error?: string | null;
 
   /** API instance currently building the dataset */
-  @Column({ length: 200, nullable: true })
+  @Column("varchar", { length: 200, nullable: true })
   lease_owner?: string | null;
 
   /** No other instance picks the build up before this time */

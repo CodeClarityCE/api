@@ -1,4 +1,5 @@
 import { type GithubIntegrationService } from "src/base_modules/integrations/github/github.service";
+import { IntegrationInvalidToken } from "src/types/error.types";
 
 import { DatasetLanguage, DatasetStatus } from "./dataset.entity";
 import { DatasetBuildService, DatasetLeaseLost } from "./dataset-build.service";
@@ -175,6 +176,21 @@ describe("DatasetBuildService", () => {
     expect(qb["set"]).toHaveBeenCalledWith(
       expect.objectContaining({ status: DatasetStatus.FAILED, error: "boom" }),
     );
+  });
+
+  it("keeps the message of an invalid or expired integration token", async () => {
+    getToken.mockRejectedValue(new IntegrationInvalidToken());
+
+    await service.build("ds-1");
+
+    expect(buildSpy).not.toHaveBeenCalled();
+    expect(qb["set"]).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: DatasetStatus.FAILED,
+        error: IntegrationInvalidToken.errorMessage,
+      }),
+    );
+    expect(IntegrationInvalidToken.errorMessage).not.toBe("");
   });
 
   it("fails without calling GitHub when the integration was removed", async () => {

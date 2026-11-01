@@ -11,6 +11,7 @@ import { Repository } from "typeorm";
 import { GithubIntegrationService } from "src/base_modules/integrations/github/github.service";
 import { createGithubClient } from "src/base_modules/integrations/github/githubSearch";
 import { CodeClarityLogger } from "src/services/logger.service";
+import { APIError } from "src/types/error.types";
 
 import { Dataset, DatasetStatus } from "./dataset.entity";
 import {
@@ -30,6 +31,16 @@ const RENEW_EVERY_MS = 30_000;
 const MAX_THROTTLE_WAIT_SECONDS = 60;
 const INSERT_CHUNK = 500;
 const ERROR_MAX_LENGTH = 1000;
+
+/**
+ * The text to show for a failed build. API errors (token problems included)
+ * carry it in error_message: their Error.message is empty.
+ */
+export function describeBuildError(err: unknown): string {
+  if (err instanceof APIError && err.error_message) return err.error_message;
+  if (err instanceof Error && err.message) return err.message;
+  return err instanceof Error ? err.name : String(err);
+}
 
 /** Another instance took over the build, or the dataset was deleted. */
 export class DatasetLeaseLost extends Error {
@@ -163,7 +174,7 @@ export class DatasetBuildService
         });
         return;
       }
-      const message = err instanceof Error ? err.message : String(err);
+      const message = describeBuildError(err);
       await this.fail(datasetId, message);
       this.logger.error(
         "Dataset build failed",
