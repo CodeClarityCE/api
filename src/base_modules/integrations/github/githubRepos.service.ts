@@ -45,8 +45,52 @@ interface OctokitReposResponse {
   data: GithubRepositorySchema[];
 }
 
+/** Owner and repository name parsed from a github.com repository url. */
+export interface GithubRepoRef {
+  owner: string;
+  repo: string;
+}
+
+/**
+ * Parse `https://github.com/{owner}/{repo}[.git][/...]` into owner and name.
+ * @throws {EntityNotFound} when the url is not a github.com repository url
+ */
+export function parseGithubRepoUrl(url: string): GithubRepoRef {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new EntityNotFound();
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (host !== "github.com" && host !== "www.github.com") {
+    throw new EntityNotFound();
+  }
+  const [owner, rawRepo] = parsed.pathname
+    .split("/")
+    .filter((segment) => segment.length > 0);
+  const repo = rawRepo?.replace(/\.git$/, "");
+  if (!owner || !repo) throw new EntityNotFound();
+  return { owner, repo };
+}
+
+/** The subset of an Octokit repos.get response this service consumes. */
+interface OctokitRepoResponse {
+  data: {
+    html_url: string;
+    full_name: string;
+    default_branch: string;
+    visibility?: string;
+    description: string | null;
+    created_at: string | null;
+  };
+}
+
 @Injectable()
 export class GithubRepositoriesService {
+  /** In-flight force syncs keyed by integration id (see forceSyncGithubRepos). */
+  private readonly syncInFlight = new Map<string, Promise<void>>();
+
   constructor(
     private readonly githubIntegrationService: GithubIntegrationService,
     private readonly membershipsRepository: MembershipsRepository,
@@ -78,27 +122,6 @@ export class GithubRepositoriesService {
     }
 
     return true;
-  }
-
-  /**
-   * Sync updated and new repos from the integration
-   * @throws {NotAuthorized} If the authenticated user is not authorized to perform this action
-   * @throws {EntityNotFound} In case the integration could not be found or the integration is of the wrong type
-   * @throws {IntegrationInvalidToken} If the token could not be used to authenticate the request to gitlab
-   * @throws {FailedToRetrieveReposFromProvider} If authentication to gitlab succeeded, but a different error with the request was encountered
-   * @throws {IntegrationTokenMissingPermissions} In the case a token does not have the required permissions
-   * @throws {IntegrationTokenExpired} In case the token is already expired
-   * @throws {IntegrationTokenRetrievalFailed} In case the token could not be fetched from the provider
-   * @throws {FailedToRetrieveReposFromProvider} If authentication to gitlab succeeded, but a different error with the request was encountered
-   * @throws {IntegrationWrongTokenType} In case the token type is not supported
-   * @param integrationId The id of the integration
-   * @returns
-   */
-  async syncGithubRepos(integrationId: string): Promise<void> {
-    const synced = await this.areGithubReposSynced(integrationId);
-    if (!synced) {
-      await this.forceSyncGithubRepos(integrationId);
-    }
   }
 
   /**
@@ -254,28 +277,27 @@ export class GithubRepositoriesService {
   }
 
   /**
-   * Get a specific github repository from the integration id
+   * Resolve a repository to import: from the integration's repository cache
+   * when it is there, otherwise through the GitHub API (typically a public
+   * repository the token owner does not own). The cache is not synced first:
+   * the API lookup is authoritative for anything the cache does not hold.
    * @throws {NotAuthorized} If the authenticated user is not authorized to perform this action
-   * @throws {EntityNotFound} In case the repo could not be found or the integration could not be found or the integration is of the wrong type
+   * @throws {EntityNotFound} If the url is not a github.com repository url or the repository does not exist / is not accessible
    * @throws {IntegrationInvalidToken} If the token could not be used to authenticate the request to github
-   * @throws {FailedToRetrieveReposFromProvider} If authentication to github succeeded, but a different error with the request was encountered
+   * @throws {FailedToRetrieveReposFromProvider} If github answered with any other error
    * @throws {IntegrationTokenMissingPermissions} In the case a token does not have the required permissions
    * @throws {IntegrationTokenExpired} In case the token is already expired
    * @throws {IntegrationTokenRetrievalFailed} In case the token could not be fetched from the provider
-   * @throws {FailedToRetrieveReposFromProvider} If authentication to github succeeded, but a different error with the request was encountered
    * @param orgId The id of the organization
    * @param integrationId The id of the integration
-   * @param url The url of the repository (https://github.com/user/repo)
+   * @param url The url of the repository (https://github.com/owner/repo)
    * @param user The authenticated user
-   * @param forceRefresh Optional, if set forces a re-sync with github
-   * @returns
    */
-  async getGithubRepository(
+  async resolveGithubRepository(
     orgId: string,
     integrationId: string,
     url: string,
     user: AuthenticatedUser,
-    forceRefresh?: boolean,
   ): Promise<RepositoryCache> {
     // (1) Check that the user has the right to access the org
     await this.membershipsRepository.hasRequiredRole(
@@ -294,31 +316,85 @@ export class GithubRepositoriesService {
       throw new NotAuthorized();
     }
 
-    const isSynced = await this.areGithubReposSynced(integrationId);
-
-    if (forceRefresh !== undefined && forceRefresh === true) {
-      await this.forceSyncGithubRepos(integrationId);
-    } else {
-      if (!isSynced) {
-        await this.forceSyncGithubRepos(integrationId);
-      }
-    }
-
-    const repo = await this.repositoryCacheRepository.findOne({
-      relations: ["integration"],
-      where: {
-        url: url,
-        integration: {
-          id: integrationId,
-        },
-      },
+    const cached = await this.repositoryCacheRepository.findOne({
+      relations: { integration: true },
+      where: { url, integration: { id: integrationId } },
     });
 
-    if (!repo) {
-      throw new EntityNotFound();
-    }
+    return cached ?? (await this.fetchGithubRepository(integrationId, url));
+  }
 
-    return repo;
+  /**
+   * Fetch a repository that is not in the integration's repository cache
+   * (typically a public repository the token owner does not own) through the
+   * GitHub API, so the default branch and metadata are accurate rather than
+   * guessed. The result is transient and is NOT persisted to the cache.
+   *
+   * Private because it performs no authorization: it uses the integration's
+   * token for whoever calls it. Go through resolveGithubRepository.
+   * @throws {EntityNotFound} If the url is not a github.com repository url or the repository does not exist / is not accessible
+   * @throws {IntegrationInvalidToken} If the token could not be used to authenticate the request to github
+   * @throws {FailedToRetrieveReposFromProvider} If github answered with any other error
+   * @throws {IntegrationTokenMissingPermissions} In the case a token does not have the required permissions
+   * @throws {IntegrationTokenExpired} In case the token is already expired
+   * @throws {IntegrationTokenRetrievalFailed} In case the token could not be fetched from the provider
+   * @param integrationId The id of the integration whose token is used
+   * @param url The url of the repository (https://github.com/owner/repo)
+   */
+  private async fetchGithubRepository(
+    integrationId: string,
+    url: string,
+  ): Promise<RepositoryCache> {
+    const { owner, repo } = parseGithubRepoUrl(url);
+
+    const githubToken =
+      await this.githubIntegrationService.getToken(integrationId);
+    const rawToken = githubToken.getToken();
+
+    try {
+      const octokit = await import("octokit");
+      const client = new octokit.Octokit({ auth: rawToken });
+      const response = (await client.rest.repos.get({
+        owner,
+        repo,
+      })) as unknown as OctokitRepoResponse;
+      const data = response.data;
+
+      const repository = new RepositoryCache();
+      repository.repository_type = RepositoryType.GITHUB;
+      repository.url = data.html_url;
+      repository.default_branch = data.default_branch;
+      repository.visibility = data.visibility ?? "public";
+      repository.fully_qualified_name = data.full_name;
+      repository.description = data.description ?? "";
+      repository.created_at = data.created_at
+        ? new Date(data.created_at)
+        : new Date();
+      repository.service_domain = "github.com";
+      return repository;
+    } catch (err) {
+      const apiError = err as GithubApiError;
+      if (apiError.status === 404) throw new EntityNotFound();
+      if (apiError.status === 401) throw new IntegrationInvalidToken();
+      if (apiError.status) throw new FailedToRetrieveReposFromProvider();
+      throw err;
+    }
+  }
+
+  /**
+   * Force sync, coalescing concurrent callers for the same integration into a
+   * single GitHub round trip: parallel imports on a stale cache would
+   * otherwise each run a full sync and each insert the same cache rows.
+   */
+  private forceSyncGithubRepos(integrationId: string): Promise<void> {
+    let pending = this.syncInFlight.get(integrationId);
+    if (!pending) {
+      pending = this.doForceSyncGithubRepos(integrationId).finally(() => {
+        this.syncInFlight.delete(integrationId);
+      });
+      this.syncInFlight.set(integrationId, pending);
+    }
+    return pending;
   }
 
   /**
@@ -336,7 +412,7 @@ export class GithubRepositoriesService {
    * @param user The authenticated user
    * @returns
    */
-  private async forceSyncGithubRepos(integrationId: string): Promise<void> {
+  private async doForceSyncGithubRepos(integrationId: string): Promise<void> {
     // Retrieve the access token to access gitlab from the integration
     const githubToken =
       await this.githubIntegrationService.getToken(integrationId);
@@ -419,11 +495,11 @@ export class GithubRepositoriesService {
     try {
       // Dynamic import has limited type inference - types are validated via OctokitReposResponse cast
       const octokit = await import("octokit");
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+
       const client = new octokit.Octokit({
         auth: token,
       });
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+
       const response = (await client.rest.repos.listForAuthenticatedUser({
         per_page: entriesPerPage,
         page: page,

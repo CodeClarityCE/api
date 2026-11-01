@@ -60,7 +60,7 @@ export class VulnerabilitiesSortService {
     }
 
     // Sorting
-    let sorted: VulnerabilityMerged[] = [];
+    let sorted: VulnerabilityMerged[];
 
     if (sortBySafe === "severity") {
       sorted = vulnerabilities.sort(

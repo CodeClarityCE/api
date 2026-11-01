@@ -348,7 +348,7 @@ export class GitlabRepositoriesService {
     }
 
     const repo = await this.repositoryCacheRepository.findOne({
-      relations: ["integration"],
+      relations: { integration: true },
       where: {
         url: url,
         integration: {

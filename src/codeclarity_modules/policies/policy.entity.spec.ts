@@ -25,9 +25,9 @@ describe("Policy Entity", () => {
     policy.policy_type = PolicyType.LICENSE_POLICY;
     policy.default = false;
     policy.created_on = new Date();
-    policy.organizations = [] as any; // Initialize organizations
+    policy.organizations = []; // Initialize organizations
     policy.created_by = {} as any; // Initialize created_by
-    policy.analyses = [] as any; // Initialize analyses
+    policy.analyses = []; // Initialize analyses
 
     expect(policy).toHaveProperty("id");
     expect(policy).toHaveProperty("name");

@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { FindOptionsRelations, Repository } from "typeorm";
 
 import { Integration } from "src/base_modules/integrations/integrations.entity";
 import { TypedPaginatedResponse } from "src/types/apiResponses.types";
@@ -23,13 +23,16 @@ export class IntegrationsRepository {
    */
   async getIntegrationById(
     integrationId: string,
-    relations?: string[] | Record<string, boolean>,
+    relations?: FindOptionsRelations<Integration>,
   ): Promise<Integration> {
-    const findOptions: { where: { id: string }; relations?: string[] } = {
+    const findOptions: {
+      where: { id: string };
+      relations?: FindOptionsRelations<Integration>;
+    } = {
       where: { id: integrationId },
     };
     if (relations) {
-      findOptions.relations = relations as string[];
+      findOptions.relations = relations;
     }
     const integration = await this.integrationRepository.findOne(findOptions);
 

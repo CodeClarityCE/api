@@ -14,7 +14,6 @@ import { OrganizationsModule } from "../organizations/organizations.module";
 
 import { ProjectMemberService } from "./projectMember.service";
 import { ProjectController } from "./projects.controller";
-import { ProjectsRepository } from "./projects.repository";
 import { ProjectService } from "./projects.service";
 
 @Module({
@@ -28,8 +27,8 @@ import { ProjectService } from "./projects.service";
     forwardRef(() => ResultsModule),
     TypeOrmModule.forFeature([Project, RepositoryCache], "codeclarity"),
   ],
-  exports: [ProjectService, ProjectMemberService, ProjectsRepository],
-  providers: [ProjectsRepository, ProjectMemberService, ProjectService],
+  exports: [ProjectService, ProjectMemberService],
+  providers: [ProjectMemberService, ProjectService],
   controllers: [ProjectController],
 })
 export class ProjectsModule {}

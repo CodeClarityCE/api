@@ -105,7 +105,7 @@ export class LicensePolicyService {
         policy_type: PolicyType.LICENSE_POLICY,
         organizations: { id: orgId },
       },
-      relations: ["created_by"],
+      relations: { created_by: true },
     });
 
     if (!policy) {

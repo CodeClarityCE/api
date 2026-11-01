@@ -74,7 +74,7 @@ describe("LicensesUtilsService", () => {
 
   const createMockResult = (licenses: LicensesOutput): Partial<Result> => ({
     id: "result-123",
-    result: licenses as any,
+    result: licenses,
     plugin: "js-license",
     analysis: {
       id: "analysis-123",

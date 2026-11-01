@@ -1,27 +1,27 @@
-// Mock external dependencies before importing main.ts
-const mockApp = {
-  register: jest.fn().mockResolvedValue(undefined),
-  enableCors: jest.fn(),
-  useGlobalPipes: jest.fn(),
-  useGlobalFilters: jest.fn(),
-  useGlobalInterceptors: jest.fn(),
-  get: jest.fn().mockReturnValue({ name: "MockReflector" }),
-  getHttpAdapter: jest.fn().mockReturnValue({
-    getInstance: jest.fn().mockReturnValue({
-      addHook: jest.fn(),
-    }),
-  }),
-  listen: jest.fn().mockResolvedValue(undefined),
-  close: jest.fn().mockResolvedValue(undefined),
-};
-
 // Mock NestFactory
-jest.mock("@nestjs/core", () => ({
-  NestFactory: {
-    create: jest.fn().mockResolvedValue(mockApp),
-    Reflector: jest.fn(),
-  },
-}));
+jest.mock("@nestjs/core", () => {
+  const mockApp = {
+    register: jest.fn().mockResolvedValue(undefined),
+    enableCors: jest.fn(),
+    useGlobalPipes: jest.fn(),
+    useGlobalFilters: jest.fn(),
+    useGlobalInterceptors: jest.fn(),
+    get: jest.fn().mockReturnValue({ name: "MockReflector" }),
+    getHttpAdapter: jest.fn().mockReturnValue({
+      getInstance: jest.fn().mockReturnValue({
+        addHook: jest.fn(),
+      }),
+    }),
+    listen: jest.fn().mockResolvedValue(undefined),
+    close: jest.fn().mockResolvedValue(undefined),
+  };
+  return {
+    NestFactory: {
+      create: jest.fn().mockResolvedValue(mockApp),
+      Reflector: jest.fn(),
+    },
+  };
+});
 
 import { ValidationPipe } from "@nestjs/common";
 import { FastifyAdapter } from "@nestjs/platform-fastify";

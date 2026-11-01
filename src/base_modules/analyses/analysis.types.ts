@@ -1,13 +1,31 @@
 import { ApiProperty } from "@nestjs/swagger";
 import {
+  ArrayMaxSize,
+  ArrayNotEmpty,
+  IsArray,
   IsBoolean,
   IsDateString,
   IsEnum,
   IsNotEmpty,
   IsOptional,
+  IsUUID,
 } from "class-validator";
 
 import { StageBase } from "../analyzers/analyzer.types";
+import { BATCH_MAX_IDS } from "../projects/project.types";
+
+export class BatchAnalysisIdsBody {
+  @ApiProperty({
+    description: "The ids of the analyses to operate on",
+    type: [String],
+    example: ["b15e2b8a-...", "c27f1d9c-..."],
+  })
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayMaxSize(BATCH_MAX_IDS)
+  @IsUUID("all", { each: true })
+  analysis_ids!: string[];
+}
 
 /********************************************/
 /*             HTTP Post bodies             */
@@ -159,6 +177,7 @@ export enum AnalysisStatus {
   COMPLETED = "completed",
   FAILED = "failed",
   SUCCESS = "success",
+  CANCELLED = "cancelled",
 }
 
 /********************************************/

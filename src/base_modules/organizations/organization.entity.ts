@@ -20,7 +20,7 @@ import type { User } from "../users/users.entity";
 
 import type { Invitation } from "./invitations/invitation.entity";
 import type { Log } from "./log/log.entity";
-import { OrganizationMemberships } from "./memberships/organization.memberships.entity";
+import type { OrganizationMemberships } from "./memberships/organization.memberships.entity";
 
 @Entity()
 export class Organization {
@@ -74,10 +74,7 @@ export class Organization {
 
   @ApiProperty()
   @Expose()
-  @OneToMany(
-    () => OrganizationMemberships,
-    (membership) => membership.organization,
-  )
+  @OneToMany("OrganizationMemberships", "organization")
   organizationMemberships!: Relation<OrganizationMemberships[]>;
 
   @ManyToMany("User", "ownerships")

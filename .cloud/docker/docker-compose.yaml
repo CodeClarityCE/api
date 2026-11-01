@@ -6,14 +6,27 @@ services:
             target: api-dev
         image: codeclarityce/api-dev:latest
         restart: always
-        command: yarn run start:debug
+        command: pnpm run start:debug
         env_file:
             - ../../.cloud/env/.env.dev
+        environment:
+            - PNPM_STORE_DIR=/pnpm/store
         volumes:
             - ../../api:/app
+            # Container-managed node_modules. The repo root is a pnpm workspace, so a
+            # host `pnpm install` re-links api/node_modules into the repo-root
+            # .pnpm store (../../../node_modules/.pnpm) which doesn't exist inside
+            # /app. This anonymous volume shadows the host node_modules so the
+            # container does its own standalone install with valid local symlinks.
+            - /app/node_modules
             - ../../.cloud/env:/app/env
             - ../../private:/private
             - ../../scripts:/scripts
+            - pnpm-store:/pnpm/store
+            # Per-container pnpm settings (allowBuilds + minimumReleaseAge=0).
+            # Kept OUT of api/ root so the host's workspace install isn't tricked
+            # into treating api/ as a standalone sub-workspace.
+            - ../../api/.cloud/docker/pnpm-workspace.yaml:/app/pnpm-workspace.yaml:ro
         ports:
             - 9229:9229
             - 3000:3000
@@ -34,3 +47,7 @@ services:
                     memory: 4G
         extra_hosts:
             - "host.docker.internal:host-gateway"
+
+volumes:
+    pnpm-store:
+        external: true

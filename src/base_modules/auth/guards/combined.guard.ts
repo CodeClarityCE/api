@@ -44,7 +44,7 @@ export class CombinedAuthGuard implements CanActivate {
       return true;
     }
 
-    let authHeader: string | undefined = undefined;
+    let authHeader: string | undefined;
     let apiHeader: string | string[] | undefined = undefined;
     let request: Request | undefined = undefined;
     let socket: Socket | undefined = undefined;

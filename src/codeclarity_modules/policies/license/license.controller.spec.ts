@@ -47,7 +47,7 @@ describe("LicensePolicyController", () => {
     } as any,
     organizations: [],
     analyses: [],
-  } as Policy;
+  };
 
   const mockPolicyFrontend: PolicyFrontend = {
     id: "policy-123",

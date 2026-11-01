@@ -16,7 +16,6 @@ const migrations = [
 
 export const PluginsDataSource = new DataSource({
   ...buildBaseOptions(),
-  name: "plugins",
   database: "plugins",
   entities,
   migrations,

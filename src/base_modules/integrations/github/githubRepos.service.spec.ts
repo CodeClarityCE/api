@@ -25,7 +25,10 @@ import type { GithubIntegrationToken } from "../Token";
 
 import { GithubIntegrationService } from "./github.service";
 import type { GithubRepositorySchema } from "./github.types";
-import { GithubRepositoriesService } from "./githubRepos.service";
+import {
+  GithubRepositoriesService,
+  parseGithubRepoUrl,
+} from "./githubRepos.service";
 // Mock ms module
 jest.mock("ms", () => ({
   __esModule: true,
@@ -43,6 +46,7 @@ jest.mock("octokit", () => ({
     rest: {
       repos: {
         listForAuthenticatedUser: jest.fn(),
+        get: jest.fn(),
       },
     },
   })),
@@ -202,30 +206,6 @@ describe("GithubRepositoriesService", () => {
       const result = await service.areGithubReposSynced("test-integration-id");
 
       expect(result).toBe(true);
-    });
-  });
-
-  describe("syncGithubRepos", () => {
-    it("should not sync when repos are already synced", async () => {
-      const forceSyncSpy = jest
-        .spyOn(service as any, "forceSyncGithubRepos")
-        .mockResolvedValue(undefined);
-      jest.spyOn(service, "areGithubReposSynced").mockResolvedValue(true);
-
-      await service.syncGithubRepos("test-integration-id");
-
-      expect(forceSyncSpy).not.toHaveBeenCalled();
-    });
-
-    it("should sync when repos are not synced", async () => {
-      const forceSyncSpy = jest
-        .spyOn(service as any, "forceSyncGithubRepos")
-        .mockResolvedValue(undefined);
-      jest.spyOn(service, "areGithubReposSynced").mockResolvedValue(false);
-
-      await service.syncGithubRepos("test-integration-id");
-
-      expect(forceSyncSpy).toHaveBeenCalledWith("test-integration-id");
     });
   });
 
@@ -448,101 +428,150 @@ describe("GithubRepositoriesService", () => {
     });
   });
 
-  describe("getGithubRepository", () => {
+  describe("resolveGithubRepository", () => {
     const orgId = "test-org-id";
     const integrationId = "test-integration-id";
-    const repoUrl = "https://github.com/test/repo";
+    const repoUrl = "https://github.com/octo/legacy.git";
 
-    beforeEach(() => {
+    const mockOctokit = {
+      rest: {
+        repos: {
+          listForAuthenticatedUser: jest.fn(),
+          get: jest.fn(),
+        },
+      },
+    };
+
+    beforeEach(async () => {
       jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
       organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
         true,
       );
-      jest.spyOn(service, "areGithubReposSynced").mockResolvedValue(true);
+      repositoryCacheRepository.findOne.mockResolvedValue(null);
+      githubIntegrationService.getToken.mockResolvedValue(
+        mockGithubIntegrationToken,
+      );
+      const { Octokit } = await import("octokit");
+      (Octokit as any).mockImplementation(() => mockOctokit);
+      mockOctokit.rest.repos.get.mockReset();
     });
 
-    it("should successfully get a specific repository", async () => {
-      repositoryCacheRepository.findOne.mockResolvedValue(mockRepositoryCache);
-
-      const result = await service.getGithubRepository(
+    function resolve(url = repoUrl): Promise<RepositoryCache> {
+      return service.resolveGithubRepository(
         orgId,
         integrationId,
-        repoUrl,
+        url,
         mockAuthenticatedUser,
       );
+    }
 
-      expect(result).toBe(mockRepositoryCache);
-      expect(repositoryCacheRepository.findOne).toHaveBeenCalledWith({
-        relations: ["integration"],
-        where: {
-          url: repoUrl,
-          integration: {
-            id: integrationId,
-          },
-        },
+    describe("authorization", () => {
+      it("throws NotAuthorized, without using the token, when the integration belongs to another organization", async () => {
+        organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+          false,
+        );
+
+        await expect(resolve()).rejects.toThrow(NotAuthorized);
+        expect(repositoryCacheRepository.findOne).not.toHaveBeenCalled();
+        expect(githubIntegrationService.getToken).not.toHaveBeenCalled();
+        expect(mockOctokit.rest.repos.get).not.toHaveBeenCalled();
+      });
+
+      it("rejects, without using the token, when the user is not a member of the organization", async () => {
+        jest
+          .spyOn(membershipsRepository, "hasRequiredRole")
+          .mockRejectedValue(new NotAuthorized());
+
+        await expect(resolve()).rejects.toThrow(NotAuthorized);
+        expect(githubIntegrationService.getToken).not.toHaveBeenCalled();
+        expect(mockOctokit.rest.repos.get).not.toHaveBeenCalled();
       });
     });
 
-    it("should force refresh when requested", async () => {
-      const forceSyncSpy = jest
-        .spyOn(service as any, "forceSyncGithubRepos")
-        .mockResolvedValue(undefined);
-      repositoryCacheRepository.findOne.mockResolvedValue(mockRepositoryCache);
+    describe("from the repository cache", () => {
+      it("returns the cached repository without asking GitHub", async () => {
+        repositoryCacheRepository.findOne.mockResolvedValue(
+          mockRepositoryCache,
+        );
 
-      await service.getGithubRepository(
-        orgId,
-        integrationId,
-        repoUrl,
-        mockAuthenticatedUser,
-        true,
-      );
+        const result = await resolve("https://github.com/test/repo");
 
-      expect(forceSyncSpy).toHaveBeenCalledWith(integrationId);
+        expect(result).toBe(mockRepositoryCache);
+        expect(repositoryCacheRepository.findOne).toHaveBeenCalledWith({
+          relations: { integration: true },
+          where: {
+            url: "https://github.com/test/repo",
+            integration: { id: integrationId },
+          },
+        });
+        expect(githubIntegrationService.getToken).not.toHaveBeenCalled();
+        expect(mockOctokit.rest.repos.get).not.toHaveBeenCalled();
+      });
+
+      it("never syncs the repository cache first", async () => {
+        const syncedCheck = jest.spyOn(service, "areGithubReposSynced");
+        const forceSync = jest.spyOn(service as any, "forceSyncGithubRepos");
+        mockOctokit.rest.repos.get.mockRejectedValue({ status: 404 });
+
+        await expect(resolve()).rejects.toThrow(EntityNotFound);
+
+        expect(syncedCheck).not.toHaveBeenCalled();
+        expect(forceSync).not.toHaveBeenCalled();
+      });
     });
 
-    it("should sync when repos are not synced", async () => {
-      jest.spyOn(service, "areGithubReposSynced").mockResolvedValue(false);
-      const forceSyncSpy = jest
-        .spyOn(service as any, "forceSyncGithubRepos")
-        .mockResolvedValue(undefined);
-      repositoryCacheRepository.findOne.mockResolvedValue(mockRepositoryCache);
+    describe("through GitHub when the cache does not hold it", () => {
+      it("maps the repository from GitHub, keeping its real default branch", async () => {
+        mockOctokit.rest.repos.get.mockResolvedValue({
+          data: {
+            html_url: "https://github.com/octo/legacy",
+            full_name: "octo/legacy",
+            default_branch: "master",
+            visibility: undefined,
+            description: null,
+            created_at: "2015-03-04T05:06:07Z",
+          },
+        });
 
-      await service.getGithubRepository(
-        orgId,
-        integrationId,
-        repoUrl,
-        mockAuthenticatedUser,
-      );
+        const repo = await resolve();
 
-      expect(forceSyncSpy).toHaveBeenCalledWith(integrationId);
-    });
-
-    it("should throw EntityNotFound when repository is not found", async () => {
-      repositoryCacheRepository.findOne.mockResolvedValue(null);
-
-      await expect(
-        service.getGithubRepository(
-          orgId,
+        expect(githubIntegrationService.getToken).toHaveBeenCalledWith(
           integrationId,
-          repoUrl,
-          mockAuthenticatedUser,
-        ),
-      ).rejects.toThrow(EntityNotFound);
-    });
+        );
+        expect(mockOctokit.rest.repos.get).toHaveBeenCalledWith({
+          owner: "octo",
+          repo: "legacy",
+        });
+        expect(repo.repository_type).toBe(RepositoryType.GITHUB);
+        expect(repo.url).toBe("https://github.com/octo/legacy");
+        expect(repo.fully_qualified_name).toBe("octo/legacy");
+        expect(repo.default_branch).toBe("master");
+        expect(repo.visibility).toBe("public");
+        expect(repo.description).toBe("");
+        expect(repo.created_at).toEqual(new Date("2015-03-04T05:06:07Z"));
+        expect(repo.service_domain).toBe("github.com");
+        // Transient: never written to the repository cache
+        expect(repositoryCacheRepository.save).not.toHaveBeenCalled();
+      });
 
-    it("should throw NotAuthorized when integration does not belong to organization", async () => {
-      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
-        false,
-      );
+      it.each([
+        [404, EntityNotFound],
+        [401, IntegrationInvalidToken],
+        [500, FailedToRetrieveReposFromProvider],
+      ])("maps a GitHub %i to %p", async (status, expectedError) => {
+        mockOctokit.rest.repos.get.mockRejectedValue({ status });
 
-      await expect(
-        service.getGithubRepository(
-          orgId,
-          integrationId,
-          repoUrl,
-          mockAuthenticatedUser,
-        ),
-      ).rejects.toThrow(NotAuthorized);
+        await expect(resolve()).rejects.toThrow(expectedError);
+      });
+
+      it("rejects non-GitHub urls before touching the token or GitHub", async () => {
+        await expect(resolve("https://gitlab.com/octo/legacy")).rejects.toThrow(
+          EntityNotFound,
+        );
+
+        expect(githubIntegrationService.getToken).not.toHaveBeenCalled();
+        expect(mockOctokit.rest.repos.get).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -744,6 +773,54 @@ describe("GithubRepositoriesService", () => {
         sort: "updated",
         since: lastUpdated.toISOString(),
       });
+    });
+  });
+
+  describe("parseGithubRepoUrl", () => {
+    it.each([
+      ["https://github.com/octo/legacy", "octo", "legacy"],
+      ["https://github.com/octo/legacy.git", "octo", "legacy"],
+      ["https://github.com/octo/legacy/", "octo", "legacy"],
+      ["https://www.github.com/octo/legacy/tree/main", "octo", "legacy"],
+    ])("parses %s", (url, owner, repo) => {
+      expect(parseGithubRepoUrl(url)).toEqual({ owner, repo });
+    });
+
+    it.each([
+      "https://github.com/octo",
+      "https://gitlab.com/octo/legacy",
+      "not a url",
+    ])("rejects %s with EntityNotFound", (url) => {
+      expect(() => parseGithubRepoUrl(url)).toThrow(EntityNotFound);
+    });
+  });
+
+  describe("forceSyncGithubRepos coalescing", () => {
+    it("runs a single sync for concurrent callers of the same integration", async () => {
+      let finishSync!: () => void;
+      const doSync = jest
+        .spyOn(service as any, "doForceSyncGithubRepos")
+        .mockImplementation(
+          () =>
+            new Promise<void>((resolve) => {
+              finishSync = resolve;
+            }),
+        );
+
+      const both = Promise.all([
+        (service as any).forceSyncGithubRepos("test-integration-id"),
+        (service as any).forceSyncGithubRepos("test-integration-id"),
+      ]);
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(doSync).toHaveBeenCalledTimes(1);
+
+      finishSync();
+      await both;
+
+      // Once finished, the next caller syncs again
+      doSync.mockResolvedValue(undefined);
+      await (service as any).forceSyncGithubRepos("test-integration-id");
+      expect(doSync).toHaveBeenCalledTimes(2);
     });
   });
 });

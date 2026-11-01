@@ -16,6 +16,10 @@ import {
 } from "src/base_modules/analyses/analysis.types";
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
+import {
+  BatchItemResult,
+  BatchResponse,
+} from "src/base_modules/projects/project.types";
 import { Policy } from "src/codeclarity_modules/policies/policy.entity";
 import { LicensesRepository } from "src/codeclarity_modules/results/licenses/licenses.repository";
 import { Output as LicensesOutput } from "src/codeclarity_modules/results/licenses/licenses.types";
@@ -31,6 +35,7 @@ import {
   TypedPaginatedData,
 } from "src/types/pagination.types";
 import { AnalysisStartMessageCreate } from "src/types/rabbitMqMessages.types";
+import { buildAmqpSocketOptions } from "src/utils/amqp";
 
 import { AnaylzerMissingConfigAttribute } from "../analyzers/analyzers.errors";
 import { AnalyzersRepository } from "../analyzers/analyzers.repository";
@@ -41,7 +46,10 @@ import {
   UsersRepository,
 } from "../shared/repositories";
 
-import { AnalysesRepository } from "./analyses.repository";
+import {
+  AnalysesRepository,
+  TERMINAL_ANALYSIS_STATUSES,
+} from "./analyses.repository";
 
 /** Configuration option for an analyzer step */
 interface AnalyzerStepConfigOption {
@@ -282,8 +290,10 @@ export class AnalysesService {
       )}:${this.configService.getOrThrow<string>("AMQP_PORT")}`;
 
       try {
-        // Connect to RabbitMQ using the configured settings
-        const conn = await amqp.connect(amqpHost);
+        // Connect to RabbitMQ using the configured settings.
+        // TLS socket options are derived from AMQP_SSLMODE / AMQP_SSLROOTCERT
+        // (amqps:// URLs negotiate TLS; options control verification).
+        const conn = await amqp.connect(amqpHost, buildAmqpSocketOptions());
         const ch1 = await conn.createChannel();
         await ch1.assertQueue(queue);
 
@@ -549,6 +559,129 @@ export class AnalysesService {
       await this.resultsRepository.delete(result.id);
     }
     await this.analysesRepository.deleteAnalysis(analysis.id);
+  }
+
+  /**
+   * Bulk-cancel analyses of a project.
+   *
+   * Transitions every non-terminal analysis among `analysisIds` to `cancelled`
+   * so the dispatcher/reaper stop advancing them (workers skip cancelled rows).
+   * Already-terminal analyses are reported as `skipped`; ids not belonging to
+   * the project are `not_found`.
+   *
+   * @throws {NotAuthorized} if the caller is not at least a USER of the org
+   * @throws {EntityNotFound} if the project does not belong to the org
+   */
+  async batchCancel(
+    orgId: string,
+    projectId: string,
+    analysisIds: string[],
+    user: AuthenticatedUser,
+  ): Promise<BatchResponse> {
+    const { cancellable, skipped, notFound } = await this.partitionAnalyses(
+      orgId,
+      projectId,
+      analysisIds,
+      user,
+    );
+
+    if (cancellable.length > 0) {
+      await this.analysesRepository.cancelByIds(cancellable);
+    }
+
+    const results: BatchItemResult[] = [
+      ...cancellable.map((id) => ({ id, status: "cancelled" as const })),
+      ...skipped.map((id) => ({ id, status: "skipped" as const })),
+      ...notFound.map((id) => ({ id, status: "not_found" as const })),
+    ];
+    return {
+      results,
+      succeeded: cancellable.length,
+      failed: skipped.length + notFound.length,
+    };
+  }
+
+  /**
+   * Bulk-delete analyses of a project using set-based statements.
+   *
+   * In-flight analyses are cancelled first (so workers stop), then their result
+   * blobs and the analyses themselves are removed in bulk. Ids not belonging to
+   * the project are reported as `not_found`.
+   *
+   * @throws {NotAuthorized} if the caller is not at least a USER of the org
+   * @throws {EntityNotFound} if the project does not belong to the org
+   */
+  async batchDelete(
+    orgId: string,
+    projectId: string,
+    analysisIds: string[],
+    user: AuthenticatedUser,
+  ): Promise<BatchResponse> {
+    const { cancellable, skipped, notFound } = await this.partitionAnalyses(
+      orgId,
+      projectId,
+      analysisIds,
+      user,
+    );
+
+    const toDelete = [...cancellable, ...skipped];
+    if (cancellable.length > 0) {
+      // Stop any in-flight work before the rows disappear.
+      await this.analysesRepository.cancelByIds(cancellable);
+    }
+    if (toDelete.length > 0) {
+      await this.resultsRepository.deleteByAnalysisIds(toDelete);
+      await this.analysesRepository.deleteByIds(toDelete);
+    }
+
+    const results: BatchItemResult[] = [
+      ...toDelete.map((id) => ({ id, status: "deleted" as const })),
+      ...notFound.map((id) => ({ id, status: "not_found" as const })),
+    ];
+    return {
+      results,
+      succeeded: toDelete.length,
+      failed: notFound.length,
+    };
+  }
+
+  /**
+   * Authorize the caller and split a requested id list into those belonging to
+   * the project that are still in-flight (`cancellable`), already-terminal
+   * (`skipped`), or not part of the project (`notFound`).
+   */
+  private async partitionAnalyses(
+    orgId: string,
+    projectId: string,
+    analysisIds: string[],
+    user: AuthenticatedUser,
+  ): Promise<{ cancellable: string[]; skipped: string[]; notFound: string[] }> {
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.USER,
+    );
+    await this.projectsRepository.doesProjectBelongToOrg(projectId, orgId);
+
+    const owned =
+      await this.analysesRepository.getIdStatusByProjectId(projectId);
+    const statusById = new Map(owned.map((a) => [a.id, a.status]));
+
+    const cancellable: string[] = [];
+    const skipped: string[] = [];
+    const notFound: string[] = [];
+
+    for (const id of new Set(analysisIds)) {
+      const status = statusById.get(id);
+      if (status === undefined) {
+        notFound.push(id);
+      } else if (TERMINAL_ANALYSIS_STATUSES.includes(status)) {
+        skipped.push(id);
+      } else {
+        cancellable.push(id);
+      }
+    }
+    return { cancellable, skipped, notFound };
   }
 
   /**
@@ -903,7 +1036,7 @@ export class AnalysesService {
       // Verify the policy exists and belongs to the organization
       const policy = await this.policyRepository.findOne({
         where: { id: policyId },
-        relations: ["organizations"],
+        relations: { organizations: true },
       });
 
       if (policy?.organizations.some((org) => org.id === orgId)) {

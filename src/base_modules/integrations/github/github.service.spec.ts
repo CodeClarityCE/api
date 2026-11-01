@@ -25,6 +25,7 @@ import type { Organization } from "../../organizations/organization.entity";
 import type { User } from "../../users/users.entity";
 import { IntegrationProvider, IntegrationType } from "../integration.types";
 import type { Integration } from "../integrations.entity";
+import { GithubIntegrationToken } from "../Token";
 
 import { GithubIntegrationService } from "./github.service";
 import {
@@ -589,6 +590,89 @@ describe("GithubIntegrationService", () => {
         mockAuthenticatedUser.userId,
         MemberRole.ADMIN,
       );
+    });
+  });
+
+  describe("getToken validation cache", () => {
+    const integrationId = "test-integration-id";
+    const T0 = new Date("2026-09-13T10:00:00Z").getTime();
+    let validateSpy: jest.SpyInstance<Promise<void>, []>;
+    let nowSpy: jest.SpyInstance<number, []>;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      integrationsRepository.getIntegrationById.mockResolvedValue(
+        mockIntegration,
+      );
+      validateSpy = jest
+        .spyOn(GithubIntegrationToken.prototype, "validate")
+        .mockResolvedValue(undefined);
+      nowSpy = jest.spyOn(Date, "now").mockReturnValue(T0);
+    });
+
+    afterEach(() => {
+      validateSpy.mockRestore();
+      nowSpy.mockRestore();
+    });
+
+    it("validates a token once and reuses it for a minute", async () => {
+      const first = await service.getToken(integrationId);
+      nowSpy.mockReturnValue(T0 + 59_000);
+      const second = await service.getToken(integrationId);
+
+      expect(second).toBe(first);
+      expect(validateSpy).toHaveBeenCalledTimes(1);
+      expect(integrationsRepository.getIntegrationById).toHaveBeenCalledTimes(
+        1,
+      );
+    });
+
+    it("validates the token again once the minute has passed", async () => {
+      await service.getToken(integrationId);
+      nowSpy.mockReturnValue(T0 + 61_000);
+      await service.getToken(integrationId);
+
+      expect(validateSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("keeps integrations apart", async () => {
+      await service.getToken(integrationId);
+      await service.getToken("other-integration-id");
+
+      expect(validateSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not remember a token that failed validation", async () => {
+      validateSpy.mockRejectedValueOnce(new IntegrationInvalidToken());
+
+      await expect(service.getToken(integrationId)).rejects.toThrow(
+        IntegrationInvalidToken,
+      );
+      await service.getToken(integrationId);
+
+      expect(validateSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("validates again after the integration's token was changed", async () => {
+      await service.getToken(integrationId);
+
+      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+        true,
+      );
+      jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
+      githubTokenService.getClassicTokenExpiryRemote.mockResolvedValue([
+        false,
+        undefined,
+      ]);
+      await service.modifyGithubIntegration(
+        "test-org-id",
+        integrationId,
+        { token: "ghp_new_token", token_type: GithubTokenType.CLASSIC_TOKEN },
+        mockAuthenticatedUser,
+      );
+      await service.getToken(integrationId);
+
+      expect(validateSpy).toHaveBeenCalledTimes(2);
     });
   });
 

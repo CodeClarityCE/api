@@ -16,7 +16,6 @@ const migrations = [
 
 export const ConfigDataSource = new DataSource({
   ...buildBaseOptions(),
-  name: "config",
   database: "config",
   entities,
   migrations,

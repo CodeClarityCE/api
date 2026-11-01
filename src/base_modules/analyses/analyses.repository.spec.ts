@@ -420,7 +420,7 @@ describe("AnalysesRepository", () => {
       ).resolves.not.toThrow();
 
       expect(mockAnalysisRepository.findOne).toHaveBeenCalledWith({
-        relations: ["project"],
+        relations: { project: true },
         where: {
           id: "analysis-123",
           project: { id: "project-123" },
@@ -439,7 +439,7 @@ describe("AnalysesRepository", () => {
       ).rejects.toThrow(NotAuthorized);
 
       expect(mockAnalysisRepository.findOne).toHaveBeenCalledWith({
-        relations: ["project"],
+        relations: { project: true },
         where: {
           id: "analysis-123",
           project: { id: "wrong-project-id" },
@@ -478,7 +478,7 @@ describe("AnalysesRepository", () => {
       ).rejects.toThrow(NotAuthorized);
 
       expect(mockAnalysisRepository.findOne).toHaveBeenCalledWith({
-        relations: ["project"],
+        relations: { project: true },
         where: {
           id: "",
           project: { id: "" },

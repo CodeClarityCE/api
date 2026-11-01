@@ -26,6 +26,7 @@ export enum AnalysisStatus {
   COMPLETED = "completed",
   FAILED = "failed",
   SUCCESS = "success",
+  CANCELLED = "cancelled",
 }
 
 export interface StageBase {
@@ -93,10 +94,24 @@ export class Analysis {
 
   @Column({
     type: "varchar",
-    length: 25,
+    length: 64,
     nullable: true,
   })
   commit_hash?: string;
+
+  /**
+   * Why the analysis was marked failed, written by the backend service that
+   * failed it (e.g. downloader clone/checkout errors). Null unless failed;
+   * the writer truncates to fit the column.
+   */
+  @ApiProperty()
+  @Expose()
+  @Column({
+    type: "varchar",
+    length: 500,
+    nullable: true,
+  })
+  failure_reason?: string;
 
   // Foreign keys
   @ManyToMany(() => Policy, (policy) => policy.analyses)

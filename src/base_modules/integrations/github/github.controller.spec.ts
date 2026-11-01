@@ -1,3 +1,7 @@
+import {
+  FastifyAdapter,
+  type NestFastifyApplication,
+} from "@nestjs/platform-fastify";
 import { Test, type TestingModule } from "@nestjs/testing";
 
 import {
@@ -25,12 +29,14 @@ import {
   type LinkGithubCreateBody,
   type LinkGithubPatchBody,
 } from "./githubIntegration.types";
+import { GithubPopularReposService } from "./githubPopularRepos.service";
 import { GithubRepositoriesService } from "./githubRepos.service";
 
 describe("GithubIntegrationController", () => {
   let controller: GithubIntegrationController;
   let githubIntegrationService: jest.Mocked<GithubIntegrationService>;
   let githubReposService: jest.Mocked<GithubRepositoriesService>;
+  let githubPopularReposService: jest.Mocked<GithubPopularReposService>;
 
   const mockAuthenticatedUser: AuthenticatedUser = new AuthenticatedUser(
     "test-user-id",
@@ -74,6 +80,10 @@ describe("GithubIntegrationController", () => {
       getGithubRepositories: jest.fn(),
     };
 
+    const mockGithubPopularReposService = {
+      getPopularGithubRepositories: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [GithubIntegrationController],
       providers: [
@@ -85,6 +95,10 @@ describe("GithubIntegrationController", () => {
           provide: GithubRepositoriesService,
           useValue: mockGithubReposService,
         },
+        {
+          provide: GithubPopularReposService,
+          useValue: mockGithubPopularReposService,
+        },
       ],
     }).compile();
 
@@ -93,6 +107,7 @@ describe("GithubIntegrationController", () => {
     );
     githubIntegrationService = module.get(GithubIntegrationService);
     githubReposService = module.get(GithubRepositoriesService);
+    githubPopularReposService = module.get(GithubPopularReposService);
   });
 
   it("should be defined", () => {
@@ -596,5 +611,146 @@ describe("GithubIntegrationController", () => {
         controller.getRepositories(mockAuthenticatedUser, orgId, integrationId),
       ).rejects.toThrow(InternalError);
     });
+  });
+
+  describe("getPopularRepositories", () => {
+    const emptyPage = {
+      data: [],
+      page: 0,
+      entry_count: 0,
+      entries_per_page: 100,
+      total_entries: 0,
+      total_pages: 0,
+      matching_count: 0,
+      filter_count: {},
+    };
+
+    it("forwards pagination, parsed languages, filters and sorting to the service", async () => {
+      githubPopularReposService.getPopularGithubRepositories.mockResolvedValue(
+        emptyPage,
+      );
+
+      const result = await controller.getPopularRepositories(
+        mockAuthenticatedUser,
+        "test-org-id",
+        "test-integration-id",
+        0,
+        100,
+        "vue",
+        false,
+        "[only_non_imported]",
+        "TypeScript,php,Rust",
+        "stars",
+        SortDirection.DESC,
+      );
+
+      expect(result).toBe(emptyPage);
+      expect(
+        githubPopularReposService.getPopularGithubRepositories,
+      ).toHaveBeenCalledWith(
+        "test-org-id",
+        "test-integration-id",
+        { currentPage: 0, entriesPerPage: 100 },
+        mockAuthenticatedUser,
+        ["TypeScript", "PHP"],
+        "vue",
+        false,
+        ["only_non_imported"],
+        "stars",
+        SortDirection.DESC,
+      );
+    });
+
+    it("defaults to every supported language and no filters", async () => {
+      githubPopularReposService.getPopularGithubRepositories.mockResolvedValue(
+        emptyPage,
+      );
+
+      await controller.getPopularRepositories(
+        mockAuthenticatedUser,
+        "test-org-id",
+        "test-integration-id",
+      );
+
+      expect(
+        githubPopularReposService.getPopularGithubRepositories,
+      ).toHaveBeenCalledWith(
+        "test-org-id",
+        "test-integration-id",
+        { currentPage: undefined, entriesPerPage: undefined },
+        mockAuthenticatedUser,
+        ["JavaScript", "TypeScript", "PHP"],
+        undefined,
+        undefined,
+        [],
+        undefined,
+        undefined,
+      );
+    });
+  });
+
+  describe("popular route query validation", () => {
+    const popularUrl =
+      "/org/test-org-id/integrations/github/test-integration-id/repositories/popular";
+    let app: NestFastifyApplication;
+
+    beforeEach(async () => {
+      const module = await Test.createTestingModule({
+        controllers: [GithubIntegrationController],
+        providers: [
+          { provide: GithubIntegrationService, useValue: {} },
+          { provide: GithubRepositoriesService, useValue: {} },
+          {
+            provide: GithubPopularReposService,
+            useValue: {
+              getPopularGithubRepositories: jest.fn().mockResolvedValue({
+                data: [],
+                page: 0,
+                entry_count: 0,
+                entries_per_page: 20,
+                total_entries: 0,
+                total_pages: 0,
+                matching_count: 0,
+                filter_count: {},
+              }),
+            },
+          },
+        ],
+      }).compile();
+
+      app = module.createNestApplication<NestFastifyApplication>(
+        new FastifyAdapter(),
+      );
+      await app.init();
+      await app.getHttpAdapter().getInstance().ready();
+    });
+
+    afterEach(async () => {
+      await app.close();
+    });
+
+    it.each(["asc", "descending", ""])(
+      "rejects the sort_direction %p with 400",
+      async (direction) => {
+        const response = await app.inject({
+          method: "GET",
+          url: `${popularUrl}?sort_direction=${direction}`,
+        });
+
+        expect(response.statusCode).toBe(400);
+      },
+    );
+
+    it.each(["", "?sort_direction=ASC", "?sort_direction=DESC"])(
+      "accepts the query %p",
+      async (query) => {
+        const response = await app.inject({
+          method: "GET",
+          url: `${popularUrl}${query}`,
+        });
+
+        expect(response.statusCode).toBe(200);
+      },
+    );
   });
 });

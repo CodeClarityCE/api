@@ -6,7 +6,6 @@ import { NVDRepository } from "src/codeclarity_modules/knowledge/nvd/nvd.reposit
 import type { OSV } from "src/codeclarity_modules/knowledge/osv/osv.entity";
 import { OSVRepository } from "src/codeclarity_modules/knowledge/osv/osv.repository";
 import { OWASPRepository } from "src/codeclarity_modules/knowledge/owasp/owasp.repository";
-import type { OwaspTop10Info } from "src/codeclarity_modules/knowledge/owasp/owasp.types";
 import { PackageRepository } from "src/codeclarity_modules/knowledge/package/package.repository";
 import { VersionsRepository } from "src/codeclarity_modules/knowledge/package/packageVersions.repository";
 import type { Dependency } from "src/codeclarity_modules/results/sbom/sbom.types";
@@ -15,7 +14,6 @@ import {
   SeverityType,
   Source,
   type Vulnerability,
-  type WeaknessInfo,
 } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
 
 import {
@@ -58,7 +56,7 @@ describe("ReportGenerator Services", () => {
       name: "Broken Access Control",
       description:
         "Access control enforces policy such that users cannot act outside of their intended permissions.",
-    } as OwaspTop10Info),
+    }),
   };
 
   const mockVulnerability: Vulnerability = {
@@ -76,7 +74,7 @@ describe("ReportGenerator Services", () => {
         WeaknessExtendedDescription: "Extended description of the weakness",
         OWASPTop10Id: "A01:2021",
         OWASPTop10Name: "Broken Access Control",
-      } as WeaknessInfo,
+      },
     ],
     OSVMatch: {
       Vulnerability: "CVE-2024-1234",
@@ -692,7 +690,7 @@ describe("ReportGenerator Services", () => {
 
       it("should return null when no weaknesses", () => {
         const { Weaknesses, ...vulnWithoutWeaknesses } = mockVulnerability;
-        osvReportGenerator.vulnsData = vulnWithoutWeaknesses as any;
+        osvReportGenerator.vulnsData = vulnWithoutWeaknesses;
         const owaspInfo = osvReportGenerator.getOwaspTop10Info();
         expect(owaspInfo).toBeNull();
       });
@@ -710,7 +708,7 @@ describe("ReportGenerator Services", () => {
                 "Extended description of the weakness",
               OWASPTop10Id: "",
               OWASPTop10Name: "",
-            } as WeaknessInfo,
+            },
           ],
         };
         const owaspInfo = osvReportGenerator.getOwaspTop10Info();
@@ -721,7 +719,7 @@ describe("ReportGenerator Services", () => {
     describe("getWeaknessData", () => {
       it("should return empty arrays when no weaknesses", async () => {
         const { Weaknesses, ...vulnWithoutWeaknesses } = mockVulnerability;
-        osvReportGenerator.vulnsData = vulnWithoutWeaknesses as any;
+        osvReportGenerator.vulnsData = vulnWithoutWeaknesses;
         const [weaknesses, consequences] =
           await osvReportGenerator.getWeaknessData();
         expect(weaknesses).toEqual([]);
@@ -894,7 +892,7 @@ describe("ReportGenerator Services", () => {
           },
         };
 
-        const result = await getCVSSNVDInfo(nvdWithMultipleSources as NVD);
+        const result = await getCVSSNVDInfo(nvdWithMultipleSources);
         expect(result.cvss_2?.access_vector).toBe("NETWORK");
       });
 
@@ -923,14 +921,14 @@ describe("ReportGenerator Services", () => {
           ],
         };
 
-        const result = await getCVSSOSVInfo(osvWithCVSS2 as OSV);
+        const result = await getCVSSOSVInfo(osvWithCVSS2);
         expect(result.cvss_2).toBeDefined();
         expect(result.cvss_3).toBeUndefined();
       });
 
       it("should handle OSV without severity", async () => {
         const osvWithoutSeverity = { ...mockOSV, severity: undefined };
-        const result = await getCVSSOSVInfo(osvWithoutSeverity as OSV);
+        const result = await getCVSSOSVInfo(osvWithoutSeverity);
         expect(result).toEqual({});
       });
     });

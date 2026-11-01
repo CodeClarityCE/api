@@ -120,7 +120,7 @@ describe("Package Entity", () => {
         ],
         extra: {
           "dual-license": true,
-        } as any,
+        },
         versions: [],
       };
 
@@ -587,7 +587,7 @@ describe("Package Entity", () => {
           array: [1, 2, 3, "mixed", { object: "in array" }],
           boolean: true,
           number: 42,
-          null_value: null as any,
+          null_value: null,
         },
         versions: [],
       };

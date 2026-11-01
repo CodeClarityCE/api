@@ -3,7 +3,7 @@ import { Expose } from "class-transformer";
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 
 import { User } from "../../users/users.entity";
-import { Organization } from "../organization.entity";
+import type { Organization } from "../organization.entity";
 
 export enum MemberRole {
   OWNER = 0,
@@ -34,9 +34,6 @@ export class OrganizationMemberships {
 
   @ApiProperty()
   @Expose()
-  @ManyToOne(
-    () => Organization,
-    (organization) => organization.organizationMemberships,
-  )
+  @ManyToOne("Organization", "organizationMemberships")
   public organization!: Organization;
 }

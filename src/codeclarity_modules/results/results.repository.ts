@@ -24,6 +24,22 @@ export class AnalysisResultsRepository {
     await this.resultRepository.remove(result);
   }
 
+  /**
+   * Deletes every result blob belonging to any of the given analyses in a
+   * single set-based statement (no per-row entity load).
+   * @param analysisIds The IDs of the analyses whose results should be deleted.
+   * @returns The number of result rows removed.
+   */
+  async deleteByAnalysisIds(analysisIds: string[]): Promise<number> {
+    if (analysisIds.length === 0) return 0;
+    const res = await this.resultRepository
+      .createQueryBuilder()
+      .delete()
+      .where('"analysisId" IN (:...analysisIds)', { analysisIds })
+      .execute();
+    return res.affected ?? 0;
+  }
+
   async getByAnalysisId(
     analysisId: string,
     relations?: object,
@@ -83,7 +99,7 @@ export class AnalysisResultsRepository {
         { analysis: { id: analysisId }, plugin: "js-sbom" },
         { analysis: { id: analysisId }, plugin: "php-sbom" },
       ],
-      select: ["plugin"],
+      select: { plugin: true },
     });
     return results.map((result) => result.plugin);
   }

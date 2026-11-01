@@ -16,9 +16,11 @@ import { Analysis } from "src/base_modules/analyses/analysis.entity";
 import {
   AnalysisCreateBody,
   AnalysisRun,
+  BatchAnalysisIdsBody,
   ScheduleUpdateBody,
 } from "src/base_modules/analyses/analysis.types";
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import { BatchResponse } from "src/base_modules/projects/project.types";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocCreatedResponseDecorator } from "src/decorators/CrudResponse";
 import { APIDocNoDataResponseDecorator } from "src/decorators/NoDataResponse";
@@ -144,6 +146,54 @@ export class AnalysesController {
   ): Promise<NoDataResponse> {
     await this.analysesService.delete(org_id, project_id, analysis_id, user);
     return {};
+  }
+
+  @ApiTags("Analyses")
+  @ApiOperation({
+    description:
+      "Cancel multiple in-flight analyses of a project. Non-terminal analyses are set to 'cancelled' so workers stop advancing them.",
+  })
+  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
+  @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
+  @Post("batch-cancel")
+  async batchCancel(
+    @AuthUser() user: AuthenticatedUser,
+    @Body() body: BatchAnalysisIdsBody,
+    @Param("org_id") org_id: string,
+    @Param("project_id") project_id: string,
+  ): Promise<TypedResponse<BatchResponse>> {
+    return {
+      data: await this.analysesService.batchCancel(
+        org_id,
+        project_id,
+        body.analysis_ids,
+        user,
+      ),
+    };
+  }
+
+  @ApiTags("Analyses")
+  @ApiOperation({
+    description:
+      "Delete multiple analyses of a project in bulk. In-flight analyses are cancelled first, then results and analyses are removed.",
+  })
+  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
+  @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
+  @Post("batch-delete")
+  async batchDelete(
+    @AuthUser() user: AuthenticatedUser,
+    @Body() body: BatchAnalysisIdsBody,
+    @Param("org_id") org_id: string,
+    @Param("project_id") project_id: string,
+  ): Promise<TypedResponse<BatchResponse>> {
+    return {
+      data: await this.analysesService.batchDelete(
+        org_id,
+        project_id,
+        body.analysis_ids,
+        user,
+      ),
+    };
   }
 
   // ===== SCHEDULING ENDPOINTS =====

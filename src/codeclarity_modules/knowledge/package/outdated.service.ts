@@ -121,7 +121,7 @@ export class OutdatedCheckService {
         name: In(packageNames),
         language: language,
       },
-      select: ["name", "latest_version"],
+      select: { name: true, latest_version: true },
     });
 
     // Create lookup map

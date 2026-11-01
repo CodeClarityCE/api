@@ -293,7 +293,7 @@ describe("LicensePolicyService", () => {
           policy_type: PolicyType.LICENSE_POLICY,
           organizations: { id: "org-123" },
         },
-        relations: ["created_by"],
+        relations: { created_by: true },
       });
     });
 

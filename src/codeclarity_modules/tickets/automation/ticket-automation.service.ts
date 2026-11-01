@@ -57,7 +57,7 @@ export class TicketAutomationService {
     // Get analysis with relationships
     const analysis = await this.analysisRepository.findOne({
       where: { id: analysisId },
-      relations: ["organization", "project"],
+      relations: { organization: true, project: true },
     });
 
     if (!analysis) {
@@ -287,7 +287,7 @@ export class TicketAutomationService {
         status: In([AnalysisStatus.SUCCESS, AnalysisStatus.COMPLETED]),
         ended_on: Not(null as unknown as Date),
       },
-      relations: ["organization", "project"],
+      relations: { organization: true, project: true },
     });
 
     // Filter to analyses completed since the given date

@@ -13,4 +13,7 @@ export class Config {
 
   @Column({ name: "gcve_last", type: "timestamptz", nullable: true })
   gcveLast?: Date;
+
+  @Column({ name: "osv_last", type: "timestamptz", nullable: true })
+  osvLast?: Date;
 }

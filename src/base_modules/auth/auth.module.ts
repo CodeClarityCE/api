@@ -11,6 +11,7 @@ import { UsersModule } from "../users/users.module";
 
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
+import { AUTH_SERVICE } from "./auth.tokens";
 import { CONST_JWT_ALGORITHM, CONST_JWT_TOKEN_EXPIRES_IN } from "./constants";
 import { GithubAuthController } from "./github.controller";
 import { GitlabAuthController } from "./gitlab.controller";
@@ -38,6 +39,7 @@ import { RefreshJWTStrategy } from "./strategies/refresh-token.strategy";
   ],
   providers: [
     AuthService,
+    { provide: AUTH_SERVICE, useExisting: AuthService },
     GitlabIntegrationTokenService,
     JwtStrategy,
     RefreshJWTStrategy,
@@ -49,6 +51,6 @@ import { RefreshJWTStrategy } from "./strategies/refresh-token.strategy";
     },
   ],
   controllers: [AuthController, GitlabAuthController, GithubAuthController],
-  exports: [AuthService],
+  exports: [AuthService, AUTH_SERVICE],
 })
 export class AuthModule {}

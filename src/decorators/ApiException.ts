@@ -36,7 +36,7 @@ export function ApiErrorDecorator({
   options?: ApiResponseOptions;
 }): ReturnType<typeof applyDecorators> {
   const descriptions: string[] = [];
-  let description = "";
+  let description: string;
   let example: ErrorResponseExample | Record<string, never> = {};
   const examples: Record<string, SwaggerExample> = {};
 

@@ -70,13 +70,13 @@ describe("ExceptionFilter", () => {
               isEmail: "email must be a valid email",
               isNotEmpty: "email should not be empty",
             },
-          } as ValidationError,
+          },
           {
             property: "password",
             constraints: {
               minLength: "password must be at least 8 characters",
             },
-          } as ValidationError,
+          },
         ];
 
         const validationError = new ValidationFailed(validationErrors);

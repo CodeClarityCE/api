@@ -93,7 +93,7 @@ Use Docker Compose to run the required infrastructure:
 version: '3.8'
 services:
   postgres-test:
-    image: postgres:15
+    image: postgres:18.6-alpine
     environment:
       POSTGRES_USER: codeclarity_test
       POSTGRES_PASSWORD: test_password
@@ -106,7 +106,7 @@ services:
       - ./test-init.sql:/docker-entrypoint-initdb.d/01-init.sql
 
   rabbitmq-test:
-    image: rabbitmq:3-management
+    image: rabbitmq:4.3.6-management-alpine
     ports:
       - "5673:5672"
       - "15673:15672"
@@ -140,22 +140,22 @@ CREATE DATABASE plugin_test;
 
 ```bash
 # Run all integration tests (requires infrastructure)
-yarn test:e2e
+pnpm test:e2e
 
 # Run only contract tests (no infrastructure required)
-yarn test:e2e test/integration/simple-contract.e2e-spec.ts test/integration/comprehensive-contract.e2e-spec.ts
+pnpm test:e2e test/integration/simple-contract.e2e-spec.ts test/integration/comprehensive-contract.e2e-spec.ts
 
 # Run specific test suite
-yarn test:e2e --testNamePattern="Authentication Integration"
+pnpm test:e2e --testNamePattern="Authentication Integration"
 
 # Run with coverage
-yarn test:e2e --coverage
+pnpm test:e2e --coverage
 
 # Run in watch mode
-yarn test:e2e --watch
+pnpm test:e2e --watch
 
 # Quick validation (contract tests only - perfect for CI)
-yarn test:e2e test/integration/*contract*.e2e-spec.ts
+pnpm test:e2e test/integration/*contract*.e2e-spec.ts
 ```
 
 ## Test Categories
@@ -340,7 +340,7 @@ psql -h localhost -p 5433 -U codeclarity_test -d codeclarity_test
 docker ps
 
 # View test logs
-yarn test:e2e --verbose
+pnpm test:e2e --verbose
 ```
 
 ## Future Enhancements

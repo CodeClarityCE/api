@@ -1,6 +1,8 @@
 import { Test, type TestingModule } from "@nestjs/testing";
+import { mkdir } from "fs/promises";
 
 import {
+  AllowedOrderByGetProjects,
   MembershipsRepository,
   OrganizationsRepository,
   ProjectsRepository,
@@ -27,13 +29,25 @@ import { MemberRole } from "../organizations/memberships/orgMembership.types";
 import type { Project } from "./project.entity";
 import type { ProjectImportBody } from "./project.types";
 import { ProjectMemberService } from "./projectMember.service";
-import { AllowedOrderByGetProjects, ProjectService } from "./projects.service";
+import { ProjectService } from "./projects.service";
+import type { RepositoryCache } from "./repositoryCache.entity";
+
+// The import creates the project's download folder; keep the filesystem out
+// of unit tests.
+jest.mock("fs/promises", () => ({
+  ...jest.requireActual("fs/promises"),
+  mkdir: jest.fn().mockResolvedValue(undefined),
+}));
 
 describe("ProjectService", () => {
   let service: ProjectService;
   let membershipsRepository: MembershipsRepository;
   let integrationsRepository: jest.Mocked<IntegrationsRepository>;
   let projectsRepository: jest.Mocked<ProjectsRepository>;
+  let githubRepositoriesService: jest.Mocked<GithubRepositoriesService>;
+  let gitlabRepositoriesService: jest.Mocked<GitlabRepositoriesService>;
+  let usersRepository: jest.Mocked<UsersRepository>;
+  let organizationsRepository: jest.Mocked<OrganizationsRepository>;
 
   const mockAuthenticatedUser = new AuthenticatedUser(
     "test-user-id",
@@ -61,8 +75,7 @@ describe("ProjectService", () => {
         {
           provide: GithubRepositoriesService,
           useValue: {
-            syncGithubRepos: jest.fn().mockResolvedValue(undefined),
-            getGithubRepository: jest.fn(),
+            resolveGithubRepository: jest.fn(),
           },
         },
         {
@@ -115,6 +128,7 @@ describe("ProjectService", () => {
           useValue: {
             saveProject: jest.fn(),
             getProjectById: jest.fn(),
+            getProjectByUrlOrgAndUser: jest.fn(),
             getManyProjects: jest.fn(),
             deleteProject: jest.fn().mockResolvedValue(undefined),
             doesProjectBelongToOrg: jest.fn().mockResolvedValue(undefined),
@@ -129,9 +143,153 @@ describe("ProjectService", () => {
     );
     integrationsRepository = module.get(IntegrationsRepository);
     projectsRepository = module.get(ProjectsRepository);
+    githubRepositoriesService = module.get(GithubRepositoriesService);
+    gitlabRepositoriesService = module.get(GitlabRepositoriesService);
+    usersRepository = module.get(UsersRepository);
+    organizationsRepository = module.get(OrganizationsRepository);
+    jest.mocked(mkdir).mockClear();
   });
 
   describe("import", () => {
+    const legacyRepository = {
+      url: "https://github.com/octo/legacy",
+      fully_qualified_name: "octo/legacy",
+      description: "Legacy project",
+      default_branch: "master",
+      service_domain: "github.com",
+    } as RepositoryCache;
+
+    /** A GitHub import whose repository resolves to `legacyRepository`. */
+    function arrangeGithubImport(): ProjectImportBody {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      projectsRepository.getProjectByUrlOrgAndUser.mockResolvedValue(null);
+      integrationsRepository.getIntegrationByIdAndOrganizationAndUser.mockResolvedValue(
+        {
+          id: mockIntegrationId,
+          integration_provider: "GITHUB" as IntegrationProvider,
+        } as any,
+      );
+      githubRepositoriesService.resolveGithubRepository.mockResolvedValue(
+        legacyRepository,
+      );
+      usersRepository.getUserById.mockResolvedValue({
+        id: "test-user-id",
+      } as any);
+      organizationsRepository.getOrganizationById.mockResolvedValue({
+        id: mockOrgId,
+      } as any);
+      projectsRepository.saveProject.mockImplementation(
+        async (project: Project) => ({ ...project, id: "new-project-id" }),
+      );
+      return {
+        url: "https://github.com/octo/legacy",
+        integration_id: mockIntegrationId,
+      } as ProjectImportBody;
+    }
+
+    it("imports the repository the GitHub service resolves, keeping its default branch", async () => {
+      const body = arrangeGithubImport();
+
+      const result = await service.import(
+        mockOrgId,
+        body,
+        mockAuthenticatedUser,
+      );
+
+      expect(result).toBe("new-project-id");
+      expect(
+        githubRepositoriesService.resolveGithubRepository,
+      ).toHaveBeenCalledWith(
+        mockOrgId,
+        mockIntegrationId,
+        body.url,
+        mockAuthenticatedUser,
+      );
+      const saved = projectsRepository.saveProject.mock.calls[0]![0];
+      expect(saved.default_branch).toBe("master");
+      expect(saved.name).toBe("octo/legacy");
+      expect(saved.description).toBe("Legacy project");
+      expect(saved.url).toBe(body.url);
+      expect(saved.type).toBe("GITHUB");
+      expect(mkdir).toHaveBeenCalledTimes(1);
+    });
+
+    it("stores the canonical url when the typed url is spelled differently", async () => {
+      const body = {
+        ...arrangeGithubImport(),
+        url: "https://github.com/Octo/Legacy/",
+      };
+
+      await service.import(mockOrgId, body, mockAuthenticatedUser);
+
+      expect(projectsRepository.getProjectByUrlOrgAndUser).toHaveBeenCalledWith(
+        "https://github.com/octo/legacy",
+        mockOrgId,
+        "test-user-id",
+      );
+      const saved = projectsRepository.saveProject.mock.calls[0]![0];
+      expect(saved.url).toBe("https://github.com/octo/legacy");
+    });
+
+    it("reuses the project already stored under the canonical url", async () => {
+      const body = {
+        ...arrangeGithubImport(),
+        url: "https://github.com/octo/legacy.git",
+      };
+      projectsRepository.getProjectByUrlOrgAndUser.mockImplementation(
+        async (url: string) =>
+          (url === "https://github.com/octo/legacy"
+            ? { id: "existing-project-id" }
+            : null) as Project,
+      );
+
+      const result = await service.import(
+        mockOrgId,
+        body,
+        mockAuthenticatedUser,
+      );
+
+      expect(result).toBe("existing-project-id");
+      expect(projectsRepository.saveProject).not.toHaveBeenCalled();
+    });
+
+    it("keeps the typed url for a public GitLab repository outside the cache", async () => {
+      const body = arrangeGithubImport();
+      body.url = "https://gitlab.com/octo/legacy";
+      integrationsRepository.getIntegrationByIdAndOrganizationAndUser.mockResolvedValue(
+        {
+          id: mockIntegrationId,
+          integration_provider: "GITLAB" as IntegrationProvider,
+        } as any,
+      );
+      gitlabRepositoriesService.getGitlabRepository.mockRejectedValue(
+        new EntityNotFound(),
+      );
+      const fetchSpy = jest
+        .spyOn(global, "fetch")
+        .mockResolvedValue(new Response("<html>octo/legacy</html>"));
+
+      await service.import(mockOrgId, body, mockAuthenticatedUser);
+
+      const saved = projectsRepository.saveProject.mock.calls[0]![0];
+      expect(saved.url).toBe("https://gitlab.com/octo/legacy");
+      fetchSpy.mockRestore();
+    });
+
+    it("propagates the error when the GitHub repository cannot be resolved", async () => {
+      const body = arrangeGithubImport();
+      githubRepositoriesService.resolveGithubRepository.mockRejectedValue(
+        new EntityNotFound(),
+      );
+
+      await expect(
+        service.import(mockOrgId, body, mockAuthenticatedUser),
+      ).rejects.toThrow(EntityNotFound);
+      expect(projectsRepository.saveProject).not.toHaveBeenCalled();
+    });
+
     it("should throw NotAuthorized when user lacks permission", async () => {
       jest
         .spyOn(membershipsRepository, "hasRequiredRole")
@@ -186,6 +344,40 @@ describe("ProjectService", () => {
       await expect(
         service.import(mockOrgId, projectImportBody, mockAuthenticatedUser),
       ).rejects.toThrow(IntegrationNotSupported);
+    });
+
+    it("should reuse an existing project (idempotent) without creating a new one", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      projectsRepository.getProjectByUrlOrgAndUser.mockResolvedValue({
+        id: "existing-project-id",
+      } as Project);
+
+      const projectImportBody: ProjectImportBody = {
+        name: "Test Project",
+        description: "A test project",
+        url: "https://github.com/test/repo",
+        integration_id: mockIntegrationId,
+      };
+
+      const result = await service.import(
+        mockOrgId,
+        projectImportBody,
+        mockAuthenticatedUser,
+      );
+
+      expect(result).toBe("existing-project-id");
+      expect(projectsRepository.getProjectByUrlOrgAndUser).toHaveBeenCalledWith(
+        projectImportBody.url,
+        mockOrgId,
+        "test-user-id",
+      );
+      // No new project is created and the repo sync is skipped.
+      expect(projectsRepository.saveProject).not.toHaveBeenCalled();
+      expect(
+        integrationsRepository.getIntegrationByIdAndOrganizationAndUser,
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -374,6 +566,99 @@ describe("ProjectService", () => {
       await expect(
         service.delete(mockOrgId, mockProjectId, mockAuthenticatedUser),
       ).rejects.toThrow(NotAuthorized);
+    });
+  });
+
+  describe("batchDelete", () => {
+    const analysesRepo = () =>
+      service["repos"].analyses as jest.Mocked<AnalysesRepository>;
+    const resultsRepo = () =>
+      service["repos"].results as jest.Mocked<AnalysisResultsRepository>;
+    const fileRepo = () => service["repos"].file as jest.Mocked<FileRepository>;
+
+    beforeEach(() => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      jest
+        .spyOn(membershipsRepository, "getMembershipRole")
+        .mockResolvedValue({ role: MemberRole.OWNER } as any);
+      (projectsRepository as any).getProjectsByIdsAndOrg = jest.fn();
+      (projectsRepository as any).detachFromOrganization = jest
+        .fn()
+        .mockResolvedValue(undefined);
+      (projectsRepository as any).deleteByIds = jest.fn().mockResolvedValue(0);
+      (analysesRepo().getAnalysisIdsByProjectIds as any) = jest
+        .fn()
+        .mockResolvedValue([]);
+      (analysesRepo().cancelByIds as any) = jest.fn().mockResolvedValue(0);
+      (analysesRepo().deleteByIds as any) = jest.fn().mockResolvedValue(0);
+      (resultsRepo().deleteByAnalysisIds as any) = jest
+        .fn()
+        .mockResolvedValue(0);
+      (fileRepo().deleteByProjectIds as any) = jest.fn().mockResolvedValue(0);
+    });
+
+    it("returns not_found for ids that do not belong to the org", async () => {
+      (projectsRepository as any).getProjectsByIdsAndOrg.mockResolvedValue([]);
+
+      const res = await service.batchDelete(
+        mockOrgId,
+        ["missing-1", "missing-2"],
+        mockAuthenticatedUser,
+      );
+
+      expect(res.succeeded).toBe(0);
+      expect(res.failed).toBe(2);
+      expect(res.results.every((r) => r.status === "not_found")).toBe(true);
+      expect((projectsRepository as any).deleteByIds).not.toHaveBeenCalled();
+    });
+
+    it("cancels in-flight analyses then bulk-deletes owned projects", async () => {
+      (projectsRepository as any).getProjectsByIdsAndOrg.mockResolvedValue([
+        { id: "p1", added_by: { id: "someone" } },
+        { id: "p2", added_by: { id: "someone" } },
+      ]);
+      (analysesRepo().getAnalysisIdsByProjectIds as any).mockResolvedValue([
+        "a1",
+      ]);
+
+      const res = await service.batchDelete(
+        mockOrgId,
+        ["p1", "p2"],
+        mockAuthenticatedUser,
+      );
+
+      expect(res.succeeded).toBe(2);
+      expect(res.failed).toBe(0);
+      expect(analysesRepo().cancelByIds).toHaveBeenCalledWith(["a1"]);
+      expect(resultsRepo().deleteByAnalysisIds).toHaveBeenCalledWith(["a1"]);
+      expect(analysesRepo().deleteByIds).toHaveBeenCalledWith(["a1"]);
+      expect(
+        (projectsRepository as any).detachFromOrganization,
+      ).toHaveBeenCalledWith(mockOrgId, ["p1", "p2"]);
+      expect((projectsRepository as any).deleteByIds).toHaveBeenCalledWith([
+        "p1",
+        "p2",
+      ]);
+    });
+
+    it("denies a USER deleting a project they did not import", async () => {
+      jest
+        .spyOn(membershipsRepository, "getMembershipRole")
+        .mockResolvedValue({ role: MemberRole.USER } as any);
+      (projectsRepository as any).getProjectsByIdsAndOrg.mockResolvedValue([
+        { id: "p1", added_by: { id: "another-user" } },
+      ]);
+
+      const res = await service.batchDelete(
+        mockOrgId,
+        ["p1"],
+        mockAuthenticatedUser,
+      );
+
+      expect(res.results).toEqual([{ id: "p1", status: "not_authorized" }]);
+      expect((projectsRepository as any).deleteByIds).not.toHaveBeenCalled();
     });
   });
 });

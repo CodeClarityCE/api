@@ -13,7 +13,12 @@ import { ApiBearerAuth, ApiQuery, ApiTags } from "@nestjs/swagger";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { Project } from "src/base_modules/projects/project.entity";
-import { ProjectImportBody } from "src/base_modules/projects/project.types";
+import {
+  BatchProjectIdsBody,
+  BatchResponse,
+  ProjectImportBody,
+} from "src/base_modules/projects/project.types";
+import { AllowedOrderByGetProjects } from "src/base_modules/shared/repositories";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocCreatedResponseDecorator } from "src/decorators/CrudResponse";
 import { APIDocNoDataResponseDecorator } from "src/decorators/NoDataResponse";
@@ -35,7 +40,7 @@ import {
 } from "src/types/error.types";
 import { SortDirection } from "src/types/sort.types";
 
-import { AllowedOrderByGetProjects, ProjectService } from "./projects.service";
+import { ProjectService } from "./projects.service";
 
 @ApiBearerAuth()
 @Controller("org/:org_id/projects")
@@ -124,5 +129,24 @@ export class ProjectController {
   ): Promise<NoDataResponse> {
     await this.projectsService.delete(org_id, project_id, user);
     return {};
+  }
+
+  @ApiTags("Projects")
+  @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
+  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
+  @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
+  @Post("batch-delete")
+  async batchDelete(
+    @AuthUser() user: AuthenticatedUser,
+    @Body() body: BatchProjectIdsBody,
+    @Param("org_id") org_id: string,
+  ): Promise<TypedResponse<BatchResponse>> {
+    return {
+      data: await this.projectsService.batchDelete(
+        org_id,
+        body.project_ids,
+        user,
+      ),
+    };
   }
 }

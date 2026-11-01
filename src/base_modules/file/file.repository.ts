@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { FindOptionsWhere, ObjectId, Repository } from "typeorm";
+import { FindOptionsWhere, Repository } from "typeorm";
 
 import { File } from "src/base_modules/file/file.entity";
 
@@ -42,12 +42,27 @@ export class FileRepository {
       | string[]
       | Date
       | number[]
-      | ObjectId
       | Date[]
-      | ObjectId[]
       | FindOptionsWhere<File>,
   ): Promise<void> {
     await this.fileRepository.delete(files);
+  }
+
+  /**
+   * Deletes every file row belonging to any of the given projects in a single
+   * set-based statement (no per-row entity load).
+   *
+   * @param projectIds - The IDs of the projects whose files should be deleted.
+   * @returns The number of file rows removed.
+   */
+  async deleteByProjectIds(projectIds: string[]): Promise<number> {
+    if (projectIds.length === 0) return 0;
+    const res = await this.fileRepository
+      .createQueryBuilder()
+      .delete()
+      .where('"projectId" IN (:...projectIds)', { projectIds })
+      .execute();
+    return res.affected ?? 0;
   }
 
   /**
