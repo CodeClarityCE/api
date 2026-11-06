@@ -85,6 +85,27 @@ export class IntegrationsRepository {
   }
 
   /**
+   * Retrieves an integration of an organization, whoever added it. For
+   * org-wide work (experiments) that is not tied to the integration's owner.
+   * @throws EntityNotFound - If the organization has no integration with this ID.
+   */
+  async getIntegrationByIdAndOrganization(
+    integrationId: string,
+    organizationId: string,
+  ): Promise<Integration> {
+    const integration = await this.integrationRepository.findOne({
+      where: {
+        id: integrationId,
+        organizations: { id: organizationId },
+      },
+    });
+    if (!integration) {
+      throw new EntityNotFound();
+    }
+    return integration;
+  }
+
+  /**
    * Retrieves a paginated list of VCS integrations for a specific organization.
    * @param orgId - The ID of the organization to retrieve integrations for.
    * @param currentPage - The current page number (0-indexed).

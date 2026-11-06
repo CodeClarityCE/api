@@ -6,6 +6,7 @@ import {
 } from "src/base_modules/shared/repositories";
 import {
   AlreadyExists,
+  EntityInUse,
   EntityNotFound,
   NotAuthorized,
 } from "src/types/error.types";
@@ -23,6 +24,7 @@ describe("DatasetsService", () => {
   let kick: jest.Mock;
   let datasetRepository: Record<string, jest.Mock>;
   let entryRepository: Record<string, jest.Mock>;
+  let experimentRepository: Record<string, jest.Mock>;
 
   beforeEach(() => {
     hasRequiredRole = jest.fn().mockResolvedValue(undefined);
@@ -49,12 +51,15 @@ describe("DatasetsService", () => {
       createQueryBuilder: jest.fn().mockReturnValue(countBuilder),
     };
 
+    experimentRepository = { exists: jest.fn().mockResolvedValue(false) };
+
     service = new DatasetsService(
       { hasRequiredRole } as unknown as MembershipsRepository,
       { doesIntegrationBelongToOrg } as unknown as OrganizationsRepository,
       { kick } as unknown as DatasetBuildService,
       datasetRepository as never,
       entryRepository as never,
+      experimentRepository as never,
     );
   });
 
@@ -229,6 +234,19 @@ describe("DatasetsService", () => {
         MemberRole.ADMIN,
       );
       expect(datasetRepository["delete"]).toHaveBeenCalledWith({ id: "ds-1" });
+    });
+
+    it("refuses a dataset that experiments use", async () => {
+      datasetRepository["findOne"]!.mockResolvedValue({ id: "ds-1" });
+      experimentRepository["exists"]!.mockResolvedValue(true);
+
+      await expect(
+        service.delete("org-1", "ds-1", user),
+      ).rejects.toBeInstanceOf(EntityInUse);
+      expect(experimentRepository["exists"]).toHaveBeenCalledWith({
+        where: { dataset: { id: "ds-1" } },
+      });
+      expect(datasetRepository["delete"]).not.toHaveBeenCalled();
     });
 
     it("refuses a dataset of another organization", async () => {

@@ -110,7 +110,10 @@ describe("ProjectService", () => {
         },
         {
           provide: IntegrationsRepository,
-          useValue: { getIntegrationByIdAndOrganizationAndUser: jest.fn() },
+          useValue: {
+            getIntegrationByIdAndOrganizationAndUser: jest.fn(),
+            getIntegrationByIdAndOrganization: jest.fn(),
+          },
         },
         {
           provide: AnalysisResultsRepository,
@@ -129,6 +132,7 @@ describe("ProjectService", () => {
             saveProject: jest.fn(),
             getProjectById: jest.fn(),
             getProjectByUrlOrgAndUser: jest.fn(),
+            getProjectByUrlAndOrg: jest.fn(),
             getManyProjects: jest.fn(),
             deleteProject: jest.fn().mockResolvedValue(undefined),
             doesProjectBelongToOrg: jest.fn().mockResolvedValue(undefined),
@@ -378,6 +382,103 @@ describe("ProjectService", () => {
       expect(
         integrationsRepository.getIntegrationByIdAndOrganizationAndUser,
       ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("importForExperiment", () => {
+    const repo = {
+      url: "https://github.com/octo/app",
+      full_name: "octo/app",
+      description: "An app",
+      default_branch: "main",
+    };
+
+    beforeEach(() => {
+      projectsRepository.getProjectByUrlAndOrg.mockResolvedValue(null);
+      integrationsRepository.getIntegrationByIdAndOrganization.mockResolvedValue(
+        {
+          id: mockIntegrationId,
+          integration_provider: "GITHUB" as IntegrationProvider,
+        } as any,
+      );
+      usersRepository.getUserById.mockResolvedValue({
+        id: "test-user-id",
+      } as any);
+      organizationsRepository.getOrganizationById.mockResolvedValue({
+        id: mockOrgId,
+      } as any);
+      projectsRepository.saveProject.mockImplementation(
+        async (project: Project) => ({ ...project, id: "new-project-id" }),
+      );
+    });
+
+    it("reuses a project any member of the org imported from the url", async () => {
+      projectsRepository.getProjectByUrlAndOrg.mockResolvedValue({
+        id: "colleague-project-id",
+      } as Project);
+
+      await expect(
+        service.importForExperiment(
+          mockOrgId,
+          mockIntegrationId,
+          repo,
+          mockAuthenticatedUser,
+        ),
+      ).resolves.toBe("colleague-project-id");
+      expect(projectsRepository.getProjectByUrlAndOrg).toHaveBeenCalledWith(
+        repo.url,
+        mockOrgId,
+      );
+      expect(projectsRepository.saveProject).not.toHaveBeenCalled();
+    });
+
+    it("imports through an org integration the caller does not own", async () => {
+      await expect(
+        service.importForExperiment(
+          mockOrgId,
+          mockIntegrationId,
+          repo,
+          mockAuthenticatedUser,
+        ),
+      ).resolves.toBe("new-project-id");
+
+      expect(
+        integrationsRepository.getIntegrationByIdAndOrganization,
+      ).toHaveBeenCalledWith(mockIntegrationId, mockOrgId);
+      expect(
+        integrationsRepository.getIntegrationByIdAndOrganizationAndUser,
+      ).not.toHaveBeenCalled();
+      expect(
+        githubRepositoriesService.resolveGithubRepository,
+      ).not.toHaveBeenCalled();
+      const saved = projectsRepository.saveProject.mock.calls[0]![0];
+      expect(saved).toMatchObject({
+        name: "octo/app",
+        description: "An app",
+        url: "https://github.com/octo/app",
+        default_branch: "main",
+        type: "GITHUB",
+        service_domain: "github.com",
+        added_by: { id: "test-user-id" },
+      });
+      expect(saved.integration?.id).toBe(mockIntegrationId);
+      expect(mkdir).toHaveBeenCalledTimes(1);
+    });
+
+    it("refuses a caller who is not a member of the org", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockRejectedValue(new NotAuthorized());
+
+      await expect(
+        service.importForExperiment(
+          mockOrgId,
+          mockIntegrationId,
+          repo,
+          mockAuthenticatedUser,
+        ),
+      ).rejects.toThrow(NotAuthorized);
+      expect(projectsRepository.saveProject).not.toHaveBeenCalled();
     });
   });
 
