@@ -14,6 +14,7 @@ import { Result } from "../results/result.entity";
 import { Experiment } from "./experiment.entity";
 import { ExperimentResultsService } from "./experiment-results.service";
 import { ExperimentRun } from "./experiment-run.entity";
+import { ExperimentRunSubmission } from "./experiment-run-submission";
 import { ExperimentRunSummaryRow } from "./experiment-run-summary-row.entity";
 import { ExperimentRunnerService } from "./experiment-runner.service";
 import { ExperimentStore, TypeOrmExperimentStore } from "./experiment-store";
@@ -46,6 +47,7 @@ import { ExperimentsService } from "./experiments.service";
     ExperimentsService,
     ExperimentResultsService,
     ExperimentRunnerService,
+    ExperimentRunSubmission,
     { provide: ExperimentStore, useClass: TypeOrmExperimentStore },
   ],
 })

@@ -1,5 +1,4 @@
-import { Client } from "pg";
-import { DataSource, type EntityManager } from "typeorm";
+import { type DataSource, type EntityManager } from "typeorm";
 
 import { AnalysesRepository } from "../../src/base_modules/analyses/analyses.repository";
 import { AnalysesService } from "../../src/base_modules/analyses/analyses.service";
@@ -23,37 +22,7 @@ import {
 } from "../../src/base_modules/shared/repositories";
 import { User } from "../../src/base_modules/users/users.entity";
 import { Policy } from "../../src/codeclarity_modules/policies/policy.entity";
-
-// A scratch database of its own: this suite drops its schema on every run
-const DATABASE = "codeclarity_analysis_create_it";
-
-function connection(): {
-  host: string;
-  port: number;
-  user: string;
-  password: string;
-} {
-  return {
-    host: process.env["PG_DB_HOST"] ?? "localhost",
-    port: Number(process.env["PG_DB_PORT"] ?? 5432),
-    user: process.env["PG_DB_USER"] ?? "postgres",
-    password: process.env["PG_DB_PASSWORD"] ?? "",
-  };
-}
-
-async function ensureDatabase(): Promise<void> {
-  const admin = new Client({ ...connection(), database: "postgres" });
-  await admin.connect();
-  try {
-    const found = await admin.query(
-      "SELECT 1 FROM pg_database WHERE datname = $1",
-      [DATABASE],
-    );
-    if (found.rowCount === 0) await admin.query(`CREATE DATABASE ${DATABASE}`);
-  } finally {
-    await admin.end();
-  }
-}
+import { openScratchDatabase } from "../utils/scratch-database";
 
 describe("AnalysesService.create against Postgres", () => {
   let dataSource: DataSource;
@@ -65,21 +34,7 @@ describe("AnalysesService.create against Postgres", () => {
   let user: AuthenticatedUser;
 
   beforeAll(async () => {
-    await ensureDatabase();
-    const { user: username, ...rest } = connection();
-    dataSource = new DataSource({
-      type: "postgres",
-      ...rest,
-      username,
-      database: DATABASE,
-      entities: [
-        "src/base_modules/!(plugins)/**/*.entity.ts",
-        "src/codeclarity_modules/!(knowledge)/**/*.entity.ts",
-      ],
-      dropSchema: true,
-      synchronize: true,
-    });
-    await dataSource.initialize();
+    dataSource = await openScratchDatabase("codeclarity_analysis_create_it");
   });
 
   afterAll(async () => {
