@@ -8,8 +8,6 @@ import { readFileSync } from "node:fs";
 import { hostname } from "node:os";
 import { join } from "node:path";
 
-import { AnalysesService } from "src/base_modules/analyses/analyses.service";
-import { AnalysisCreateBody } from "src/base_modules/analyses/analysis.types";
 import { analysisOutcome } from "src/base_modules/analyses/analysis-outcome";
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
 import { GithubIntegrationService } from "src/base_modules/integrations/github/github.service";
@@ -23,7 +21,6 @@ import {
   type GithubRepoMetadata,
   type GithubRestClient,
 } from "src/base_modules/integrations/github/githubSearch";
-import { ProjectService } from "src/base_modules/projects/projects.service";
 import { ProvenanceService } from "src/codeclarity_modules/knowledge/provenance/provenance.service";
 import { CodeClarityLogger } from "src/services/logger.service";
 import { APIError, EntityNotFound, NotAuthorized } from "src/types/error.types";
@@ -34,6 +31,10 @@ import { GithubRateLimited, rateLimitedAt } from "../datasets/dataset-builder";
 import { Experiment, ExperimentStatus } from "./experiment.entity";
 import { isUsablePluginResult, mapRunRows } from "./experiment-row-copy";
 import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
+import {
+  ExperimentRunSubmission,
+  PinnedHead,
+} from "./experiment-run-submission";
 import { ExperimentLeaseLost, ExperimentStore } from "./experiment-store";
 import {
   EXPERIMENT_REQUIRED_PLUGINS,
@@ -63,13 +64,6 @@ class ExperimentFatal extends Error {
     super(reason);
     this.name = "ExperimentFatal";
   }
-}
-
-interface PinnedHead {
-  branch: string;
-  commitHash: string;
-  committedAt: Date | null;
-  description: string | null;
 }
 
 function analysisContext(run: ExperimentRun): { analysisId?: string } {
@@ -121,8 +115,7 @@ export class ExperimentRunnerService
   constructor(
     private readonly store: ExperimentStore,
     private readonly githubIntegrationService: GithubIntegrationService,
-    private readonly projectService: ProjectService,
-    private readonly analysesService: AnalysesService,
+    private readonly submission: ExperimentRunSubmission,
     private readonly provenanceService: ProvenanceService,
   ) {}
 
@@ -341,11 +334,13 @@ export class ExperimentRunnerService
           run.analysis.failure_reason ?? `analysis ${status}`,
         );
       } else if (this.pastCeiling(run, now)) {
+        // Fail the run before abandoning, so a cancelled analysis is never retried
         await this.store.updateRun(run.id, {
           status: ExperimentRunStatus.FAILED,
           error: "ceiling",
           ended_on: new Date(),
         });
+        await this.submission.abandon(run.analysis.id);
         this.logger.warn("Experiment run hit the ceiling", {
           experimentId: experiment.id,
           analysisId: run.analysis.id,
@@ -397,7 +392,6 @@ export class ExperimentRunnerService
     creator: AuthenticatedUser,
   ): Promise<void> {
     const entry = run.dataset_entry;
-    const orgId = experiment.organization.id;
     const logContext = { experimentId: experiment.id, runId: run.id };
 
     let head: PinnedHead;
@@ -447,26 +441,16 @@ export class ExperimentRunnerService
       return;
     }
 
-    let projectId: string;
-    let analysisId: string;
+    let analysisId: string | undefined;
     try {
-      projectId = await this.projectService.importForExperiment(
-        orgId,
+      analysisId = await this.submission.submit({
+        experiment,
+        runId: run.id,
+        entry,
         integrationId,
-        {
-          url: entry.git_url,
-          full_name: entry.full_name,
-          description: head.description,
-          default_branch: head.branch,
-        },
+        head,
         creator,
-      );
-      analysisId = await this.analysesService.create(
-        orgId,
-        projectId,
-        this.analysisBody(experiment, orgId, projectId, head),
-        creator,
-      );
+      });
     } catch (err) {
       if (err instanceof NotAuthorized) {
         throw new ExperimentFatal(
@@ -487,19 +471,15 @@ export class ExperimentRunnerService
       return;
     }
 
-    const linked = await this.store.updateRun(run.id, {
-      analysis: { id: analysisId },
-    });
-    if (!linked) {
-      this.logger.warn("Experiment run ended before its analysis was linked", {
-        ...logContext,
-        analysisId,
-      });
+    if (!analysisId) {
+      this.logger.log(
+        "Experiment run ended before it was submitted",
+        logContext,
+      );
       return;
     }
     this.logger.log("Experiment run submitted", {
       ...logContext,
-      projectId,
       analysisId,
       commitHash: head.commitHash,
     });
@@ -653,30 +633,6 @@ export class ExperimentRunnerService
     return createGithubClient(token, {
       maxThrottleWaitSeconds: MAX_THROTTLE_WAIT_SECONDS,
     });
-  }
-
-  /** Same body as the archived harness, pinned to the SHA. */
-  private analysisBody(
-    experiment: Experiment,
-    orgId: string,
-    projectId: string,
-    head: PinnedHead,
-  ): AnalysisCreateBody {
-    return {
-      analyzer_id: experiment.analyzer!.id,
-      branch: head.branch,
-      commit_hash: head.commitHash,
-      schedule_type: "once",
-      languages: ["javascript"],
-      config: {
-        [SBOM_PLUGIN]: {
-          project: `${orgId}/projects/${projectId}/${head.commitHash}`,
-          branch: head.branch,
-        },
-        [VULN_PLUGIN]: {},
-        "license-finder": { licensePolicy: [] },
-      },
-    };
   }
 
   private schedule(delayMs: number): void {

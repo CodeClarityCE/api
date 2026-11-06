@@ -1,10 +1,8 @@
-import type { AnalysesService } from "src/base_modules/analyses/analyses.service";
 import { AnalysisStatus } from "src/base_modules/analyses/analysis.entity";
 import type { GithubIntegrationService } from "src/base_modules/integrations/github/github.service";
 import * as githubSearch from "src/base_modules/integrations/github/githubSearch";
-import type { ProjectService } from "src/base_modules/projects/projects.service";
 import type { ProvenanceService } from "src/codeclarity_modules/knowledge/provenance/provenance.service";
-import { NotAuthorized, RabbitMQError } from "src/types/error.types";
+import { NotAuthorized } from "src/types/error.types";
 
 import type { DatasetEntry } from "../datasets/dataset-entry.entity";
 
@@ -14,6 +12,10 @@ import {
   type ExperimentRun,
   ExperimentRunStatus,
 } from "./experiment-run.entity";
+import type {
+  ExperimentRunSubmission,
+  RunSubmissionRequest,
+} from "./experiment-run-submission";
 import { ExperimentRunnerService } from "./experiment-runner.service";
 import {
   EXPERIMENT_LEASE_SECONDS,
@@ -200,7 +202,9 @@ class FakeStore extends ExperimentStore {
     limit: number,
   ): Promise<ExperimentRun[]> {
     return this.runsOf(experimentId)
-      .filter((r) => r.status === ExperimentRunStatus.PENDING && !r.submitted_on)
+      .filter(
+        (r) => r.status === ExperimentRunStatus.PENDING && !r.submitted_on,
+      )
       .sort((a, b) => a.dataset_entry.rank - b.dataset_entry.rank)
       .slice(0, limit)
       .map((r) => ({ ...r }));
@@ -223,6 +227,10 @@ class FakeStore extends ExperimentStore {
     if (run?.status !== ExperimentRunStatus.PENDING) return false;
     Object.assign(run, patch);
     return true;
+  }
+
+  linkRun(): Promise<boolean> {
+    throw new Error("The runner links runs through its submission");
   }
 
   async getPluginResult(analysisId: string, plugin: string): Promise<unknown> {
@@ -384,8 +392,8 @@ class FakeGithub {
 describe("ExperimentRunnerService", () => {
   let store: FakeStore;
   let github: FakeGithub;
-  let createAnalysis: jest.Mock;
-  let importProject: jest.Mock;
+  let submit: jest.Mock<Promise<string | undefined>, [RunSubmissionRequest]>;
+  let abandon: jest.Mock<Promise<void>, [string]>;
   let getProvenance: jest.Mock;
   let getToken: jest.Mock;
   let analysisCount: number;
@@ -394,8 +402,7 @@ describe("ExperimentRunnerService", () => {
     return new ExperimentRunnerService(
       store,
       { getToken } as unknown as GithubIntegrationService,
-      { importForExperiment: importProject } as unknown as ProjectService,
-      { create: createAnalysis } as unknown as AnalysesService,
+      { submit, abandon } as unknown as ExperimentRunSubmission,
       { get: getProvenance } as unknown as ProvenanceService,
     );
   }
@@ -432,7 +439,8 @@ describe("ExperimentRunnerService", () => {
         experiment: { id },
         dataset_entry: entry(rank, name),
       } as unknown as ExperimentRun);
-      if (!github.repos.has(name.toLowerCase())) github.add(name, `sha-${name}`);
+      if (!github.repos.has(name.toLowerCase()))
+        github.add(name, `sha-${name}`);
     });
     return experiment;
   }
@@ -462,16 +470,19 @@ describe("ExperimentRunnerService", () => {
       .mocked(githubSearch.createGithubClient)
       .mockImplementation(async () => github.client());
     getToken = jest.fn().mockResolvedValue({ getToken: () => "token" });
-    importProject = jest
-      .fn()
-      .mockImplementation(
-        async (_org: string, _int: string, repo: { full_name: string }) =>
-          `project-${repo.full_name}`,
-      );
-    createAnalysis = jest.fn().mockImplementation(async () => {
-      const id = `analysis-${++analysisCount}`;
+    // Like the real submission: links only a still-pending run, else leaves nothing
+    submit = jest.fn(async (request: RunSubmissionRequest) => {
+      const id = `analysis-${analysisCount + 1}`;
+      if (!(await store.updateRun(request.runId, { analysis: { id } }))) {
+        return undefined;
+      }
+      analysisCount++;
       store.analyses.set(id, { id, status: AnalysisStatus.REQUESTED });
       return id;
+    });
+    abandon = jest.fn(async (id: string) => {
+      const analysis = store.analyses.get(id);
+      if (analysis) analysis.status = AnalysisStatus.CANCELLED;
     });
     getProvenance = jest.fn().mockResolvedValue({
       knowledge_sources: { nvd: "2026-11-05T00:00:00.000Z" },
@@ -498,36 +509,21 @@ describe("ExperimentRunnerService", () => {
       submitted_on: new Date("2026-11-06T12:00:00Z"),
       analysis: { id: "analysis-1" },
     });
-    expect(importProject).toHaveBeenCalledWith(
-      ORG,
-      INTEGRATION,
-      expect.objectContaining({
-        url: "https://github.com/octo/app",
+    expect(submit).toHaveBeenCalledWith({
+      experiment: expect.objectContaining({ id: "exp-1" }),
+      runId: run.id,
+      entry: expect.objectContaining({
+        git_url: "https://github.com/octo/app",
         full_name: "octo/app",
-        default_branch: "main",
       }),
-      expect.objectContaining({ userId: CREATOR }),
-    );
-    expect(createAnalysis).toHaveBeenCalledWith(
-      ORG,
-      "project-octo/app",
-      {
-        analyzer_id: ANALYZER,
+      integrationId: INTEGRATION,
+      head: expect.objectContaining({
         branch: "main",
-        commit_hash: "sha-octo/app",
-        schedule_type: "once",
-        languages: ["javascript"],
-        config: {
-          "js-sbom": {
-            project: `${ORG}/projects/project-octo/app/sha-octo/app`,
-            branch: "main",
-          },
-          "vuln-finder": {},
-          "license-finder": { licensePolicy: [] },
-        },
-      },
-      expect.objectContaining({ userId: CREATOR }),
-    );
+        commitHash: "sha-octo/app",
+        committedAt: new Date("2026-11-01T10:00:00Z"),
+      }),
+      creator: expect.objectContaining({ userId: CREATOR }),
+    });
   });
   it("snapshots the analyzer steps and knowledge provenance when it starts", async () => {
     addExperiment("exp-1", ["octo/app"]);
@@ -584,18 +580,18 @@ describe("ExperimentRunnerService", () => {
 
     await service.tick();
 
-    expect(createAnalysis).toHaveBeenCalledTimes(3);
+    expect(submit).toHaveBeenCalledTimes(3);
     expect(store.run("a/1").submitted_on).toBeTruthy();
     expect(store.run("a/2").submitted_on).toBeTruthy();
     expect(store.run("b/1").submitted_on).toBeTruthy();
     expect(store.run("b/2").submitted_on).toBeFalsy();
 
     await service.tick();
-    expect(createAnalysis).toHaveBeenCalledTimes(3);
+    expect(submit).toHaveBeenCalledTimes(3);
 
     finishAnalysis("a/1", AnalysisStatus.SUCCESS);
     await service.tick();
-    expect(createAnalysis).toHaveBeenCalledTimes(4);
+    expect(submit).toHaveBeenCalledTimes(4);
     expect(store.run("b/2").submitted_on).toBeTruthy();
   });
 
@@ -608,10 +604,8 @@ describe("ExperimentRunnerService", () => {
 
     await service.tick();
 
-    expect(createAnalysis).toHaveBeenCalledTimes(2);
-    expect(createAnalysis.mock.calls[1]![2]).toMatchObject({
-      commit_hash: "sha-octo/app",
-    });
+    expect(submit).toHaveBeenCalledTimes(2);
+    expect(submit.mock.calls[1]![0].head.commitHash).toBe("sha-octo/app");
     expect(store.run("octo/app")).toMatchObject({
       status: ExperimentRunStatus.PENDING,
       attempts: 2,
@@ -631,7 +625,7 @@ describe("ExperimentRunnerService", () => {
 
     await service.tick();
 
-    expect(createAnalysis).toHaveBeenCalledTimes(2);
+    expect(submit).toHaveBeenCalledTimes(2);
     expect(store.run("octo/app")).toMatchObject({
       status: ExperimentRunStatus.FAILED,
       attempts: 2,
@@ -644,7 +638,7 @@ describe("ExperimentRunnerService", () => {
 
   it("counts a failed submission as an attempt and retries it", async () => {
     addExperiment("exp-1", ["octo/app"], { retries: 1 });
-    createAnalysis.mockRejectedValueOnce(new RabbitMQError(new Error("down")));
+    submit.mockRejectedValueOnce(new Error("project import failed"));
     const service = runner();
 
     await service.tick();
@@ -679,7 +673,44 @@ describe("ExperimentRunnerService", () => {
       status: ExperimentRunStatus.FAILED,
       error: "ceiling",
     });
-    expect(createAnalysis).toHaveBeenCalledTimes(1);
+    expect(submit).toHaveBeenCalledTimes(1);
+  });
+
+  it("abandons the analysis of a run that hit the ceiling", async () => {
+    process.env["EXPERIMENT_RUN_CEILING_HOURS"] = "2";
+    addExperiment("exp-1", ["octo/app"]);
+    const service = runner();
+    await service.tick();
+
+    jest.setSystemTime(Date.now() + 121 * 60 * 1000);
+    await service.tick();
+
+    expect(abandon).toHaveBeenCalledWith("analysis-1");
+    expect(store.analysisOf("octo/app").status).toBe(AnalysisStatus.CANCELLED);
+    expect(store.run("octo/app")).toMatchObject({
+      status: ExperimentRunStatus.FAILED,
+      error: "ceiling",
+    });
+  });
+
+  it("does not count an attempt against a run that ended while it was submitted", async () => {
+    addExperiment("exp-1", ["octo/app"]);
+    submit.mockImplementationOnce(async (request) => {
+      await store.updateRun(request.runId, {
+        status: ExperimentRunStatus.SKIPPED,
+        error: "cancelled",
+      });
+      return undefined;
+    });
+
+    await runner().tick();
+
+    expect(store.run("octo/app")).toMatchObject({
+      status: ExperimentRunStatus.SKIPPED,
+      error: "cancelled",
+      attempts: 1,
+    });
+    expect(store.analyses.size).toBe(0);
   });
 
   it("measures the ceiling from the first submission, across retries", async () => {
@@ -703,7 +734,7 @@ describe("ExperimentRunnerService", () => {
       status: ExperimentRunStatus.FAILED,
       error: "ceiling",
     });
-    expect(createAnalysis).toHaveBeenCalledTimes(2);
+    expect(submit).toHaveBeenCalledTimes(2);
   });
   describe("GitHub errors", () => {
     it("pauses the whole experiment until the rate limit resets, skipping nothing", async () => {
@@ -734,7 +765,7 @@ describe("ExperimentRunnerService", () => {
 
       jest.setSystemTime((reset + 1) * 1000);
       await service.tick();
-      expect(createAnalysis).toHaveBeenCalledTimes(2);
+      expect(submit).toHaveBeenCalledTimes(2);
     });
 
     it("treats a 429 as a rate limit", async () => {
@@ -743,9 +774,9 @@ describe("ExperimentRunnerService", () => {
 
       await runner().tick();
 
-      expect(store.experiments.get("exp-1")!.lease_until!.getTime()).toBeGreaterThan(
-        Date.now(),
-      );
+      expect(
+        store.experiments.get("exp-1")!.lease_until!.getTime(),
+      ).toBeGreaterThan(Date.now());
       expect(store.run("octo/app").status).toBe(ExperimentRunStatus.PENDING);
     });
 
@@ -760,7 +791,7 @@ describe("ExperimentRunnerService", () => {
       expect(experiment.error).toMatch(/GitHub authentication failed/);
       expect(experiment.ended_on).toBeDefined();
       expect(store.run("octo/app").status).toBe(ExperimentRunStatus.SKIPPED);
-      expect(createAnalysis).not.toHaveBeenCalled();
+      expect(submit).not.toHaveBeenCalled();
     });
 
     it("records the knowledge provenance at end when the experiment fails", async () => {
@@ -793,7 +824,7 @@ describe("ExperimentRunnerService", () => {
       expect(store.run("octo/app").status).toBe(ExperimentRunStatus.SKIPPED);
       expect(store.run("octo/app").error).toMatch(/^experiment failed/);
       expect(store.run("octo/lib").error).toMatch(/^experiment failed/);
-      expect(createAnalysis).not.toHaveBeenCalled();
+      expect(submit).not.toHaveBeenCalled();
     });
 
     it("fails the experiment when the integration token cannot be retrieved", async () => {
@@ -834,7 +865,7 @@ describe("ExperimentRunnerService", () => {
         attempts: 0,
       });
       expect(store.run("octo/app").status).toBe(ExperimentRunStatus.PENDING);
-      expect(createAnalysis).toHaveBeenCalledTimes(1);
+      expect(submit).toHaveBeenCalledTimes(1);
     });
 
     it("skips a run whose repository moved", async () => {
@@ -869,7 +900,7 @@ describe("ExperimentRunnerService", () => {
 
   it("fails the experiment when its creator may no longer analyze the org's projects", async () => {
     addExperiment("exp-1", ["octo/app"]);
-    importProject.mockRejectedValue(new NotAuthorized());
+    submit.mockRejectedValue(new NotAuthorized());
 
     await runner().tick();
 
@@ -900,7 +931,7 @@ describe("ExperimentRunnerService", () => {
     expect(experiment.status).toBe(ExperimentStatus.CANCELLED);
     expect(experiment.ended_on).toBeDefined();
     expect(experiment.provenance).toHaveProperty("knowledge_end");
-    expect(createAnalysis).toHaveBeenCalledTimes(1);
+    expect(submit).toHaveBeenCalledTimes(1);
   });
 
   it("does not retry an in-flight analysis that fails after cancel", async () => {
@@ -937,7 +968,7 @@ describe("ExperimentRunnerService", () => {
 
     await service.tick();
 
-    expect(createAnalysis).toHaveBeenCalledTimes(1);
+    expect(submit).toHaveBeenCalledTimes(1);
     expect(store.run("octo/app")).toMatchObject({
       status: ExperimentRunStatus.SKIPPED,
       error: "cancelled",
@@ -950,17 +981,16 @@ describe("ExperimentRunnerService", () => {
   it("links the analysis of a run submitted while cancel commits, and submits no other run", async () => {
     process.env["EXPERIMENT_MAX_IN_FLIGHT"] = "2";
     addExperiment("exp-1", ["octo/app", "octo/lib"]);
-    const create = createAnalysis.getMockImplementation()!;
-    createAnalysis.mockImplementationOnce(async (...args: unknown[]) => {
+    const realSubmit = submit.getMockImplementation()!;
+    submit.mockImplementationOnce(async (request) => {
       await store.cancel("exp-1");
-      return create(...args);
+      return realSubmit(request);
     });
     const service = runner();
 
     await service.tick();
 
-    expect(createAnalysis).toHaveBeenCalledTimes(1);
-    expect(importProject).toHaveBeenCalledTimes(1);
+    expect(submit).toHaveBeenCalledTimes(1);
     expect(store.run("octo/app")).toMatchObject({
       status: ExperimentRunStatus.PENDING,
       analysis: { id: "analysis-1" },
@@ -1001,7 +1031,7 @@ describe("ExperimentRunnerService", () => {
     expect(store.experiments.get("exp-1")!.status).toBe(
       ExperimentStatus.COMPLETED,
     );
-    expect(createAnalysis).toHaveBeenCalledTimes(1);
+    expect(submit).toHaveBeenCalledTimes(1);
   });
 
   describe("row copy", () => {

@@ -136,8 +136,21 @@ export abstract class ExperimentStore {
   /** Apply a patch to a run that is still pending. False if it was not. */
   abstract updateRun(runId: string, patch: RunPatch): Promise<boolean>;
 
+  /**
+   * Link a still-pending run to its analysis inside the caller's transaction.
+   * False if the run was no longer pending.
+   */
+  abstract linkRun(
+    manager: EntityManager,
+    runId: string,
+    analysisId: string,
+  ): Promise<boolean>;
+
   /** A plugin's stored result payload for an analysis, null if it has none. */
-  abstract getPluginResult(analysisId: string, plugin: string): Promise<unknown>;
+  abstract getPluginResult(
+    analysisId: string,
+    plugin: string,
+  ): Promise<unknown>;
 
   /**
    * In one transaction, replace the run's copied rows with these and mark it
@@ -370,6 +383,23 @@ export class TypeOrmExperimentStore extends ExperimentStore {
           : { error: fields.error?.slice(0, ERROR_MAX_LENGTH) ?? null }),
         ...(analysis ? { analysis: { id: analysis.id } } : {}),
       })
+      .where("id = :id AND status = :pending", {
+        id: runId,
+        pending: ExperimentRunStatus.PENDING,
+      })
+      .execute();
+    return Boolean(result.affected);
+  }
+
+  async linkRun(
+    manager: EntityManager,
+    runId: string,
+    analysisId: string,
+  ): Promise<boolean> {
+    const result = await manager
+      .createQueryBuilder()
+      .update(ExperimentRun)
+      .set({ analysis: { id: analysisId } })
       .where("id = :id AND status = :pending", {
         id: runId,
         pending: ExperimentRunStatus.PENDING,
