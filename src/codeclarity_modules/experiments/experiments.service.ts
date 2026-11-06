@@ -19,8 +19,18 @@ import { DatasetEntry } from "../datasets/dataset-entry.entity";
 import { paginated, resolvePagination } from "../datasets/datasets.service";
 
 import { Experiment, ExperimentStatus } from "./experiment.entity";
+import {
+  aggregateExperimentResults,
+  type ExperimentResults,
+  type KnowledgeSnapshot,
+  type ResultsProvenanceInput,
+  type ResultsSummaryInput,
+  type ResultsVulnerabilityInput,
+} from "./experiment-results";
 import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
+import { ExperimentRunSummaryRow } from "./experiment-run-summary-row.entity";
 import { ExperimentRunnerService } from "./experiment-runner.service";
+import { ExperimentVulnerabilityInstance } from "./experiment-vulnerability-instance.entity";
 import {
   AnalyzerMissingRequiredPlugins,
   DatasetNotReady,
@@ -67,6 +77,10 @@ export class ExperimentsService {
     @InjectRepository(DatasetEntry, "codeclarity")
     private readonly entryRepository: Repository<DatasetEntry>,
     private readonly runner: ExperimentRunnerService,
+    @InjectRepository(ExperimentRunSummaryRow, "codeclarity")
+    private readonly summaryRepository: Repository<ExperimentRunSummaryRow>,
+    @InjectRepository(ExperimentVulnerabilityInstance, "codeclarity")
+    private readonly vulnerabilityRepository: Repository<ExperimentVulnerabilityInstance>,
   ) {}
 
   /**
@@ -317,6 +331,67 @@ export class ExperimentsService {
     });
   }
 
+  /**
+   * The dataset-level results of an experiment, computed from its copied
+   * rows on every read (ADR 0001). Results of a running or cancelled
+   * experiment cover the runs done so far.
+   * @throws {NotAuthorized} If the user is not a member of the org
+   * @throws {EntityNotFound} If the org has no such experiment
+   */
+  async getResults(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+  ): Promise<ExperimentResults> {
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.USER,
+    );
+    const experiment = await this.findInOrg(orgId, experimentId);
+
+    const [runs, summaries, vulnerabilities] = await Promise.all([
+      this.runRepository.find({
+        where: { experiment: { id: experiment.id } },
+        select: { id: true, status: true, error: true },
+      }),
+      this.summaryRepository
+        .createQueryBuilder("summary")
+        .innerJoin("summary.run", "run")
+        .innerJoin("run.dataset_entry", "entry")
+        .select('summary."runId"', "run_id")
+        .addSelect("entry.rank", "rank")
+        .addSelect("summary.total_dependencies", "total_dependencies")
+        .addSelect("summary.total_vulnerabilities", "total_vulnerabilities")
+        .addSelect("summary.package_manager", "package_manager")
+        .where('summary."experimentId" = :experimentId', {
+          experimentId: experiment.id,
+        })
+        .getRawMany<ResultsSummaryInput>(),
+      this.vulnerabilityRepository
+        .createQueryBuilder("instance")
+        .select('instance."runId"', "run_id")
+        .addSelect("instance.affected_dependency", "affected_dependency")
+        .addSelect("instance.vulnerability_id", "vulnerability_id")
+        .addSelect("instance.severity_class", "severity_class")
+        .addSelect("instance.epss_score", "epss_score")
+        .addSelect("instance.conflict_flag", "conflict_flag")
+        .addSelect("instance.winning_source", "winning_source")
+        .addSelect("instance.withdrawn_date", "withdrawn_date")
+        .where('instance."experimentId" = :experimentId', {
+          experimentId: experiment.id,
+        })
+        .getRawMany<ResultsVulnerabilityInput>(),
+    ]);
+
+    return aggregateExperimentResults({
+      runs: runs.map((run) => ({ status: run.status, error: run.error ?? null })),
+      summaries,
+      vulnerabilities,
+      provenance: provenanceInput(experiment),
+    });
+  }
+
   private async findInOrg(
     orgId: string,
     experimentId: string,
@@ -359,7 +434,6 @@ export class ExperimentsService {
     experiment: Experiment,
     runCounts: ExperimentRunCounts = emptyRunCounts(),
   ): ExperimentSummary {
-    const creator = experiment.created_by;
     return {
       id: experiment.id,
       name: experiment.name,
@@ -371,9 +445,7 @@ export class ExperimentsService {
       analyzer_id: experiment.analyzer?.id ?? null,
       analyzer_name: experiment.analyzer?.name ?? null,
       analyzer_steps: experiment.analyzer_steps ?? null,
-      created_by_name: creator
-        ? `${creator.first_name} ${creator.last_name}`
-        : null,
+      created_by_name: creatorName(experiment),
       created_on: experiment.created_on,
       started_on: experiment.started_on ?? null,
       ended_on: experiment.ended_on ?? null,
@@ -381,6 +453,35 @@ export class ExperimentsService {
       run_counts: runCounts,
     };
   }
+}
+
+function creatorName(experiment: Experiment): string | null {
+  const creator = experiment.created_by;
+  return creator ? `${creator.first_name} ${creator.last_name}` : null;
+}
+
+function knowledgeSnapshot(value: unknown): KnowledgeSnapshot | null {
+  return typeof value === "object" &&
+    value !== null &&
+    "knowledge_sources" in value
+    ? (value as KnowledgeSnapshot)
+    : null;
+}
+
+/** The provenance the runner recorded on the experiment, as results show it. */
+function provenanceInput(experiment: Experiment): ResultsProvenanceInput {
+  const recorded = experiment.provenance ?? {};
+  const apiVersion = recorded["api_version"];
+  return {
+    api_version: typeof apiVersion === "string" ? apiVersion : null,
+    analyzer_steps: experiment.analyzer_steps ?? null,
+    knowledge_start: knowledgeSnapshot(recorded["knowledge_start"]),
+    knowledge_end: knowledgeSnapshot(recorded["knowledge_end"]),
+    created_by: creatorName(experiment),
+    created_on: experiment.created_on,
+    started_on: experiment.started_on ?? null,
+    ended_on: experiment.ended_on ?? null,
+  };
 }
 
 function emptyRunCounts(): ExperimentRunCounts {

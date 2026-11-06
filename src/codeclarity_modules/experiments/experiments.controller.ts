@@ -26,6 +26,7 @@ import {
   TypedResponse,
 } from "src/types/apiResponses.types";
 
+import type { ExperimentResults } from "./experiment-results";
 import { ExperimentsService } from "./experiments.service";
 import {
   CreateExperimentBody,
@@ -112,6 +113,27 @@ export class ExperimentsController {
       { currentPage: page, entriesPerPage: entries_per_page },
       user,
     );
+  }
+
+  @Get(":experiment_id/results")
+  @ApiOperation({
+    summary:
+      "Dataset-level results of an experiment, computed from its done runs",
+  })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  async getResults(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+  ): Promise<TypedResponse<ExperimentResults>> {
+    return {
+      data: await this.experimentsService.getResults(
+        org_id,
+        experiment_id,
+        user,
+      ),
+    };
   }
 
   @Post(":experiment_id/cancel")
