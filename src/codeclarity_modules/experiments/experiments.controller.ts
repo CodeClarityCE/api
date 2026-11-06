@@ -8,14 +8,17 @@ import {
   ParseIntPipe,
   Post,
   Query,
+  Res,
 } from "@nestjs/common";
 import {
   ApiOperation,
   ApiParam,
+  ApiProduces,
   ApiQuery,
   ApiResponse,
   ApiTags,
 } from "@nestjs/swagger";
+import type { FastifyReply } from "fastify";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { AuthUser } from "src/decorators/UserDecorator";
@@ -33,6 +36,15 @@ import {
   ExperimentRunSummary,
   ExperimentSummary,
 } from "./experiments.types";
+
+const CSV_CONTENT_TYPE = "text/csv; charset=utf-8";
+const JSON_CONTENT_TYPE = "application/json; charset=utf-8";
+
+/** An attachment header naming the file after the experiment. */
+function attachment(experimentName: string, file: string): string {
+  const safeName = experimentName.replace(/[^A-Za-z0-9._-]/g, "_");
+  return `attachment; filename="${safeName}-${file}"`;
+}
 
 @ApiTags("Experiments")
 @Controller("org/:org_id/experiments")
@@ -134,6 +146,86 @@ export class ExperimentsController {
         user,
       ),
     };
+  }
+
+  /*
+   * Downloads write to the raw reply (@Res), bypassing the response body
+   * interceptor: the CSVs stream chunk by chunk and are never buffered.
+   * Authorization and the 404 happen before any header is sent.
+   */
+
+  @Get(":experiment_id/export/runs.csv")
+  @ApiOperation({
+    summary:
+      "Download one CSV row per run: state, pinned commit, entry, summary",
+  })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiProduces("text/csv")
+  async exportRunsCsv(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Res() reply: FastifyReply,
+  ): Promise<void> {
+    const { experiment_name, stream } =
+      await this.experimentsService.exportRunsCsv(org_id, experiment_id, user);
+    await reply
+      .header("content-type", CSV_CONTENT_TYPE)
+      .header("content-disposition", attachment(experiment_name, "runs.csv"))
+      .send(stream);
+  }
+
+  @Get(":experiment_id/export/vulnerabilities.csv")
+  @ApiOperation({
+    summary: "Download one CSV row per vulnerability instance of done runs",
+  })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiProduces("text/csv")
+  async exportVulnerabilitiesCsv(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Res() reply: FastifyReply,
+  ): Promise<void> {
+    const { experiment_name, stream } =
+      await this.experimentsService.exportVulnerabilitiesCsv(
+        org_id,
+        experiment_id,
+        user,
+      );
+    await reply
+      .header("content-type", CSV_CONTENT_TYPE)
+      .header(
+        "content-disposition",
+        attachment(experiment_name, "vulnerabilities.csv"),
+      )
+      .send(stream);
+  }
+
+  @Get(":experiment_id/export/results.json")
+  @ApiOperation({
+    summary: "Download the results payload (not wrapped in data) as a file",
+  })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiProduces("application/json")
+  async exportResults(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Res() reply: FastifyReply,
+  ): Promise<void> {
+    const { experiment_name, results } =
+      await this.experimentsService.exportResults(org_id, experiment_id, user);
+    await reply
+      .header("content-type", JSON_CONTENT_TYPE)
+      .header(
+        "content-disposition",
+        attachment(experiment_name, "results.json"),
+      )
+      .send(JSON.stringify(results, null, 2));
   }
 
   @Post(":experiment_id/cancel")

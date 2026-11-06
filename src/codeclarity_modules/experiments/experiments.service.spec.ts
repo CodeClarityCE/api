@@ -581,4 +581,64 @@ describe("ExperimentsService", () => {
       expect(vulnerabilityRows).not.toHaveBeenCalled();
     });
   });
+
+  describe("exports", () => {
+    const exports = [
+      ["exportRunsCsv"],
+      ["exportVulnerabilitiesCsv"],
+      ["exportResults"],
+    ] as const;
+
+    it.each(exports)(
+      "%s requires membership and names the experiment",
+      async (method) => {
+        experimentRepository["findOne"]!.mockResolvedValue({
+          id: "exp-1",
+          name: "top100-head",
+          created_on: new Date("2026-11-06T00:00:00Z"),
+        });
+
+        const exported = await service[method]("org-1", "exp-1", user);
+
+        expect(hasRequiredRole).toHaveBeenCalledWith(
+          "org-1",
+          "user-1",
+          MemberRole.USER,
+        );
+        expect(experimentRepository["findOne"]).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { id: "exp-1", organization: { id: "org-1" } },
+          }),
+        );
+        expect(exported.experiment_name).toBe("top100-head");
+        if ("stream" in exported) exported.stream.destroy();
+      },
+    );
+
+    it.each(exports)(
+      "%s hides experiments of other organizations",
+      async (method) => {
+        experimentRepository["findOne"]!.mockResolvedValue(null);
+
+        await expect(
+          service[method]("org-1", "exp-9", user),
+        ).rejects.toBeInstanceOf(EntityNotFound);
+      },
+    );
+
+    it("exportResults carries the results payload", async () => {
+      experimentRepository["findOne"]!.mockResolvedValue({
+        id: "exp-1",
+        name: "top100-head",
+        created_on: new Date("2026-11-06T00:00:00Z"),
+      });
+      runRepository["find"]!.mockResolvedValue([
+        { status: "failed", error: "missing result: js-sbom" },
+      ]);
+
+      const { results } = await service.exportResults("org-1", "exp-1", user);
+
+      expect(results.coverage).toMatchObject({ runs: 1, failed: 1 });
+    });
+  });
 });
