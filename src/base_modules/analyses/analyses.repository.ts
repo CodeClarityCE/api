@@ -6,22 +6,9 @@ import {
   Analysis,
   AnalysisStatus,
 } from "src/base_modules/analyses/analysis.entity";
+import { TERMINAL_ANALYSIS_STATUSES } from "src/base_modules/analyses/analysis-outcome";
 import { EntityNotFound, NotAuthorized } from "src/types/error.types";
 import { TypedPaginatedData } from "src/types/pagination.types";
-
-/**
- * Statuses considered terminal: an analysis in one of these states is no longer
- * advancing through stages, so it is neither cancellable nor in-flight. The list
- * spans both the TypeScript and Go status spellings since worker-written rows use
- * the Go enum values ("failure" vs "failed").
- */
-export const TERMINAL_ANALYSIS_STATUSES: string[] = [
-  AnalysisStatus.COMPLETED,
-  AnalysisStatus.SUCCESS,
-  AnalysisStatus.FAILED,
-  AnalysisStatus.CANCELLED,
-  "failure",
-];
 
 /** Caller writes committed in the same transaction as a new analysis. */
 export type AnalysisWrites = (
@@ -101,7 +88,7 @@ export class AnalysesRepository {
   async cancelByIds(ids: string[]): Promise<number> {
     if (ids.length === 0) return 0;
     const res = await this.analysisRepository.update(
-      { id: In(ids), status: Not(In(TERMINAL_ANALYSIS_STATUSES)) },
+      { id: In(ids), status: Not(In([...TERMINAL_ANALYSIS_STATUSES])) },
       { status: AnalysisStatus.CANCELLED, ended_on: new Date() },
     );
     return res.affected ?? 0;

@@ -43,11 +43,8 @@ import {
   UsersRepository,
 } from "../shared/repositories";
 
-import {
-  AnalysesRepository,
-  AnalysisWrites,
-  TERMINAL_ANALYSIS_STATUSES,
-} from "./analyses.repository";
+import { AnalysesRepository, AnalysisWrites } from "./analyses.repository";
+import { analysisOutcome } from "./analysis-outcome";
 import { AnalysisPublisher } from "./analysis-publisher";
 
 /** Configuration option for an analyzer step */
@@ -644,7 +641,7 @@ export class AnalysesService {
       const status = statusById.get(id);
       if (status === undefined) {
         notFound.push(id);
-      } else if (TERMINAL_ANALYSIS_STATUSES.includes(status)) {
+      } else if (analysisOutcome(status) !== "running") {
         skipped.push(id);
       } else {
         cancellable.push(id);
