@@ -1,0 +1,192 @@
+{
+  "headline": {
+    "n_projects": 98,
+    "n_affected": 87,
+    "affected_share": 0.8877551020408163,
+    "instances": 16304,
+    "distinct_vuln_packages": 277,
+    "load_median": 29,
+    "load_mean": 166.3673469387755,
+    "load_max": 2801,
+    "sev_counts": {
+      "CRITICAL": 473,
+      "HIGH": 6961,
+      "MEDIUM": 5277,
+      "LOW": 1149,
+      "NONE": 2444
+    },
+    "high_critical_share": 0.45596172718351324,
+    "top10_pkg_share": 0.5011653581943082,
+    "top10_proj_share": 0.6986015701668302,
+    "gini_pkg": 0.8328881220705512,
+    "gini_proj": 0.7907324607958983,
+    "pkgs_clear_50": 10,
+    "pkgs_clear_80": 35,
+    "pkgs_clear_90": 61,
+    "top_packages": [
+      [
+        "brace-expansion",
+        75
+      ],
+      [
+        "nanoid",
+        60
+      ],
+      [
+        "js-yaml",
+        54
+      ],
+      [
+        "negotiator",
+        48
+      ],
+      [
+        "fast-uri",
+        43
+      ],
+      [
+        "esbuild",
+        32
+      ],
+      [
+        "postcss",
+        31
+      ],
+      [
+        "uuid",
+        31
+      ],
+      [
+        "ajv",
+        30
+      ],
+      [
+        "clone",
+        30
+      ]
+    ],
+    "high_critical_share_of_classed": 0.5363636363636364
+  },
+  "sweep": [
+    {
+      "subset": "all",
+      "n_projects": 98,
+      "n_affected": 87,
+      "affected_share": 0.887755102,
+      "instances": 16304,
+      "distinct_vuln_packages": 277,
+      "load_median": 29,
+      "load_mean": 166.3673469388,
+      "load_max": 2801,
+      "high_critical_share": 0.4559617272,
+      "top10_pkg_share": 0.5011653582,
+      "top10_proj_share": 0.6986015702,
+      "gini_pkg": 0.8328881221,
+      "gini_proj": 0.7907324608,
+      "pkgs_clear_50": 10,
+      "pkgs_clear_80": 35,
+      "pkgs_clear_90": 61
+    },
+    {
+      "subset": "match_correct_only",
+      "n_projects": 98,
+      "n_affected": 74,
+      "affected_share": 0.7551020408,
+      "instances": 13111,
+      "distinct_vuln_packages": 237,
+      "load_median": 18.5,
+      "load_mean": 133.7857142857,
+      "load_max": 2532,
+      "high_critical_share": 0.4763938677,
+      "top10_pkg_share": 0.5374876058,
+      "top10_proj_share": 0.7274044695,
+      "gini_pkg": 0.8333801584,
+      "gini_proj": 0.8180488731,
+      "pkgs_clear_50": 9,
+      "pkgs_clear_80": 30,
+      "pkgs_clear_90": 51
+    },
+    {
+      "subset": "non_withdrawn",
+      "n_projects": 98,
+      "n_affected": 87,
+      "affected_share": 0.887755102,
+      "instances": 15870,
+      "distinct_vuln_packages": 271,
+      "load_median": 28,
+      "load_mean": 161.9387755102,
+      "load_max": 2779,
+      "high_critical_share": 0.4553245117,
+      "top10_pkg_share": 0.5127284184,
+      "top10_proj_share": 0.7032766226,
+      "gini_pkg": 0.8339334584,
+      "gini_proj": 0.7925697311,
+      "pkgs_clear_50": 10,
+      "pkgs_clear_80": 34,
+      "pkgs_clear_90": 58
+    },
+    {
+      "subset": "direct_only",
+      "n_projects": 98,
+      "n_affected": 0,
+      "affected_share": 0,
+      "instances": 0,
+      "distinct_vuln_packages": 0,
+      "load_median": 0,
+      "load_mean": 0,
+      "load_max": 0,
+      "high_critical_share": null,
+      "top10_pkg_share": null,
+      "top10_proj_share": null,
+      "gini_pkg": null,
+      "gini_proj": null,
+      "pkgs_clear_50": 0,
+      "pkgs_clear_80": 0,
+      "pkgs_clear_90": 0
+    }
+  ],
+  "epss": {
+    "nonnull_share": 0.9435107948969578,
+    "median": 0.00168,
+    "p90": 0.00623,
+    "over_10pct": 186,
+    "over_50pct": 107,
+    "missing_non_cve": 900,
+    "missing_cve": 21
+  },
+  "match_flags": {
+    "MATCH_CORRECT": 13111,
+    "MATCH_POSSIBLE_INCORRECT": 3193
+  },
+  "winning_source_head": {
+    "OSV": 12966,
+    "GCVE": 2972,
+    "NVD": 366
+  },
+  "rqc": {
+    "spearman_rho": 0.01525889253571939,
+    "p": 0.8820720264854418,
+    "n": 97,
+    "excluded_zero_dep_projects": 1
+  },
+  "rqd": [
+    {
+      "package_manager": "NPM",
+      "projects": 38,
+      "med_deps": 648,
+      "med_vulns": 24.5
+    },
+    {
+      "package_manager": "PNPM",
+      "projects": 43,
+      "med_deps": 2058,
+      "med_vulns": 28
+    },
+    {
+      "package_manager": "YARN",
+      "projects": 17,
+      "med_deps": 15884,
+      "med_vulns": 221
+    }
+  ]
+}
