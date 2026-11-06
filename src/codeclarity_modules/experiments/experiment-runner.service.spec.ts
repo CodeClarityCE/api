@@ -167,10 +167,19 @@ class FakeStore extends ExperimentStore {
     }
   }
 
+  async getStatus(id: string): Promise<ExperimentStatus | null> {
+    return this.experiments.get(id)?.status ?? null;
+  }
+
   async cancel(id: string): Promise<boolean> {
     const experiment = this.experiments.get(id);
     if (!experiment || !NON_TERMINAL.has(experiment.status)) return false;
     experiment.status = ExperimentStatus.CANCELLED;
+    await this.skipUnsubmitted(id);
+    return true;
+  }
+
+  async skipUnsubmitted(id: string): Promise<void> {
     for (const run of this.runsOf(id)) {
       if (run.status === ExperimentRunStatus.PENDING && !run.submitted_on) {
         run.status = ExperimentRunStatus.SKIPPED;
@@ -178,7 +187,6 @@ class FakeStore extends ExperimentStore {
         run.ended_on = new Date();
       }
     }
-    return true;
   }
 
   async getInFlightRuns(experimentId: string): Promise<ExperimentRun[]> {
@@ -673,6 +681,30 @@ describe("ExperimentRunnerService", () => {
     });
     expect(createAnalysis).toHaveBeenCalledTimes(1);
   });
+
+  it("measures the ceiling from the first submission, across retries", async () => {
+    process.env["EXPERIMENT_RUN_CEILING_HOURS"] = "2";
+    addExperiment("exp-1", ["octo/app"]);
+    const service = runner();
+    await service.tick();
+
+    jest.setSystemTime(Date.now() + 90 * 60 * 1000);
+    finishAnalysis("octo/app", AnalysisStatus.FAILED, "clone failed");
+    await service.tick();
+    expect(store.run("octo/app")).toMatchObject({
+      status: ExperimentRunStatus.PENDING,
+      attempts: 2,
+    });
+
+    jest.setSystemTime(Date.now() + 40 * 60 * 1000);
+    await service.tick();
+
+    expect(store.run("octo/app")).toMatchObject({
+      status: ExperimentRunStatus.FAILED,
+      error: "ceiling",
+    });
+    expect(createAnalysis).toHaveBeenCalledTimes(2);
+  });
   describe("GitHub errors", () => {
     it("pauses the whole experiment until the rate limit resets, skipping nothing", async () => {
       addExperiment("exp-1", ["octo/app", "octo/lib"]);
@@ -728,6 +760,39 @@ describe("ExperimentRunnerService", () => {
       expect(experiment.error).toMatch(/GitHub authentication failed/);
       expect(experiment.ended_on).toBeDefined();
       expect(store.run("octo/app").status).toBe(ExperimentRunStatus.SKIPPED);
+      expect(createAnalysis).not.toHaveBeenCalled();
+    });
+
+    it("records the knowledge provenance at end when the experiment fails", async () => {
+      addExperiment("exp-1", ["octo/app"]);
+      github.getError = githubError(401, "Bad credentials");
+      getProvenance
+        .mockResolvedValueOnce({ knowledge_sources: {}, epss_rows: 10 })
+        .mockResolvedValueOnce({ knowledge_sources: {}, epss_rows: 11 });
+
+      await runner().tick();
+
+      expect(store.experiments.get("exp-1")!.provenance).toMatchObject({
+        knowledge_start: { epss_rows: 10 },
+        knowledge_end: { epss_rows: 11 },
+      });
+    });
+
+    it("fails the experiment on a 403 that is not a rate limit (revoked scope, SSO)", async () => {
+      addExperiment("exp-1", ["octo/app", "octo/lib"]);
+      github.getError = githubError(
+        403,
+        "Resource protected by organization SAML enforcement",
+      );
+
+      await runner().tick();
+
+      const experiment = store.experiments.get("exp-1")!;
+      expect(experiment.status).toBe(ExperimentStatus.FAILED);
+      expect(experiment.error).toMatch(/GitHub access denied/);
+      expect(store.run("octo/app").status).toBe(ExperimentRunStatus.SKIPPED);
+      expect(store.run("octo/app").error).toMatch(/^experiment failed/);
+      expect(store.run("octo/lib").error).toMatch(/^experiment failed/);
       expect(createAnalysis).not.toHaveBeenCalled();
     });
 
@@ -854,6 +919,64 @@ describe("ExperimentRunnerService", () => {
     expect(store.experiments.get("exp-1")!.status).toBe(
       ExperimentStatus.CANCELLED,
     );
+  });
+
+  it("ends CANCELLED when cancel commits during a pass in which an analysis fails, submitting nothing more", async () => {
+    process.env["EXPERIMENT_MAX_IN_FLIGHT"] = "1";
+    addExperiment("exp-1", ["octo/app", "octo/lib"]);
+    const service = runner();
+    await service.tick();
+    finishAnalysis("octo/app", AnalysisStatus.FAILED, "clone failed");
+    const getInFlightRuns = store.getInFlightRuns.bind(store);
+    jest
+      .spyOn(store, "getInFlightRuns")
+      .mockImplementationOnce(async (experimentId) => {
+        await store.cancel(experimentId);
+        return getInFlightRuns(experimentId);
+      });
+
+    await service.tick();
+
+    expect(createAnalysis).toHaveBeenCalledTimes(1);
+    expect(store.run("octo/app")).toMatchObject({
+      status: ExperimentRunStatus.SKIPPED,
+      error: "cancelled",
+    });
+    const experiment = store.experiments.get("exp-1")!;
+    expect(experiment.status).toBe(ExperimentStatus.CANCELLED);
+    expect(experiment.ended_on).toBeTruthy();
+  });
+
+  it("links the analysis of a run submitted while cancel commits, and submits no other run", async () => {
+    process.env["EXPERIMENT_MAX_IN_FLIGHT"] = "2";
+    addExperiment("exp-1", ["octo/app", "octo/lib"]);
+    const create = createAnalysis.getMockImplementation()!;
+    createAnalysis.mockImplementationOnce(async (...args: unknown[]) => {
+      await store.cancel("exp-1");
+      return create(...args);
+    });
+    const service = runner();
+
+    await service.tick();
+
+    expect(createAnalysis).toHaveBeenCalledTimes(1);
+    expect(importProject).toHaveBeenCalledTimes(1);
+    expect(store.run("octo/app")).toMatchObject({
+      status: ExperimentRunStatus.PENDING,
+      analysis: { id: "analysis-1" },
+    });
+    expect(store.run("octo/lib")).toMatchObject({
+      status: ExperimentRunStatus.SKIPPED,
+      error: "cancelled",
+    });
+
+    finishAnalysis("octo/app", AnalysisStatus.SUCCESS);
+    await service.tick();
+
+    expect(store.run("octo/app").status).toBe(ExperimentRunStatus.DONE);
+    const experiment = store.experiments.get("exp-1")!;
+    expect(experiment.status).toBe(ExperimentStatus.CANCELLED);
+    expect(experiment.ended_on).toBeTruthy();
   });
 
   it("refuses to cancel an experiment that already ended", async () => {

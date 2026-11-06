@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { IsNull, Not, Repository } from "typeorm";
+import { EntityManager, IsNull, Not, Repository } from "typeorm";
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity";
 
 import { Result } from "../results/result.entity";
@@ -43,6 +43,7 @@ export type RunPatch = Partial<
     | "commit_hash"
     | "committed_at"
     | "submitted_on"
+    | "first_submitted_on"
     | "ended_on"
   >
 > & { analysis?: { id: string } };
@@ -83,6 +84,9 @@ export abstract class ExperimentStore {
   /** With organization, created_by, dataset.integration and analyzer. */
   abstract getExperiment(id: string): Promise<Experiment | null>;
 
+  /** The status as committed now, null if the experiment is gone. */
+  abstract getStatus(id: string): Promise<ExperimentStatus | null>;
+
   /**
    * PENDING to RUNNING, with what was snapshotted at start.
    * @throws {ExperimentLeaseLost} If the lease is no longer ours
@@ -108,6 +112,12 @@ export abstract class ExperimentStore {
    * runs are left to finish. False if the experiment had already ended.
    */
   abstract cancel(id: string): Promise<boolean>;
+
+  /**
+   * Skip the unsubmitted runs of a cancelled experiment, such as a failed
+   * attempt that was set up for a retry while cancel committed.
+   */
+  abstract skipUnsubmitted(experimentId: string): Promise<void>;
 
   /** In-flight runs with their analysis and dataset entry. */
   abstract getInFlightRuns(experimentId: string): Promise<ExperimentRun[]>;
@@ -220,6 +230,14 @@ export class TypeOrmExperimentStore extends ExperimentStore {
     });
   }
 
+  async getStatus(id: string): Promise<ExperimentStatus | null> {
+    const experiment = await this.experimentRepository.findOne({
+      where: { id },
+      select: { id: true, status: true },
+    });
+    return experiment?.status ?? null;
+  }
+
   async start(
     id: string,
     owner: string,
@@ -285,21 +303,13 @@ export class TypeOrmExperimentStore extends ExperimentStore {
         })
         .execute();
       if (!update.affected) return false;
-      await manager.update(
-        ExperimentRun,
-        {
-          experiment: { id },
-          status: ExperimentRunStatus.PENDING,
-          submitted_on: IsNull(),
-        },
-        {
-          status: ExperimentRunStatus.SKIPPED,
-          error: "cancelled",
-          ended_on: new Date(),
-        },
-      );
+      await this.skipUnsubmittedWith(manager, id);
       return true;
     });
+  }
+
+  async skipUnsubmitted(experimentId: string): Promise<void> {
+    await this.skipUnsubmittedWith(this.runRepository.manager, experimentId);
   }
 
   async getInFlightRuns(experimentId: string): Promise<ExperimentRun[]> {
@@ -423,6 +433,25 @@ export class TypeOrmExperimentStore extends ExperimentStore {
       );
       return true;
     });
+  }
+
+  private async skipUnsubmittedWith(
+    manager: EntityManager,
+    experimentId: string,
+  ): Promise<void> {
+    await manager.update(
+      ExperimentRun,
+      {
+        experiment: { id: experimentId },
+        status: ExperimentRunStatus.PENDING,
+        submitted_on: IsNull(),
+      },
+      {
+        status: ExperimentRunStatus.SKIPPED,
+        error: "cancelled",
+        ended_on: new Date(),
+      },
+    );
   }
 
   /** @throws {ExperimentLeaseLost} If the lease is no longer ours */

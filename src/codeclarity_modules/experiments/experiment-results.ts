@@ -412,7 +412,9 @@ function coverage(runs: readonly ResultsRunInput[]): CoverageBlock {
   };
 }
 
-function sameSources(a: KnowledgeSnapshot, b: KnowledgeSnapshot): boolean {
+/** The same source timestamps and the same number of EPSS rows. */
+function sameKnowledge(a: KnowledgeSnapshot, b: KnowledgeSnapshot): boolean {
+  if (a.epss_rows !== b.epss_rows) return false;
   const keys = new Set([
     ...Object.keys(a.knowledge_sources),
     ...Object.keys(b.knowledge_sources),
@@ -427,7 +429,7 @@ function provenance(input: ResultsProvenanceInput): ProvenanceBlock {
   const { knowledge_start: start, knowledge_end: end } = input;
   return {
     ...input,
-    knowledge_changed: start !== null && end !== null && !sameSources(start, end),
+    knowledge_changed: start !== null && end !== null && !sameKnowledge(start, end),
   };
 }
 

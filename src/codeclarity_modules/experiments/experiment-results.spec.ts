@@ -320,6 +320,26 @@ describe("aggregateExperimentResults", () => {
       expect(same.knowledge_changed).toBe(false);
     });
 
+    it("flags a change in the EPSS rows even when every source is unchanged", () => {
+      const base = input().provenance;
+      const changed = aggregateExperimentResults(
+        input({
+          provenance: {
+            ...base,
+            knowledge_start: snapshot("2026-11-01T00:00:00Z") as never,
+            knowledge_end: {
+              knowledge_sources: {
+                nvd: "2026-11-01T00:00:00Z",
+                osv: "2026-11-01T00:00:00Z",
+              },
+              epss_rows: 12,
+            },
+          },
+        }),
+      ).provenance;
+      expect(changed.knowledge_changed).toBe(true);
+    });
+
     it("does not flag a change before the end snapshot exists", () => {
       const base = input().provenance;
       const running = aggregateExperimentResults(

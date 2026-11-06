@@ -73,6 +73,12 @@ export class ExperimentRun {
   @Column("timestamptz", { nullable: true })
   submitted_on?: Date | null;
 
+  /** When the first analysis was submitted: retries never reset the ceiling */
+  @ApiProperty()
+  @Expose()
+  @Column("timestamptz", { nullable: true })
+  first_submitted_on?: Date | null;
+
   @ApiProperty()
   @Expose()
   @Column("timestamptz", { nullable: true })

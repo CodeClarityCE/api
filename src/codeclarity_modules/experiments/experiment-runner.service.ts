@@ -38,11 +38,7 @@ import { GithubRateLimited, rateLimitedAt } from "../datasets/dataset-builder";
 import { Experiment, ExperimentStatus } from "./experiment.entity";
 import { isUsablePluginResult, mapRunRows } from "./experiment-row-copy";
 import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
-import {
-  ExperimentLeaseLost,
-  ExperimentStore,
-  type RunPatch,
-} from "./experiment-store";
+import { ExperimentLeaseLost, ExperimentStore } from "./experiment-store";
 
 /** How often experiments are looked at (in-flight analyses polled) */
 const TICK_MS = 15_000;
@@ -261,7 +257,13 @@ export class ExperimentRunnerService
         await this.start(experiment);
       }
       await this.pollInFlight(experiment);
-      if (experiment.status === ExperimentStatus.RUNNING) {
+      // Read again: a cancel may have committed since the pass began
+      const status = await this.store.getStatus(experimentId);
+      if (status === null) return;
+      experiment.status = status;
+      if (status === ExperimentStatus.CANCELLED) {
+        await this.store.skipUnsubmitted(experimentId);
+      } else if (status === ExperimentStatus.RUNNING) {
         await this.submit(experiment);
       }
       if ((await this.store.countPending(experimentId)) === 0) {
@@ -288,6 +290,7 @@ export class ExperimentRunnerService
         await this.store.finish(experimentId, this.instanceId, {
           status: ExperimentStatus.FAILED,
           error: err.reason,
+          provenance: await this.endProvenance(experiment),
         });
         this.logger.error("Experiment failed", err, {
           ...logContext,
@@ -345,10 +348,7 @@ export class ExperimentRunnerService
           run,
           run.analysis.failure_reason ?? `analysis ${status}`,
         );
-      } else if (
-        run.submitted_on &&
-        now - run.submitted_on.getTime() > this.ceilingMs
-      ) {
+      } else if (this.pastCeiling(run, now)) {
         await this.store.updateRun(run.id, {
           status: ExperimentRunStatus.FAILED,
           error: "ceiling",
@@ -360,6 +360,12 @@ export class ExperimentRunnerService
         });
       }
     }
+  }
+
+  /** Not terminal this long after its first analysis was submitted. */
+  private pastCeiling(run: ExperimentRun, now: number): boolean {
+    const since = run.first_submitted_on ?? run.submitted_on;
+    return since ? now - since.getTime() > this.ceilingMs : false;
   }
 
   /** Submit unsubmitted runs, by entry rank, while the global cap allows. */
@@ -433,6 +439,21 @@ export class ExperimentRunnerService
       commit_hash: head.commitHash,
       committed_at: head.committedAt,
     };
+    const attempt = { ...run, attempts: run.attempts + 1 };
+
+    // Reserve the run first: a cancel only skips unsubmitted runs, so once
+    // reserved it cannot be skipped under the analysis created for it
+    const now = new Date();
+    const reserved = await this.store.updateRun(run.id, {
+      ...pinned,
+      attempts: attempt.attempts,
+      submitted_on: now,
+      first_submitted_on: run.first_submitted_on ?? now,
+    });
+    if (!reserved) {
+      this.logger.log("Experiment run no longer pending", logContext);
+      return;
+    }
 
     let projectId: string;
     let analysisId: string;
@@ -466,12 +487,7 @@ export class ExperimentRunnerService
         );
       }
       const reason = `submission failed: ${describeBuildError(err)}`;
-      await this.attemptFailed(
-        experiment,
-        { ...run, attempts: run.attempts + 1 },
-        reason,
-        pinned,
-      );
+      await this.attemptFailed(experiment, attempt, reason);
       this.logger.warn("Experiment run submission failed", {
         ...logContext,
         reason,
@@ -479,12 +495,16 @@ export class ExperimentRunnerService
       return;
     }
 
-    await this.store.updateRun(run.id, {
-      ...pinned,
-      attempts: run.attempts + 1,
-      submitted_on: new Date(),
+    const linked = await this.store.updateRun(run.id, {
       analysis: { id: analysisId },
     });
+    if (!linked) {
+      this.logger.warn("Experiment run ended before its analysis was linked", {
+        ...logContext,
+        analysisId,
+      });
+      return;
+    }
     this.logger.log("Experiment run submitted", {
       ...logContext,
       projectId,
@@ -495,20 +515,19 @@ export class ExperimentRunnerService
 
   /**
    * A failed attempt is retried on the same SHA while attempts remain and
-   * the experiment is still RUNNING; otherwise the run fails.
+   * the experiment is still RUNNING; otherwise the run fails. A retry set
+   * up while a cancel commits is skipped by the end of the pass.
    * `run.attempts` counts the attempt that failed.
    */
   private async attemptFailed(
     experiment: Experiment,
     run: ExperimentRun,
     reason: string,
-    pinned: RunPatch = {},
   ): Promise<void> {
     const retry =
       experiment.status === ExperimentStatus.RUNNING &&
       run.attempts <= experiment.retries;
     await this.store.updateRun(run.id, {
-      ...pinned,
       attempts: run.attempts,
       error: reason,
       ...(retry
@@ -534,10 +553,7 @@ export class ExperimentRunnerService
         experiment.status === ExperimentStatus.CANCELLED
           ? ExperimentStatus.CANCELLED
           : ExperimentStatus.COMPLETED,
-      provenance: {
-        ...(experiment.provenance ?? {}),
-        knowledge_end: await this.provenanceService.get(),
-      },
+      provenance: await this.endProvenance(experiment),
     });
     this.logger.log("Experiment ended", {
       experimentId: experiment.id,
@@ -546,11 +562,21 @@ export class ExperimentRunnerService
     });
   }
 
+  /** The start provenance with the knowledge snapshot at end added. */
+  private async endProvenance(
+    experiment: Experiment,
+  ): Promise<Record<string, unknown>> {
+    return {
+      ...(experiment.provenance ?? {}),
+      knowledge_end: await this.provenanceService.get(),
+    };
+  }
+
   /**
    * The repository's live default branch and its tip.
    * @throws {RunSkipped} If the repository is gone, moved or has no branch
    * @throws {GithubRateLimited} If GitHub rate limited the request
-   * @throws {ExperimentFatal} If the token is no longer accepted
+   * @throws {ExperimentFatal} If the token is no longer accepted or allowed
    */
   private async pinHead(
     client: GithubRestClient,
@@ -598,7 +624,11 @@ export class ExperimentRunnerService
           `GitHub authentication failed: ${apiError.message ?? "bad credentials"}`,
         );
       case 403:
-        return new RunSkipped("repository not accessible");
+        // Not a rate limit: the token lost its scope or is blocked by SSO,
+        // which would skip every run alike
+        return new ExperimentFatal(
+          `GitHub access denied: ${apiError.message ?? "forbidden"}`,
+        );
       case 404:
         return new RunSkipped("repository or branch not found");
       case 409:
