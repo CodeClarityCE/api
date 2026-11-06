@@ -13,7 +13,9 @@ import { AnalyzersModule } from "../analyzers/analyzers.module";
 import { AnalysesController } from "./analyses.controller";
 import { AnalysesRepository } from "./analyses.repository";
 import { AnalysesService } from "./analyses.service";
+import { AnalysisPublisher } from "./analysis-publisher";
 import { LanguageDetectionService } from "./language-detection.service";
+import { RabbitMqAnalysisPublisher } from "./rabbitmq-analysis-publisher";
 
 @Module({
   imports: [
@@ -25,7 +27,12 @@ import { LanguageDetectionService } from "./language-detection.service";
     TypeOrmModule.forFeature([Analysis, Policy], "codeclarity"),
   ],
   exports: [AnalysesService, AnalysesRepository],
-  providers: [AnalysesService, AnalysesRepository, LanguageDetectionService],
+  providers: [
+    AnalysesService,
+    AnalysesRepository,
+    LanguageDetectionService,
+    { provide: AnalysisPublisher, useClass: RabbitMqAnalysisPublisher },
+  ],
   controllers: [AnalysesController],
 })
 export class AnalysesModule {}

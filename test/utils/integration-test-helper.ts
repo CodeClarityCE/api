@@ -67,6 +67,14 @@ export class IntegrationTestHelper {
   async cleanDatabase(): Promise<void> {
     if (!this.dataSource) return;
 
+    // Refuse to truncate a database that is not a test one, such as dev's
+    const database = this.dataSource.options.database ?? "";
+    if (typeof database !== "string" || !database.endsWith("_test")) {
+      throw new Error(
+        `Refusing to truncate "${String(database)}": not a test database`,
+      );
+    }
+
     // Get all entity metadata
     const entities = this.dataSource.entityMetadatas;
 
