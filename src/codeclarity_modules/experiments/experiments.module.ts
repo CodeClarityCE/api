@@ -9,18 +9,29 @@ import { KnowledgeModule } from "src/codeclarity_modules/knowledge/knowledge.mod
 
 import { Dataset } from "../datasets/dataset.entity";
 import { DatasetEntry } from "../datasets/dataset-entry.entity";
+import { Result } from "../results/result.entity";
 
 import { Experiment } from "./experiment.entity";
 import { ExperimentRun } from "./experiment-run.entity";
+import { ExperimentRunSummaryRow } from "./experiment-run-summary-row.entity";
 import { ExperimentRunnerService } from "./experiment-runner.service";
 import { ExperimentStore, TypeOrmExperimentStore } from "./experiment-store";
+import { ExperimentVulnerabilityInstance } from "./experiment-vulnerability-instance.entity";
 import { ExperimentsController } from "./experiments.controller";
 import { ExperimentsService } from "./experiments.service";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature(
-      [Experiment, ExperimentRun, Dataset, DatasetEntry],
+      [
+        Experiment,
+        ExperimentRun,
+        ExperimentRunSummaryRow,
+        ExperimentVulnerabilityInstance,
+        Dataset,
+        DatasetEntry,
+        Result,
+      ],
       "codeclarity",
     ),
     AnalyzersModule,

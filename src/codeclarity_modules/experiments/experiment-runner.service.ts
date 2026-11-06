@@ -36,6 +36,7 @@ import { describeBuildError } from "../datasets/dataset-build.service";
 import { GithubRateLimited, rateLimitedAt } from "../datasets/dataset-builder";
 
 import { Experiment, ExperimentStatus } from "./experiment.entity";
+import { isUsablePluginResult, mapRunRows } from "./experiment-row-copy";
 import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
 import {
   ExperimentLeaseLost,
@@ -49,6 +50,9 @@ const TICK_MS = 15_000;
 const MAX_THROTTLE_WAIT_SECONDS = 60;
 const DEFAULT_MAX_IN_FLIGHT = 8;
 const DEFAULT_RUN_CEILING_HOURS = 24;
+/** The results a done run is copied from (the analyzer must run both) */
+const SBOM_PLUGIN = "js-sbom";
+const VULN_PLUGIN = "vuln-finder";
 
 const SUCCEEDED: ReadonlySet<string> = new Set([
   AnalysisStatus.SUCCESS,
@@ -203,19 +207,43 @@ export class ExperimentRunnerService
   }
 
   /**
-   * Hook for a run whose analysis succeeded. Slice 3 copies the tidy rows
-   * here and applies the done definition; for now the run is done.
+   * Apply the done definition to a run whose analysis succeeded: both its
+   * js-sbom and vuln-finder results exist and are usable, and their tidy
+   * rows are copied (replacing any copied before). Otherwise the attempt
+   * failed with `missing result: <plugin>`, which is retried like any other.
    */
   async completeRun(experiment: Experiment, run: ExperimentRun): Promise<void> {
-    await this.store.updateRun(run.id, {
-      status: ExperimentRunStatus.DONE,
-      error: null,
-      ended_on: new Date(),
-    });
-    this.logger.log("Experiment run done", {
+    const logContext = {
       experimentId: experiment.id,
       runId: run.id,
       ...analysisContext(run),
+    };
+    const results = new Map<string, unknown>();
+    for (const plugin of [SBOM_PLUGIN, VULN_PLUGIN]) {
+      const result = run.analysis
+        ? await this.store.getPluginResult(run.analysis.id, plugin)
+        : null;
+      if (!isUsablePluginResult(result)) {
+        this.logger.warn("Experiment run has no usable result", {
+          ...logContext,
+          plugin,
+        });
+        await this.attemptFailed(experiment, run, `missing result: ${plugin}`);
+        return;
+      }
+      results.set(plugin, result);
+    }
+
+    const rows = mapRunRows(results.get(SBOM_PLUGIN), results.get(VULN_PLUGIN));
+    const copied = await this.store.copyRunRows(experiment.id, run.id, rows);
+    if (!copied) {
+      this.logger.warn("Experiment run ended before its rows were copied", logContext);
+      return;
+    }
+    this.logger.log("Experiment run done", {
+      ...logContext,
+      dependencies: rows.summary.total_dependencies,
+      vulnerabilities: rows.summary.total_vulnerabilities,
     });
   }
 

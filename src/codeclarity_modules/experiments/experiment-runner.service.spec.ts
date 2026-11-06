@@ -9,6 +9,7 @@ import { NotAuthorized, RabbitMQError } from "src/types/error.types";
 import type { DatasetEntry } from "../datasets/dataset-entry.entity";
 
 import { type Experiment, ExperimentStatus } from "./experiment.entity";
+import type { RunRows } from "./experiment-row-copy";
 import {
   type ExperimentRun,
   ExperimentRunStatus,
@@ -40,14 +41,52 @@ interface FakeAnalysis {
   failure_reason?: string | null;
 }
 
+/** Plugin results as the pipeline stores them, one workspace each. */
+function sbomResult(packageManager = "NPM"): unknown {
+  return {
+    workspaces: {
+      ".": {
+        dependencies: {
+          lodash: { "4.17.20": { Direct: true, Prod: true } },
+          minimist: { "1.2.5": { Transitive: true, Prod: true } },
+        },
+        start: {},
+      },
+    },
+    analysis_info: { status: "success", package_manager: packageManager },
+  };
+}
+
+function vulnResult(ids: string[] = ["CVE-2021-23337"]): unknown {
+  return {
+    workspaces: {
+      ".": {
+        Vulnerabilities: ids.map((id) => ({
+          VulnerabilityId: id,
+          AffectedDependency: "lodash",
+          AffectedVersion: "4.17.20",
+          Severity: { Severity: 7.2, SeverityClass: "HIGH" },
+          Conflict: { ConflictFlag: "MATCH_CORRECT", ConflictWinner: "OSV" },
+          direct_dependency: true,
+        })),
+      },
+    },
+    analysis_info: { status: "success" },
+  };
+}
+
 /**
  * The store as it behaves against Postgres: leases expire with the clock,
- * run updates only apply to pending runs.
+ * run updates only apply to pending runs, copied rows are replaced per run.
  */
 class FakeStore extends ExperimentStore {
   experiments = new Map<string, Experiment>();
   runs: ExperimentRun[] = [];
   analyses = new Map<string, FakeAnalysis>();
+  /** Plugin results by `${analysisId}/${plugin}` */
+  results = new Map<string, unknown>();
+  /** Copied rows by run id */
+  copied = new Map<string, RunRows & { experimentId: string }>();
 
   async claimNext(
     owner: string,
@@ -175,6 +214,31 @@ class FakeStore extends ExperimentStore {
     const run = this.runs.find((r) => r.id === runId);
     if (run?.status !== ExperimentRunStatus.PENDING) return false;
     Object.assign(run, patch);
+    return true;
+  }
+
+  async getPluginResult(analysisId: string, plugin: string): Promise<unknown> {
+    return this.results.get(`${analysisId}/${plugin}`) ?? null;
+  }
+
+  async copyRunRows(
+    experimentId: string,
+    runId: string,
+    rows: RunRows,
+  ): Promise<boolean> {
+    const run = this.runs.find((r) => r.id === runId);
+    if (
+      run?.status !== ExperimentRunStatus.PENDING &&
+      run?.status !== ExperimentRunStatus.DONE
+    ) {
+      return false;
+    }
+    this.copied.set(runId, { experimentId, ...rows });
+    Object.assign(run, {
+      status: ExperimentRunStatus.DONE,
+      error: null,
+      ended_on: run.ended_on ?? new Date(),
+    });
     return true;
   }
 
@@ -373,6 +437,10 @@ describe("ExperimentRunnerService", () => {
     const analysis = store.analysisOf(entryName);
     analysis.status = status;
     analysis.failure_reason = failureReason ?? null;
+    if (status === AnalysisStatus.SUCCESS) {
+      store.results.set(`${analysis.id}/js-sbom`, sbomResult());
+      store.results.set(`${analysis.id}/vuln-finder`, vulnResult());
+    }
   }
 
   beforeEach(() => {
@@ -811,5 +879,122 @@ describe("ExperimentRunnerService", () => {
       ExperimentStatus.COMPLETED,
     );
     expect(createAnalysis).toHaveBeenCalledTimes(1);
+  });
+
+  describe("row copy", () => {
+    it("copies the run summary and vulnerability instances of a succeeded analysis, then marks the run done", async () => {
+      addExperiment("exp-1", ["octo/app"]);
+      const service = runner();
+      await service.tick();
+      finishAnalysis("octo/app", AnalysisStatus.SUCCESS);
+
+      await service.tick();
+
+      const run = store.run("octo/app");
+      expect(run).toMatchObject({
+        status: ExperimentRunStatus.DONE,
+        error: null,
+      });
+      const copied = store.copied.get(run.id)!;
+      expect(copied.experimentId).toBe("exp-1");
+      expect(copied.summary).toEqual({
+        total_dependencies: 2,
+        direct_dependencies: 1,
+        transitive_dependencies: 1,
+        dev_dependencies: 0,
+        prod_dependencies: 2,
+        package_manager: "NPM",
+        total_vulnerabilities: 1,
+        vulnerable_dependencies: 1,
+        direct_vulnerabilities: 1,
+        transitive_vulnerabilities: 0,
+        n_critical: 0,
+        n_high: 1,
+        n_medium: 0,
+        n_low: 0,
+        n_none: 0,
+      });
+      expect(copied.vulnerabilities).toEqual([
+        expect.objectContaining({
+          workspace: ".",
+          vulnerability_id: "CVE-2021-23337",
+          affected_dependency: "lodash",
+          direct_dependency: true,
+        }),
+      ]);
+    });
+
+    it.each([
+      ["js-sbom", "missing", undefined],
+      ["vuln-finder", "missing", undefined],
+      ["js-sbom", "unparseable", "not json"],
+      [
+        "vuln-finder",
+        "from a failed plugin",
+        { workspaces: {}, analysis_info: { status: "failure" } },
+      ],
+    ])(
+      "fails a run whose %s result is %s, without copying anything",
+      async (plugin, _, result) => {
+        addExperiment("exp-1", ["octo/app"], { retries: 0 });
+        const service = runner();
+        await service.tick();
+        finishAnalysis("octo/app", AnalysisStatus.SUCCESS);
+        const key = `${store.analysisOf("octo/app").id}/${plugin}`;
+        if (result === undefined) store.results.delete(key);
+        else store.results.set(key, result);
+
+        await service.tick();
+
+        const run = store.run("octo/app");
+        expect(run).toMatchObject({
+          status: ExperimentRunStatus.FAILED,
+          error: `missing result: ${plugin}`,
+        });
+        expect(store.copied.has(run.id)).toBe(false);
+      },
+    );
+
+    it("retries a run with a missing result on the same pinned SHA", async () => {
+      addExperiment("exp-1", ["octo/app"]);
+      const service = runner();
+      await service.tick();
+      finishAnalysis("octo/app", AnalysisStatus.SUCCESS);
+      store.results.delete(`${store.analysisOf("octo/app").id}/vuln-finder`);
+
+      await service.tick();
+
+      expect(store.run("octo/app")).toMatchObject({
+        status: ExperimentRunStatus.PENDING,
+        attempts: 2,
+        error: "missing result: vuln-finder",
+        commit_hash: "sha-octo/app",
+        analysis: { id: "analysis-2" },
+      });
+    });
+
+    it("replaces a run's rows when it is copied again", async () => {
+      addExperiment("exp-1", ["octo/app"]);
+      const service = runner();
+      await service.tick();
+      finishAnalysis("octo/app", AnalysisStatus.SUCCESS);
+      const experiment = (await store.getExperiment("exp-1"))!;
+      const [run] = await store.getInFlightRuns("exp-1");
+      await service.completeRun(experiment, run!);
+      store.results.set(
+        `${run!.analysis!.id}/vuln-finder`,
+        vulnResult(["CVE-1", "CVE-2"]),
+      );
+
+      await service.completeRun(experiment, run!);
+
+      const copied = store.copied.get(run!.id)!;
+      expect(copied.summary.total_vulnerabilities).toBe(2);
+      expect(copied.vulnerabilities.map((v) => v.vulnerability_id)).toEqual([
+        "CVE-1",
+        "CVE-2",
+      ]);
+      expect(store.run("octo/app").status).toBe(ExperimentRunStatus.DONE);
+    });
   });
 });

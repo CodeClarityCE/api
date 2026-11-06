@@ -3,12 +3,19 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { IsNull, Not, Repository } from "typeorm";
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity";
 
+import { Result } from "../results/result.entity";
+
 import { Experiment, ExperimentStatus } from "./experiment.entity";
+import type { RunRows } from "./experiment-row-copy";
 import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
+import { ExperimentRunSummaryRow } from "./experiment-run-summary-row.entity";
+import { ExperimentVulnerabilityInstance } from "./experiment-vulnerability-instance.entity";
 
 /** A runner that stops renewing its lease for this long is replaced */
 export const EXPERIMENT_LEASE_SECONDS = 120;
 const ERROR_MAX_LENGTH = 1000;
+/** Instance rows per INSERT, well under Postgres's 65535 bind parameters */
+const INSERT_CHUNK = 1000;
 
 /** A jsonb value for a query builder set(), whose typing expects an entity. */
 function jsonb(
@@ -118,6 +125,20 @@ export abstract class ExperimentStore {
 
   /** Apply a patch to a run that is still pending. False if it was not. */
   abstract updateRun(runId: string, patch: RunPatch): Promise<boolean>;
+
+  /** A plugin's stored result payload for an analysis, null if it has none. */
+  abstract getPluginResult(analysisId: string, plugin: string): Promise<unknown>;
+
+  /**
+   * In one transaction, replace the run's copied rows with these and mark it
+   * done. Copying a done run again replaces its rows. False, with nothing
+   * written, if the run is failed or skipped.
+   */
+  abstract copyRunRows(
+    experimentId: string,
+    runId: string,
+    rows: RunRows,
+  ): Promise<boolean>;
 }
 
 /**
@@ -131,6 +152,8 @@ export class TypeOrmExperimentStore extends ExperimentStore {
     private readonly experimentRepository: Repository<Experiment>,
     @InjectRepository(ExperimentRun, "codeclarity")
     private readonly runRepository: Repository<ExperimentRun>,
+    @InjectRepository(Result, "codeclarity")
+    private readonly resultRepository: Repository<Result>,
   ) {
     super();
   }
@@ -343,6 +366,63 @@ export class TypeOrmExperimentStore extends ExperimentStore {
       })
       .execute();
     return Boolean(result.affected);
+  }
+
+  async getPluginResult(analysisId: string, plugin: string): Promise<unknown> {
+    const result = await this.resultRepository.findOne({
+      where: { analysis: { id: analysisId }, plugin },
+      select: { id: true, result: true },
+    });
+    return result?.result ?? null;
+  }
+
+  async copyRunRows(
+    experimentId: string,
+    runId: string,
+    rows: RunRows,
+  ): Promise<boolean> {
+    return this.runRepository.manager.transaction(async (manager) => {
+      // Locking the run serializes concurrent copies of it
+      const run = await manager
+        .createQueryBuilder(ExperimentRun, "run")
+        .setLock("pessimistic_write")
+        .where("run.id = :runId", { runId })
+        .getOne();
+      if (
+        run?.status !== ExperimentRunStatus.PENDING &&
+        run?.status !== ExperimentRunStatus.DONE
+      ) {
+        return false;
+      }
+
+      const owner = { experiment: { id: experimentId }, run: { id: runId } };
+      await manager.delete(ExperimentVulnerabilityInstance, {
+        run: { id: runId },
+      });
+      await manager.delete(ExperimentRunSummaryRow, { run: { id: runId } });
+      await manager.insert(ExperimentRunSummaryRow, {
+        ...rows.summary,
+        ...owner,
+      });
+      for (let i = 0; i < rows.vulnerabilities.length; i += INSERT_CHUNK) {
+        await manager.insert(
+          ExperimentVulnerabilityInstance,
+          rows.vulnerabilities
+            .slice(i, i + INSERT_CHUNK)
+            .map((row) => ({ ...row, ...owner })),
+        );
+      }
+      await manager.update(
+        ExperimentRun,
+        { id: runId },
+        {
+          status: ExperimentRunStatus.DONE,
+          error: null,
+          ended_on: run.ended_on ?? new Date(),
+        },
+      );
+      return true;
+    });
   }
 
   /** @throws {ExperimentLeaseLost} If the lease is no longer ours */
