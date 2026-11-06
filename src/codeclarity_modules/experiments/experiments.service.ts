@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import type { Readable } from "node:stream";
 import { Repository } from "typeorm";
 
 import { AnalyzersRepository } from "src/base_modules/analyzers/analyzers.repository";
@@ -20,24 +19,8 @@ import { DatasetEntry } from "../datasets/dataset-entry.entity";
 import { paginated, resolvePagination } from "../datasets/datasets.service";
 
 import { Experiment, ExperimentStatus } from "./experiment.entity";
-import {
-  type CsvRow,
-  RUN_CSV_COLUMNS,
-  streamCsv,
-  VULNERABILITY_CSV_COLUMNS,
-} from "./experiment-csv";
-import {
-  aggregateExperimentResults,
-  type ExperimentResults,
-  type KnowledgeSnapshot,
-  type ResultsProvenanceInput,
-  type ResultsSummaryInput,
-  type ResultsVulnerabilityInput,
-} from "./experiment-results";
 import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
-import { ExperimentRunSummaryRow } from "./experiment-run-summary-row.entity";
 import { ExperimentRunnerService } from "./experiment-runner.service";
-import { ExperimentVulnerabilityInstance } from "./experiment-vulnerability-instance.entity";
 import {
   AnalyzerMissingRequiredPlugins,
   DatasetNotReady,
@@ -62,41 +45,6 @@ const RUN_PAGINATION: PaginationConfig = {
   defaultEntriesPerPage: 100,
 };
 
-/** Runs read per runs.csv chunk */
-const RUN_EXPORT_CHUNK = 1000;
-
-/**
- * Runs whose instances are read per vulnerabilities.csv chunk. A chunk
- * never splits a run, so its size is bounded by the runs' instance counts.
- */
-const VULNERABILITY_EXPORT_RUNS_PER_CHUNK = 20;
-
-const ENTRY_COLUMNS = ["rank", "full_name", "stars", "git_url"] as const;
-const RUN_COLUMNS = [
-  "status",
-  "error",
-  "attempts",
-  "branch",
-  "commit_hash",
-  "committed_at",
-] as const;
-const SUMMARY_COLUMNS = RUN_CSV_COLUMNS.slice(
-  ENTRY_COLUMNS.length + RUN_COLUMNS.length + 1, // + analysis_id
-);
-const INSTANCE_COLUMNS = VULNERABILITY_CSV_COLUMNS.slice(ENTRY_COLUMNS.length);
-
-/** A streamed CSV export of an experiment. */
-export interface ExperimentCsvExport {
-  experiment_name: string;
-  stream: Readable;
-}
-
-/** The results of an experiment, for download. */
-export interface ExperimentResultsExport {
-  experiment_name: string;
-  results: ExperimentResults;
-}
-
 const SUMMARY_RELATIONS = {
   created_by: true,
   dataset: true,
@@ -119,10 +67,6 @@ export class ExperimentsService {
     @InjectRepository(DatasetEntry, "codeclarity")
     private readonly entryRepository: Repository<DatasetEntry>,
     private readonly runner: ExperimentRunnerService,
-    @InjectRepository(ExperimentRunSummaryRow, "codeclarity")
-    private readonly summaryRepository: Repository<ExperimentRunSummaryRow>,
-    @InjectRepository(ExperimentVulnerabilityInstance, "codeclarity")
-    private readonly vulnerabilityRepository: Repository<ExperimentVulnerabilityInstance>,
   ) {}
 
   /**
@@ -373,237 +317,11 @@ export class ExperimentsService {
     });
   }
 
-  /**
-   * The dataset-level results of an experiment, computed from its copied
-   * rows on every read (ADR 0001). Results of a running or cancelled
-   * experiment cover the runs done so far.
-   * @throws {NotAuthorized} If the user is not a member of the org
-   * @throws {EntityNotFound} If the org has no such experiment
-   */
-  async getResults(
-    orgId: string,
-    experimentId: string,
-    user: AuthenticatedUser,
-  ): Promise<ExperimentResults> {
-    return (await this.exportResults(orgId, experimentId, user)).results;
-  }
-
-  /**
-   * The results payload with the experiment's name, for results.json.
-   * @throws {NotAuthorized} If the user is not a member of the org
-   * @throws {EntityNotFound} If the org has no such experiment
-   */
-  async exportResults(
-    orgId: string,
-    experimentId: string,
-    user: AuthenticatedUser,
-  ): Promise<ExperimentResultsExport> {
-    await this.membershipsRepository.hasRequiredRole(
-      orgId,
-      user.userId,
-      MemberRole.USER,
-    );
-    const experiment = await this.findInOrg(orgId, experimentId);
-
-    const [runs, summaries, vulnerabilities] = await Promise.all([
-      this.runRepository.find({
-        where: { experiment: { id: experiment.id } },
-        select: { id: true, status: true, error: true },
-      }),
-      this.summaryRepository
-        .createQueryBuilder("summary")
-        .innerJoin("summary.run", "run")
-        .innerJoin("run.dataset_entry", "entry")
-        .select('summary."runId"', "run_id")
-        .addSelect("entry.rank", "rank")
-        .addSelect("summary.total_dependencies", "total_dependencies")
-        .addSelect("summary.total_vulnerabilities", "total_vulnerabilities")
-        .addSelect("summary.package_manager", "package_manager")
-        .where('summary."experimentId" = :experimentId', {
-          experimentId: experiment.id,
-        })
-        .getRawMany<ResultsSummaryInput>(),
-      this.vulnerabilityRepository
-        .createQueryBuilder("instance")
-        .select('instance."runId"', "run_id")
-        .addSelect("instance.affected_dependency", "affected_dependency")
-        .addSelect("instance.vulnerability_id", "vulnerability_id")
-        .addSelect("instance.severity_class", "severity_class")
-        .addSelect("instance.epss_score", "epss_score")
-        .addSelect("instance.conflict_flag", "conflict_flag")
-        .addSelect("instance.winning_source", "winning_source")
-        .addSelect("instance.withdrawn_date", "withdrawn_date")
-        .where('instance."experimentId" = :experimentId', {
-          experimentId: experiment.id,
-        })
-        .getRawMany<ResultsVulnerabilityInput>(),
-    ]);
-
-    return {
-      experiment_name: experiment.name,
-      results: aggregateExperimentResults({
-        runs: runs.map((run) => ({
-          status: run.status,
-          error: run.error ?? null,
-        })),
-        summaries,
-        vulnerabilities,
-        provenance: provenanceInput(experiment),
-      }),
-    };
-  }
-
-  /**
-   * runs.csv: one row per run by entry rank, with the entry's metadata and,
-   * for done runs, the copied summary. Streamed in chunks keyed by rank.
-   * @throws {NotAuthorized} If the user is not a member of the org
-   * @throws {EntityNotFound} If the org has no such experiment
-   */
-  async exportRunsCsv(
-    orgId: string,
-    experimentId: string,
-    user: AuthenticatedUser,
-  ): Promise<ExperimentCsvExport> {
-    await this.membershipsRepository.hasRequiredRole(
-      orgId,
-      user.userId,
-      MemberRole.USER,
-    );
-    const experiment = await this.findInOrg(orgId, experimentId);
-
-    const nextChunk = (after: CsvRow | null): Promise<CsvRow[]> => {
-      const query = this.runRepository
-        .createQueryBuilder("run")
-        .innerJoin("run.dataset_entry", "entry")
-        .leftJoin(
-          ExperimentRunSummaryRow,
-          "summary",
-          'summary."runId" = run.id AND run.status = :done',
-          { done: ExperimentRunStatus.DONE },
-        )
-        .select(ENTRY_COLUMNS.map((column) => `entry.${column} AS "${column}"`))
-        .addSelect(RUN_COLUMNS.map((column) => `run.${column} AS "${column}"`))
-        .addSelect('run."analysisId"', "analysis_id")
-        .addSelect(
-          SUMMARY_COLUMNS.map((column) => `summary.${column} AS "${column}"`),
-        )
-        .where('run."experimentId" = :experimentId', {
-          experimentId: experiment.id,
-        });
-      if (after) query.andWhere("entry.rank > :rank", { rank: after["rank"] });
-      return query
-        .orderBy("entry.rank", "ASC")
-        .limit(RUN_EXPORT_CHUNK)
-        .getRawMany<CsvRow>();
-    };
-
-    return {
-      experiment_name: experiment.name,
-      stream: this.logStreamErrors(
-        streamCsv(RUN_CSV_COLUMNS, nextChunk),
-        "runs.csv",
-        experiment.id,
-      ),
-    };
-  }
-
-  /**
-   * vulnerabilities.csv: one row per copied vulnerability instance, with the
-   * entry's metadata, by entry rank. Streamed a few done runs at a time.
-   * @throws {NotAuthorized} If the user is not a member of the org
-   * @throws {EntityNotFound} If the org has no such experiment
-   */
-  async exportVulnerabilitiesCsv(
-    orgId: string,
-    experimentId: string,
-    user: AuthenticatedUser,
-  ): Promise<ExperimentCsvExport> {
-    await this.membershipsRepository.hasRequiredRole(
-      orgId,
-      user.userId,
-      MemberRole.USER,
-    );
-    const experiment = await this.findInOrg(orgId, experimentId);
-
-    const nextChunk = async (after: CsvRow | null): Promise<CsvRow[]> => {
-      let afterRank = after ? Number(after["rank"]) : -1;
-      // Done runs without instances give empty reads: skip past them, since
-      // an empty chunk ends the export.
-      for (;;) {
-        const runs = await this.runRepository
-          .createQueryBuilder("run")
-          .innerJoin("run.dataset_entry", "entry")
-          .select("run.id", "id")
-          .addSelect("entry.rank", "rank")
-          .where('run."experimentId" = :experimentId', {
-            experimentId: experiment.id,
-          })
-          .andWhere("run.status = :done", { done: ExperimentRunStatus.DONE })
-          .andWhere("entry.rank > :afterRank", { afterRank })
-          .orderBy("entry.rank", "ASC")
-          .limit(VULNERABILITY_EXPORT_RUNS_PER_CHUNK)
-          .getRawMany<{ id: string; rank: number }>();
-        if (runs.length === 0) return [];
-
-        const rows = await this.vulnerabilityRepository
-          .createQueryBuilder("instance")
-          .innerJoin("instance.run", "run")
-          .innerJoin("run.dataset_entry", "entry")
-          .select(
-            ENTRY_COLUMNS.map((column) => `entry.${column} AS "${column}"`),
-          )
-          .addSelect(
-            INSTANCE_COLUMNS.map(
-              (column) => `instance.${column} AS "${column}"`,
-            ),
-          )
-          .where('instance."runId" IN (:...runIds)', {
-            runIds: runs.map((run) => run.id),
-          })
-          .orderBy("entry.rank", "ASC")
-          .addOrderBy("instance.id", "ASC")
-          .getRawMany<CsvRow>();
-        if (rows.length > 0) return rows;
-        afterRank = runs[runs.length - 1]!.rank;
-      }
-    };
-
-    return {
-      experiment_name: experiment.name,
-      stream: this.logStreamErrors(
-        streamCsv(VULNERABILITY_CSV_COLUMNS, nextChunk),
-        "vulnerabilities.csv",
-        experiment.id,
-      ),
-    };
-  }
-
-  /** A stream failing mid-export cuts the download short: leave a trace. */
-  private logStreamErrors(
-    stream: Readable,
-    file: string,
-    experimentId: string,
-  ): Readable {
-    stream.on("error", (error: unknown) => {
-      this.logger.error(
-        `Experiment export ${file} failed`,
-        error instanceof Error ? error : String(error),
-        { experimentId },
-      );
-    });
-    return stream;
-  }
-
   private async findInOrg(
     orgId: string,
     experimentId: string,
   ): Promise<Experiment> {
-    const experiment = await this.experimentRepository.findOne({
-      where: { id: experimentId, organization: { id: orgId } },
-      relations: SUMMARY_RELATIONS,
-    });
-    if (!experiment) throw new EntityNotFound();
-    return experiment;
+    return findExperimentInOrg(this.experimentRepository, orgId, experimentId);
   }
 
   private async countRuns(
@@ -657,33 +375,26 @@ export class ExperimentsService {
   }
 }
 
-function creatorName(experiment: Experiment): string | null {
+/**
+ * An experiment of the org with its creator, dataset and analyzer.
+ * @throws {EntityNotFound} If the org has no such experiment
+ */
+export async function findExperimentInOrg(
+  repository: Repository<Experiment>,
+  orgId: string,
+  experimentId: string,
+): Promise<Experiment> {
+  const experiment = await repository.findOne({
+    where: { id: experimentId, organization: { id: orgId } },
+    relations: SUMMARY_RELATIONS,
+  });
+  if (!experiment) throw new EntityNotFound();
+  return experiment;
+}
+
+export function creatorName(experiment: Experiment): string | null {
   const creator = experiment.created_by;
   return creator ? `${creator.first_name} ${creator.last_name}` : null;
-}
-
-function knowledgeSnapshot(value: unknown): KnowledgeSnapshot | null {
-  return typeof value === "object" &&
-    value !== null &&
-    "knowledge_sources" in value
-    ? (value as KnowledgeSnapshot)
-    : null;
-}
-
-/** The provenance the runner recorded on the experiment, as results show it. */
-function provenanceInput(experiment: Experiment): ResultsProvenanceInput {
-  const recorded = experiment.provenance ?? {};
-  const apiVersion = recorded["api_version"];
-  return {
-    api_version: typeof apiVersion === "string" ? apiVersion : null,
-    analyzer_steps: experiment.analyzer_steps ?? null,
-    knowledge_start: knowledgeSnapshot(recorded["knowledge_start"]),
-    knowledge_end: knowledgeSnapshot(recorded["knowledge_end"]),
-    created_by: creatorName(experiment),
-    created_on: experiment.created_on,
-    started_on: experiment.started_on ?? null,
-    ended_on: experiment.ended_on ?? null,
-  };
 }
 
 function emptyRunCounts(): ExperimentRunCounts {

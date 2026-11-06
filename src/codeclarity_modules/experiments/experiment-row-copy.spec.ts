@@ -49,8 +49,8 @@ function vulnFinder(workspaces: Record<string, unknown[]>): unknown {
   };
 }
 
-/** A vuln-finder finding as the plugin writes it, overridable per field. */
-function finding(overrides: Record<string, unknown> = {}): unknown {
+/** A vulnerability instance as vuln-finder writes it, overridable per field. */
+function instance(overrides: Record<string, unknown> = {}): unknown {
   return {
     VulnerabilityId: "CVE-2021-23337",
     AffectedDependency: "lodash",
@@ -108,14 +108,14 @@ describe("mapRunRows", () => {
     });
   });
 
-  it("copies one vulnerability instance per finding, keyed by its workspace", () => {
+  it("copies one row per vulnerability instance, keyed by its workspace", () => {
     const rows = mapRunRows(
       EMPTY_SBOM,
       vulnFinder({
-        ".": [finding()],
+        ".": [instance()],
         "tests/kit": [
-          finding({ AffectedVersion: "4.17.11" }),
-          finding({ VulnerabilityId: "GHSA-xxxx", AffectedDependency: "minimist", AffectedVersion: "1.2.5" }),
+          instance({ AffectedVersion: "4.17.11" }),
+          instance({ VulnerabilityId: "GHSA-xxxx", AffectedDependency: "minimist", AffectedVersion: "1.2.5" }),
         ],
       }),
     );
@@ -158,7 +158,7 @@ describe("mapRunRows", () => {
       EMPTY_SBOM,
       vulnFinder({
         ".": [
-          finding({
+          instance({
             NVDMatch: {
               Vulnerability: {
                 Published: "2021-02-15T13:15:12.560",
@@ -173,7 +173,7 @@ describe("mapRunRows", () => {
               },
             },
           }),
-          finding({
+          instance({
             OSVMatch: null,
             GCVEMatch: {
               Vulnerability: {
@@ -200,7 +200,7 @@ describe("mapRunRows", () => {
 
   it("buckets instances by severity class, NONE included and a missing class in no bucket", () => {
     const withClass = (SeverityClass: unknown): unknown =>
-      finding({ Severity: { Severity: 1, SeverityClass } });
+      instance({ Severity: { Severity: 1, SeverityClass } });
     const rows = mapRunRows(
       EMPTY_SBOM,
       vulnFinder({
@@ -233,9 +233,9 @@ describe("mapRunRows", () => {
     const rows = mapRunRows(
       EMPTY_SBOM,
       vulnFinder({
-        ".": [finding({ direct_dependency: true }), finding()],
-        "tools/cli": [finding({ direct_dependency: true }), finding()],
-        "tests/kit": [finding()],
+        ".": [instance({ direct_dependency: true }), instance()],
+        "tools/cli": [instance({ direct_dependency: true }), instance()],
+        "tests/kit": [instance()],
       }),
     );
 
@@ -253,10 +253,10 @@ describe("mapRunRows", () => {
     ]);
   });
 
-  it("leaves EPSS empty when the finding has none", () => {
+  it("leaves EPSS empty when the instance has none", () => {
     const rows = mapRunRows(
       EMPTY_SBOM,
-      vulnFinder({ ".": [finding({ EPSS: undefined }), finding({ EPSS: null })] }),
+      vulnFinder({ ".": [instance({ EPSS: undefined }), instance({ EPSS: null })] }),
     );
 
     for (const row of rows.vulnerabilities) {

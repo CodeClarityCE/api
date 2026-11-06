@@ -39,6 +39,11 @@ import { Experiment, ExperimentStatus } from "./experiment.entity";
 import { isUsablePluginResult, mapRunRows } from "./experiment-row-copy";
 import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
 import { ExperimentLeaseLost, ExperimentStore } from "./experiment-store";
+import {
+  EXPERIMENT_REQUIRED_PLUGINS,
+  SBOM_PLUGIN,
+  VULN_PLUGIN,
+} from "./experiments.types";
 
 /** How often experiments are looked at (in-flight analyses polled) */
 const TICK_MS = 15_000;
@@ -46,19 +51,17 @@ const TICK_MS = 15_000;
 const MAX_THROTTLE_WAIT_SECONDS = 60;
 const DEFAULT_MAX_IN_FLIGHT = 8;
 const DEFAULT_RUN_CEILING_HOURS = 24;
-/** The results a done run is copied from (the analyzer must run both) */
-const SBOM_PLUGIN = "js-sbom";
-const VULN_PLUGIN = "vuln-finder";
+/** The failed status as the Go services write it (the API writes "failed") */
+const GO_ANALYSIS_FAILURE = "failure";
 
 const SUCCEEDED: ReadonlySet<string> = new Set([
   AnalysisStatus.SUCCESS,
   AnalysisStatus.COMPLETED,
 ]);
-/** The Go services write "failure", the API "failed" */
 const FAILED: ReadonlySet<string> = new Set([
   AnalysisStatus.FAILED,
   AnalysisStatus.CANCELLED,
-  "failure",
+  GO_ANALYSIS_FAILURE,
 ]);
 
 /** The run cannot be done: never retried. */
@@ -215,7 +218,7 @@ export class ExperimentRunnerService
       ...analysisContext(run),
     };
     const results = new Map<string, unknown>();
-    for (const plugin of [SBOM_PLUGIN, VULN_PLUGIN]) {
+    for (const plugin of EXPERIMENT_REQUIRED_PLUGINS) {
       const result = run.analysis
         ? await this.store.getPluginResult(run.analysis.id, plugin)
         : null;
@@ -676,11 +679,11 @@ export class ExperimentRunnerService
       schedule_type: "once",
       languages: ["javascript"],
       config: {
-        "js-sbom": {
+        [SBOM_PLUGIN]: {
           project: `${orgId}/projects/${projectId}/${head.commitHash}`,
           branch: head.branch,
         },
-        "vuln-finder": {},
+        [VULN_PLUGIN]: {},
         "license-finder": { licensePolicy: [] },
       },
     };

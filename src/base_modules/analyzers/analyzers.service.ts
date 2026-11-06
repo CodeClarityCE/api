@@ -11,7 +11,7 @@ import {
   Experiment,
   ExperimentStatus,
 } from "src/codeclarity_modules/experiments/experiment.entity";
-import { EntityInUse } from "src/types/error.types";
+import { assertNotUsedByExperiments } from "src/codeclarity_modules/experiments/experiment-in-use";
 import {
   PaginationConfig,
   PaginationUserSuppliedConf,
@@ -263,16 +263,10 @@ export class AnalyzersService {
     await this.analyzersRepository.doesAnalyzerBelongToOrg(id, orgId);
 
     // An experiment still to run needs its analyzer; finished ones keep a step snapshot
-    if (
-      await this.experimentRepository.exists({
-        where: {
-          analyzer: { id },
-          status: In([ExperimentStatus.PENDING, ExperimentStatus.RUNNING]),
-        },
-      })
-    ) {
-      throw new EntityInUse();
-    }
+    await assertNotUsedByExperiments(this.experimentRepository, {
+      analyzer: { id },
+      status: In([ExperimentStatus.PENDING, ExperimentStatus.RUNNING]),
+    });
 
     // Delete the analyzer from the database
     await this.analyzersRepository.deleteAnalyzer(id);

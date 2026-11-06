@@ -16,8 +16,10 @@ import { ExperimentRunStatus } from "./experiment-run.entity";
 export const EXPERIMENT_DEFAULT_RETRIES = 2;
 export const EXPERIMENT_MAX_RETRIES = 10;
 
+export const SBOM_PLUGIN = "js-sbom";
+export const VULN_PLUGIN = "vuln-finder";
 /** Plugins whose results an experiment copies; the analyzer must run both */
-export const EXPERIMENT_REQUIRED_PLUGINS = ["js-sbom", "vuln-finder"];
+export const EXPERIMENT_REQUIRED_PLUGINS = [SBOM_PLUGIN, VULN_PLUGIN];
 
 export class CreateExperimentBody {
   @ApiProperty({ maxLength: 100 })

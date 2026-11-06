@@ -11,7 +11,6 @@ import {
 import { TypedPaginatedResponse } from "src/types/apiResponses.types";
 import {
   AlreadyExists,
-  EntityInUse,
   EntityNotFound,
   NotAuthorized,
 } from "src/types/error.types";
@@ -21,6 +20,7 @@ import {
 } from "src/types/pagination.types";
 
 import { Experiment } from "../experiments/experiment.entity";
+import { assertNotUsedByExperiments } from "../experiments/experiment-in-use";
 
 import { Dataset, DatasetStatus } from "./dataset.entity";
 import { DatasetBuildService } from "./dataset-build.service";
@@ -265,13 +265,9 @@ export class DatasetsService {
       MemberRole.ADMIN,
     );
     const dataset = await this.findInOrg(orgId, datasetId);
-    if (
-      await this.experimentRepository.exists({
-        where: { dataset: { id: dataset.id } },
-      })
-    ) {
-      throw new EntityInUse();
-    }
+    await assertNotUsedByExperiments(this.experimentRepository, {
+      dataset: { id: dataset.id },
+    });
     await this.datasetRepository.delete({ id: dataset.id });
   }
 

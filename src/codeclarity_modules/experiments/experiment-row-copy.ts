@@ -88,8 +88,8 @@ function objectOrEmpty(value: unknown): JsonObject {
 }
 
 /** The advisory record of one source's match, or {} when it has none. */
-function matchedAdvisory(finding: JsonObject, key: string): JsonObject {
-  return objectOrEmpty(objectOrEmpty(finding[key])["Vulnerability"]);
+function matchedAdvisory(instance: JsonObject, key: string): JsonObject {
+  return objectOrEmpty(objectOrEmpty(instance[key])["Vulnerability"]);
 }
 
 function firstString(...values: unknown[]): string | null {
@@ -100,18 +100,18 @@ function firstString(...values: unknown[]): string | null {
   return null;
 }
 
-function instanceRow(workspace: string, finding: JsonObject): VulnerabilityInstanceRow {
-  const severity = objectOrEmpty(finding["Severity"]);
-  const epss = objectOrEmpty(finding["EPSS"]);
-  const conflict = objectOrEmpty(finding["Conflict"]);
-  const nvd = matchedAdvisory(finding, "NVDMatch");
-  const osv = matchedAdvisory(finding, "OSVMatch");
-  const gcve = matchedAdvisory(finding, "GCVEMatch");
+function instanceRow(workspace: string, instance: JsonObject): VulnerabilityInstanceRow {
+  const severity = objectOrEmpty(instance["Severity"]);
+  const epss = objectOrEmpty(instance["EPSS"]);
+  const conflict = objectOrEmpty(instance["Conflict"]);
+  const nvd = matchedAdvisory(instance, "NVDMatch");
+  const osv = matchedAdvisory(instance, "OSVMatch");
+  const gcve = matchedAdvisory(instance, "GCVEMatch");
   return {
     workspace,
-    vulnerability_id: stringOrNull(finding["VulnerabilityId"]),
-    affected_dependency: stringOrNull(finding["AffectedDependency"]),
-    affected_version: stringOrNull(finding["AffectedVersion"]),
+    vulnerability_id: stringOrNull(instance["VulnerabilityId"]),
+    affected_dependency: stringOrNull(instance["AffectedDependency"]),
+    affected_version: stringOrNull(instance["AffectedVersion"]),
     severity_class: stringOrNull(severity["SeverityClass"]),
     severity_score: numberOrNull(severity["Severity"]),
     severity_vector: stringOrNull(severity["Vector"]),
@@ -124,7 +124,7 @@ function instanceRow(workspace: string, finding: JsonObject): VulnerabilityInsta
     // vuln-finder writes `direct_dependency` (omitempty, so absent means
     // false). This deliberately differs from the archived harness, which read
     // a `DirectDependency` key that never exists and so always got false.
-    direct_dependency: finding["direct_dependency"] === true,
+    direct_dependency: instance["direct_dependency"] === true,
     published_date: firstString(
       nvd["Published"],
       osv["published"],
@@ -214,10 +214,10 @@ export function mapRunRows(sbom: unknown, vulns: unknown): RunRows {
 
   const vulnerabilities: VulnerabilityInstanceRow[] = [];
   for (const [name, ws] of workspaces(vulns)) {
-    const findings = ws["Vulnerabilities"];
-    if (!Array.isArray(findings)) continue;
-    for (const finding of findings) {
-      if (isObject(finding)) vulnerabilities.push(instanceRow(name, finding));
+    const instances = ws["Vulnerabilities"];
+    if (!Array.isArray(instances)) continue;
+    for (const instance of instances) {
+      if (isObject(instance)) vulnerabilities.push(instanceRow(name, instance));
     }
   }
 

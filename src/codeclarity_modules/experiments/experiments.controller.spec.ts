@@ -3,6 +3,7 @@ import { Readable } from "node:stream";
 
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
 
+import type { ExperimentResultsService } from "./experiment-results.service";
 import { ExperimentsController } from "./experiments.controller";
 import type { ExperimentsService } from "./experiments.service";
 
@@ -21,7 +22,8 @@ describe("ExperimentsController exports", () => {
       exportResults: jest.fn(),
     };
     controller = new ExperimentsController(
-      service as unknown as ExperimentsService,
+      {} as ExperimentsService,
+      service as unknown as ExperimentResultsService,
     );
     headers = {};
     sent = undefined;

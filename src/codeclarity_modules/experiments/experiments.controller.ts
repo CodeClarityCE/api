@@ -30,6 +30,7 @@ import {
 } from "src/types/apiResponses.types";
 
 import type { ExperimentResults } from "./experiment-results";
+import { ExperimentResultsService } from "./experiment-results.service";
 import { ExperimentsService } from "./experiments.service";
 import {
   CreateExperimentBody,
@@ -49,7 +50,10 @@ function attachment(experimentName: string, file: string): string {
 @ApiTags("Experiments")
 @Controller("org/:org_id/experiments")
 export class ExperimentsController {
-  constructor(private readonly experimentsService: ExperimentsService) {}
+  constructor(
+    private readonly experimentsService: ExperimentsService,
+    private readonly resultsService: ExperimentResultsService,
+  ) {}
 
   @Post("")
   @ApiOperation({
@@ -140,7 +144,7 @@ export class ExperimentsController {
     @Param("experiment_id") experiment_id: string,
   ): Promise<TypedResponse<ExperimentResults>> {
     return {
-      data: await this.experimentsService.getResults(
+      data: await this.resultsService.getResults(
         org_id,
         experiment_id,
         user,
@@ -169,7 +173,7 @@ export class ExperimentsController {
     @Res() reply: FastifyReply,
   ): Promise<void> {
     const { experiment_name, stream } =
-      await this.experimentsService.exportRunsCsv(org_id, experiment_id, user);
+      await this.resultsService.exportRunsCsv(org_id, experiment_id, user);
     await reply
       .header("content-type", CSV_CONTENT_TYPE)
       .header("content-disposition", attachment(experiment_name, "runs.csv"))
@@ -190,7 +194,7 @@ export class ExperimentsController {
     @Res() reply: FastifyReply,
   ): Promise<void> {
     const { experiment_name, stream } =
-      await this.experimentsService.exportVulnerabilitiesCsv(
+      await this.resultsService.exportVulnerabilitiesCsv(
         org_id,
         experiment_id,
         user,
@@ -218,7 +222,7 @@ export class ExperimentsController {
     @Res() reply: FastifyReply,
   ): Promise<void> {
     const { experiment_name, results } =
-      await this.experimentsService.exportResults(org_id, experiment_id, user);
+      await this.resultsService.exportResults(org_id, experiment_id, user);
     await reply
       .header("content-type", JSON_CONTENT_TYPE)
       .header(

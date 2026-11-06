@@ -111,28 +111,28 @@ const MATCH_FIELDS: Record<string, readonly string[]> = {
   GCVEMatch: ["datePublished", "dateUpdated"],
 };
 
-function trimFinding(finding: unknown): JsonObject {
-  const out = pick(finding, [
+function trimInstance(instance: unknown): JsonObject {
+  const out = pick(instance, [
     "VulnerabilityId",
     "AffectedDependency",
     "AffectedVersion",
     "EPSS",
     "direct_dependency",
   ]);
-  if (!isObject(finding)) return out;
-  out["Severity"] = pick(finding["Severity"], [
+  if (!isObject(instance)) return out;
+  out["Severity"] = pick(instance["Severity"], [
     "SeverityClass",
     "Severity",
     "Vector",
     "Impact",
     "Exploitability",
   ]);
-  out["Conflict"] = pick(finding["Conflict"], [
+  out["Conflict"] = pick(instance["Conflict"], [
     "ConflictFlag",
     "ConflictWinner",
   ]);
   for (const [key, fields] of Object.entries(MATCH_FIELDS)) {
-    const match = finding[key];
+    const match = instance[key];
     if (isObject(match) && isObject(match["Vulnerability"])) {
       out[key] = { Vulnerability: pick(match["Vulnerability"], fields) };
     }
@@ -146,9 +146,9 @@ function trimVulns(payload: unknown): JsonObject {
   return {
     analysis_info: pick(info, ["status"]),
     workspaces: mapValues(workspaces, (ws) => {
-      const findings = isObject(ws) ? ws["Vulnerabilities"] : undefined;
+      const instances = isObject(ws) ? ws["Vulnerabilities"] : undefined;
       return {
-        Vulnerabilities: Array.isArray(findings) ? findings.map(trimFinding) : [],
+        Vulnerabilities: Array.isArray(instances) ? instances.map(trimInstance) : [],
       };
     }),
   };

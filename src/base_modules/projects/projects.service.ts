@@ -46,7 +46,7 @@ import {
 } from "../shared/repositories";
 
 /** A GitHub repository already resolved through an integration */
-export interface ExperimentRepository {
+export interface ResolvedGithubRepo {
   /** Canonical url (GitHub's html_url) */
   url: string;
   full_name: string;
@@ -259,7 +259,7 @@ export class ProjectService {
   async importForExperiment(
     orgId: string,
     integrationId: string,
-    repo: ExperimentRepository,
+    repo: ResolvedGithubRepo,
     user: AuthenticatedUser,
   ): Promise<string> {
     await this.repos.memberships.hasRequiredRole(

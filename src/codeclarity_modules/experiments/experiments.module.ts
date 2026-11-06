@@ -12,6 +12,7 @@ import { DatasetEntry } from "../datasets/dataset-entry.entity";
 import { Result } from "../results/result.entity";
 
 import { Experiment } from "./experiment.entity";
+import { ExperimentResultsService } from "./experiment-results.service";
 import { ExperimentRun } from "./experiment-run.entity";
 import { ExperimentRunSummaryRow } from "./experiment-run-summary-row.entity";
 import { ExperimentRunnerService } from "./experiment-runner.service";
@@ -43,6 +44,7 @@ import { ExperimentsService } from "./experiments.service";
   controllers: [ExperimentsController],
   providers: [
     ExperimentsService,
+    ExperimentResultsService,
     ExperimentRunnerService,
     { provide: ExperimentStore, useClass: TypeOrmExperimentStore },
   ],
