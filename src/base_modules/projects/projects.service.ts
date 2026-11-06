@@ -45,6 +45,15 @@ import {
   UsersRepository,
 } from "../shared/repositories";
 
+/** A GitHub repository already resolved through an integration */
+export interface ExperimentRepository {
+  /** Canonical url (GitHub's html_url) */
+  url: string;
+  full_name: string;
+  description?: string | null;
+  default_branch: string;
+}
+
 /** Repository services grouped for dependency injection */
 interface RepositoryServices {
   users: UsersRepository;
@@ -230,6 +239,65 @@ export class ProjectService {
       project.integration_provider = IntegrationProvider.FILE;
     }
 
+    return this.saveNewProject(orgId, project, user);
+  }
+
+  /**
+   * Get or import the project of a GitHub repository for org-wide work
+   * (experiments). Unlike import, any project of the org with this url is
+   * reused, and the integration only has to belong to the org, not to the
+   * caller. The repository was already resolved by the caller through the
+   * integration, so GitHub is not queried again.
+   * @throws {NotAuthorized} If the user is not a member of the org
+   * @throws {EntityNotFound} If the org has no such integration
+   * @param orgId The id of the organization
+   * @param integrationId The GitHub integration the repository was resolved with
+   * @param repo The repository, with its canonical url
+   * @param user The user recorded as having added the project
+   * @returns the id of the existing or created project
+   */
+  async importForExperiment(
+    orgId: string,
+    integrationId: string,
+    repo: ExperimentRepository,
+    user: AuthenticatedUser,
+  ): Promise<string> {
+    await this.repos.memberships.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.USER,
+    );
+
+    const existing = await this.repos.projects.getProjectByUrlAndOrg(
+      repo.url,
+      orgId,
+    );
+    if (existing) return existing.id;
+
+    const integration =
+      await this.repos.integrations.getIntegrationByIdAndOrganization(
+        integrationId,
+        orgId,
+      );
+
+    const project = new Project();
+    project.name = repo.full_name;
+    project.description = repo.description ?? "";
+    project.type = IntegrationProvider.GITHUB;
+    project.integration = integration;
+    project.default_branch = repo.default_branch;
+    project.service_domain = "github.com";
+    project.integration_provider = IntegrationProvider.GITHUB;
+    project.url = repo.url;
+    return this.saveNewProject(orgId, project, user);
+  }
+
+  /** Save a new project for the org and create its download folder. */
+  private async saveNewProject(
+    orgId: string,
+    project: Project,
+    user: AuthenticatedUser,
+  ): Promise<string> {
     const user_adding = await this.repos.users.getUserById(user.userId);
 
     const organization =

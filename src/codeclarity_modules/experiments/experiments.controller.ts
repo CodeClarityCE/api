@@ -114,6 +114,24 @@ export class ExperimentsController {
     );
   }
 
+  @Post(":experiment_id/cancel")
+  @ApiOperation({
+    summary:
+      "Cancel an experiment: stop submitting, let in-flight analyses finish",
+  })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiResponse({ status: 403, description: "Insufficient permissions" })
+  @ApiResponse({ status: 409, description: "Experiment already ended" })
+  async cancel(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+  ): Promise<NoDataResponse> {
+    await this.experimentsService.cancel(org_id, experiment_id, user);
+    return {};
+  }
+
   @Delete(":experiment_id")
   @ApiOperation({
     summary: "Delete an experiment, its runs and copied results",

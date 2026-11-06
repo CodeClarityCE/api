@@ -20,9 +20,11 @@ import { paginated, resolvePagination } from "../datasets/datasets.service";
 
 import { Experiment, ExperimentStatus } from "./experiment.entity";
 import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
+import { ExperimentRunnerService } from "./experiment-runner.service";
 import {
   AnalyzerMissingRequiredPlugins,
   DatasetNotReady,
+  ExperimentNotCancellable,
 } from "./experiments.errors";
 import {
   CreateExperimentBody,
@@ -64,11 +66,12 @@ export class ExperimentsService {
     private readonly datasetRepository: Repository<Dataset>,
     @InjectRepository(DatasetEntry, "codeclarity")
     private readonly entryRepository: Repository<DatasetEntry>,
+    private readonly runner: ExperimentRunnerService,
   ) {}
 
   /**
-   * Register an experiment with one pending run per dataset entry. Nothing is
-   * submitted yet: the runner picks PENDING experiments up.
+   * Register an experiment with one pending run per dataset entry. The
+   * runner picks it up and submits the analyses.
    * @throws {NotAuthorized} If the user is not an admin of the org or the analyzer belongs to another org
    * @throws {EntityNotFound} If the org has no such dataset
    * @throws {DatasetNotReady} If the dataset is not READY
@@ -143,6 +146,7 @@ export class ExperimentsService {
       analyzerId: analyzer.id,
       runs: entries.length,
     });
+    this.runner.kick();
     return saved.id;
   }
 
@@ -258,6 +262,34 @@ export class ExperimentsService {
       currentPage,
       entriesPerPage,
     );
+  }
+
+  /**
+   * Stop submitting analyses: unsubmitted runs are skipped, in-flight ones
+   * finish and are still kept; the experiment ends CANCELLED.
+   * @throws {NotAuthorized} If the user is not an admin of the org
+   * @throws {EntityNotFound} If the org has no such experiment
+   * @throws {ExperimentNotCancellable} If the experiment already ended
+   */
+  async cancel(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.ADMIN,
+    );
+    const experiment = await this.findInOrg(orgId, experimentId);
+    if (!(await this.runner.cancel(experiment.id))) {
+      throw new ExperimentNotCancellable();
+    }
+    this.logger.log("Experiment cancel requested", {
+      experimentId: experiment.id,
+      organizationId: orgId,
+      userId: user.userId,
+    });
   }
 
   /**

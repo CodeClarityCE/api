@@ -12,9 +12,11 @@ import { DatasetStatus } from "../datasets/dataset.entity";
 
 import { ExperimentStatus } from "./experiment.entity";
 import { ExperimentRunStatus } from "./experiment-run.entity";
+import { type ExperimentRunnerService } from "./experiment-runner.service";
 import {
   AnalyzerMissingRequiredPlugins,
   DatasetNotReady,
+  ExperimentNotCancellable,
 } from "./experiments.errors";
 import { ExperimentsService } from "./experiments.service";
 
@@ -36,6 +38,7 @@ describe("ExperimentsService", () => {
   let runRepository: Record<string, jest.Mock>;
   let datasetRepository: Record<string, jest.Mock>;
   let entryRepository: Record<string, jest.Mock>;
+  let runner: { kick: jest.Mock; cancel: jest.Mock };
 
   beforeEach(() => {
     hasRequiredRole = jest.fn().mockResolvedValue(undefined);
@@ -81,6 +84,7 @@ describe("ExperimentsService", () => {
       find: jest.fn().mockResolvedValue([{ id: "e-0" }, { id: "e-1" }]),
     };
 
+    runner = { kick: jest.fn(), cancel: jest.fn().mockResolvedValue(true) };
     service = new ExperimentsService(
       { hasRequiredRole } as unknown as MembershipsRepository,
       analyzersRepository as unknown as AnalyzersRepository,
@@ -88,6 +92,7 @@ describe("ExperimentsService", () => {
       runRepository as never,
       datasetRepository as never,
       entryRepository as never,
+      runner as unknown as ExperimentRunnerService,
     );
   });
 
@@ -124,6 +129,11 @@ describe("ExperimentsService", () => {
           ],
         }),
       );
+    });
+
+    it("wakes the runner up", async () => {
+      await service.create("org-1", body, user);
+      expect(runner.kick).toHaveBeenCalled();
     });
 
     it("keeps the requested retries", async () => {
@@ -409,6 +419,38 @@ describe("ExperimentsService", () => {
         service.delete("org-1", "exp-9", user),
       ).rejects.toBeInstanceOf(EntityNotFound);
       expect(experimentRepository["delete"]).not.toHaveBeenCalled();
+    });
+  });
+  describe("cancel", () => {
+    it("requires an admin and hands the experiment to the runner", async () => {
+      experimentRepository["findOne"]!.mockResolvedValue({ id: "exp-1" });
+
+      await service.cancel("org-1", "exp-1", user);
+
+      expect(hasRequiredRole).toHaveBeenCalledWith(
+        "org-1",
+        "user-1",
+        MemberRole.ADMIN,
+      );
+      expect(runner.cancel).toHaveBeenCalledWith("exp-1");
+    });
+
+    it("refuses an experiment that already ended", async () => {
+      experimentRepository["findOne"]!.mockResolvedValue({ id: "exp-1" });
+      runner.cancel.mockResolvedValue(false);
+
+      await expect(
+        service.cancel("org-1", "exp-1", user),
+      ).rejects.toBeInstanceOf(ExperimentNotCancellable);
+    });
+
+    it("refuses an experiment of another organization", async () => {
+      experimentRepository["findOne"]!.mockResolvedValue(null);
+
+      await expect(
+        service.cancel("org-1", "exp-9", user),
+      ).rejects.toBeInstanceOf(EntityNotFound);
+      expect(runner.cancel).not.toHaveBeenCalled();
     });
   });
 });

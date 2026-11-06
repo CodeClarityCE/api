@@ -93,6 +93,7 @@ import { VulnerabilitySearchService } from "./vulnerability/vulnerability.servic
     VulnerabilitySearchService,
     OutdatedCheckService,
     VulnerabilityCheckService,
+    ProvenanceService,
   ],
   providers: [
     LicenseService,

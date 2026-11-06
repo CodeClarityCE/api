@@ -95,6 +95,21 @@ export class ProjectsRepository {
   }
 
   /**
+   * Get the oldest project of an org with a given git URL, whoever imported
+   * it, or null if none exists. For org-wide work (experiments); user-facing
+   * imports stay per-user through getProjectByUrlOrgAndUser.
+   */
+  async getProjectByUrlAndOrg(
+    url: string,
+    orgId: string,
+  ): Promise<Project | null> {
+    return this.projectRepository.findOne({
+      where: { url, organizations: { id: orgId } },
+      order: { added_on: "ASC" },
+    });
+  }
+
+  /**
    * Check if a project belongs to an organization.
    * @throws {NotAuthorized} if the project does not belong to the org.
    */
