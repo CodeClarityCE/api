@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, Not, Repository } from "typeorm";
+import { EntityManager, In, Not, Repository } from "typeorm";
 
 import {
   Analysis,
@@ -9,6 +9,12 @@ import {
 import { TERMINAL_ANALYSIS_STATUSES } from "src/base_modules/analyses/analysis-outcome";
 import { EntityNotFound, NotAuthorized } from "src/types/error.types";
 import { TypedPaginatedData } from "src/types/pagination.types";
+
+/** Caller writes committed in the same transaction as a new analysis. */
+export type AnalysisWrites = (
+  manager: EntityManager,
+  analysisId: string,
+) => Promise<void>;
 
 /**
  * A repository for handling analysis-related database operations.
@@ -27,10 +33,22 @@ export class AnalysesRepository {
   /**
    * Saves an analysis to the database.
    * @param analysis The analysis to be saved.
+   * @param inTransaction Writes to commit atomically with the analysis.
    * @returns A promise that resolves with the saved analysis.
    */
-  async saveAnalysis(analysis: Analysis): Promise<Analysis> {
-    return await this.analysisRepository.save(analysis);
+  async saveAnalysis(
+    analysis: Analysis,
+    inTransaction?: AnalysisWrites,
+  ): Promise<Analysis> {
+    if (!inTransaction) return await this.analysisRepository.save(analysis);
+    // Commit the analysis together with the caller's own writes
+    return await this.analysisRepository.manager.transaction(
+      async (manager) => {
+        const saved = await manager.save(analysis);
+        await inTransaction(manager, saved.id);
+        return saved;
+      },
+    );
   }
 
   /**

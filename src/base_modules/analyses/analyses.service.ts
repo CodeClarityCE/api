@@ -1,7 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
-import * as amqp from "amqplib";
 import { Repository } from "typeorm";
 
 import {
@@ -28,14 +26,13 @@ import { SBOMRepository } from "src/codeclarity_modules/results/sbom/sbom.reposi
 import { Output as SbomOutput } from "src/codeclarity_modules/results/sbom/sbom.types";
 import { VulnerabilitiesRepository } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.repository";
 import { Output as VulnsOuptut } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
-import { RabbitMQError } from "src/types/error.types";
+import { CodeClarityLogger } from "src/services/logger.service";
 import {
   PaginationConfig,
   PaginationUserSuppliedConf,
   TypedPaginatedData,
 } from "src/types/pagination.types";
 import { AnalysisStartMessageCreate } from "src/types/rabbitMqMessages.types";
-import { buildAmqpSocketOptions } from "src/utils/amqp";
 
 import { AnaylzerMissingConfigAttribute } from "../analyzers/analyzers.errors";
 import { AnalyzersRepository } from "../analyzers/analyzers.repository";
@@ -46,8 +43,9 @@ import {
   UsersRepository,
 } from "../shared/repositories";
 
-import { AnalysesRepository } from "./analyses.repository";
+import { AnalysesRepository, AnalysisWrites } from "./analyses.repository";
 import { analysisOutcome } from "./analysis-outcome";
+import { AnalysisPublisher } from "./analysis-publisher";
 
 /** Configuration option for an analyzer step */
 interface AnalyzerStepConfigOption {
@@ -75,8 +73,10 @@ interface AnalysisConfigInput {
 
 @Injectable()
 export class AnalysesService {
+  private readonly logger = CodeClarityLogger.forService("Analyses");
+
   constructor(
-    private readonly configService: ConfigService,
+    private readonly analysisPublisher: AnalysisPublisher,
     private readonly membershipsRepository: MembershipsRepository,
     private readonly usersRepository: UsersRepository,
     private readonly organizationsRepository: OrganizationsRepository,
@@ -100,6 +100,8 @@ export class AnalysesService {
    * @param projectId The id of the project on which the analysis should be performed
    * @param analysisData The analysis create body supplied by the user
    * @param user The authenticated user
+   * @param options.inTransaction Writes committed atomically with the analysis; if they
+   * throw, no analysis is saved. The start message is published only after commit.
    * @returns The ID of the created analysis
    */
   async create(
@@ -107,6 +109,7 @@ export class AnalysesService {
     projectId: string,
     analysisData: AnalysisCreateBody,
     user: AuthenticatedUser,
+    options: { inTransaction?: AnalysisWrites } = {},
   ): Promise<string> {
     // Check if the user has the required role to perform actions on the organization
     await this.membershipsRepository.hasRequiredRole(
@@ -263,8 +266,10 @@ export class AnalysesService {
     }
 
     // Save the newly created analysis to the database
-    const created_analysis =
-      await this.analysesRepository.saveAnalysis(analysis);
+    const created_analysis = await this.analysesRepository.saveAnalysis(
+      analysis,
+      options.inTransaction,
+    );
 
     // Link vulnerability policies to the analysis if any were provided
     await this.linkPoliciesToAnalysis(
@@ -273,51 +278,14 @@ export class AnalysesService {
       orgId,
     );
 
-    // Only send message immediately for 'once' type analyses
-    // Scheduled analyses (daily/weekly) will be triggered by the scheduler at the appropriate time
+    // Scheduled analyses (daily/weekly) are triggered by the scheduler instead
     if (analysis.schedule_type === "once") {
-      const queue = this.configService.getOrThrow<string>(
-        "AMQP_ANALYSES_QUEUE",
-      );
-      const amqpHost = `${this.configService.getOrThrow<string>(
-        "AMQP_PROTOCOL",
-      )}://${this.configService.getOrThrow<string>("AMQP_USER")}:${
-        process.env["AMQP_PASSWORD"]
-      }@${this.configService.getOrThrow<string>(
-        "AMQP_HOST",
-      )}:${this.configService.getOrThrow<string>("AMQP_PORT")}`;
-
-      try {
-        // Connect to RabbitMQ using the configured settings.
-        // TLS socket options are derived from AMQP_SSLMODE / AMQP_SSLROOTCERT
-        // (amqps:// URLs negotiate TLS; options control verification).
-        const conn = await amqp.connect(amqpHost, buildAmqpSocketOptions());
-        const ch1 = await conn.createChannel();
-        await ch1.assertQueue(queue);
-
-        // Determine the integration ID if the project has an associated integration
-        let integration_id = null;
-        if (project.integration) {
-          integration_id = project.integration.id;
-        }
-
-        // Create the message payload to start the analysis process
-        const message: AnalysisStartMessageCreate = {
-          analysis_id: created_analysis.id,
-          integration_id: integration_id,
-          organization_id: orgId,
-          project_id: projectId,
-        };
-
-        // Send the message to RabbitMQ queue
-        ch1.sendToQueue(queue, Buffer.from(JSON.stringify(message)));
-
-        // Close the channel after sending the message
-        await ch1.close();
-      } catch (err) {
-        // Throw an error if there is a problem with connecting or messaging via RabbitMQ
-        throw new RabbitMQError(err);
-      }
+      await this.publishStart({
+        analysis_id: created_analysis.id,
+        integration_id: project.integration?.id ?? null,
+        organization_id: orgId,
+        project_id: projectId,
+      });
     }
 
     // Return the ID of the created analysis as a confirmation
@@ -991,6 +959,25 @@ export class AnalysesService {
         (a, b) =>
           new Date(b.run_date).getTime() - new Date(a.run_date).getTime(),
       ); // Newest first
+  }
+
+  /**
+   * Best-effort: a saved analysis counts as submitted, and the dispatcher's
+   * reaper re-drives one whose start message never arrived (ADR-0003).
+   */
+  private async publishStart(
+    message: AnalysisStartMessageCreate,
+  ): Promise<void> {
+    try {
+      await this.analysisPublisher.publish(message);
+    } catch (err) {
+      this.logger.warn("Analysis start message not published", {
+        analysisId: message.analysis_id,
+        projectId: message.project_id,
+        organizationId: message.organization_id,
+        error: (err as Error).message,
+      });
+    }
   }
 
   /**
