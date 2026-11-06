@@ -104,6 +104,8 @@ export const errorMessages: Record<string, string> = {
   CannotRevokeOwnMembership: "You cannot revoke your own membership.",
   InvitationInvalidOrExpired: "The invitation does not exist or has expired.",
   EntityNotFound: "The requested entity could not be found.",
+  EntityInUse:
+    "The requested entity cannot be deleted because other entities still use it.",
   IntegrationIntegrationTokenMissingPermissions:
     "An integration token has missing permissions.",
   FailedToSendPasswordResetEmail:
@@ -624,6 +626,20 @@ export class EntityNotFound extends PublicAPIError {
       EntityNotFound.errorCode,
       EntityNotFound.errorMessage,
       EntityNotFound.statusCode,
+      cause,
+    );
+  }
+}
+
+export class EntityInUse extends PublicAPIError {
+  static errorCode = "EntityInUse";
+  static errorMessage = errorMessages[EntityInUse.errorCode]!;
+  static statusCode = 409;
+  constructor(cause?: unknown) {
+    super(
+      EntityInUse.errorCode,
+      EntityInUse.errorMessage,
+      EntityInUse.statusCode,
       cause,
     );
   }

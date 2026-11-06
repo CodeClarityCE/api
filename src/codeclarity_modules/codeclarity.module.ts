@@ -6,6 +6,7 @@ import { defaultOptions } from "src/datasources/base-options";
 
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { DatasetsModule } from "./datasets/datasets.module";
+import { ExperimentsModule } from "./experiments/experiments.module";
 import { KnowledgeModule } from "./knowledge/knowledge.module";
 import { PolicyModule } from "./policies/policy.module";
 import { ResultsModule } from "./results/results.module";
@@ -19,6 +20,7 @@ import { TicketsModule } from "./tickets/tickets.module";
     DashboardModule,
     TicketsModule,
     DatasetsModule,
+    ExperimentsModule,
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       name: "knowledge",
