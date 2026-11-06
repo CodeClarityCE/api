@@ -9,8 +9,8 @@ import { hostname } from "node:os";
 import { join } from "node:path";
 
 import { AnalysesService } from "src/base_modules/analyses/analyses.service";
-import { AnalysisStatus } from "src/base_modules/analyses/analysis.entity";
 import { AnalysisCreateBody } from "src/base_modules/analyses/analysis.types";
+import { analysisOutcome } from "src/base_modules/analyses/analysis-outcome";
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
 import { GithubIntegrationService } from "src/base_modules/integrations/github/github.service";
 import {
@@ -26,11 +26,7 @@ import {
 import { ProjectService } from "src/base_modules/projects/projects.service";
 import { ProvenanceService } from "src/codeclarity_modules/knowledge/provenance/provenance.service";
 import { CodeClarityLogger } from "src/services/logger.service";
-import {
-  APIError,
-  EntityNotFound,
-  NotAuthorized,
-} from "src/types/error.types";
+import { APIError, EntityNotFound, NotAuthorized } from "src/types/error.types";
 
 import { describeBuildError } from "../datasets/dataset-build.service";
 import { GithubRateLimited, rateLimitedAt } from "../datasets/dataset-builder";
@@ -52,17 +48,6 @@ const MAX_THROTTLE_WAIT_SECONDS = 60;
 const DEFAULT_MAX_IN_FLIGHT = 8;
 const DEFAULT_RUN_CEILING_HOURS = 24;
 /** The failed status as the Go services write it (the API writes "failed") */
-const GO_ANALYSIS_FAILURE = "failure";
-
-const SUCCEEDED: ReadonlySet<string> = new Set([
-  AnalysisStatus.SUCCESS,
-  AnalysisStatus.COMPLETED,
-]);
-const FAILED: ReadonlySet<string> = new Set([
-  AnalysisStatus.FAILED,
-  AnalysisStatus.CANCELLED,
-  GO_ANALYSIS_FAILURE,
-]);
 
 /** The run cannot be done: never retried. */
 class RunSkipped extends Error {
@@ -236,7 +221,10 @@ export class ExperimentRunnerService
     const rows = mapRunRows(results.get(SBOM_PLUGIN), results.get(VULN_PLUGIN));
     const copied = await this.store.copyRunRows(experiment.id, run.id, rows);
     if (!copied) {
-      this.logger.warn("Experiment run ended before its rows were copied", logContext);
+      this.logger.warn(
+        "Experiment run ended before its rows were copied",
+        logContext,
+      );
       return;
     }
     this.logger.log("Experiment run done", {
@@ -341,11 +329,12 @@ export class ExperimentRunnerService
     const now = Date.now();
     for (const run of await this.store.getInFlightRuns(experiment.id)) {
       const status = run.analysis?.status;
+      const outcome = status ? analysisOutcome(status) : "running";
       if (!run.analysis) {
         await this.attemptFailed(experiment, run, "analysis deleted");
-      } else if (status && SUCCEEDED.has(status)) {
+      } else if (outcome === "succeeded") {
         await this.completeRun(experiment, run);
-      } else if (status && FAILED.has(status)) {
+      } else if (outcome === "failed") {
         await this.attemptFailed(
           experiment,
           run,
@@ -589,8 +578,9 @@ export class ExperimentRunnerService
     let repo: GithubRepoMetadata;
     let commits: GithubCommitItem[];
     try {
-      repo = ((await client.rest.repos.get(params)) as { data: GithubRepoMetadata })
-        .data;
+      repo = (
+        (await client.rest.repos.get(params)) as { data: GithubRepoMetadata }
+      ).data;
       if (repo.html_url.toLowerCase() !== entry.git_url.toLowerCase()) {
         throw new RunSkipped(`repository moved to ${repo.html_url}`);
       }

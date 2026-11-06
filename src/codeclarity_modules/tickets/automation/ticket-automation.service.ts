@@ -2,10 +2,11 @@ import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { In, Not, Repository } from "typeorm";
 
+import { Analysis } from "src/base_modules/analyses/analysis.entity";
 import {
-  Analysis,
-  AnalysisStatus,
-} from "src/base_modules/analyses/analysis.entity";
+  analysisOutcome,
+  SUCCEEDED_ANALYSIS_STATUSES,
+} from "src/base_modules/analyses/analysis-outcome";
 import { Organization } from "src/base_modules/organizations/organization.entity";
 import { Result } from "src/codeclarity_modules/results/result.entity";
 import { Output as VulnsOutput } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
@@ -66,10 +67,7 @@ export class TicketAutomationService {
     }
 
     // Check if analysis completed successfully
-    if (
-      analysis.status !== AnalysisStatus.SUCCESS &&
-      analysis.status !== AnalysisStatus.COMPLETED
-    ) {
+    if (analysisOutcome(analysis.status) !== "succeeded") {
       this.logger.log(
         `Analysis ${analysisId} status is ${analysis.status}, skipping auto-resolve`,
       );
@@ -284,7 +282,7 @@ export class TicketAutomationService {
   async processRecentlyCompletedAnalyses(since: Date): Promise<number> {
     const completedAnalyses = await this.analysisRepository.find({
       where: {
-        status: In([AnalysisStatus.SUCCESS, AnalysisStatus.COMPLETED]),
+        status: In([...SUCCEEDED_ANALYSIS_STATUSES]),
         ended_on: Not(null as unknown as Date),
       },
       relations: { organization: true, project: true },
