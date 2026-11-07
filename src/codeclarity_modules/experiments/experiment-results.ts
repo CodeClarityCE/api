@@ -18,6 +18,7 @@ import {
   type FixKind,
 } from "./experiment-exposures";
 import { gridDay } from "./experiment-grid";
+import { type ResidenceBlock, residenceBlock } from "./experiment-residence";
 import {
   NO_LOCKFILE_YET,
   type ProbePackage,
@@ -295,6 +296,8 @@ export interface ExperimentResults {
   /** Exposures and fixes over the whole grid (hindsight view) */
   exposures: ExposuresBlock;
   fix_lag: FixLagBlock;
+  /** Introduction to disclosure, introductions after it apart */
+  residence: ResidenceBlock;
   provenance: ProvenanceBlock;
 }
 
@@ -686,6 +689,7 @@ export function aggregateExperimentResults(
     rqd: rqd(summaries),
     exposures: exposuresBlock(exposures),
     fix_lag: fixLag(exposures),
+    residence: residenceBlock(exposures),
     provenance: provenance(input.provenance),
   };
 }
