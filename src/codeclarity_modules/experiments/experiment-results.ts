@@ -19,6 +19,7 @@ import {
 } from "./experiment-exposures";
 import { gridDay } from "./experiment-grid";
 import { loadOverTime, type LoadRow } from "./experiment-load";
+import { type ResidenceBlock, residenceBlock } from "./experiment-residence";
 import {
   NO_LOCKFILE_YET,
   type ProbePackage,
@@ -298,6 +299,8 @@ export interface ExperimentResults {
   fix_lag: FixLagBlock;
   /** Instances per grid date in the hindsight and as-of views, HEAD last */
   load_over_time: LoadRow[];
+  /** Introduction to disclosure, introductions after it apart */
+  residence: ResidenceBlock;
   provenance: ProvenanceBlock;
 }
 
@@ -696,6 +699,7 @@ export function aggregateExperimentResults(
       vulnerabilities: input.vulnerabilities,
       ended_on: input.provenance.ended_on,
     }),
+    residence: residenceBlock(exposures),
     provenance: provenance(input.provenance),
   };
 }
