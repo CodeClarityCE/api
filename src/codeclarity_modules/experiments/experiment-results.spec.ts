@@ -1,6 +1,7 @@
 import {
   aggregateExperimentResults,
   type ExperimentResultsInput,
+  type KnowledgeSnapshot,
   type ResultsSummaryInput,
   type ResultsVulnerabilityInput,
 } from "./experiment-results";
@@ -342,8 +343,8 @@ describe("aggregateExperimentResults", () => {
       const { grid_coverage } = aggregateExperimentResults(gridExperiment);
 
       expect(grid_coverage).toEqual([
-        { grid_date: "2026-10-07", runs: 3, done: 2, empty: 0, failed: 1, skipped: 0, pending: 0 },
-        { grid_date: null, runs: 3, done: 2, empty: 0, failed: 0, skipped: 1, pending: 0 },
+        { grid_date: "2026-10-07", runs: 3, done: 2, empty: 0, failed: 1, skipped: 0, pending: 0, mixed_knowledge: false },
+        { grid_date: null, runs: 3, done: 2, empty: 0, failed: 0, skipped: 1, pending: 0, mixed_knowledge: false },
       ]);
     });
 
@@ -360,9 +361,9 @@ describe("aggregateExperimentResults", () => {
       );
 
       expect(grid_coverage).toEqual([
-        { grid_date: "2026-09-07", runs: 1, done: 0, empty: 1, failed: 0, skipped: 0, pending: 0 },
-        { grid_date: "2026-10-07", runs: 1, done: 1, empty: 0, failed: 0, skipped: 0, pending: 0 },
-        { grid_date: null, runs: 1, done: 0, empty: 0, failed: 0, skipped: 0, pending: 1 },
+        { grid_date: "2026-09-07", runs: 1, done: 0, empty: 1, failed: 0, skipped: 0, pending: 0, mixed_knowledge: false },
+        { grid_date: "2026-10-07", runs: 1, done: 1, empty: 0, failed: 0, skipped: 0, pending: 0, mixed_knowledge: false },
+        { grid_date: null, runs: 1, done: 0, empty: 0, failed: 0, skipped: 0, pending: 1, mixed_knowledge: false },
       ]);
     });
 
@@ -372,7 +373,66 @@ describe("aggregateExperimentResults", () => {
       );
 
       expect(grid_coverage).toEqual([
-        { grid_date: null, runs: 2, done: 1, empty: 0, failed: 1, skipped: 0, pending: 0 },
+        { grid_date: null, runs: 2, done: 1, empty: 0, failed: 1, skipped: 0, pending: 0, mixed_knowledge: false },
+      ]);
+    });
+  });
+
+  describe("mixed knowledge per grid date", () => {
+    const grid = new Date("2026-10-07T00:00:00Z");
+    const knowledge = (nvd: string, epss_rows = 10): KnowledgeSnapshot => ({
+      knowledge_sources: { nvd, osv: "2026-11-01T00:00:00Z" },
+      epss_rows,
+    });
+    const flags = (results: ReturnType<typeof aggregateExperimentResults>): [string | null, boolean][] =>
+      results.grid_coverage.map((row) => [row.grid_date, row.mixed_knowledge]);
+
+    it("flags a grid date whose runs were matched against different knowledge", () => {
+      const results = aggregateExperimentResults(
+        input({
+          runs: [
+            { status: "done", error: null, grid_date: grid, knowledge: knowledge("2026-11-01T00:00:00Z") },
+            { status: "done", error: null, grid_date: grid, knowledge: knowledge("2026-11-02T00:00:00Z") },
+            { status: "done", error: null, grid_date: null, knowledge: knowledge("2026-11-02T00:00:00Z") },
+            { status: "done", error: null, grid_date: null, knowledge: knowledge("2026-11-02T00:00:00Z") },
+          ],
+        }),
+      );
+
+      expect(flags(results)).toEqual([
+        ["2026-10-07", true],
+        [null, false],
+      ]);
+    });
+
+    it("counts a change in EPSS rows as different knowledge", () => {
+      const results = aggregateExperimentResults(
+        input({
+          runs: [
+            { status: "done", error: null, knowledge: knowledge("2026-11-01T00:00:00Z", 10) },
+            { status: "done", error: null, knowledge: knowledge("2026-11-01T00:00:00Z", 11) },
+          ],
+        }),
+      );
+
+      expect(flags(results)).toEqual([[null, true]]);
+    });
+
+    it("ignores runs without recorded knowledge, such as empty, failed or v1 runs", () => {
+      const results = aggregateExperimentResults(
+        input({
+          runs: [
+            { status: "done", error: null, grid_date: grid, knowledge: knowledge("2026-11-01T00:00:00Z") },
+            { status: "done", error: "no_lockfile_yet", grid_date: grid, knowledge: null },
+            { status: "failed", error: "ceiling", grid_date: grid },
+            { status: "done", error: null, grid_date: null },
+          ],
+        }),
+      );
+
+      expect(flags(results)).toEqual([
+        ["2026-10-07", false],
+        [null, false],
       ]);
     });
   });

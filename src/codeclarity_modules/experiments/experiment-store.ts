@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { EntityManager, IsNull, Not, Repository } from "typeorm";
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity";
 
+import type { KnowledgeProvenance } from "../knowledge/provenance/provenance.service";
 import { Result } from "../results/result.entity";
 
 import { Experiment, ExperimentStatus } from "./experiment.entity";
@@ -148,7 +149,8 @@ export abstract class ExperimentStore {
 
   /**
    * Give every pending run that shares a commit the outcome of the run it
-   * shares from, once that run has ended: status, reason, analysis.
+   * shares from, once that run has ended: status, reason, analysis and the
+   * knowledge its rows were matched against.
    */
   abstract settleSharedRuns(experimentId: string): Promise<void>;
 
@@ -173,15 +175,17 @@ export abstract class ExperimentStore {
 
   /**
    * In one transaction, replace the run's copied rows with these and mark it
-   * done, with `reason` (e.g. no_lockfile_yet) when it is done but empty.
-   * Copying a done run again replaces its rows. False, with nothing
-   * written, if the run is failed or skipped.
+   * done, with `reason` (e.g. no_lockfile_yet) when it is done but empty,
+   * and the `knowledge` the rows were matched against. Copying a done run
+   * again replaces its rows. False, with nothing written, if the run is
+   * failed or skipped.
    */
   abstract copyRunRows(
     experimentId: string,
     runId: string,
     rows: RunRows,
     reason?: string,
+    knowledge?: KnowledgeProvenance | null,
   ): Promise<boolean>;
 
   /** Write the packages an entry resolves at a commit, replacing any row for it. */
@@ -433,7 +437,8 @@ export class TypeOrmExperimentStore extends ExperimentStore {
           SET status = owner.status,
               error = owner.error,
               ended_on = COALESCE(owner.ended_on, now()),
-              "analysisId" = owner."analysisId"
+              "analysisId" = owner."analysisId",
+              knowledge = owner.knowledge
          FROM experiment_run AS owner
         WHERE owner.id = run."sharedFromId"
           AND run."experimentId" = $1
@@ -494,6 +499,7 @@ export class TypeOrmExperimentStore extends ExperimentStore {
     runId: string,
     rows: RunRows,
     reason?: string,
+    knowledge: KnowledgeProvenance | null = null,
   ): Promise<boolean> {
     return this.runRepository.manager.transaction(async (manager) => {
       // Locking the run serializes concurrent copies of it
@@ -533,6 +539,7 @@ export class TypeOrmExperimentStore extends ExperimentStore {
           status: ExperimentRunStatus.DONE,
           error: reason ?? null,
           ended_on: run.ended_on ?? new Date(),
+          knowledge,
         },
       );
       return true;

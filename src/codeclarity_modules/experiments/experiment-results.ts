@@ -79,6 +79,8 @@ export interface ResultsRunInput {
   /** The pinned commit, null when the snapshot has none yet */
   commit_hash?: string | null;
   committed_at?: Date | null;
+  /** The knowledge its rows were matched against, null if none was recorded */
+  knowledge?: KnowledgeSnapshot | null;
 }
 
 /**
@@ -215,6 +217,8 @@ export interface GridCoverageRow {
   failed: number;
   skipped: number;
   pending: number;
+  /** Its runs were matched against different knowledge */
+  mixed_knowledge: boolean;
 }
 
 /** A lag distribution in days. */
@@ -517,15 +521,31 @@ function coverage(runs: readonly ResultsRunInput[]): CoverageBlock {
 
 function gridCoverage(runs: readonly ResultsRunInput[]): GridCoverageRow[] {
   const rows = new Map<string, GridCoverageRow>();
+  // The first knowledge seen per grid date, to compare the others with
+  const firstKnowledge = new Map<string, KnowledgeSnapshot>();
   for (const run of runs) {
     const date = isHead(run) ? null : gridDay(run.grid_date!);
     const key = date ?? "HEAD";
     let row = rows.get(key);
     if (!row) {
-      row = { grid_date: date, runs: 0, done: 0, empty: 0, failed: 0, skipped: 0, pending: 0 };
+      row = {
+        grid_date: date,
+        runs: 0,
+        done: 0,
+        empty: 0,
+        failed: 0,
+        skipped: 0,
+        pending: 0,
+        mixed_knowledge: false,
+      };
       rows.set(key, row);
     }
     row.runs++;
+    if (run.knowledge) {
+      const first = firstKnowledge.get(key);
+      if (!first) firstKnowledge.set(key, run.knowledge);
+      else if (!sameKnowledge(first, run.knowledge)) row.mixed_knowledge = true;
+    }
     if (run.status === "done") {
       if (run.error === NO_LOCKFILE_YET) row.empty++;
       else row.done++;
