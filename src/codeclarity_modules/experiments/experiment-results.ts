@@ -19,10 +19,12 @@ import {
   type FixKind,
 } from "./experiment-exposures";
 import { gridDay } from "./experiment-grid";
+import { loadOverTime, type LoadRow } from "./experiment-load";
 import type {
   ResultsProbeAnalysisInput,
   ResultsProbeIntervalInput,
 } from "./experiment-probes";
+import { type ResidenceBlock, residenceBlock } from "./experiment-residence";
 import {
   NO_LOCKFILE_YET,
   type ProbePackage,
@@ -41,6 +43,14 @@ import {
   quantile,
   spearman,
 } from "./experiment-stats";
+import {
+  exposureSurvival,
+  type ExposureSurvivalBlock,
+} from "./experiment-survival";
+import {
+  upstreamLeverage,
+  type UpstreamLeverageBlock,
+} from "./experiment-upstream-leverage";
 
 /** A done run's summary row with the rank of its dataset entry. */
 export type ResultsSummaryInput = Pick<
@@ -329,8 +339,18 @@ export interface ExperimentResults {
   fix_lag: FixLagBlock;
   /** How fix probes dated the fixes and introductions */
   probes: ProbesBlock;
+  /** Instances per grid date in the hindsight and as-of views, HEAD last */
+  load_over_time: LoadRow[];
+  /** Introduction to disclosure, introductions after it apart */
+  residence: ResidenceBlock;
+  /** Kaplan-Meier survival of exposures, open ones censored at HEAD */
+  exposure_survival: ExposureSurvivalBlock;
+  /** Packages to clear per grid date, removed_transitive share per interval */
+  upstream_leverage: UpstreamLeverageBlock;
   provenance: ProvenanceBlock;
 }
+
+export type { LoadRow } from "./experiment-load";
 
 function nullIfNaN(value: number): number | null {
   return Number.isNaN(value) ? null : value;
@@ -695,6 +715,11 @@ function provenance(input: ResultsProvenanceInput): ProvenanceBlock {
   };
 }
 
+/** When HEAD was observed: the experiment's end, else its start or creation. */
+function headObservedOn(p: ResultsProvenanceInput): Date {
+  return p.ended_on ?? p.started_on ?? p.created_on;
+}
+
 function isHead(run: ResultsRunInput): boolean {
   return !run.grid_date;
 }
@@ -740,6 +765,14 @@ export function aggregateExperimentResults(
     exposures: exposuresBlock(exposures),
     fix_lag: fixLag(exposures),
     probes: probesBlock(exposures),
+    load_over_time: loadOverTime({
+      runs: input.runs,
+      vulnerabilities: input.vulnerabilities,
+      ended_on: input.provenance.ended_on,
+    }),
+    residence: residenceBlock(exposures),
+    exposure_survival: exposureSurvival(exposures, headObservedOn(input.provenance)),
+    upstream_leverage: upstreamLeverage(input.runs, input.vulnerabilities, exposures),
     provenance: provenance(input.provenance),
   };
 }
