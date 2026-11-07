@@ -337,6 +337,44 @@ describe("aggregateExperimentResults", () => {
         skip_reasons: { gone: 1 },
       });
     });
+
+    it("counts coverage per grid date, oldest first and HEAD last", () => {
+      const { grid_coverage } = aggregateExperimentResults(gridExperiment);
+
+      expect(grid_coverage).toEqual([
+        { grid_date: "2026-10-07", runs: 3, done: 2, empty: 0, failed: 1, skipped: 0, pending: 0 },
+        { grid_date: null, runs: 3, done: 2, empty: 0, failed: 0, skipped: 1, pending: 0 },
+      ]);
+    });
+
+    it("counts a done run with no lockfile yet as empty, and pending runs per date", () => {
+      const older = new Date("2026-09-07T00:00:00Z");
+      const { grid_coverage } = aggregateExperimentResults(
+        input({
+          runs: [
+            { status: "pending", error: null, grid_date: null, rows_run_id: "aH" },
+            { status: "done", error: null, grid_date: grid, rows_run_id: "a1" },
+            { status: "done", error: "no_lockfile_yet", grid_date: older, rows_run_id: "a0" },
+          ],
+        }),
+      );
+
+      expect(grid_coverage).toEqual([
+        { grid_date: "2026-09-07", runs: 1, done: 0, empty: 1, failed: 0, skipped: 0, pending: 0 },
+        { grid_date: "2026-10-07", runs: 1, done: 1, empty: 0, failed: 0, skipped: 0, pending: 0 },
+        { grid_date: null, runs: 1, done: 0, empty: 0, failed: 0, skipped: 0, pending: 1 },
+      ]);
+    });
+
+    it("gives a HEAD-only experiment a single HEAD coverage row", () => {
+      const { grid_coverage } = aggregateExperimentResults(
+        input({ runs: [{ status: "done", error: null }, { status: "failed", error: "x" }] }),
+      );
+
+      expect(grid_coverage).toEqual([
+        { grid_date: null, runs: 2, done: 1, empty: 0, failed: 1, skipped: 0, pending: 0 },
+      ]);
+    });
   });
 
   describe("provenance", () => {

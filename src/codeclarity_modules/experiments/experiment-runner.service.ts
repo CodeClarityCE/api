@@ -34,6 +34,7 @@ import {
   isNoLockfileResult,
   isUsablePluginResult,
   mapRunRows,
+  NO_LOCKFILE_YET,
 } from "./experiment-row-copy";
 import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
 import {
@@ -53,8 +54,6 @@ const TICK_MS = 15_000;
 const MAX_THROTTLE_WAIT_SECONDS = 60;
 const DEFAULT_MAX_IN_FLIGHT = 8;
 const DEFAULT_RUN_CEILING_HOURS = 24;
-/** Why a done run is empty: its snapshot predates the repo or its lockfile */
-export const NO_LOCKFILE_YET = "no_lockfile_yet";
 
 /** A repository that can be pinned: it exists where expected, with a branch. */
 interface PinnableRepo {
