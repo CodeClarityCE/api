@@ -157,6 +157,30 @@ export function isUsablePluginResult(blob: unknown): boolean {
   return objectOrEmpty(blob["analysis_info"])["status"] !== "failure";
 }
 
+/** What js-sbom reports when a commit has no package.json and lockfile pair. */
+const NO_LOCKFILE_ERRORS = [
+  "no lock file found",
+  "no package.json and lock file pair found",
+];
+
+/** A failed js-sbom result whose commit had no lockfile yet. */
+export function isNoLockfileResult(blob: unknown): boolean {
+  if (!isObject(blob)) return false;
+  const info = objectOrEmpty(blob["analysis_info"]);
+  if (info["status"] !== "failure" || !Array.isArray(info["errors"])) {
+    return false;
+  }
+  return info["errors"].some((error: unknown) => {
+    const description = isObject(error)
+      ? objectOrEmpty(error["private_error"])["description"]
+      : null;
+    return (
+      typeof description === "string" &&
+      NO_LOCKFILE_ERRORS.some((message) => description.endsWith(message))
+    );
+  });
+}
+
 /**
  * The plugin payload of a Result entity as the results endpoint returns it
  * ({result, plugin, created_on}), as the archived raw JSON stores it.

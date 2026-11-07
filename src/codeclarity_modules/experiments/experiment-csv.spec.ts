@@ -89,12 +89,13 @@ describe("experiment CSV encoding", () => {
   });
 
   describe("export columns", () => {
-    it("lists run state, entry metadata then the summary columns", () => {
+    it("lists entry metadata, the grid date, run state then the summary columns", () => {
       expect(RUN_CSV_COLUMNS).toEqual([
         "rank",
         "full_name",
         "stars",
         "git_url",
+        "grid_date",
         "status",
         "error",
         "attempts",
@@ -120,12 +121,14 @@ describe("experiment CSV encoding", () => {
       ]);
     });
 
-    it("lists entry metadata then the vulnerability instance columns", () => {
+    it("lists entry metadata, the snapshot holding the rows, then the vulnerability instance columns", () => {
       expect(VULNERABILITY_CSV_COLUMNS).toEqual([
         "rank",
         "full_name",
         "stars",
         "git_url",
+        "grid_date",
+        "commit_hash",
         "workspace",
         "vulnerability_id",
         "affected_dependency",

@@ -29,7 +29,12 @@ import { describeBuildError } from "../datasets/dataset-build.service";
 import { GithubRateLimited, rateLimitedAt } from "../datasets/dataset-builder";
 
 import { Experiment, ExperimentStatus } from "./experiment.entity";
-import { isUsablePluginResult, mapRunRows } from "./experiment-row-copy";
+import { endOfGridDay } from "./experiment-grid";
+import {
+  isNoLockfileResult,
+  isUsablePluginResult,
+  mapRunRows,
+} from "./experiment-row-copy";
 import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
 import {
   ExperimentRunSubmission,
@@ -48,7 +53,17 @@ const TICK_MS = 15_000;
 const MAX_THROTTLE_WAIT_SECONDS = 60;
 const DEFAULT_MAX_IN_FLIGHT = 8;
 const DEFAULT_RUN_CEILING_HOURS = 24;
-/** The failed status as the Go services write it (the API writes "failed") */
+/** Why a done run is empty: its snapshot predates the repo or its lockfile */
+export const NO_LOCKFILE_YET = "no_lockfile_yet";
+
+/** A repository that can be pinned: it exists where expected, with a branch. */
+interface PinnableRepo {
+  branch: string;
+  description: string | null;
+}
+
+/** Repository lookups of one pass, by dataset entry id */
+type RepoLookups = Map<string, Promise<PinnableRepo>>;
 
 /** The run cannot be done: never retried. */
 class RunSkipped extends Error {
@@ -63,6 +78,14 @@ class ExperimentFatal extends Error {
   constructor(readonly reason: string) {
     super(reason);
     this.name = "ExperimentFatal";
+  }
+}
+
+/** The snapshot's grid date has no commit on or before it. */
+class NoCommitYet extends Error {
+  constructor(readonly branch: string) {
+    super("no commit yet");
+    this.name = "NoCommitYet";
   }
 }
 
@@ -200,6 +223,14 @@ export class ExperimentRunnerService
       const result = run.analysis
         ? await this.store.getPluginResult(run.analysis.id, plugin)
         : null;
+      if (
+        plugin === SBOM_PLUGIN &&
+        run.grid_date &&
+        isNoLockfileResult(result)
+      ) {
+        await this.completeEmpty(experiment, run);
+        return;
+      }
       if (!isUsablePluginResult(result)) {
         this.logger.warn("Experiment run has no usable result", {
           ...logContext,
@@ -227,6 +258,33 @@ export class ExperimentRunnerService
     });
   }
 
+  /** Mark a run done with no rows: its snapshot had no lockfile yet. */
+  private async completeEmpty(
+    experiment: Experiment,
+    run: ExperimentRun,
+  ): Promise<void> {
+    const copied = await this.store.copyRunRows(
+      experiment.id,
+      run.id,
+      mapRunRows(null, null),
+      NO_LOCKFILE_YET,
+    );
+    if (!copied) return;
+    this.logger.log("Experiment run done: no lockfile yet", {
+      experimentId: experiment.id,
+      runId: run.id,
+      ...analysisContext(run),
+    });
+  }
+
+  /** A dated snapshot whose js-sbom result says its commit had no lockfile yet. */
+  private async lacksLockfile(run: ExperimentRun): Promise<boolean> {
+    if (!run.analysis || !run.grid_date) return false;
+    return isNoLockfileResult(
+      await this.store.getPluginResult(run.analysis.id, SBOM_PLUGIN),
+    );
+  }
+
   /** One pass over one claimed experiment. */
   private async drive(experimentId: string): Promise<void> {
     const experiment = await this.store.getExperiment(experimentId);
@@ -250,6 +308,7 @@ export class ExperimentRunnerService
       } else if (status === ExperimentStatus.RUNNING) {
         await this.submit(experiment);
       }
+      await this.store.settleSharedRuns(experimentId);
       if ((await this.store.countPending(experimentId)) === 0) {
         await this.end(experiment);
       }
@@ -327,6 +386,8 @@ export class ExperimentRunnerService
         await this.attemptFailed(experiment, run, "analysis deleted");
       } else if (outcome === "succeeded") {
         await this.completeRun(experiment, run);
+      } else if (outcome === "failed" && (await this.lacksLockfile(run))) {
+        await this.completeEmpty(experiment, run);
       } else if (outcome === "failed") {
         await this.attemptFailed(
           experiment,
@@ -355,11 +416,17 @@ export class ExperimentRunnerService
     return since ? now - since.getTime() > this.ceilingMs : false;
   }
 
-  /** Submit unsubmitted runs, by entry rank, while the global cap allows. */
+  /**
+   * Submit unsubmitted runs, by entry rank then grid date, while the global
+   * cap allows. Shared or commit-less snapshots take no slot.
+   */
   private async submit(experiment: Experiment): Promise<void> {
     const slots = this.maxInFlight - (await this.store.countInFlight());
     if (slots <= 0) return;
-    const runs = await this.store.getUnsubmittedRuns(experiment.id, slots);
+    const runs = await this.store.getUnsubmittedRuns(
+      experiment.id,
+      slots * ((experiment.grid_count ?? 0) + 1),
+    );
     if (runs.length === 0) return;
 
     const integrationId = experiment.dataset.integration?.id;
@@ -377,22 +444,38 @@ export class ExperimentRunnerService
       true,
     );
     const client = await this.githubClient(integrationId);
+    const repos: RepoLookups = new Map();
 
+    let submitted = 0;
     for (const run of runs) {
+      if (submitted >= slots) break;
       await this.store.renewLease(experiment.id, this.instanceId);
-      await this.submitRun(experiment, run, client, integrationId, creator);
+      if (
+        await this.submitRun(experiment, run, client, repos, {
+          integrationId,
+          creator,
+        })
+      ) {
+        submitted++;
+      }
     }
   }
 
+  /** @returns whether the run took an in-flight slot */
   private async submitRun(
     experiment: Experiment,
     run: ExperimentRun,
     client: GithubRestClient,
-    integrationId: string,
-    creator: AuthenticatedUser,
-  ): Promise<void> {
+    repos: RepoLookups,
+    submitter: { integrationId: string; creator: AuthenticatedUser },
+  ): Promise<boolean> {
+    const { integrationId, creator } = submitter;
     const entry = run.dataset_entry;
-    const logContext = { experimentId: experiment.id, runId: run.id };
+    const logContext = {
+      experimentId: experiment.id,
+      runId: run.id,
+      gridDate: run.grid_date?.toISOString() ?? "HEAD",
+    };
 
     let head: PinnedHead;
     if (run.commit_hash && run.branch) {
@@ -405,8 +488,13 @@ export class ExperimentRunnerService
       };
     } else {
       try {
-        head = await this.pinHead(client, entry);
+        head = await this.pin(client, repos, run);
       } catch (err) {
+        if (err instanceof NoCommitYet) {
+          await this.store.updateRun(run.id, { branch: err.branch });
+          await this.completeEmpty(experiment, run);
+          return false;
+        }
         if (!(err instanceof RunSkipped)) throw err;
         await this.store.updateRun(run.id, {
           status: ExperimentRunStatus.SKIPPED,
@@ -417,7 +505,7 @@ export class ExperimentRunnerService
           ...logContext,
           reason: err.reason,
         });
-        return;
+        return false;
       }
     }
     const pinned = {
@@ -425,6 +513,29 @@ export class ExperimentRunnerService
       commit_hash: head.commitHash,
       committed_at: head.committedAt,
     };
+
+    // Another snapshot of the entry pinned the same commit: share its analysis
+    const sharedRun = await this.store.findCommitRun(
+      experiment.id,
+      entry.id,
+      head.commitHash,
+      run.id,
+    );
+    if (sharedRun) {
+      const now = new Date();
+      await this.store.updateRun(run.id, {
+        ...pinned,
+        shared_from: { id: sharedRun.id },
+        submitted_on: now,
+        first_submitted_on: run.first_submitted_on ?? now,
+      });
+      this.logger.log("Experiment run shares an analysis", {
+        ...logContext,
+        sharedFromRunId: sharedRun.id,
+        commitHash: head.commitHash,
+      });
+      return false;
+    }
     const attempt = { ...run, attempts: run.attempts + 1 };
 
     // Reserve the run first: a cancel only skips unsubmitted runs, so once
@@ -438,7 +549,7 @@ export class ExperimentRunnerService
     });
     if (!reserved) {
       this.logger.log("Experiment run no longer pending", logContext);
-      return;
+      return false;
     }
 
     let analysisId: string | undefined;
@@ -468,7 +579,7 @@ export class ExperimentRunnerService
         ...logContext,
         reason,
       });
-      return;
+      return false;
     }
 
     if (!analysisId) {
@@ -476,13 +587,14 @@ export class ExperimentRunnerService
         "Experiment run ended before it was submitted",
         logContext,
       );
-      return;
+      return false;
     }
     this.logger.log("Experiment run submitted", {
       ...logContext,
       analysisId,
       commitHash: head.commitHash,
     });
+    return true;
   }
 
   /**
@@ -545,45 +657,91 @@ export class ExperimentRunnerService
   }
 
   /**
-   * The repository's live default branch and its tip.
+   * The commit a snapshot analyzes: the last default-branch commit on or
+   * before the end of its grid date, or the branch tip for HEAD.
    * @throws {RunSkipped} If the repository is gone, moved or has no branch
+   * @throws {NoCommitYet} If the branch has no commit by the grid date
    * @throws {GithubRateLimited} If GitHub rate limited the request
    * @throws {ExperimentFatal} If the token is no longer accepted or allowed
    */
-  private async pinHead(
+  private async pin(
     client: GithubRestClient,
-    entry: ExperimentRun["dataset_entry"],
+    repos: RepoLookups,
+    run: ExperimentRun,
   ): Promise<PinnedHead> {
-    const params = { owner: entry.owner, repo: entry.repo };
-    let repo: GithubRepoMetadata;
+    const entry = run.dataset_entry;
+    const repo = await this.lookupRepo(client, repos, entry);
+    const gridDate = run.grid_date ?? null;
     let commits: GithubCommitItem[];
     try {
-      repo = (
-        (await client.rest.repos.get(params)) as { data: GithubRepoMetadata }
-      ).data;
-      if (repo.html_url.toLowerCase() !== entry.git_url.toLowerCase()) {
-        throw new RunSkipped(`repository moved to ${repo.html_url}`);
-      }
-      if (!repo.default_branch) throw new RunSkipped("no default branch");
       commits = (
         (await client.rest.repos.listCommits({
-          ...params,
-          sha: repo.default_branch,
+          owner: entry.owner,
+          repo: entry.repo,
+          sha: repo.branch,
+          ...(gridDate ? { until: endOfGridDay(gridDate).toISOString() } : {}),
           per_page: 1,
         })) as { data: GithubCommitItem[] }
       ).data;
     } catch (err) {
-      if (err instanceof RunSkipped) throw err;
+      // An empty repository has no commit by any grid date yet
+      if (gridDate && (err as GithubApiError).status === 409) {
+        throw new NoCommitYet(repo.branch);
+      }
       throw this.classifyGithubError(err);
     }
 
     const tip = commits[0];
-    if (!tip) throw new RunSkipped(`no commits on ${repo.default_branch}`);
+    if (!tip && gridDate) throw new NoCommitYet(repo.branch);
+    if (!tip) throw new RunSkipped(`no commits on ${repo.branch}`);
     const date = tip.commit.committer?.date ?? tip.commit.author?.date;
     return {
-      branch: repo.default_branch,
+      branch: repo.branch,
       commitHash: tip.sha,
       committedAt: date ? new Date(date) : null,
+      description: repo.description,
+    };
+  }
+
+  /** The entry's repository, looked up once per pass for all its snapshots. */
+  private lookupRepo(
+    client: GithubRestClient,
+    repos: RepoLookups,
+    entry: ExperimentRun["dataset_entry"],
+  ): Promise<PinnableRepo> {
+    let lookup = repos.get(entry.id);
+    if (!lookup) {
+      lookup = this.fetchRepo(client, entry);
+      repos.set(entry.id, lookup);
+    }
+    return lookup;
+  }
+
+  /**
+   * The repository's live metadata, with its default branch.
+   * @throws {RunSkipped} If the repository is gone, moved or has no branch
+   */
+  private async fetchRepo(
+    client: GithubRestClient,
+    entry: ExperimentRun["dataset_entry"],
+  ): Promise<PinnableRepo> {
+    let repo: GithubRepoMetadata;
+    try {
+      repo = (
+        (await client.rest.repos.get({
+          owner: entry.owner,
+          repo: entry.repo,
+        })) as { data: GithubRepoMetadata }
+      ).data;
+    } catch (err) {
+      throw this.classifyGithubError(err);
+    }
+    if (repo.html_url.toLowerCase() !== entry.git_url.toLowerCase()) {
+      throw new RunSkipped(`repository moved to ${repo.html_url}`);
+    }
+    if (!repo.default_branch) throw new RunSkipped("no default branch");
+    return {
+      branch: repo.default_branch,
       description: repo.description ?? null,
     };
   }

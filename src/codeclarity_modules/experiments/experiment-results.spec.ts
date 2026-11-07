@@ -287,6 +287,58 @@ describe("aggregateExperimentResults", () => {
     });
   });
 
+  describe("snapshot grid", () => {
+    const grid = new Date("2026-10-07T00:00:00Z");
+    /**
+     * Entry a: a grid run with its own rows and a HEAD run with its own.
+     * Entry b: a grid run whose rows HEAD shares (same commit). Entry c:
+     * a grid run that failed and a HEAD run that was skipped.
+     */
+    const gridExperiment = input({
+      runs: [
+        { status: "done", error: null, grid_date: grid, rows_run_id: "a0" },
+        { status: "done", error: null, grid_date: null, rows_run_id: "aH" },
+        { status: "done", error: null, grid_date: grid, rows_run_id: "b0" },
+        { status: "done", error: null, grid_date: null, rows_run_id: "b0" },
+        { status: "failed", error: "ceiling", grid_date: grid, rows_run_id: "c0" },
+        { status: "skipped", error: "gone", grid_date: null, rows_run_id: "cH" },
+      ],
+      summaries: [summary("a0", 0), summary("aH", 0), summary("b0", 1)],
+      vulnerabilities: [
+        vuln("a0", "old"),
+        vuln("a0", "old"),
+        vuln("a0", "old"),
+        vuln("aH", "new"),
+        vuln("b0", "shared"),
+      ],
+    });
+
+    it("computes the existing blocks over the HEAD snapshot only", () => {
+      const { headline } = aggregateExperimentResults(gridExperiment);
+
+      expect(headline).toMatchObject({
+        n_projects: 2,
+        instances: 2,
+        top_packages: [
+          ["new", 1],
+          ["shared", 1],
+        ],
+      });
+    });
+
+    it("counts coverage over the HEAD runs", () => {
+      const { coverage } = aggregateExperimentResults(gridExperiment);
+
+      expect(coverage).toMatchObject({
+        runs: 3,
+        done: 2,
+        failed: 0,
+        skipped: 1,
+        skip_reasons: { gone: 1 },
+      });
+    });
+  });
+
   describe("provenance", () => {
     const snapshot = (nvd: string): object => ({
       knowledge_sources: { nvd, osv: "2026-11-01T00:00:00Z" },

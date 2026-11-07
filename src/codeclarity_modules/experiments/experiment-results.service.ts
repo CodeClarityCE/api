@@ -53,6 +53,27 @@ const RUN_COLUMNS: ReadonlySet<string> = new Set([
   "committed_at",
 ]);
 
+/** The run's grid date as its UTC calendar day, "HEAD" for HEAD. */
+const GRID_DATE_SELECT = `CASE WHEN run.grid_date IS NULL THEN 'HEAD'
+  ELSE to_char(run.grid_date AT TIME ZONE 'UTC', 'YYYY-MM-DD') END AS "grid_date"`;
+
+/** Export chunks are keyed by (rank, grid index): read along, not written */
+const GRID_INDEX_SELECT = 'run.grid_index AS "grid_index"';
+
+/** Rows strictly after the last exported (rank, grid index). */
+function afterSnapshot(after: CsvRow): {
+  where: string;
+  params: { rank: number; gridIndex: number };
+} {
+  return {
+    where: "(entry.rank, run.grid_index) > (:rank, :gridIndex)",
+    params: {
+      rank: Number(after["rank"]),
+      gridIndex: Number(after["grid_index"]),
+    },
+  };
+}
+
 /**
  * SELECT expressions for export columns, each aliased to its CSV header:
  * entry and run columns from their tables, the rest from `rowsAlias` (the
@@ -64,6 +85,7 @@ function exportSelect(
 ): string[] {
   return columns.map((column) => {
     if (column === "analysis_id") return 'run."analysisId" AS "analysis_id"';
+    if (column === "grid_date") return GRID_DATE_SELECT;
     let alias: string = rowsAlias;
     if (ENTRY_COLUMNS.has(column)) alias = "entry";
     else if (RUN_COLUMNS.has(column)) alias = "run";
@@ -138,7 +160,14 @@ export class ExperimentResultsService {
     const [runs, summaries, vulnerabilities] = await Promise.all([
       this.runRepository.find({
         where: { experiment: { id: experiment.id } },
-        select: { id: true, status: true, error: true },
+        select: {
+          id: true,
+          status: true,
+          error: true,
+          grid_date: true,
+          shared_from: { id: true },
+        },
+        relations: { shared_from: true },
       }),
       this.summaryRepository
         .createQueryBuilder("summary")
@@ -175,6 +204,8 @@ export class ExperimentResultsService {
         runs: runs.map((run) => ({
           status: run.status,
           error: run.error ?? null,
+          grid_date: run.grid_date ?? null,
+          rows_run_id: run.shared_from?.id ?? run.id,
         })),
         summaries,
         vulnerabilities,
@@ -184,8 +215,9 @@ export class ExperimentResultsService {
   }
 
   /**
-   * runs.csv: one row per run by entry rank, with the entry's metadata and,
-   * for done runs, the copied summary. Streamed in chunks keyed by rank.
+   * runs.csv: one row per run by entry rank then grid date, with the
+   * entry's metadata and, for done runs, the copied summary (of the run it
+   * shares from, if any). Streamed in chunks keyed by (rank, grid index).
    * @throws {NotAuthorized} If the user is not a member of the org
    * @throws {EntityNotFound} If the org has no such experiment
    */
@@ -208,16 +240,20 @@ export class ExperimentResultsService {
         .leftJoin(
           ExperimentRunSummaryRow,
           "summary",
-          'summary."runId" = run.id AND run.status = :done',
+          'summary."runId" = COALESCE(run."sharedFromId", run.id) AND run.status = :done',
           { done: ExperimentRunStatus.DONE },
         )
-        .select(exportSelect(RUN_CSV_COLUMNS, "summary"))
+        .select([...exportSelect(RUN_CSV_COLUMNS, "summary"), GRID_INDEX_SELECT])
         .where('run."experimentId" = :experimentId', {
           experimentId: experiment.id,
         });
-      if (after) query.andWhere("entry.rank > :rank", { rank: after["rank"] });
+      if (after) {
+        const { where, params } = afterSnapshot(after);
+        query.andWhere(where, params);
+      }
       return query
         .orderBy("entry.rank", "ASC")
+        .addOrderBy("run.grid_index", "ASC")
         .limit(RUN_EXPORT_CHUNK)
         .getRawMany<CsvRow>();
     };
@@ -234,7 +270,8 @@ export class ExperimentResultsService {
 
   /**
    * vulnerabilities.csv: one row per copied vulnerability instance, with the
-   * entry's metadata, by entry rank. Streamed a few done runs at a time.
+   * entry's metadata, by entry rank then grid date. Streamed a few done
+   * runs at a time; runs sharing another's rows hold none and are passed.
    * @throws {NotAuthorized} If the user is not a member of the org
    * @throws {EntityNotFound} If the org has no such experiment
    */
@@ -251,38 +288,49 @@ export class ExperimentResultsService {
     const experiment = await findExperimentInOrg(this.experimentRepository, orgId, experimentId);
 
     const nextChunk = async (after: CsvRow | null): Promise<CsvRow[]> => {
-      let afterRank = after ? Number(after["rank"]) : -1;
+      let cursor = after;
       // Done runs without instances give empty reads: skip past them, since
       // an empty chunk ends the export.
       for (;;) {
-        const runs = await this.runRepository
+        const query = this.runRepository
           .createQueryBuilder("run")
           .innerJoin("run.dataset_entry", "entry")
           .select("run.id", "id")
           .addSelect("entry.rank", "rank")
+          .addSelect(GRID_INDEX_SELECT)
           .where('run."experimentId" = :experimentId', {
             experimentId: experiment.id,
           })
           .andWhere("run.status = :done", { done: ExperimentRunStatus.DONE })
-          .andWhere("entry.rank > :afterRank", { afterRank })
+          .andWhere('run."sharedFromId" IS NULL');
+        if (cursor) {
+          const { where, params } = afterSnapshot(cursor);
+          query.andWhere(where, params);
+        }
+        const runs = await query
           .orderBy("entry.rank", "ASC")
+          .addOrderBy("run.grid_index", "ASC")
           .limit(VULNERABILITY_EXPORT_RUNS_PER_CHUNK)
-          .getRawMany<{ id: string; rank: number }>();
+          .getRawMany<{ id: string; rank: number; grid_index: number }>();
         if (runs.length === 0) return [];
 
         const rows = await this.vulnerabilityRepository
           .createQueryBuilder("instance")
           .innerJoin("instance.run", "run")
           .innerJoin("run.dataset_entry", "entry")
-          .select(exportSelect(VULNERABILITY_CSV_COLUMNS, "instance"))
+          .select([
+            ...exportSelect(VULNERABILITY_CSV_COLUMNS, "instance"),
+            GRID_INDEX_SELECT,
+          ])
           .where('instance."runId" IN (:...runIds)', {
             runIds: runs.map((run) => run.id),
           })
           .orderBy("entry.rank", "ASC")
+          .addOrderBy("run.grid_index", "ASC")
           .addOrderBy("instance.id", "ASC")
           .getRawMany<CsvRow>();
         if (rows.length > 0) return rows;
-        afterRank = runs[runs.length - 1]!.rank;
+        cursor = runs[runs.length - 1]!;
       }
     };
 

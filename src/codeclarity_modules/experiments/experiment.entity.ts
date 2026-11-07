@@ -16,6 +16,7 @@ import type { Organization } from "../../base_modules/organizations/organization
 import type { User } from "../../base_modules/users/users.entity";
 import type { Dataset } from "../datasets/dataset.entity";
 
+import { GridInterval } from "./experiment-grid";
 import type { ExperimentRun } from "./experiment-run.entity";
 
 export enum ExperimentStatus {
@@ -30,9 +31,9 @@ export enum ExperimentStatus {
 export type AnalyzerStepSnapshot = Pick<StageBase, "name" | "version">;
 
 /**
- * A named, one-shot run of one analyzer over every entry of one READY dataset.
- * Its configuration is frozen at creation; running again later means creating
- * a new experiment.
+ * A named, one-shot run of one analyzer over every snapshot of every entry of
+ * one READY dataset. Its configuration, snapshot grid included, is frozen at
+ * creation; running again later means creating a new experiment.
  */
 @Entity()
 @Unique(["organization", "name"])
@@ -60,6 +61,23 @@ export class Experiment {
   @Expose()
   @Column("integer", { default: 2 })
   retries!: number;
+
+  /** Step between grid dates; never updated once created */
+  @ApiProperty({ enum: GridInterval })
+  @Expose()
+  @Column({
+    type: "enum",
+    enum: GridInterval,
+    default: GridInterval.MONTH,
+    update: false,
+  })
+  grid_interval!: GridInterval;
+
+  /** Grid dates before HEAD; 0 is HEAD only (older experiments) */
+  @ApiProperty({ description: "Grid dates before HEAD (0: HEAD only)" })
+  @Expose()
+  @Column({ type: "integer", default: 0, update: false })
+  grid_count!: number;
 
   @ApiProperty({ description: "Why the experiment FAILED, if it did" })
   @Expose()

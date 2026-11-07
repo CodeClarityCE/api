@@ -20,12 +20,16 @@ export type CsvRow = Record<string, unknown>;
 const FORMULA_TRIGGERS = new Set(["=", "+", "-", "@", "\t", "\r"]);
 const NEEDS_QUOTES = /[",\r\n]/;
 
-/** runs.csv: one row per run; summary columns blank unless the run is done. */
+/**
+ * runs.csv: one row per run (snapshot); summary columns blank unless the
+ * run is done. grid_date is the snapshot's calendar day, "HEAD" for HEAD.
+ */
 export const RUN_CSV_COLUMNS = [
   "rank",
   "full_name",
   "stars",
   "git_url",
+  "grid_date",
   "status",
   "error",
   "attempts",
@@ -50,12 +54,18 @@ export const RUN_CSV_COLUMNS = [
   "n_none",
 ] as const;
 
-/** vulnerabilities.csv: one row per copied vulnerability instance. */
+/**
+ * vulnerabilities.csv: one row per copied vulnerability instance, once per
+ * analyzed commit. grid_date and commit_hash are those of the snapshot that
+ * holds the rows; snapshots sharing its commit (see runs.csv) share them.
+ */
 export const VULNERABILITY_CSV_COLUMNS = [
   "rank",
   "full_name",
   "stars",
   "git_url",
+  "grid_date",
+  "commit_hash",
   "workspace",
   "vulnerability_id",
   "affected_dependency",

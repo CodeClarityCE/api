@@ -193,7 +193,12 @@ class FakeStore extends ExperimentStore {
 
   async getInFlightRuns(experimentId: string): Promise<ExperimentRun[]> {
     return this.runsOf(experimentId)
-      .filter((r) => r.status === ExperimentRunStatus.PENDING && r.submitted_on)
+      .filter(
+        (r) =>
+          r.status === ExperimentRunStatus.PENDING &&
+          r.submitted_on &&
+          !r.shared_from,
+      )
       .map((r) => this.withAnalysis(r));
   }
 
@@ -205,15 +210,55 @@ class FakeStore extends ExperimentStore {
       .filter(
         (r) => r.status === ExperimentRunStatus.PENDING && !r.submitted_on,
       )
-      .sort((a, b) => a.dataset_entry.rank - b.dataset_entry.rank)
+      .sort(
+        (a, b) =>
+          a.dataset_entry.rank - b.dataset_entry.rank ||
+          a.grid_index - b.grid_index,
+      )
       .slice(0, limit)
       .map((r) => ({ ...r }));
   }
 
   async countInFlight(): Promise<number> {
     return this.runs.filter(
-      (r) => r.status === ExperimentRunStatus.PENDING && r.submitted_on,
+      (r) =>
+        r.status === ExperimentRunStatus.PENDING &&
+        r.submitted_on &&
+        !r.shared_from,
     ).length;
+  }
+
+  async findCommitRun(
+    experimentId: string,
+    entryId: string,
+    commitHash: string,
+    excludeRunId: string,
+  ): Promise<ExperimentRun | null> {
+    const found = this.runsOf(experimentId).find(
+      (r) =>
+        r.id !== excludeRunId &&
+        r.dataset_entry.id === entryId &&
+        r.commit_hash === commitHash &&
+        !r.shared_from &&
+        r.status !== ExperimentRunStatus.SKIPPED,
+    );
+    return found ? { ...found } : null;
+  }
+
+  async settleSharedRuns(experimentId: string): Promise<void> {
+    for (const run of this.runsOf(experimentId)) {
+      if (run.status !== ExperimentRunStatus.PENDING || !run.shared_from) {
+        continue;
+      }
+      const primary = this.runs.find((r) => r.id === run.shared_from!.id);
+      if (!primary || primary.status === ExperimentRunStatus.PENDING) continue;
+      Object.assign(run, {
+        status: primary.status,
+        error: primary.error ?? null,
+        ended_on: primary.ended_on ?? new Date(),
+        analysis: primary.analysis ?? null,
+      });
+    }
   }
 
   async countPending(experimentId: string): Promise<number> {
@@ -241,6 +286,7 @@ class FakeStore extends ExperimentStore {
     experimentId: string,
     runId: string,
     rows: RunRows,
+    reason?: string,
   ): Promise<boolean> {
     const run = this.runs.find((r) => r.id === runId);
     if (
@@ -252,20 +298,27 @@ class FakeStore extends ExperimentStore {
     this.copied.set(runId, { experimentId, ...rows });
     Object.assign(run, {
       status: ExperimentRunStatus.DONE,
-      error: null,
+      error: reason ?? null,
       ended_on: run.ended_on ?? new Date(),
     });
     return true;
   }
 
-  run(entryName: string): ExperimentRun {
-    const run = this.runs.find((r) => r.dataset_entry.full_name === entryName);
+  /** The entry's run at a grid index, HEAD (the last) by default. */
+  run(entryName: string, gridIndex?: number): ExperimentRun {
+    const runs = this.runs.filter(
+      (r) => r.dataset_entry.full_name === entryName,
+    );
+    const run =
+      gridIndex === undefined
+        ? runs[runs.length - 1]
+        : runs.find((r) => r.grid_index === gridIndex);
     if (!run) throw new Error(`no run for ${entryName}`);
     return run;
   }
 
-  analysisOf(entryName: string): FakeAnalysis {
-    const id = this.run(entryName).analysis?.id;
+  analysisOf(entryName: string, gridIndex?: number): FakeAnalysis {
+    const id = this.run(entryName, gridIndex).analysis?.id;
     const analysis = id ? this.analyses.get(id) : undefined;
     if (!analysis) throw new Error(`no analysis for ${entryName}`);
     return analysis;
@@ -330,6 +383,11 @@ class FakeGithub {
   commitsError: Error | undefined;
   calls = { get: 0, listCommits: 0 };
 
+  /** Earlier default-branch commits by repository, oldest first */
+  history = new Map<string, { sha: string; date: string }[]>();
+  /** The `until` of every listCommits call */
+  untils: (string | undefined)[] = [];
+
   add(fullName: string, sha: string, branch = "main"): void {
     this.repos.set(fullName.toLowerCase(), {
       html_url: `https://github.com/${fullName}`,
@@ -337,6 +395,14 @@ class FakeGithub {
       sha,
       date: "2026-11-01T10:00:00Z",
     });
+  }
+
+  /** Give a repository earlier commits, oldest first; its tip stays last. */
+  addHistory(fullName: string, commits: [string, string][]): void {
+    this.history.set(
+      fullName.toLowerCase(),
+      commits.map(([sha, date]) => ({ sha, date })),
+    );
   }
 
   client(): githubSearch.GithubRestClient {
@@ -363,24 +429,35 @@ class FakeGithub {
             owner,
             repo,
             sha,
+            until,
           }: {
             owner: string;
             repo: string;
             sha: string;
+            until?: string;
           }) => {
             this.calls.listCommits++;
+            this.untils.push(until);
             if (this.commitsError) throw this.commitsError;
-            const found = this.repos.get(`${owner}/${repo}`.toLowerCase());
+            const key = `${owner}/${repo}`.toLowerCase();
+            const found = this.repos.get(key);
             if (found?.default_branch !== sha) {
               throw githubError(404, "Not Found");
             }
+            const commits = [
+              ...(this.history.get(key) ?? []),
+              { sha: found.sha, date: found.date },
+            ].filter((c) => !until || c.date <= until);
+            const latest = commits[commits.length - 1];
             return {
-              data: [
-                {
-                  sha: found.sha,
-                  commit: { committer: { date: found.date } },
-                },
-              ],
+              data: latest
+                ? [
+                    {
+                      sha: latest.sha,
+                      commit: { committer: { date: latest.date } },
+                    },
+                  ]
+                : [],
             };
           },
         },
@@ -407,16 +484,23 @@ describe("ExperimentRunnerService", () => {
     );
   }
 
+  /**
+   * An experiment with one run per snapshot of every entry: `grid` dates
+   * then HEAD. Without a grid it is HEAD-only, as a v1 experiment reads.
+   */
   function addExperiment(
     id: string,
     names: string[],
     overrides: Partial<Experiment> = {},
+    grid: string[] = [],
   ): Experiment {
     const experiment = {
       id,
       name: id,
       status: ExperimentStatus.PENDING,
       retries: 2,
+      grid_interval: "month",
+      grid_count: grid.length,
       created_on: new Date(Date.now() - 1000 + store.experiments.size),
       organization: { id: ORG },
       created_by: { id: CREATOR },
@@ -432,13 +516,19 @@ describe("ExperimentRunnerService", () => {
     } as unknown as Experiment;
     store.experiments.set(id, experiment);
     names.forEach((name, rank) => {
-      store.runs.push({
-        id: `run-${id}-${name}`,
-        status: ExperimentRunStatus.PENDING,
-        attempts: 0,
-        experiment: { id },
-        dataset_entry: entry(rank, name),
-      } as unknown as ExperimentRun);
+      const snapshots = [...grid.map((d) => new Date(d)), null];
+      snapshots.forEach((gridDate, gridIndex) => {
+        const suffix = gridDate ? `@${gridIndex}` : "";
+        store.runs.push({
+          id: `run-${id}-${name}${suffix}`,
+          status: ExperimentRunStatus.PENDING,
+          attempts: 0,
+          grid_index: gridIndex,
+          grid_date: gridDate,
+          experiment: { id },
+          dataset_entry: entry(rank, name),
+        } as unknown as ExperimentRun);
+      });
       if (!github.repos.has(name.toLowerCase()))
         github.add(name, `sha-${name}`);
     });
@@ -449,8 +539,9 @@ describe("ExperimentRunnerService", () => {
     entryName: string,
     status: AnalysisStatus,
     failureReason?: string,
+    gridIndex?: number,
   ): void {
-    const analysis = store.analysisOf(entryName);
+    const analysis = store.analysisOf(entryName, gridIndex);
     analysis.status = status;
     analysis.failure_reason = failureReason ?? null;
     if (status === AnalysisStatus.SUCCESS) {
@@ -1148,6 +1239,237 @@ describe("ExperimentRunnerService", () => {
         "CVE-2",
       ]);
       expect(store.run("octo/app").status).toBe(ExperimentRunStatus.DONE);
+    });
+  });
+  describe("snapshot grid", () => {
+    const GRID = ["2025-02-01T00:00:00Z", "2025-03-15T00:00:00Z"];
+
+    beforeEach(() => {
+      github.addHistory("octo/app", [
+        ["sha-jan", "2025-01-10T08:00:00Z"],
+        ["sha-mar", "2025-03-15T18:30:00Z"],
+      ]);
+    });
+
+    it("pins each grid date to the last default-branch commit on or before it, and HEAD to the tip", async () => {
+      addExperiment("exp-1", ["octo/app"], {}, GRID);
+
+      await runner().tick();
+
+      expect(store.run("octo/app", 0)).toMatchObject({
+        commit_hash: "sha-jan",
+        committed_at: new Date("2025-01-10T08:00:00Z"),
+        branch: "main",
+        attempts: 1,
+      });
+      expect(store.run("octo/app", 1).commit_hash).toBe("sha-mar");
+      expect(store.run("octo/app", 2).commit_hash).toBe("sha-octo/app");
+      expect(github.untils).toEqual([
+        "2025-02-01T23:59:59.999Z",
+        "2025-03-15T23:59:59.999Z",
+        undefined,
+      ]);
+      expect(submit).toHaveBeenCalledTimes(3);
+      expect(
+        submit.mock.calls.map(([request]) => request.head.commitHash),
+      ).toEqual(["sha-jan", "sha-mar", "sha-octo/app"]);
+    });
+
+    it("looks each repository up once per pass, however many snapshots it has", async () => {
+      addExperiment("exp-1", ["octo/app"], {}, GRID);
+
+      await runner().tick();
+
+      expect(github.calls.get).toBe(1);
+    });
+
+    it("shares one analysis and one copy of the rows between snapshots that pin the same commit", async () => {
+      addExperiment("exp-1", ["octo/app"], {}, [
+        "2025-04-01T00:00:00Z",
+        "2025-05-01T00:00:00Z",
+      ]);
+      const service = runner();
+      await service.tick();
+
+      expect(submit).toHaveBeenCalledTimes(2);
+      expect(store.run("octo/app", 1)).toMatchObject({
+        commit_hash: "sha-mar",
+        shared_from: { id: store.run("octo/app", 0).id },
+        status: ExperimentRunStatus.PENDING,
+      });
+
+      finishAnalysis("octo/app", AnalysisStatus.SUCCESS, undefined, 0);
+      finishAnalysis("octo/app", AnalysisStatus.SUCCESS);
+      await service.tick();
+
+      const primary = store.run("octo/app", 0);
+      expect(store.run("octo/app", 1)).toMatchObject({
+        status: ExperimentRunStatus.DONE,
+        analysis: { id: primary.analysis!.id },
+      });
+      expect([...store.copied.keys()].sort()).toEqual(
+        [primary.id, store.run("octo/app", 2).id].sort(),
+      );
+      expect(store.experiments.get("exp-1")!.status).toBe(
+        ExperimentStatus.COMPLETED,
+      );
+    });
+
+    it("counts one in-flight analysis per commit against the cap, not one per snapshot", async () => {
+      process.env["EXPERIMENT_MAX_IN_FLIGHT"] = "2";
+      addExperiment("exp-1", ["octo/app"], {}, [
+        "2025-04-01T00:00:00Z",
+        "2025-05-01T00:00:00Z",
+        "2025-06-01T00:00:00Z",
+      ]);
+      const service = runner();
+
+      await service.tick();
+      await service.tick();
+
+      expect(submit).toHaveBeenCalledTimes(2);
+      expect(store.run("octo/app").submitted_on).toBeTruthy();
+    });
+
+    it("fails snapshots sharing a commit together when its analysis fails", async () => {
+      addExperiment("exp-1", ["octo/app"], { retries: 0 }, [
+        "2025-04-01T00:00:00Z",
+        "2025-05-01T00:00:00Z",
+      ]);
+      const service = runner();
+      await service.tick();
+
+      finishAnalysis("octo/app", AnalysisStatus.FAILED, "clone failed", 0);
+      await service.tick();
+
+      for (const gridIndex of [0, 1]) {
+        expect(store.run("octo/app", gridIndex)).toMatchObject({
+          status: ExperimentRunStatus.FAILED,
+          error: "clone failed",
+        });
+      }
+    });
+
+    it("ends a snapshot from before the repository's first commit as done and empty, with reason no_lockfile_yet", async () => {
+      addExperiment("exp-1", ["octo/app"], {}, ["2024-12-01T00:00:00Z"]);
+
+      await runner().tick();
+
+      const run = store.run("octo/app", 0);
+      expect(run).toMatchObject({
+        status: ExperimentRunStatus.DONE,
+        error: "no_lockfile_yet",
+      });
+      expect(run.analysis).toBeFalsy();
+      expect(store.copied.get(run.id)).toMatchObject({
+        summary: { total_dependencies: 0, total_vulnerabilities: 0 },
+        vulnerabilities: [],
+      });
+      expect(submit).toHaveBeenCalledTimes(1);
+    });
+
+    it("ends a snapshot whose commit has no lockfile yet as done and empty, without retrying it", async () => {
+      addExperiment("exp-1", ["octo/app"], {}, ["2025-02-01T00:00:00Z"]);
+      const service = runner();
+      await service.tick();
+
+      const analysis = store.analysisOf("octo/app", 0);
+      analysis.status = AnalysisStatus.FAILED;
+      store.results.set(`${analysis.id}/js-sbom`, {
+        workspaces: {},
+        analysis_info: {
+          status: "failure",
+          errors: [
+            {
+              public_error: { description: "Unable to parse package file" },
+              private_error: {
+                description:
+                  "Unable to parse package file, error: no lock file found",
+              },
+            },
+          ],
+        },
+      });
+      await service.tick();
+
+      const run = store.run("octo/app", 0);
+      expect(run).toMatchObject({
+        status: ExperimentRunStatus.DONE,
+        error: "no_lockfile_yet",
+        attempts: 1,
+      });
+      expect(store.copied.get(run.id)?.vulnerabilities).toEqual([]);
+      expect(submit).toHaveBeenCalledTimes(2);
+    });
+
+    it("ends a snapshot of a repository that is still empty as done with reason no_lockfile_yet", async () => {
+      addExperiment("exp-1", ["octo/app"], {}, ["2025-02-01T00:00:00Z"]);
+      github.commitsError = githubError(409, "Git Repository is empty.");
+
+      await runner().tick();
+
+      expect(store.run("octo/app", 0)).toMatchObject({
+        status: ExperimentRunStatus.DONE,
+        error: "no_lockfile_yet",
+      });
+      expect(store.run("octo/app")).toMatchObject({
+        status: ExperimentRunStatus.SKIPPED,
+        error: "empty repository",
+      });
+    });
+
+    it("keeps a HEAD analysis without a lockfile a failed attempt, as before grids", async () => {
+      addExperiment("exp-1", ["octo/app"], { retries: 0 });
+      const service = runner();
+      await service.tick();
+
+      const analysis = store.analysisOf("octo/app");
+      analysis.status = AnalysisStatus.FAILED;
+      analysis.failure_reason = "js-sbom failed";
+      store.results.set(`${analysis.id}/js-sbom`, {
+        workspaces: {},
+        analysis_info: {
+          status: "failure",
+          errors: [{ private_error: { description: "no lock file found" } }],
+        },
+      });
+      await service.tick();
+
+      expect(store.run("octo/app")).toMatchObject({
+        status: ExperimentRunStatus.FAILED,
+        error: "js-sbom failed",
+      });
+      expect(store.copied.size).toBe(0);
+    });
+
+    it("skips every snapshot of a missing repository with a reason, and carries on with other entries", async () => {
+      addExperiment("exp-1", ["octo/gone", "octo/app"], {}, GRID);
+      github.repos.delete("octo/gone");
+
+      await runner().tick();
+
+      for (const gridIndex of [0, 1, 2]) {
+        expect(store.run("octo/gone", gridIndex)).toMatchObject({
+          status: ExperimentRunStatus.SKIPPED,
+          error: "repository or branch not found",
+        });
+      }
+      expect(store.run("octo/app", 0).commit_hash).toBe("sha-jan");
+      expect(submit).toHaveBeenCalledTimes(3);
+    });
+
+    it("runs a HEAD-only (v1) experiment as one snapshot per entry at the tip", async () => {
+      addExperiment("exp-1", ["octo/app"]);
+
+      await runner().tick();
+
+      expect(store.runs).toHaveLength(1);
+      expect(store.run("octo/app")).toMatchObject({
+        grid_index: 0,
+        grid_date: null,
+        commit_hash: "sha-octo/app",
+      });
+      expect(github.untils).toEqual([undefined]);
     });
   });
 });

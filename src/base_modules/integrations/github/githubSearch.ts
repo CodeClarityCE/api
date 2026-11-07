@@ -67,6 +67,8 @@ export interface GithubRestClient {
         owner: string;
         repo: string;
         sha?: string;
+        /** ISO 8601: only commits on or before this time */
+        until?: string;
         per_page?: number;
       }): Promise<unknown>;
     };

@@ -41,10 +41,14 @@ export type ResultsVulnerabilityInput = Pick<
   | "withdrawn_date"
 > & { run_id: string };
 
-/** Any run of the experiment, done or not, for coverage. */
+/** Any run of the experiment, done or not. No grid date means HEAD. */
 export interface ResultsRunInput {
   status: string;
   error: string | null;
+  /** The snapshot's grid date, null for HEAD */
+  grid_date?: Date | null;
+  /** The run whose copied rows this snapshot reads (itself unless shared) */
+  rows_run_id?: string;
 }
 
 export interface KnowledgeSnapshot {
@@ -433,28 +437,46 @@ function provenance(input: ResultsProvenanceInput): ProvenanceBlock {
   };
 }
 
+function isHead(run: ResultsRunInput): boolean {
+  return !run.grid_date;
+}
+
+/** Run ids whose rows only grid snapshots read: outside the HEAD blocks. */
+function gridOnlyRunIds(runs: readonly ResultsRunInput[]): Set<string> {
+  const headRows = new Set<string>();
+  const gridRows = new Set<string>();
+  for (const run of runs) {
+    if (run.rows_run_id === undefined) continue;
+    (isHead(run) ? headRows : gridRows).add(run.rows_run_id);
+  }
+  return new Set([...gridRows].filter((id) => !headRows.has(id)));
+}
+
 /**
- * Every aggregate of an experiment, from its runs and tidy rows. The done
- * runs (one summary each) are the project universe: a done run without
- * instances counts with load 0, instances of other runs are ignored.
+ * Every aggregate of an experiment, from its runs and tidy rows, over the
+ * HEAD snapshot. Its done runs (one summary each) are the project
+ * universe: a done run without instances counts with load 0, instances of
+ * other runs are ignored.
  */
 export function aggregateExperimentResults(
   input: ExperimentResultsInput,
 ): ExperimentResults {
-  const universe = input.summaries.map((s) => s.run_id);
+  const gridOnly = gridOnlyRunIds(input.runs);
+  const summaries = input.summaries.filter((s) => !gridOnly.has(s.run_id));
+  const universe = summaries.map((s) => s.run_id);
   const inUniverse = new Set(universe);
   const vulnerabilities = input.vulnerabilities.filter((v) =>
     inUniverse.has(v.run_id),
   );
   return {
-    coverage: coverage(input.runs),
+    coverage: coverage(input.runs.filter(isHead)),
     headline: headline(universe, vulnerabilities),
     sweep: sweep(universe, vulnerabilities),
     epss: epss(vulnerabilities),
     match_flags: mix(vulnerabilities, (v) => v.conflict_flag),
     winning_source_head: mix(vulnerabilities, (v) => v.winning_source),
-    rqc: rqc(input.summaries),
-    rqd: rqd(input.summaries),
+    rqc: rqc(summaries),
+    rqd: rqd(summaries),
     provenance: provenance(input.provenance),
   };
 }

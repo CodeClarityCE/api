@@ -122,6 +122,29 @@ describe("ExperimentResultsService", () => {
       });
     });
 
+    it("aggregates a grid experiment over HEAD, reading the rows a HEAD run shares", async () => {
+      experimentRepository["findOne"]!.mockResolvedValue(experiment);
+      const grid = new Date("2026-10-06T00:00:00Z");
+      runRepository["find"]!.mockResolvedValue([
+        { id: "a0", status: "done", error: null, grid_date: grid, shared_from: null },
+        { id: "aH", status: "done", error: null, grid_date: null, shared_from: { id: "a0" } },
+        { id: "b0", status: "done", error: null, grid_date: grid, shared_from: null },
+        { id: "bH", status: "failed", error: "ceiling", grid_date: null, shared_from: null },
+      ]);
+      summaryRows.mockResolvedValue([
+        { run_id: "a0", rank: 0, total_dependencies: 10, total_vulnerabilities: 0, package_manager: "NPM" },
+        { run_id: "b0", rank: 1, total_dependencies: 5, total_vulnerabilities: 0, package_manager: "NPM" },
+      ]);
+
+      const results = await service.getResults("org-1", "exp-1", user);
+
+      expect(results.coverage).toMatchObject({ runs: 2, done: 1, failed: 1 });
+      expect(results.headline.n_projects).toBe(1);
+      expect(results.rqd).toEqual([
+        { package_manager: "NPM", projects: 1, med_deps: 10, med_vulns: 0 },
+      ]);
+    });
+
     it("has no provenance snapshots before the experiment started", async () => {
       experimentRepository["findOne"]!.mockResolvedValue({
         ...experiment,

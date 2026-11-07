@@ -19,6 +19,12 @@ import { DatasetEntry } from "../datasets/dataset-entry.entity";
 import { paginated, resolvePagination } from "../datasets/datasets.service";
 
 import { Experiment, ExperimentStatus } from "./experiment.entity";
+import {
+  DEFAULT_GRID_COUNT,
+  DEFAULT_GRID_INTERVAL,
+  gridDay,
+  snapshotGrid,
+} from "./experiment-grid";
 import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
 import { ExperimentRunnerService } from "./experiment-runner.service";
 import {
@@ -70,8 +76,9 @@ export class ExperimentsService {
   ) {}
 
   /**
-   * Register an experiment with one pending run per dataset entry. The
-   * runner picks it up and submits the analyses.
+   * Register an experiment with one pending run per snapshot: every grid
+   * date of every dataset entry, plus HEAD. The runner picks it up and
+   * submits the analyses.
    * @throws {NotAuthorized} If the user is not an admin of the org or the analyzer belongs to another org
    * @throws {EntityNotFound} If the org has no such dataset
    * @throws {DatasetNotReady} If the dataset is not READY
@@ -122,20 +129,30 @@ export class ExperimentsService {
       order: { rank: "ASC" },
     });
 
+    const createdOn = new Date();
+    const gridInterval = body.grid_interval ?? DEFAULT_GRID_INTERVAL;
+    const gridCount = body.grid_count ?? DEFAULT_GRID_COUNT;
+    const grid = snapshotGrid(createdOn, gridInterval, gridCount);
+
     const experiment = this.experimentRepository.create({
       name,
       status: ExperimentStatus.PENDING,
       retries: body.retries ?? EXPERIMENT_DEFAULT_RETRIES,
-      created_on: new Date(),
+      grid_interval: gridInterval,
+      grid_count: gridCount,
+      created_on: createdOn,
       organization: { id: orgId },
       created_by: { id: user.userId },
       dataset: { id: body.dataset_id },
       analyzer: { id: body.analyzer_id },
-      runs: entries.map((entry) => ({
-        status: ExperimentRunStatus.PENDING,
-        attempts: 0,
-        dataset_entry: { id: entry.id },
-      })),
+      runs: entries.flatMap((entry) =>
+        grid.map((snapshot) => ({
+          status: ExperimentRunStatus.PENDING,
+          attempts: 0,
+          ...snapshot,
+          dataset_entry: { id: entry.id },
+        })),
+      ),
     });
     const saved = await this.experimentRepository.save(experiment);
     this.logger.log("Experiment created", {
@@ -144,7 +161,9 @@ export class ExperimentsService {
       userId: user.userId,
       datasetId: dataset.id,
       analyzerId: analyzer.id,
-      runs: entries.length,
+      gridInterval,
+      gridCount,
+      runs: entries.length * grid.length,
     });
     this.runner.kick();
     return saved.id;
@@ -208,7 +227,7 @@ export class ExperimentsService {
   }
 
   /**
-   * The runs of an experiment in dataset entry rank order.
+   * The runs of an experiment by dataset entry rank, then grid date (HEAD last).
    * @throws {NotAuthorized} If the user is not a member of the org
    * @throws {EntityNotFound} If the org has no such experiment
    */
@@ -231,8 +250,12 @@ export class ExperimentsService {
 
     const [runs, fullCount] = await this.runRepository.findAndCount({
       where: { experiment: { id: experiment.id } },
-      relations: { dataset_entry: true, analysis: { project: true } },
-      order: { dataset_entry: { rank: "ASC" } },
+      relations: {
+        dataset_entry: true,
+        analysis: { project: true },
+        shared_from: true,
+      },
+      order: { dataset_entry: { rank: "ASC" }, grid_index: "ASC" },
       skip: currentPage * entriesPerPage,
       take: entriesPerPage,
     });
@@ -246,6 +269,9 @@ export class ExperimentsService {
         branch: run.branch ?? null,
         commit_hash: run.commit_hash ?? null,
         committed_at: run.committed_at ?? null,
+        grid_index: run.grid_index,
+        grid_date: run.grid_date ?? null,
+        shared_from_run_id: run.shared_from?.id ?? null,
         submitted_on: run.submitted_on ?? null,
         ended_on: run.ended_on ?? null,
         analysis_id: run.analysis?.id ?? null,
@@ -359,6 +385,15 @@ export class ExperimentsService {
       name: experiment.name,
       status: experiment.status,
       retries: experiment.retries,
+      grid_interval: experiment.grid_interval,
+      grid_count: experiment.grid_count,
+      grid_dates: snapshotGrid(
+        experiment.created_on,
+        experiment.grid_interval,
+        experiment.grid_count,
+      ).flatMap((snapshot) =>
+        snapshot.grid_date ? [gridDay(snapshot.grid_date)] : [],
+      ),
       error: experiment.error ?? null,
       dataset_id: experiment.dataset?.id ?? null,
       dataset_name: experiment.dataset?.name ?? null,

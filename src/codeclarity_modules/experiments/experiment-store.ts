@@ -46,7 +46,7 @@ export type RunPatch = Partial<
     | "first_submitted_on"
     | "ended_on"
   >
-> & { analysis?: { id: string } };
+> & { analysis?: { id: string }; shared_from?: { id: string } };
 
 export interface ExperimentFinish {
   status:
@@ -62,7 +62,8 @@ export interface ExperimentFinish {
  * from here on each pass, so a restarted API resumes from it.
  *
  * A run is in flight once it has an analysis submitted (pending with
- * submitted_on set), and unsubmitted while pending without it.
+ * submitted_on set), and unsubmitted while pending without it. A shared
+ * run (shared_from set) is never in flight: it takes its owner's outcome.
  */
 export abstract class ExperimentStore {
   /**
@@ -122,7 +123,7 @@ export abstract class ExperimentStore {
   /** In-flight runs with their analysis and dataset entry. */
   abstract getInFlightRuns(experimentId: string): Promise<ExperimentRun[]>;
 
-  /** Unsubmitted runs with their dataset entry, by entry rank. */
+  /** Unsubmitted runs with their dataset entry, by entry rank then grid index. */
   abstract getUnsubmittedRuns(
     experimentId: string,
     limit: number,
@@ -132,6 +133,23 @@ export abstract class ExperimentStore {
   abstract countInFlight(): Promise<number>;
 
   abstract countPending(experimentId: string): Promise<number>;
+
+  /**
+   * Another run of the entry pinned to this commit that owns its analysis
+   * (shares from no other run) and was not skipped, null if there is none.
+   */
+  abstract findCommitRun(
+    experimentId: string,
+    entryId: string,
+    commitHash: string,
+    excludeRunId: string,
+  ): Promise<ExperimentRun | null>;
+
+  /**
+   * Give every pending run that shares a commit the outcome of the run it
+   * shares from, once that run has ended: status, reason, analysis.
+   */
+  abstract settleSharedRuns(experimentId: string): Promise<void>;
 
   /** Apply a patch to a run that is still pending. False if it was not. */
   abstract updateRun(runId: string, patch: RunPatch): Promise<boolean>;
@@ -154,13 +172,15 @@ export abstract class ExperimentStore {
 
   /**
    * In one transaction, replace the run's copied rows with these and mark it
-   * done. Copying a done run again replaces its rows. False, with nothing
+   * done, with `reason` (e.g. no_lockfile_yet) when it is done but empty.
+   * Copying a done run again replaces its rows. False, with nothing
    * written, if the run is failed or skipped.
    */
   abstract copyRunRows(
     experimentId: string,
     runId: string,
     rows: RunRows,
+    reason?: string,
   ): Promise<boolean>;
 }
 
@@ -331,6 +351,7 @@ export class TypeOrmExperimentStore extends ExperimentStore {
         experiment: { id: experimentId },
         status: ExperimentRunStatus.PENDING,
         submitted_on: Not(IsNull()),
+        shared_from: IsNull(),
       },
       relations: { analysis: true, dataset_entry: true },
     });
@@ -348,7 +369,7 @@ export class TypeOrmExperimentStore extends ExperimentStore {
         submitted_on: IsNull(),
       },
       relations: { dataset_entry: true },
-      order: { dataset_entry: { rank: "ASC" } },
+      order: { dataset_entry: { rank: "ASC" }, grid_index: "ASC" },
       take: limit,
     });
   }
@@ -358,6 +379,7 @@ export class TypeOrmExperimentStore extends ExperimentStore {
       where: {
         status: ExperimentRunStatus.PENDING,
         submitted_on: Not(IsNull()),
+        shared_from: IsNull(),
       },
     });
   }
@@ -371,8 +393,43 @@ export class TypeOrmExperimentStore extends ExperimentStore {
     });
   }
 
+  async findCommitRun(
+    experimentId: string,
+    entryId: string,
+    commitHash: string,
+    excludeRunId: string,
+  ): Promise<ExperimentRun | null> {
+    return this.runRepository.findOne({
+      where: {
+        id: Not(excludeRunId),
+        experiment: { id: experimentId },
+        dataset_entry: { id: entryId },
+        commit_hash: commitHash,
+        shared_from: IsNull(),
+        status: Not(ExperimentRunStatus.SKIPPED),
+      },
+      order: { grid_index: "ASC" },
+    });
+  }
+
+  async settleSharedRuns(experimentId: string): Promise<void> {
+    await this.runRepository.query(
+      `UPDATE experiment_run AS run
+          SET status = owner.status,
+              error = owner.error,
+              ended_on = COALESCE(owner.ended_on, now()),
+              "analysisId" = owner."analysisId"
+         FROM experiment_run AS owner
+        WHERE owner.id = run."sharedFromId"
+          AND run."experimentId" = $1
+          AND run.status = $2
+          AND owner.status <> $2`,
+      [experimentId, ExperimentRunStatus.PENDING],
+    );
+  }
+
   async updateRun(runId: string, patch: RunPatch): Promise<boolean> {
-    const { analysis, ...fields } = patch;
+    const { analysis, shared_from, ...fields } = patch;
     const result = await this.runRepository
       .createQueryBuilder()
       .update(ExperimentRun)
@@ -382,6 +439,7 @@ export class TypeOrmExperimentStore extends ExperimentStore {
           ? {}
           : { error: fields.error?.slice(0, ERROR_MAX_LENGTH) ?? null }),
         ...(analysis ? { analysis: { id: analysis.id } } : {}),
+        ...(shared_from ? { shared_from: { id: shared_from.id } } : {}),
       })
       .where("id = :id AND status = :pending", {
         id: runId,
@@ -420,6 +478,7 @@ export class TypeOrmExperimentStore extends ExperimentStore {
     experimentId: string,
     runId: string,
     rows: RunRows,
+    reason?: string,
   ): Promise<boolean> {
     return this.runRepository.manager.transaction(async (manager) => {
       // Locking the run serializes concurrent copies of it
@@ -457,7 +516,7 @@ export class TypeOrmExperimentStore extends ExperimentStore {
         { id: runId },
         {
           status: ExperimentRunStatus.DONE,
-          error: null,
+          error: reason ?? null,
           ended_on: run.ended_on ?? new Date(),
         },
       );

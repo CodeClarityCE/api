@@ -24,7 +24,20 @@ describe("CreateExperimentBody", () => {
     await expect(errorsOf({ ...valid, retries: 10 })).resolves.toEqual([]);
   });
 
+  it("accepts a grid interval and count", async () => {
+    await expect(
+      errorsOf({ ...valid, grid_interval: "week", grid_count: 0 }),
+    ).resolves.toEqual([]);
+    await expect(
+      errorsOf({ ...valid, grid_interval: "month", grid_count: 120 }),
+    ).resolves.toEqual([]);
+  });
+
   it.each([
+    [{ grid_interval: "year" }, "grid_interval"],
+    [{ grid_count: -1 }, "grid_count"],
+    [{ grid_count: 121 }, "grid_count"],
+    [{ grid_count: 2.5 }, "grid_count"],
     [{ name: "" }, "name"],
     [{ name: "x".repeat(101) }, "name"],
     [{ dataset_id: "nope" }, "dataset_id"],
