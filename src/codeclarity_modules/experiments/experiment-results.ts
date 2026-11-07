@@ -36,6 +36,10 @@ import {
   quantile,
   spearman,
 } from "./experiment-stats";
+import {
+  upstreamLeverage,
+  type UpstreamLeverageBlock,
+} from "./experiment-upstream-leverage";
 
 /** A done run's summary row with the rank of its dataset entry. */
 export type ResultsSummaryInput = Pick<
@@ -295,6 +299,8 @@ export interface ExperimentResults {
   /** Exposures and fixes over the whole grid (hindsight view) */
   exposures: ExposuresBlock;
   fix_lag: FixLagBlock;
+  /** Packages to clear per grid date, removed_transitive share per interval */
+  upstream_leverage: UpstreamLeverageBlock;
   provenance: ProvenanceBlock;
 }
 
@@ -686,6 +692,7 @@ export function aggregateExperimentResults(
     rqd: rqd(summaries),
     exposures: exposuresBlock(exposures),
     fix_lag: fixLag(exposures),
+    upstream_leverage: upstreamLeverage(input.runs, input.vulnerabilities, exposures),
     provenance: provenance(input.provenance),
   };
 }
