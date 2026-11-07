@@ -14,10 +14,15 @@ import {
   type DatingPrecision,
   deriveExposures,
   type Exposure,
+  type ExposureEvent,
   FIX_KINDS,
   type FixKind,
 } from "./experiment-exposures";
 import { gridDay } from "./experiment-grid";
+import type {
+  ResultsProbeAnalysisInput,
+  ResultsProbeIntervalInput,
+} from "./experiment-probes";
 import {
   NO_LOCKFILE_YET,
   type ProbePackage,
@@ -61,7 +66,11 @@ export type ResultsVulnerabilityInput = Pick<
   Partial<
     Pick<
       VulnerabilityInstanceRow,
-      "workspace" | "affected_version" | "direct_dependency" | "published_date"
+      | "workspace"
+      | "affected_version"
+      | "direct_dependency"
+      | "published_date"
+      | "vulnerable_versions"
     >
   > & { run_id: string };
 
@@ -81,6 +90,9 @@ export interface ResultsRunInput {
   committed_at?: Date | null;
   /** The knowledge its rows were matched against, null if none was recorded */
   knowledge?: KnowledgeSnapshot | null;
+  /** The analysis it reads and its branch, for probe planning */
+  analysis_id?: string | null;
+  branch?: string | null;
 }
 
 /**
@@ -88,6 +100,7 @@ export interface ResultsRunInput {
  * Readers may pass only the packages they care about.
  */
 export type { ProbePackage };
+export type { ResultsProbeAnalysisInput, ResultsProbeIntervalInput };
 
 export interface ResultsProbeInput {
   dataset_entry_id: string;
@@ -116,8 +129,12 @@ export interface ExperimentResultsInput {
   /** One per done run: the project universe of every aggregate */
   summaries: ResultsSummaryInput[];
   vulnerabilities: ResultsVulnerabilityInput[];
-  /** Probe outcome rows of snapshot commits (and later, fix probes) */
+  /** Probe outcome rows of snapshot and fix probe commits */
   probes?: ResultsProbeInput[];
+  /** The lockfile-touching commits listed between snapshot commits */
+  probe_intervals?: ResultsProbeIntervalInput[];
+  /** Fix probe analyses, pending, done or failed */
+  probe_analyses?: ResultsProbeAnalysisInput[];
   provenance: ResultsProvenanceInput;
 }
 
@@ -270,6 +287,21 @@ export interface ExposuresBlock {
   introduction_precision: Record<DatingPrecision, number>;
 }
 
+/** Events by how fix probes ended; not_probed while they have not. */
+export interface ProbeOutcomeCounts {
+  found: number;
+  ambiguous: number;
+  not_found: number;
+  not_probed: number;
+}
+
+export interface ProbesBlock {
+  fixes: ProbeOutcomeCounts;
+  introductions: ProbeOutcomeCounts;
+  /** Not-found events per reason, most frequent first */
+  not_found_reasons: Record<string, number>;
+}
+
 export interface ProvenanceBlock extends ResultsProvenanceInput {
   /** Knowledge sources differ between the start and end snapshots */
   knowledge_changed: boolean;
@@ -295,6 +327,8 @@ export interface ExperimentResults {
   /** Exposures and fixes over the whole grid (hindsight view) */
   exposures: ExposuresBlock;
   fix_lag: FixLagBlock;
+  /** How fix probes dated the fixes and introductions */
+  probes: ProbesBlock;
   provenance: ProvenanceBlock;
 }
 
@@ -621,6 +655,25 @@ function exposuresBlock(exposures: readonly Exposure[]): ExposuresBlock {
   };
 }
 
+function probesBlock(exposures: readonly Exposure[]): ProbesBlock {
+  const counts = (events: readonly ExposureEvent[]): ProbeOutcomeCounts => ({
+    found: events.filter((e) => e.probe_outcome === "found").length,
+    ambiguous: events.filter((e) => e.probe_outcome === "ambiguous").length,
+    not_found: events.filter((e) => e.probe_outcome === "not_found").length,
+    not_probed: events.filter((e) => e.probe_outcome === null).length,
+  });
+  const fixes = exposures.flatMap((e) => (e.fix ? [e.fix] : []));
+  const introductions = exposures.flatMap((e) => (e.introduction ? [e.introduction] : []));
+  const notFound = [...fixes, ...introductions].filter((e) => e.probe_outcome === "not_found");
+  return {
+    fixes: counts(fixes),
+    introductions: counts(introductions),
+    not_found_reasons: Object.fromEntries(
+      rankedEntries(countBy(notFound, (e) => e.probe_reason)),
+    ),
+  };
+}
+
 /** The same source timestamps and the same number of EPSS rows. */
 function sameKnowledge(a: KnowledgeSnapshot, b: KnowledgeSnapshot): boolean {
   if (a.epss_rows !== b.epss_rows) return false;
@@ -686,6 +739,7 @@ export function aggregateExperimentResults(
     rqd: rqd(summaries),
     exposures: exposuresBlock(exposures),
     fix_lag: fixLag(exposures),
+    probes: probesBlock(exposures),
     provenance: provenance(input.provenance),
   };
 }

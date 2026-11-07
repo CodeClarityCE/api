@@ -1,13 +1,19 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { EntityManager, IsNull, Not, Repository } from "typeorm";
+import { EntityManager, In, IsNull, Not, Repository } from "typeorm";
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity";
 
+import { DatasetEntry } from "../datasets/dataset-entry.entity";
 import type { KnowledgeProvenance } from "../knowledge/provenance/provenance.service";
 import { Result } from "../results/result.entity";
 
 import { Experiment, ExperimentStatus } from "./experiment.entity";
+import type { ExposuresInput } from "./experiment-exposures";
+import { ExperimentProbe } from "./experiment-probe.entity";
 import { ExperimentProbeOutcome } from "./experiment-probe-outcome.entity";
+import { type RawQuery, readPlanningRows } from "./experiment-probe-rows";
+import type { ProbeCandidate } from "./experiment-probes";
+import type { ResultsRunInput } from "./experiment-results";
 import type { ProbePackage, RunRows } from "./experiment-row-copy";
 import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
 import { ExperimentRunSummaryRow } from "./experiment-run-summary-row.entity";
@@ -190,6 +196,61 @@ export abstract class ExperimentStore {
 
   /** Write the packages an entry resolves at a commit, replacing any row for it. */
   abstract saveProbeOutcome(outcome: ProbeOutcome): Promise<void>;
+
+  /**
+   * What probe planning reads, for the entries whose snapshot runs have all
+   * ended: runs, instances, probe outcome rows, intervals and probes.
+   */
+  abstract getProbeRows(
+    experimentId: string,
+  ): Promise<ExposuresInput & { runs: ResultsRunInput[] }>;
+
+  abstract getDatasetEntries(ids: string[]): Promise<DatasetEntry[]>;
+
+  /** Record the lockfile-touching commits of an interval; a listed one is kept. */
+  abstract saveProbeInterval(interval: ProbeInterval): Promise<void>;
+
+  /**
+   * Insert a pending, submitted probe of a commit. Null if the commit was
+   * already probed (or is being).
+   */
+  abstract reserveProbe(probe: ProbeReservation): Promise<string | null>;
+
+  /** Link a pending probe to its analysis inside the caller's transaction. */
+  abstract linkProbe(
+    manager: EntityManager,
+    probeId: string,
+    analysisId: string,
+  ): Promise<boolean>;
+
+  /** Pending probes of the experiment, with their analysis and dataset entry. */
+  abstract getInFlightProbes(experimentId: string): Promise<ExperimentProbe[]>;
+
+  /** End a pending probe as done or failed. False if it was not pending. */
+  abstract endProbe(
+    probeId: string,
+    status: "done" | "failed",
+    error?: string,
+  ): Promise<boolean>;
+}
+
+/** The lockfile-touching commits between two snapshot commits of an entry. */
+export interface ProbeInterval {
+  experimentId: string;
+  datasetEntryId: string;
+  /** Null when the interval starts before the first commit */
+  fromCommit: string | null;
+  toCommit: string;
+  lockfilePath: string | null;
+  candidates: ProbeCandidate[];
+  error: string | null;
+}
+
+export interface ProbeReservation {
+  experimentId: string;
+  datasetEntryId: string;
+  commitHash: string;
+  committedAt: Date | null;
 }
 
 /** The packages one dataset entry resolves at one commit. */
@@ -216,6 +277,10 @@ export class TypeOrmExperimentStore extends ExperimentStore {
     private readonly resultRepository: Repository<Result>,
     @InjectRepository(ExperimentProbeOutcome, "codeclarity")
     private readonly probeOutcomeRepository: Repository<ExperimentProbeOutcome>,
+    @InjectRepository(ExperimentProbe, "codeclarity")
+    private readonly probeRepository: Repository<ExperimentProbe>,
+    @InjectRepository(DatasetEntry, "codeclarity")
+    private readonly entryRepository: Repository<DatasetEntry>,
   ) {
     super();
   }
@@ -394,13 +459,17 @@ export class TypeOrmExperimentStore extends ExperimentStore {
   }
 
   async countInFlight(): Promise<number> {
-    return this.runRepository.count({
-      where: {
-        status: ExperimentRunStatus.PENDING,
-        submitted_on: Not(IsNull()),
-        shared_from: IsNull(),
-      },
-    });
+    const [runs, probes] = await Promise.all([
+      this.runRepository.count({
+        where: {
+          status: ExperimentRunStatus.PENDING,
+          submitted_on: Not(IsNull()),
+          shared_from: IsNull(),
+        },
+      }),
+      this.probeRepository.count({ where: { status: "pending" } }),
+    ]);
+    return runs + probes;
   }
 
   async countPending(experimentId: string): Promise<number> {
@@ -595,5 +664,86 @@ export class TypeOrmExperimentStore extends ExperimentStore {
         JSON.stringify(outcome.packages),
       ],
     );
+  }
+
+  async getProbeRows(
+    experimentId: string,
+  ): Promise<ExposuresInput & { runs: ResultsRunInput[] }> {
+    const query: RawQuery = (sql, params) => this.runRepository.query(sql, params);
+    return readPlanningRows(query, experimentId);
+  }
+
+  async getDatasetEntries(ids: string[]): Promise<DatasetEntry[]> {
+    if (ids.length === 0) return [];
+    return this.entryRepository.find({ where: { id: In(ids) } });
+  }
+
+  async saveProbeInterval(interval: ProbeInterval): Promise<void> {
+    await this.runRepository.query(
+      `INSERT INTO experiment_probe_interval
+         ("experimentId", "datasetEntryId", from_commit, to_commit, lockfile_path, candidates, error)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT ("experimentId", "datasetEntryId", from_commit, to_commit) DO NOTHING`,
+      [
+        interval.experimentId,
+        interval.datasetEntryId,
+        interval.fromCommit ?? "",
+        interval.toCommit,
+        interval.lockfilePath,
+        JSON.stringify(interval.candidates),
+        interval.error?.slice(0, ERROR_MAX_LENGTH) ?? null,
+      ],
+    );
+  }
+
+  async reserveProbe(probe: ProbeReservation): Promise<string | null> {
+    const rows = await this.runRepository.query<{ id: string }[]>(
+      `INSERT INTO experiment_probe
+         ("experimentId", "datasetEntryId", commit_hash, committed_at, status, submitted_on)
+       VALUES ($1, $2, $3, $4, 'pending', now())
+       ON CONFLICT ("experimentId", "datasetEntryId", commit_hash) DO NOTHING
+       RETURNING id`,
+      [probe.experimentId, probe.datasetEntryId, probe.commitHash, probe.committedAt],
+    );
+    return rows[0]?.id ?? null;
+  }
+
+  async linkProbe(
+    manager: EntityManager,
+    probeId: string,
+    analysisId: string,
+  ): Promise<boolean> {
+    const result = await manager
+      .createQueryBuilder()
+      .update(ExperimentProbe)
+      .set({ analysis: { id: analysisId } })
+      .where("id = :id AND status = 'pending'", { id: probeId })
+      .execute();
+    return Boolean(result.affected);
+  }
+
+  async getInFlightProbes(experimentId: string): Promise<ExperimentProbe[]> {
+    return this.probeRepository.find({
+      where: { experiment: { id: experimentId }, status: "pending" },
+      relations: { analysis: true, dataset_entry: true },
+    });
+  }
+
+  async endProbe(
+    probeId: string,
+    status: "done" | "failed",
+    error?: string,
+  ): Promise<boolean> {
+    const result = await this.probeRepository
+      .createQueryBuilder()
+      .update(ExperimentProbe)
+      .set({
+        status,
+        error: error?.slice(0, ERROR_MAX_LENGTH) ?? null,
+        ended_on: new Date(),
+      })
+      .where("id = :id AND status = 'pending'", { id: probeId })
+      .execute();
+    return Boolean(result.affected);
   }
 }

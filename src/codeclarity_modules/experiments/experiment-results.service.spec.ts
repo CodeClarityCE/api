@@ -81,9 +81,38 @@ describe("ExperimentResultsService", () => {
         withdrawn_date: null,
       },
     ]);
-    probeRows.mockResolvedValue([
-      { dataset_entry_id: "e1", commit_hash: "e5f", packages: [{ workspace: ".", name: "lodash", version: "4.17.21", direct: true }] },
-    ]);
+    probeRows.mockImplementation(async (sql: string) =>
+      sql.includes("experiment_probe_outcome")
+        ? [{ dataset_entry_id: "e1", commit_hash: "e5f", packages: [{ workspace: ".", name: "lodash", version: "4.17.21", direct: true }] }]
+        : [],
+    );
+  }
+
+  /** A probe of d4e between the two snapshots found the fix there. */
+  function probedLodash(): void {
+    probeRows.mockImplementation(async (sql: string) => {
+      if (sql.includes("experiment_probe_outcome")) {
+        return [
+          { dataset_entry_id: "e1", commit_hash: "e5f", packages: [{ workspace: ".", name: "lodash", version: "4.17.21", direct: true }] },
+          { dataset_entry_id: "e1", commit_hash: "d4e", packages: [{ workspace: ".", name: "lodash", version: "4.17.21", direct: true }] },
+        ];
+      }
+      if (sql.includes("experiment_probe_interval")) {
+        return [
+          {
+            dataset_entry_id: "e1",
+            from_commit: "c3d",
+            to_commit: "e5f",
+            candidates: [
+              { sha: "d4e", committed_at: "2025-03-12T09:00:00Z" },
+              { sha: "e5f", committed_at: "2025-03-28T00:00:00Z" },
+            ],
+            error: null,
+          },
+        ];
+      }
+      return [{ dataset_entry_id: "e1", commit_hash: "d4e", status: "done", error: null }];
+    });
   }
 
   async function read(stream: NodeJS.ReadableStream): Promise<string> {
@@ -307,8 +336,8 @@ describe("ExperimentResultsService", () => {
 
       const fixes = await read((await service.exportFixesCsv("org-1", "exp-1", user)).stream);
       expect(fixes.split("\r\n")).toEqual([
-        "rank,full_name,vulnerability_id,affected_dependency,severity,published_date,fix_date,fix_commit,fix_kind,precision,probe_outcome,interval_from,interval_to,lag_days",
-        "0,octo/app,CVE-2021-23337,lodash,HIGH,2025-02-10,2025-03-28,e5f,upgraded,snapshot,,2025-03-01,HEAD,46",
+        "rank,full_name,vulnerability_id,affected_dependency,severity,published_date,fix_date,fix_commit,fix_kind,precision,probe_outcome,probe_reason,interval_from,interval_to,lag_days",
+        "0,octo/app,CVE-2021-23337,lodash,HIGH,2025-02-10,2025-03-28,e5f,upgraded,snapshot,,,2025-03-01,HEAD,46",
         "",
       ]);
 
@@ -317,6 +346,24 @@ describe("ExperimentResultsService", () => {
       expect(exposures.split("\r\n")[1]).toBe(
         "0,octo/app,CVE-2021-23337,lodash,HIGH,2025-02-10,2025-03-01,2025-03-01,0,fixed,,,,,2025-03-28,e5f,snapshot,upgraded,46",
       );
+    });
+
+    it("dates a fix to the commit a stored probe located, keeping its snapshot interval", async () => {
+      experimentRepository["findOne"]!.mockResolvedValue({ id: "exp-1", name: "x", created_on: new Date() });
+      fixedLodash();
+      probedLodash();
+      const entries = jest
+        .fn()
+        .mockResolvedValue([])
+        .mockResolvedValueOnce([{ id: "e1", rank: 0, full_name: "octo/app" }]);
+      runRepository["createQueryBuilder"]!.mockImplementation(() => rowsBuilder(entries));
+
+      const fixes = await read((await service.exportFixesCsv("org-1", "exp-1", user)).stream);
+      expect(fixes.split("\r\n")[1]).toBe(
+        "0,octo/app,CVE-2021-23337,lodash,HIGH,2025-02-10,2025-03-12,d4e,upgraded,commit,found,,2025-03-01,HEAD,30",
+      );
+      const { results } = await service.exportResults("org-1", "exp-1", user);
+      expect(results.probes.fixes).toEqual({ found: 1, ambiguous: 0, not_found: 0, not_probed: 0 });
     });
   });
 });
