@@ -12,6 +12,8 @@ import { DatasetEntry } from "../datasets/dataset-entry.entity";
 import { Result } from "../results/result.entity";
 
 import { Experiment } from "./experiment.entity";
+import { ExperimentProbe } from "./experiment-probe.entity";
+import { ExperimentProbeInterval } from "./experiment-probe-interval.entity";
 import { ExperimentProbeOutcome } from "./experiment-probe-outcome.entity";
 import { ExperimentResultsService } from "./experiment-results.service";
 import { ExperimentRun } from "./experiment-run.entity";
@@ -32,6 +34,8 @@ import { ExperimentsService } from "./experiments.service";
         ExperimentRunSummaryRow,
         ExperimentVulnerabilityInstance,
         ExperimentProbeOutcome,
+        ExperimentProbe,
+        ExperimentProbeInterval,
         Dataset,
         DatasetEntry,
         Result,

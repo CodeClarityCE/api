@@ -115,8 +115,9 @@ export const EXPOSURE_CSV_COLUMNS = [
 ] as const;
 
 /**
- * fixes.csv: one row per fix, computed on read. probe_outcome stays blank
- * until fix probes run; interval_from and interval_to bracket the fix.
+ * fixes.csv: one row per fix, computed on read. probe_outcome is blank
+ * until fix probes end, probe_reason says why one found no commit;
+ * interval_from and interval_to bracket the fix.
  */
 export const FIX_CSV_COLUMNS = [
   "rank",
@@ -130,6 +131,7 @@ export const FIX_CSV_COLUMNS = [
   "fix_kind",
   "precision",
   "probe_outcome",
+  "probe_reason",
   "interval_from",
   "interval_to",
   "lag_days",
@@ -184,7 +186,8 @@ export function fixCsvRow(entry: CsvEntry, exposure: Exposure): CsvRow | null {
     fix_commit: fix.commit_hash,
     fix_kind: fix.kind,
     precision: fix.precision,
-    probe_outcome: null,
+    probe_outcome: fix.probe_outcome,
+    probe_reason: fix.probe_reason,
     interval_from: gridCell(fix.interval_from),
     interval_to: gridCell(fix.interval_to),
     lag_days: fix.lag_days,

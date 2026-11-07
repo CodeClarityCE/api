@@ -10,6 +10,9 @@ import { NotAuthorized } from "src/types/error.types";
 import type { DatasetEntry } from "../datasets/dataset-entry.entity";
 
 import { type Experiment, ExperimentStatus } from "./experiment.entity";
+import { deriveExposures, type ExposuresInput } from "./experiment-exposures";
+import type { ExperimentProbe } from "./experiment-probe.entity";
+import type { ResultsRunInput } from "./experiment-results";
 import type { RunRows } from "./experiment-row-copy";
 import {
   type ExperimentRun,
@@ -17,6 +20,7 @@ import {
 } from "./experiment-run.entity";
 import type {
   ExperimentRunSubmission,
+  ProbeSubmissionRequest,
   RunSubmissionRequest,
 } from "./experiment-run-submission";
 import { ExperimentRunnerService } from "./experiment-runner.service";
@@ -25,7 +29,9 @@ import {
   type ExperimentFinish,
   ExperimentLeaseLost,
   ExperimentStore,
+  type ProbeInterval,
   type ProbeOutcome,
+  type ProbeReservation,
   type RunPatch,
 } from "./experiment-store";
 
@@ -99,6 +105,124 @@ class FakeStore extends ExperimentStore {
   async saveProbeOutcome(outcome: ProbeOutcome): Promise<void> {
     const key = `${outcome.experimentId}/${outcome.datasetEntryId}/${outcome.commitHash}`;
     this.probeOutcomes.set(key, outcome);
+  }
+
+  /** Fix probes and listed intervals, as their tables hold them */
+  probes: (ProbeReservation & {
+    id: string;
+    status: "pending" | "done" | "failed";
+    error: string | null;
+    submitted_on: Date;
+    analysis: { id: string } | null;
+  })[] = [];
+  intervals: ProbeInterval[] = [];
+
+  async getProbeRows(
+    experimentId: string,
+  ): Promise<ExposuresInput & { runs: ResultsRunInput[] }> {
+    const runs = this.runsOf(experimentId);
+    const pending = new Set(
+      runs.filter((r) => r.status === ExperimentRunStatus.PENDING).map((r) => r.dataset_entry.id),
+    );
+    const ended = runs.filter((r) => !pending.has(r.dataset_entry.id));
+    const entries = new Set(ended.map((r) => r.dataset_entry.id));
+    return {
+      runs: ended.map((r) => ({
+        status: r.status,
+        error: r.error ?? null,
+        grid_index: r.grid_index,
+        grid_date: r.grid_date ?? null,
+        commit_hash: r.commit_hash ?? null,
+        committed_at: r.committed_at ?? null,
+        branch: r.branch ?? null,
+        analysis_id: r.analysis?.id ?? null,
+        rows_run_id: r.shared_from?.id ?? r.id,
+        dataset_entry_id: r.dataset_entry.id,
+      })),
+      vulnerabilities: ended.flatMap((r) =>
+        (this.copied.get(r.id)?.vulnerabilities ?? []).map((v) => ({ ...v, run_id: r.id })),
+      ),
+      probes: [...this.probeOutcomes.values()]
+        .filter((o) => o.experimentId === experimentId && entries.has(o.datasetEntryId))
+        .map((o) => ({ dataset_entry_id: o.datasetEntryId, commit_hash: o.commitHash, packages: o.packages })),
+      probe_intervals: this.intervals
+        .filter((i) => i.experimentId === experimentId && entries.has(i.datasetEntryId))
+        .map((i) => ({
+          dataset_entry_id: i.datasetEntryId,
+          from_commit: i.fromCommit,
+          to_commit: i.toCommit,
+          candidates: i.candidates,
+          error: i.error,
+        })),
+      probe_analyses: this.probes
+        .filter((p) => p.experimentId === experimentId && entries.has(p.datasetEntryId))
+        .map((p) => ({ dataset_entry_id: p.datasetEntryId, commit_hash: p.commitHash, status: p.status, error: p.error })),
+    };
+  }
+
+  async getDatasetEntries(ids: string[]): Promise<DatasetEntry[]> {
+    const found = new Map(this.runs.map((r) => [r.dataset_entry.id, r.dataset_entry]));
+    return ids.flatMap((id) => (found.has(id) ? [found.get(id)!] : []));
+  }
+
+  async saveProbeInterval(interval: ProbeInterval): Promise<void> {
+    const exists = this.intervals.some(
+      (i) =>
+        i.experimentId === interval.experimentId &&
+        i.datasetEntryId === interval.datasetEntryId &&
+        i.fromCommit === interval.fromCommit &&
+        i.toCommit === interval.toCommit,
+    );
+    if (!exists) this.intervals.push(interval);
+  }
+
+  async reserveProbe(probe: ProbeReservation): Promise<string | null> {
+    const taken = this.probes.some(
+      (p) =>
+        p.experimentId === probe.experimentId &&
+        p.datasetEntryId === probe.datasetEntryId &&
+        p.commitHash === probe.commitHash,
+    );
+    if (taken) return null;
+    const id = `probe-${this.probes.length + 1}`;
+    this.probes.push({ ...probe, id, status: "pending", error: null, submitted_on: new Date(), analysis: null });
+    return id;
+  }
+
+  async linkProbe(_manager: unknown, probeId: string, analysisId: string): Promise<boolean> {
+    const probe = this.probes.find((p) => p.id === probeId);
+    if (probe?.status !== "pending") return false;
+    probe.analysis = { id: analysisId };
+    return true;
+  }
+
+  async getInFlightProbes(experimentId: string): Promise<ExperimentProbe[]> {
+    return this.probes
+      .filter((p) => p.experimentId === experimentId && p.status === "pending")
+      .map(
+        (p) =>
+          ({
+            id: p.id,
+            commit_hash: p.commitHash,
+            committed_at: p.committedAt,
+            status: p.status,
+            submitted_on: p.submitted_on,
+            dataset_entry: { id: p.datasetEntryId },
+            analysis: p.analysis ? (this.analyses.get(p.analysis.id) ?? null) : null,
+          }) as unknown as ExperimentProbe,
+      );
+  }
+
+  async endProbe(probeId: string, status: "done" | "failed", error?: string): Promise<boolean> {
+    const probe = this.probes.find((p) => p.id === probeId);
+    if (probe?.status !== "pending") return false;
+    probe.status = status;
+    probe.error = error ?? null;
+    return true;
+  }
+
+  probeOf(commit: string): FakeStore["probes"][number] | undefined {
+    return this.probes.find((p) => p.commitHash === commit);
   }
 
   async claimNext(
@@ -231,12 +355,14 @@ class FakeStore extends ExperimentStore {
   }
 
   async countInFlight(): Promise<number> {
-    return this.runs.filter(
-      (r) =>
-        r.status === ExperimentRunStatus.PENDING &&
-        r.submitted_on &&
-        !r.shared_from,
-    ).length;
+    return (
+      this.runs.filter(
+        (r) =>
+          r.status === ExperimentRunStatus.PENDING &&
+          r.submitted_on &&
+          !r.shared_from,
+      ).length + this.probes.filter((p) => p.status === "pending").length
+    );
   }
 
   async findCommitRun(
@@ -398,7 +524,9 @@ class FakeGithub {
   calls = { get: 0, listCommits: 0 };
 
   /** Earlier default-branch commits by repository, oldest first */
-  history = new Map<string, { sha: string; date: string }[]>();
+  history = new Map<string, { sha: string; date: string; paths?: string[] }[]>();
+  /** Every listCommits call's parameters */
+  listed: Record<string, unknown>[] = [];
   /** The `until` of every listCommits call */
   untils: (string | undefined)[] = [];
 
@@ -412,10 +540,10 @@ class FakeGithub {
   }
 
   /** Give a repository earlier commits, oldest first; its tip stays last. */
-  addHistory(fullName: string, commits: [string, string][]): void {
+  addHistory(fullName: string, commits: [string, string, string[]?][]): void {
     this.history.set(
       fullName.toLowerCase(),
-      commits.map(([sha, date]) => ({ sha, date })),
+      commits.map(([sha, date, paths]) => ({ sha, date, ...(paths ? { paths } : {}) })),
     );
   }
 
@@ -439,39 +567,43 @@ class FakeGithub {
               },
             };
           },
-          listCommits: async ({
-            owner,
-            repo,
-            sha,
-            until,
-          }: {
+          listCommits: async (params: {
             owner: string;
             repo: string;
             sha: string;
+            path?: string;
+            since?: string;
             until?: string;
+            per_page?: number;
+            page?: number;
           }) => {
+            const { owner, repo, sha, path, since, until } = params;
             this.calls.listCommits++;
-            this.untils.push(until);
+            if (path) this.listed.push(params);
+            else this.untils.push(until);
             if (this.commitsError) throw this.commitsError;
             const key = `${owner}/${repo}`.toLowerCase();
             const found = this.repos.get(key);
             if (found?.default_branch !== sha) {
               throw githubError(404, "Not Found");
             }
+            // Commits touch package-lock.json unless told otherwise
+            const at = (date: string): number => Date.parse(date);
             const commits = [
               ...(this.history.get(key) ?? []),
               { sha: found.sha, date: found.date },
-            ].filter((c) => !until || c.date <= until);
-            const latest = commits[commits.length - 1];
+            ]
+              .filter((c) => !until || at(c.date) <= at(until))
+              .filter((c) => !since || at(c.date) >= at(since))
+              .filter((c) => !path || ("paths" in c ? c.paths : ["package-lock.json"]).includes(path))
+              .reverse();
+            const perPage = params.per_page ?? 30;
+            const start = ((params.page ?? 1) - 1) * perPage;
             return {
-              data: latest
-                ? [
-                    {
-                      sha: latest.sha,
-                      commit: { committer: { date: latest.date } },
-                    },
-                  ]
-                : [],
+              data: commits.slice(start, start + perPage).map((c) => ({
+                sha: c.sha,
+                commit: { committer: { date: c.date } },
+              })),
             };
           },
         },
@@ -484,6 +616,7 @@ describe("ExperimentRunnerService", () => {
   let store: FakeStore;
   let github: FakeGithub;
   let submit: jest.Mock<Promise<string | undefined>, [RunSubmissionRequest]>;
+  let submitProbe: jest.Mock<Promise<string | undefined>, [ProbeSubmissionRequest]>;
   let abandon: jest.Mock<Promise<void>, [string]>;
   let getProvenance: jest.Mock;
   let getToken: jest.Mock;
@@ -493,7 +626,7 @@ describe("ExperimentRunnerService", () => {
     return new ExperimentRunnerService(
       store,
       { getToken } as unknown as GithubIntegrationService,
-      { submit, abandon } as unknown as ExperimentRunSubmission,
+      { submit, submitProbe, abandon } as unknown as ExperimentRunSubmission,
       { get: getProvenance } as unknown as ProvenanceService,
     );
   }
@@ -581,6 +714,13 @@ describe("ExperimentRunnerService", () => {
       if (!(await store.updateRun(request.runId, { analysis: { id } }))) {
         return undefined;
       }
+      analysisCount++;
+      store.analyses.set(id, { id, status: AnalysisStatus.REQUESTED });
+      return id;
+    });
+    submitProbe = jest.fn(async (request: ProbeSubmissionRequest) => {
+      const id = `analysis-${analysisCount + 1}`;
+      if (!(await store.linkProbe(null, request.probeId, id))) return undefined;
       analysisCount++;
       store.analyses.set(id, { id, status: AnalysisStatus.REQUESTED });
       return id;
@@ -1598,6 +1738,200 @@ describe("ExperimentRunnerService", () => {
         error: "no_lockfile_yet",
         knowledge: null,
       });
+    });
+  });
+
+  describe("fix probes", () => {
+    const GRID = ["2025-03-01T00:00:00Z", "2025-04-01T00:00:00Z"];
+    /** lodash at each commit; CVE-A is fixed in 4.17.21, CVE-B in 4.17.16 */
+    const LODASH: Record<string, string> = {
+      c3d: "4.17.15",
+      d4e: "4.17.16",
+      e5f: "4.17.21",
+      f6a: "4.17.21",
+      "sha-octo/app": "4.17.21",
+    };
+    const FIXED: Record<string, [number, number, number]> = {
+      "CVE-A": [4, 17, 21],
+      "CVE-B": [4, 17, 16],
+    };
+
+    function lodashSbom(sha: string): unknown {
+      return {
+        workspaces: {
+          ".": {
+            dependencies: { lodash: { [LODASH[sha]!]: { Direct: true, Prod: true } } },
+            start: {},
+          },
+        },
+        analysis_info: {
+          status: "success",
+          package_manager: "NPM",
+          paths: { relative_lock_file_path: `${sha}/package-lock.json` },
+        },
+      };
+    }
+
+    function lodashVulns(sha: string): unknown {
+      const version = LODASH[sha]!;
+      const [, minor, patch] = version.split(".").map(Number) as [number, number, number];
+      const ids = Object.entries(FIXED)
+        .filter(([, [, fMinor, fPatch]]) => minor < fMinor || (minor === fMinor && patch < fPatch))
+        .map(([id]) => id);
+      return {
+        workspaces: {
+          ".": {
+            Vulnerabilities: ids.map((id) => {
+              const [Major, Minor, Patch] = FIXED[id]!;
+              return {
+                VulnerabilityId: id,
+                AffectedDependency: "lodash",
+                AffectedVersion: version,
+                Severity: { SeverityClass: "HIGH" },
+                Conflict: { ConflictFlag: "MATCH_CORRECT", ConflictWinner: "OSV" },
+                direct_dependency: true,
+                OSVMatch: {
+                  Vulnerable: true,
+                  Vulnerability: { published: "2025-02-01T00:00:00Z" },
+                  AffectedInfo: [{ Ranges: [{ FixedSemver: { Major, Minor, Patch } }] }],
+                },
+              };
+            }),
+          },
+        },
+        analysis_info: { status: "success" },
+      };
+    }
+
+    /** Finish every requested analysis at its commit; `failing` probes fail. */
+    function settle(failing: Record<string, string> = {}): void {
+      const commits = new Map<string, string>();
+      for (const run of store.runs) {
+        if (run.analysis && run.commit_hash) commits.set(run.analysis.id, run.commit_hash);
+      }
+      for (const probe of store.probes) {
+        if (probe.analysis) commits.set(probe.analysis.id, probe.commitHash);
+      }
+      for (const analysis of store.analyses.values()) {
+        const sha = commits.get(analysis.id);
+        if (analysis.status !== AnalysisStatus.REQUESTED || !sha) continue;
+        const isProbe = store.probes.some((p) => p.analysis?.id === analysis.id);
+        if (isProbe && failing[sha]) {
+          analysis.status = AnalysisStatus.FAILED;
+          analysis.failure_reason = failing[sha];
+          continue;
+        }
+        analysis.status = AnalysisStatus.SUCCESS;
+        store.results.set(`${analysis.id}/js-sbom`, lodashSbom(sha));
+        if (!isProbe) store.results.set(`${analysis.id}/vuln-finder`, lodashVulns(sha));
+      }
+    }
+
+    async function runToEnd(failing: Record<string, string> = {}): Promise<void> {
+      const service = runner();
+      for (let pass = 0; pass < 12; pass++) {
+        await service.tick();
+        if (store.experiments.get("exp-1")!.status === ExperimentStatus.COMPLETED) return;
+        settle(failing);
+      }
+      throw new Error("experiment did not complete");
+    }
+
+    async function fixes(): Promise<[string, unknown][]> {
+      const rows = await store.getProbeRows("exp-1");
+      return deriveExposures(rows).map((e) => [e.vulnerability_id, e.fix]);
+    }
+
+    beforeEach(() => {
+      github.addHistory("octo/app", [
+        ["c3d", "2025-02-25T12:00:00Z"],
+        ["d4e", "2025-03-12T12:00:00Z"],
+        ["e5f", "2025-03-20T12:00:00Z"],
+        ["f6a", "2025-03-28T12:00:00Z"],
+      ]);
+      addExperiment("exp-1", ["octo/app"], {}, GRID);
+    });
+
+    it("halves over the lockfile-touching commits between two snapshots, probing each commit once for several fixes", async () => {
+      await runToEnd();
+
+      // Candidates d4e, e5f, f6a: f6a is the later snapshot, never probed
+      expect(submitProbe.mock.calls.map(([request]) => request.head.commitHash)).toEqual(["d4e", "e5f"]);
+      expect(submitProbe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          probeId: store.probeOf("d4e")!.id,
+          head: expect.objectContaining({ branch: "main", commitHash: "d4e" }),
+          entry: expect.objectContaining({ full_name: "octo/app" }),
+        }),
+      );
+      expect(github.listed).toEqual([
+        expect.objectContaining({
+          path: "package-lock.json",
+          sha: "main",
+          since: "2025-02-25T12:00:00.000Z",
+          until: "2025-03-28T12:00:00.000Z",
+        }),
+      ]);
+      expect(await fixes()).toEqual([
+        ["CVE-A", expect.objectContaining({ commit_hash: "e5f", precision: "commit", probe_outcome: "found", interval_to: "2025-04-01" })],
+        ["CVE-B", expect.objectContaining({ commit_hash: "d4e", precision: "commit", probe_outcome: "found" })],
+      ]);
+      expect(store.probes.map((p) => p.status)).toEqual(["done", "done"]);
+    });
+
+    it("probes only after an entry's snapshots have all ended", async () => {
+      const service = runner();
+      await service.tick();
+      settle();
+      await service.tick();
+
+      expect(store.runs.every((r) => r.status === ExperimentRunStatus.DONE)).toBe(true);
+      expect(submitProbe).toHaveBeenCalledTimes(1);
+      expect(submit).toHaveBeenCalledTimes(3);
+    });
+
+    it("ends the searches a failed probe was part of as not_found, and probes nothing more for them", async () => {
+      await runToEnd({ d4e: "clone failed" });
+
+      expect(submitProbe).toHaveBeenCalledTimes(1);
+      expect(store.probeOf("d4e")).toMatchObject({ status: "failed", error: "clone failed" });
+      expect(await fixes()).toEqual([
+        ["CVE-A", expect.objectContaining({ precision: "snapshot", probe_outcome: "not_found", probe_reason: "probe of d4e failed: clone failed" })],
+        ["CVE-B", expect.objectContaining({ precision: "snapshot", probe_outcome: "not_found" })],
+      ]);
+    });
+
+    it("counts probes in flight against the global cap", async () => {
+      process.env["EXPERIMENT_MAX_IN_FLIGHT"] = "1";
+      const service = runner();
+      for (let pass = 0; pass < 6; pass++) {
+        await service.tick();
+        if (submitProbe.mock.calls.length > 0) break;
+        settle();
+      }
+      // The probe in flight holds the only slot
+      await service.tick();
+
+      expect(await store.countInFlight()).toBe(1);
+      expect(store.probes).toHaveLength(1);
+    });
+
+    it("does not probe once the experiment is cancelled, and ends when its probes finish", async () => {
+      const service = runner();
+      await service.tick();
+      settle();
+      await service.tick();
+      expect(submitProbe).toHaveBeenCalledTimes(1);
+
+      await service.cancel("exp-1");
+      await service.tick();
+      expect(store.experiments.get("exp-1")!.ended_on).toBeFalsy();
+      settle();
+      await service.tick();
+
+      expect(submitProbe).toHaveBeenCalledTimes(1);
+      expect(store.experiments.get("exp-1")).toMatchObject({ status: ExperimentStatus.CANCELLED });
+      expect(store.experiments.get("exp-1")!.ended_on).toBeTruthy();
     });
   });
 });

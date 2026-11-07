@@ -201,6 +201,8 @@ describe("exposures", () => {
           interval_to: "2025-04-01",
           kind: "upgraded",
           lag_days: 46,
+          probe_outcome: null,
+          probe_reason: null,
         },
       },
     ]);

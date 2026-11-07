@@ -4,6 +4,15 @@
  * (ADR 0001). Pure: no Nest or TypeORM imports.
  */
 import { gridDay } from "./experiment-grid";
+import {
+  type DatingTask,
+  type ProbeDating,
+  type ProbeOutcomeKind,
+  type ProbePlan,
+  probePlan,
+  type ProbeRows,
+  ProbeSearch,
+} from "./experiment-probes";
 import type {
   ResultsProbeInput,
   ResultsRunInput,
@@ -31,6 +40,10 @@ export interface ExposureEvent {
   /** The bracketing snapshots' grid dates, null for HEAD */
   interval_from: string | null;
   interval_to: string | null;
+  /** How fix probes dated it, null while they have not finished */
+  probe_outcome: ProbeOutcomeKind | null;
+  /** Why probes did not date it to a commit */
+  probe_reason: string | null;
 }
 
 export interface Introduction extends ExposureEvent {
@@ -65,7 +78,7 @@ export interface Exposure {
   fix: Fix | null;
 }
 
-export interface ExposuresInput {
+export interface ExposuresInput extends ProbeRows {
   runs: readonly ResultsRunInput[];
   vulnerabilities: readonly ResultsVulnerabilityInput[];
   probes?: readonly ResultsProbeInput[];
@@ -140,6 +153,21 @@ function snapshotEvent(before: ResultsRunInput, after: ResultsRunInput): Exposur
     precision: "snapshot",
     interval_from: gridLabel(before),
     interval_to: gridLabel(after),
+    probe_outcome: null,
+    probe_reason: null,
+  };
+}
+
+/** The event as probes dated it: at the located commit when found. */
+function probedEvent(event: ExposureEvent, dating: ProbeDating | null): ExposureEvent {
+  if (!dating) return event;
+  const dated = { ...event, probe_outcome: dating.outcome, probe_reason: dating.reason };
+  if (!dating.commit) return dated;
+  return {
+    ...dated,
+    date: dayOf(dating.commit.committed_at),
+    commit_hash: dating.commit.sha,
+    precision: "commit",
   };
 }
 
@@ -156,7 +184,10 @@ const keyOf = (vulnerabilityId: string, pkg: string): string => `${vulnerability
  * package resolves to a vulnerable version in any workspace; failed or
  * skipped snapshots are gaps and empty ones are absent.
  */
-export function deriveExposures(input: ExposuresInput): Exposure[] {
+export function deriveExposures(
+  input: ExposuresInput,
+  search: ProbeSearch = new ProbeSearch(input),
+): Exposure[] {
   const instancesByRun = new Map<string, ResultsVulnerabilityInput[]>();
   for (const v of input.vulnerabilities) {
     const list = instancesByRun.get(v.run_id) ?? [];
@@ -207,18 +238,38 @@ export function deriveExposures(input: ExposuresInput): Exposure[] {
         const latest = hits[span.lastPresent]!.get(key)![0]!;
         const published = dayOf(latest.published_date);
         let introduction: Introduction | null = null;
+        const task = (kind: DatingTask["kind"], before: number, after: number): DatingTask => ({
+          entry,
+          kind,
+          vulnerability_id: vulnerabilityId,
+          pkg,
+          before: runs[before]!,
+          after: runs[after]!,
+        });
         if (span.from !== null) {
-          const event = snapshotEvent(runs[span.from]!, runs[span.startAt]!);
+          const event = probedEvent(
+            snapshotEvent(runs[span.from]!, runs[span.startAt]!),
+            search.date(task("introduction", span.from, span.startAt)),
+          );
           introduction = { ...event, residence_days: daysBetween(event.date, published) };
         }
         let fix: Fix | null = null;
         if (span.to !== null) {
           const before = runs[span.lastPresent]!;
           const after = runs[span.to]!;
-          const event = snapshotEvent(before, after);
+          const dating = search.date(task("fix", span.lastPresent, span.to));
+          const event = probedEvent(snapshotEvent(before, after), dating);
+          const located = dating?.commit ? dating : null;
           fix = {
             ...event,
-            kind: fixKind(entry, pkg, hits[span.lastPresent]!.get(key)!, after, packagesAt),
+            kind: fixKind(
+              located?.packages_before
+                ? located.packages_before.some((p) => p.direct && search.isPresent({ vulnerability_id: vulnerabilityId, pkg }, [p]))
+                : hits[span.lastPresent]!.get(key)!.some((v) => v.direct_dependency === true),
+              located?.packages_after
+                ? located.packages_after.some((p) => p.name === pkg)
+                : resolvesAt(entry, pkg, after, packagesAt),
+            ),
             lag_days: daysBetween(published, event.date),
           };
         }
@@ -241,28 +292,40 @@ export function deriveExposures(input: ExposuresInput): Exposure[] {
   return exposures;
 }
 
+/** Whether the package resolves in some workspace at a snapshot, null if unknown. */
+function resolvesAt(
+  entry: string,
+  pkg: string,
+  run: ResultsRunInput,
+  packagesAt: ReadonlyMap<string, ProbePackage[]>,
+): boolean | null {
+  if (isEmpty(run)) return false;
+  const packages = run.commit_hash ? packagesAt.get(`${entry}\u0000${run.commit_hash}`) : undefined;
+  return packages ? packages.some((p) => p.name === pkg) : null;
+}
+
 /**
  * Upgraded if the package still resolves anywhere after the fix (at a safe
  * version, since it is no longer present), else removed directly when a
  * vulnerable hit before it was a direct dependency, else transitively.
+ * Null when the state after the fix is unknown.
  */
-function fixKind(
-  entry: string,
-  pkg: string,
-  before: readonly ResultsVulnerabilityInput[],
-  after: ResultsRunInput,
-  packagesAt: ReadonlyMap<string, ProbePackage[]>,
-): FixKind | null {
-  let resolves = false;
-  if (!isEmpty(after)) {
-    const packages = after.commit_hash
-      ? packagesAt.get(`${entry}\u0000${after.commit_hash}`)
-      : undefined;
-    if (!packages) return null;
-    resolves = packages.some((p) => p.name === pkg);
-  }
-  if (resolves) return "upgraded";
-  return before.some((v) => v.direct_dependency === true)
-    ? "removed_direct"
-    : "removed_transitive";
+function fixKind(directBefore: boolean, resolvesAfter: boolean | null): FixKind | null {
+  if (resolvesAfter === null) return null;
+  if (resolvesAfter) return "upgraded";
+  return directBefore ? "removed_direct" : "removed_transitive";
+}
+
+/**
+ * The next probe work of an experiment: the events of entries whose
+ * snapshots have all ended, searched against what is known so far.
+ */
+export function planProbes(input: ExposuresInput): ProbePlan {
+  const unfinished = new Set(
+    input.runs.filter((run) => run.status === "pending").map((run) => run.dataset_entry_id),
+  );
+  const ready = { ...input, runs: input.runs.filter((run) => !unfinished.has(run.dataset_entry_id)) };
+  const search = new ProbeSearch(ready);
+  deriveExposures(ready, search);
+  return probePlan(search);
 }

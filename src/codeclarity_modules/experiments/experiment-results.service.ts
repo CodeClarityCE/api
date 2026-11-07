@@ -22,6 +22,11 @@ import {
 } from "./experiment-csv";
 import { deriveExposures, type Exposure } from "./experiment-exposures";
 import { ExperimentProbeOutcome } from "./experiment-probe-outcome.entity";
+import { PROBE_OUTCOME_SELECT, type RawQuery, readProbeRows } from "./experiment-probe-rows";
+import type {
+  ResultsProbeAnalysisInput,
+  ResultsProbeIntervalInput,
+} from "./experiment-probes";
 import {
   aggregateExperimentResults,
   type ExperimentResults,
@@ -62,27 +67,16 @@ const INSTANCE_COLUMNS = [
   "conflict_flag",
   "winning_source",
   "withdrawn_date",
+  "vulnerable_versions",
 ] as const;
-
-/**
- * Probe outcome rows with only the packages some instance of the
- * experiment names: fix kinds need nothing else, and full rows are large.
- */
-const PROBE_SELECT = `SELECT probe."datasetEntryId" AS dataset_entry_id,
-         probe.commit_hash AS commit_hash,
-         COALESCE((SELECT jsonb_agg(p) FROM jsonb_array_elements(probe.packages) AS p
-                    WHERE p->>'name' IN (SELECT instance.affected_dependency
-                                           FROM experiment_vulnerability_instance AS instance
-                                          WHERE instance."experimentId" = $1)),
-                  '[]'::jsonb) AS packages
-    FROM experiment_probe_outcome AS probe
-   WHERE probe."experimentId" = $1`;
 
 /** The rows exposures are derived from. */
 interface ExposureRows {
   runs: ResultsRunInput[];
   vulnerabilities: ResultsVulnerabilityInput[];
   probes: ResultsProbeInput[];
+  probe_intervals: ResultsProbeIntervalInput[];
+  probe_analyses: ResultsProbeAnalysisInput[];
 }
 
 /** Export columns read from the dataset entry and from the run itself */
@@ -275,16 +269,18 @@ export class ExperimentResultsService {
       });
     }
 
-    const [vulnerabilities, probes] = await Promise.all([
+    const query: RawQuery = (sql, params) => this.probeOutcomeRepository.query(sql, params);
+    const [vulnerabilities, probes, probeRows] = await Promise.all([
       instances.getRawMany<ResultsVulnerabilityInput>(),
       entryIds
         ? this.probeOutcomeRepository.query<ResultsProbeInput[]>(
-            `${PROBE_SELECT} AND probe."datasetEntryId" = ANY($2)`,
+            `${PROBE_OUTCOME_SELECT} AND probe."datasetEntryId" = ANY($2)`,
             [experimentId, entryIds],
           )
-        : this.probeOutcomeRepository.query<ResultsProbeInput[]>(PROBE_SELECT, [
+        : this.probeOutcomeRepository.query<ResultsProbeInput[]>(PROBE_OUTCOME_SELECT, [
             experimentId,
           ]),
+      readProbeRows(query, experimentId, entryIds),
     ]);
 
     return {
@@ -301,6 +297,7 @@ export class ExperimentResultsService {
       })),
       vulnerabilities,
       probes,
+      ...probeRows,
     };
   }
 
