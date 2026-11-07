@@ -10,7 +10,12 @@
  * aggregateExperimentResults with plain rows. Where the harness produced
  * NaN the payload carries null.
  */
-import type { RunSummaryRow, VulnerabilityInstanceRow } from "./experiment-row-copy";
+import { gridDay } from "./experiment-grid";
+import {
+  NO_LOCKFILE_YET,
+  type RunSummaryRow,
+  type VulnerabilityInstanceRow,
+} from "./experiment-row-copy";
 import {
   gini,
   median,
@@ -166,6 +171,20 @@ export interface CoverageBlock {
   skip_reasons: Record<string, number>;
 }
 
+/** Run states of one snapshot of the grid. */
+export interface GridCoverageRow {
+  /** YYYY-MM-DD, null for HEAD */
+  grid_date: string | null;
+  runs: number;
+  /** Done with rows */
+  done: number;
+  /** Done but empty: no lockfile yet at that date */
+  empty: number;
+  failed: number;
+  skipped: number;
+  pending: number;
+}
+
 export interface ProvenanceBlock extends ResultsProvenanceInput {
   /** Knowledge sources differ between the start and end snapshots */
   knowledge_changed: boolean;
@@ -177,6 +196,8 @@ export interface ProvenanceBlock extends ResultsProvenanceInput {
  */
 export interface ExperimentResults {
   coverage: CoverageBlock;
+  /** Coverage per grid date, oldest first, HEAD last */
+  grid_coverage: GridCoverageRow[];
   headline: Headline;
   sweep: SweepRow[];
   epss: EpssBlock;
@@ -416,6 +437,30 @@ function coverage(runs: readonly ResultsRunInput[]): CoverageBlock {
   };
 }
 
+function gridCoverage(runs: readonly ResultsRunInput[]): GridCoverageRow[] {
+  const rows = new Map<string, GridCoverageRow>();
+  for (const run of runs) {
+    const date = isHead(run) ? null : gridDay(run.grid_date!);
+    const key = date ?? "HEAD";
+    let row = rows.get(key);
+    if (!row) {
+      row = { grid_date: date, runs: 0, done: 0, empty: 0, failed: 0, skipped: 0, pending: 0 };
+      rows.set(key, row);
+    }
+    row.runs++;
+    if (run.status === "done") {
+      if (run.error === NO_LOCKFILE_YET) row.empty++;
+      else row.done++;
+    } else if (run.status === "failed") row.failed++;
+    else if (run.status === "skipped") row.skipped++;
+    else row.pending++;
+  }
+  // YYYY-MM-DD sorts by date; HEAD goes last.
+  return [...rows.values()].sort((a, b) =>
+    byKey(a.grid_date ?? "HEAD", b.grid_date ?? "HEAD"),
+  );
+}
+
 /** The same source timestamps and the same number of EPSS rows. */
 function sameKnowledge(a: KnowledgeSnapshot, b: KnowledgeSnapshot): boolean {
   if (a.epss_rows !== b.epss_rows) return false;
@@ -470,6 +515,7 @@ export function aggregateExperimentResults(
   );
   return {
     coverage: coverage(input.runs.filter(isHead)),
+    grid_coverage: gridCoverage(input.runs),
     headline: headline(universe, vulnerabilities),
     sweep: sweep(universe, vulnerabilities),
     epss: epss(vulnerabilities),

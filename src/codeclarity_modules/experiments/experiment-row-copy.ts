@@ -157,6 +157,9 @@ export function isUsablePluginResult(blob: unknown): boolean {
   return objectOrEmpty(blob["analysis_info"])["status"] !== "failure";
 }
 
+/** Why a done run is empty: its snapshot predates the repo or its lockfile */
+export const NO_LOCKFILE_YET = "no_lockfile_yet";
+
 /** What js-sbom reports when a commit has no package.json and lockfile pair. */
 const NO_LOCKFILE_ERRORS = [
   "no lock file found",
