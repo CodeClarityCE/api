@@ -18,6 +18,7 @@ import {
   type FixKind,
 } from "./experiment-exposures";
 import { gridDay } from "./experiment-grid";
+import { loadOverTime, type LoadRow } from "./experiment-load";
 import {
   NO_LOCKFILE_YET,
   type ProbePackage,
@@ -295,8 +296,12 @@ export interface ExperimentResults {
   /** Exposures and fixes over the whole grid (hindsight view) */
   exposures: ExposuresBlock;
   fix_lag: FixLagBlock;
+  /** Instances per grid date in the hindsight and as-of views, HEAD last */
+  load_over_time: LoadRow[];
   provenance: ProvenanceBlock;
 }
+
+export type { LoadRow } from "./experiment-load";
 
 function nullIfNaN(value: number): number | null {
   return Number.isNaN(value) ? null : value;
@@ -686,6 +691,11 @@ export function aggregateExperimentResults(
     rqd: rqd(summaries),
     exposures: exposuresBlock(exposures),
     fix_lag: fixLag(exposures),
+    load_over_time: loadOverTime({
+      runs: input.runs,
+      vulnerabilities: input.vulnerabilities,
+      ended_on: input.provenance.ended_on,
+    }),
     provenance: provenance(input.provenance),
   };
 }
