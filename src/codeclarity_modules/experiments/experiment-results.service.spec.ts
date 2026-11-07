@@ -13,11 +13,22 @@ describe("ExperimentResultsService", () => {
   let runRepository: Record<string, jest.Mock>;
   let summaryRows: jest.Mock;
   let vulnerabilityRows: jest.Mock;
+  let probeRows: jest.Mock;
 
   /** A query builder whose chained calls return itself, ending in rows. */
   function rowsBuilder(getRawMany: jest.Mock): Record<string, jest.Mock> {
     const builder: Record<string, jest.Mock> = { getRawMany };
-    for (const method of ["select", "addSelect", "innerJoin", "where"]) {
+    for (const method of [
+      "select",
+      "addSelect",
+      "innerJoin",
+      "where",
+      "andWhere",
+      "groupBy",
+      "addGroupBy",
+      "orderBy",
+      "limit",
+    ]) {
       builder[method] = jest.fn().mockReturnValue(builder);
     }
     return builder;
@@ -32,6 +43,7 @@ describe("ExperimentResultsService", () => {
     };
     summaryRows = jest.fn().mockResolvedValue([]);
     vulnerabilityRows = jest.fn().mockResolvedValue([]);
+    probeRows = jest.fn().mockResolvedValue([]);
     service = new ExperimentResultsService(
       { hasRequiredRole } as unknown as MembershipsRepository,
       experimentRepository as never,
@@ -42,8 +54,43 @@ describe("ExperimentResultsService", () => {
       {
         createQueryBuilder: jest.fn(() => rowsBuilder(vulnerabilityRows)),
       } as never,
+      { query: probeRows } as never,
     );
   });
+
+  /** Two snapshots of one entry: lodash present, then upgraded away. */
+  function fixedLodash(): void {
+    const at = (day: string): Date => new Date(`${day}T00:00:00Z`);
+    runRepository["find"]!.mockResolvedValue([
+      { id: "a0", status: "done", error: null, grid_index: 0, grid_date: at("2025-03-01"), commit_hash: "c3d", committed_at: at("2025-02-25"), shared_from: null, dataset_entry: { id: "e1" } },
+      { id: "aH", status: "done", error: null, grid_index: 1, grid_date: null, commit_hash: "e5f", committed_at: at("2025-03-28"), shared_from: null, dataset_entry: { id: "e1" } },
+    ]);
+    vulnerabilityRows.mockResolvedValue([
+      {
+        run_id: "a0",
+        workspace: ".",
+        affected_dependency: "lodash",
+        affected_version: "4.17.15",
+        direct_dependency: true,
+        vulnerability_id: "CVE-2021-23337",
+        severity_class: "HIGH",
+        published_date: "2025-02-10T08:00:00Z",
+        epss_score: null,
+        conflict_flag: "MATCH_CORRECT",
+        winning_source: "OSV",
+        withdrawn_date: null,
+      },
+    ]);
+    probeRows.mockResolvedValue([
+      { dataset_entry_id: "e1", commit_hash: "e5f", packages: [{ workspace: ".", name: "lodash", version: "4.17.21", direct: true }] },
+    ]);
+  }
+
+  async function read(stream: NodeJS.ReadableStream): Promise<string> {
+    let text = "";
+    for await (const chunk of stream) text += String(chunk);
+    return text;
+  }
 
   describe("getResults", () => {
     const knowledge = (nvd: string): object => ({
@@ -180,6 +227,8 @@ describe("ExperimentResultsService", () => {
     const exports = [
       ["exportRunsCsv"],
       ["exportVulnerabilitiesCsv"],
+      ["exportExposuresCsv"],
+      ["exportFixesCsv"],
       ["exportResults"],
     ] as const;
 
@@ -233,6 +282,41 @@ describe("ExperimentResultsService", () => {
       const { results } = await service.exportResults("org-1", "exp-1", user);
 
       expect(results.coverage).toMatchObject({ runs: 1, failed: 1 });
+    });
+
+    it("derives fix lag from snapshot rows and the probe outcome after the fix", async () => {
+      experimentRepository["findOne"]!.mockResolvedValue({ id: "exp-1", name: "x", created_on: new Date() });
+      fixedLodash();
+
+      const { results } = await service.exportResults("org-1", "exp-1", user);
+
+      expect(results.fix_lag.by_kind).toEqual([
+        expect.objectContaining({ key: "upgraded", n: 1, median: 46 }),
+      ]);
+      expect(probeRows).toHaveBeenCalledWith(expect.any(String), ["exp-1"]);
+    });
+
+    it("streams fixes.csv and exposures.csv computed on read, per entry by rank", async () => {
+      experimentRepository["findOne"]!.mockResolvedValue({ id: "exp-1", name: "x", created_on: new Date() });
+      fixedLodash();
+      const entries = jest
+        .fn()
+        .mockResolvedValue([])
+        .mockResolvedValueOnce([{ id: "e1", rank: 0, full_name: "octo/app" }]);
+      runRepository["createQueryBuilder"]!.mockImplementation(() => rowsBuilder(entries));
+
+      const fixes = await read((await service.exportFixesCsv("org-1", "exp-1", user)).stream);
+      expect(fixes.split("\r\n")).toEqual([
+        "rank,full_name,vulnerability_id,affected_dependency,severity,published_date,fix_date,fix_commit,fix_kind,precision,probe_outcome,interval_from,interval_to,lag_days",
+        "0,octo/app,CVE-2021-23337,lodash,HIGH,2025-02-10,2025-03-28,e5f,upgraded,snapshot,,2025-03-01,HEAD,46",
+        "",
+      ]);
+
+      entries.mockResolvedValueOnce([{ id: "e1", rank: 0, full_name: "octo/app" }]);
+      const exposures = await read((await service.exportExposuresCsv("org-1", "exp-1", user)).stream);
+      expect(exposures.split("\r\n")[1]).toBe(
+        "0,octo/app,CVE-2021-23337,lodash,HIGH,2025-02-10,2025-03-01,2025-03-01,0,fixed,,,,,2025-03-28,e5f,snapshot,upgraded,46",
+      );
     });
   });
 });
