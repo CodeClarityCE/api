@@ -437,6 +437,44 @@ describe("aggregateExperimentResults", () => {
     });
   });
 
+  describe("load over time", () => {
+    it("shows an advisory published mid-grid in hindsight everywhere but as-of only from the next grid date", () => {
+      const jan = new Date("2025-01-01T00:00:00Z");
+      const feb = new Date("2025-02-01T00:00:00Z");
+      const mar = new Date("2025-03-01T00:00:00Z");
+      const midGrid = { published_date: "2025-02-15T10:00:00.000Z" };
+      const results = aggregateExperimentResults(
+        input({
+          runs: [
+            { status: "done", error: null, grid_date: jan, rows_run_id: "a0" },
+            { status: "done", error: null, grid_date: feb, rows_run_id: "a1" },
+            { status: "failed", error: "boom", grid_date: mar, rows_run_id: "a2" },
+            { status: "done", error: null, grid_date: null, rows_run_id: "aH" },
+            { status: "done", error: null, grid_date: jan, rows_run_id: "b0" },
+            { status: "done", error: null, grid_date: feb, rows_run_id: "b0" },
+            { status: "done", error: null, grid_date: mar, rows_run_id: "b0" },
+            { status: "done", error: null, grid_date: null, rows_run_id: "b0" },
+          ],
+          summaries: [summary("aH", 0), summary("b0", 1)],
+          vulnerabilities: [
+            vuln("a0", "lodash", midGrid),
+            vuln("a1", "lodash", midGrid),
+            vuln("aH", "lodash", midGrid),
+            vuln("b0", "minimist", { published_date: "2022-04-06T17:15:08.650" }),
+          ],
+          provenance: { ...input().provenance, ended_on: new Date("2025-04-02T09:00:00Z") },
+        }),
+      );
+
+      expect(results.load_over_time).toEqual([
+        { grid_date: "2025-01-01", as_of_date: "2025-01-01", projects: 2, hindsight: 2, as_of: 1, undated: 0 },
+        { grid_date: "2025-02-01", as_of_date: "2025-02-01", projects: 2, hindsight: 2, as_of: 1, undated: 0 },
+        { grid_date: "2025-03-01", as_of_date: "2025-03-01", projects: 1, hindsight: 1, as_of: 1, undated: 0 },
+        { grid_date: null, as_of_date: "2025-04-02", projects: 2, hindsight: 2, as_of: 2, undated: 0 },
+      ]);
+    });
+  });
+
   describe("provenance", () => {
     const snapshot = (nvd: string): object => ({
       knowledge_sources: { nvd, osv: "2026-11-01T00:00:00Z" },
