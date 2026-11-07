@@ -42,6 +42,10 @@ import {
   exposureSurvival,
   type ExposureSurvivalBlock,
 } from "./experiment-survival";
+import {
+  upstreamLeverage,
+  type UpstreamLeverageBlock,
+} from "./experiment-upstream-leverage";
 
 /** A done run's summary row with the rank of its dataset entry. */
 export type ResultsSummaryInput = Pick<
@@ -307,6 +311,8 @@ export interface ExperimentResults {
   residence: ResidenceBlock;
   /** Kaplan-Meier survival of exposures, open ones censored at HEAD */
   exposure_survival: ExposureSurvivalBlock;
+  /** Packages to clear per grid date, removed_transitive share per interval */
+  upstream_leverage: UpstreamLeverageBlock;
   provenance: ProvenanceBlock;
 }
 
@@ -712,6 +718,7 @@ export function aggregateExperimentResults(
     }),
     residence: residenceBlock(exposures),
     exposure_survival: exposureSurvival(exposures, headObservedOn(input.provenance)),
+    upstream_leverage: upstreamLeverage(input.runs, input.vulnerabilities, exposures),
     provenance: provenance(input.provenance),
   };
 }
