@@ -36,6 +36,10 @@ import {
   quantile,
   spearman,
 } from "./experiment-stats";
+import {
+  exposureSurvival,
+  type ExposureSurvivalBlock,
+} from "./experiment-survival";
 
 /** A done run's summary row with the rank of its dataset entry. */
 export type ResultsSummaryInput = Pick<
@@ -295,6 +299,8 @@ export interface ExperimentResults {
   /** Exposures and fixes over the whole grid (hindsight view) */
   exposures: ExposuresBlock;
   fix_lag: FixLagBlock;
+  /** Kaplan-Meier survival of exposures, open ones censored at HEAD */
+  exposure_survival: ExposureSurvivalBlock;
   provenance: ProvenanceBlock;
 }
 
@@ -642,6 +648,11 @@ function provenance(input: ResultsProvenanceInput): ProvenanceBlock {
   };
 }
 
+/** When HEAD was observed: the experiment's end, else its start or creation. */
+function headObservedOn(p: ResultsProvenanceInput): Date {
+  return p.ended_on ?? p.started_on ?? p.created_on;
+}
+
 function isHead(run: ResultsRunInput): boolean {
   return !run.grid_date;
 }
@@ -686,6 +697,7 @@ export function aggregateExperimentResults(
     rqd: rqd(summaries),
     exposures: exposuresBlock(exposures),
     fix_lag: fixLag(exposures),
+    exposure_survival: exposureSurvival(exposures, headObservedOn(input.provenance)),
     provenance: provenance(input.provenance),
   };
 }
