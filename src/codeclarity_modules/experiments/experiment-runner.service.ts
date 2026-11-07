@@ -242,7 +242,15 @@ export class ExperimentRunnerService
     }
 
     const rows = mapRunRows(results.get(SBOM_PLUGIN), results.get(VULN_PLUGIN));
-    const copied = await this.store.copyRunRows(experiment.id, run.id, rows);
+    // The knowledge in use now, right after vuln-finder matched these rows
+    const knowledge = await this.provenanceService.get();
+    const copied = await this.store.copyRunRows(
+      experiment.id,
+      run.id,
+      rows,
+      undefined,
+      knowledge,
+    );
     if (!copied) {
       this.logger.warn(
         "Experiment run ended before its rows were copied",

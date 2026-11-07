@@ -1,7 +1,10 @@
 import { AnalysisStatus } from "src/base_modules/analyses/analysis.entity";
 import type { GithubIntegrationService } from "src/base_modules/integrations/github/github.service";
 import * as githubSearch from "src/base_modules/integrations/github/githubSearch";
-import type { ProvenanceService } from "src/codeclarity_modules/knowledge/provenance/provenance.service";
+import type {
+  KnowledgeProvenance,
+  ProvenanceService,
+} from "src/codeclarity_modules/knowledge/provenance/provenance.service";
 import { NotAuthorized } from "src/types/error.types";
 
 import type { DatasetEntry } from "../datasets/dataset-entry.entity";
@@ -257,6 +260,7 @@ class FakeStore extends ExperimentStore {
         error: primary.error ?? null,
         ended_on: primary.ended_on ?? new Date(),
         analysis: primary.analysis ?? null,
+        knowledge: primary.knowledge ?? null,
       });
     }
   }
@@ -287,6 +291,7 @@ class FakeStore extends ExperimentStore {
     runId: string,
     rows: RunRows,
     reason?: string,
+    knowledge: KnowledgeProvenance | null = null,
   ): Promise<boolean> {
     const run = this.runs.find((r) => r.id === runId);
     if (
@@ -300,6 +305,7 @@ class FakeStore extends ExperimentStore {
       status: ExperimentRunStatus.DONE,
       error: reason ?? null,
       ended_on: run.ended_on ?? new Date(),
+      knowledge,
     });
     return true;
   }
@@ -1470,6 +1476,68 @@ describe("ExperimentRunnerService", () => {
         commit_hash: "sha-octo/app",
       });
       expect(github.untils).toEqual([undefined]);
+    });
+  });
+
+  describe("knowledge provenance per run", () => {
+    const KNOWLEDGE_A = {
+      knowledge_sources: { nvd: "2026-11-05T00:00:00.000Z" },
+      epss_rows: 10,
+    };
+    const KNOWLEDGE_B = {
+      knowledge_sources: { nvd: "2026-11-06T00:00:00.000Z" },
+      epss_rows: 12,
+    };
+
+    it("records on each done run the knowledge in use when its rows were copied", async () => {
+      addExperiment("exp-1", ["octo/app", "octo/lib"]);
+      const service = runner();
+      await service.tick();
+
+      getProvenance.mockResolvedValue(KNOWLEDGE_A);
+      finishAnalysis("octo/app", AnalysisStatus.SUCCESS);
+      await service.tick();
+      getProvenance.mockResolvedValue(KNOWLEDGE_B);
+      finishAnalysis("octo/lib", AnalysisStatus.SUCCESS);
+      await service.tick();
+
+      expect(store.run("octo/app").knowledge).toEqual(KNOWLEDGE_A);
+      expect(store.run("octo/lib").knowledge).toEqual(KNOWLEDGE_B);
+    });
+
+    it("gives a shared run its owner's knowledge, since it reads the owner's rows", async () => {
+      github.addHistory("octo/app", [["sha-mar", "2025-03-15T18:30:00Z"]]);
+      addExperiment("exp-1", ["octo/app"], {}, [
+        "2025-04-01T00:00:00Z",
+        "2025-05-01T00:00:00Z",
+      ]);
+      const service = runner();
+      await service.tick();
+
+      getProvenance.mockResolvedValue(KNOWLEDGE_A);
+      finishAnalysis("octo/app", AnalysisStatus.SUCCESS, undefined, 0);
+      await service.tick();
+      getProvenance.mockResolvedValue(KNOWLEDGE_B);
+      finishAnalysis("octo/app", AnalysisStatus.SUCCESS);
+      await service.tick();
+
+      expect(store.run("octo/app", 1)).toMatchObject({
+        status: ExperimentRunStatus.DONE,
+        knowledge: KNOWLEDGE_A,
+      });
+      expect(store.run("octo/app").knowledge).toEqual(KNOWLEDGE_B);
+    });
+
+    it("records no knowledge on a snapshot that was empty, since nothing was matched", async () => {
+      addExperiment("exp-1", ["octo/app"], {}, ["2024-12-01T00:00:00Z"]);
+
+      await runner().tick();
+
+      expect(store.run("octo/app", 0)).toMatchObject({
+        status: ExperimentRunStatus.DONE,
+        error: "no_lockfile_yet",
+        knowledge: null,
+      });
     });
   });
 });

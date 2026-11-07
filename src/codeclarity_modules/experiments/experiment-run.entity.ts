@@ -11,6 +11,7 @@ import {
 
 import type { Analysis } from "../../base_modules/analyses/analysis.entity";
 import type { DatasetEntry } from "../datasets/dataset-entry.entity";
+import type { KnowledgeProvenance } from "../knowledge/provenance/provenance.service";
 
 import type { Experiment } from "./experiment.entity";
 
@@ -98,6 +99,12 @@ export class ExperimentRun {
   @Expose()
   @Column("timestamptz", { nullable: true })
   ended_on?: Date | null;
+
+  /** The knowledge its rows were matched against; null if nothing was matched */
+  @ApiProperty({ description: "Knowledge provenance the run's rows used" })
+  @Expose()
+  @Column("jsonb", { nullable: true })
+  knowledge?: KnowledgeProvenance | null;
 
   @ManyToOne("Experiment", "runs", { onDelete: "CASCADE" })
   experiment!: Relation<Experiment>;
