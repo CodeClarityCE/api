@@ -208,6 +208,48 @@ export class ExperimentsController {
       .send(stream);
   }
 
+  @Get(":experiment_id/export/exposures.csv")
+  @ApiOperation({
+    summary: "Download one CSV row per exposure, with its introduction and fix",
+  })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiProduces("text/csv")
+  async exportExposuresCsv(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Res() reply: FastifyReply,
+  ): Promise<void> {
+    const { experiment_name, stream } =
+      await this.resultsService.exportExposuresCsv(org_id, experiment_id, user);
+    await reply
+      .header("content-type", CSV_CONTENT_TYPE)
+      .header("content-disposition", attachment(experiment_name, "exposures.csv"))
+      .send(stream);
+  }
+
+  @Get(":experiment_id/export/fixes.csv")
+  @ApiOperation({
+    summary: "Download one CSV row per fix: kind, dating precision and lag",
+  })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiProduces("text/csv")
+  async exportFixesCsv(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Res() reply: FastifyReply,
+  ): Promise<void> {
+    const { experiment_name, stream } =
+      await this.resultsService.exportFixesCsv(org_id, experiment_id, user);
+    await reply
+      .header("content-type", CSV_CONTENT_TYPE)
+      .header("content-disposition", attachment(experiment_name, "fixes.csv"))
+      .send(stream);
+  }
+
   @Get(":experiment_id/export/results.json")
   @ApiOperation({
     summary: "Download the results payload (not wrapped in data) as a file",

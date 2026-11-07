@@ -33,8 +33,10 @@ import { endOfGridDay } from "./experiment-grid";
 import {
   isNoLockfileResult,
   isUsablePluginResult,
+  mapProbePackages,
   mapRunRows,
   NO_LOCKFILE_YET,
+  type ProbePackage,
 } from "./experiment-row-copy";
 import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
 import {
@@ -241,6 +243,11 @@ export class ExperimentRunnerService
       results.set(plugin, result);
     }
 
+    await this.saveProbeOutcome(
+      experiment,
+      run,
+      mapProbePackages(results.get(SBOM_PLUGIN)),
+    );
     const rows = mapRunRows(results.get(SBOM_PLUGIN), results.get(VULN_PLUGIN));
     const copied = await this.store.copyRunRows(experiment.id, run.id, rows);
     if (!copied) {
@@ -257,11 +264,32 @@ export class ExperimentRunnerService
     });
   }
 
+  /**
+   * Record what the run's commit resolves, before the run is marked done so
+   * a crash in between only repeats the write.
+   */
+  private async saveProbeOutcome(
+    experiment: Experiment,
+    run: ExperimentRun,
+    packages: ProbePackage[],
+  ): Promise<void> {
+    if (!run.commit_hash) return;
+    await this.store.saveProbeOutcome({
+      experimentId: experiment.id,
+      datasetEntryId: run.dataset_entry.id,
+      commitHash: run.commit_hash,
+      committedAt: run.committed_at ?? null,
+      packages,
+    });
+  }
+
   /** Mark a run done with no rows: its snapshot had no lockfile yet. */
   private async completeEmpty(
     experiment: Experiment,
     run: ExperimentRun,
   ): Promise<void> {
+    // A commit without a lockfile resolves nothing
+    await this.saveProbeOutcome(experiment, run, []);
     const copied = await this.store.copyRunRows(
       experiment.id,
       run.id,

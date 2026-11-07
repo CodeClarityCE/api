@@ -6,7 +6,8 @@ import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialE
 import { Result } from "../results/result.entity";
 
 import { Experiment, ExperimentStatus } from "./experiment.entity";
-import type { RunRows } from "./experiment-row-copy";
+import { ExperimentProbeOutcome } from "./experiment-probe-outcome.entity";
+import type { ProbePackage, RunRows } from "./experiment-row-copy";
 import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
 import { ExperimentRunSummaryRow } from "./experiment-run-summary-row.entity";
 import { ExperimentVulnerabilityInstance } from "./experiment-vulnerability-instance.entity";
@@ -182,6 +183,18 @@ export abstract class ExperimentStore {
     rows: RunRows,
     reason?: string,
   ): Promise<boolean>;
+
+  /** Write the packages an entry resolves at a commit, replacing any row for it. */
+  abstract saveProbeOutcome(outcome: ProbeOutcome): Promise<void>;
+}
+
+/** The packages one dataset entry resolves at one commit. */
+export interface ProbeOutcome {
+  experimentId: string;
+  datasetEntryId: string;
+  commitHash: string;
+  committedAt: Date | null;
+  packages: ProbePackage[];
 }
 
 /**
@@ -197,6 +210,8 @@ export class TypeOrmExperimentStore extends ExperimentStore {
     private readonly runRepository: Repository<ExperimentRun>,
     @InjectRepository(Result, "codeclarity")
     private readonly resultRepository: Repository<Result>,
+    @InjectRepository(ExperimentProbeOutcome, "codeclarity")
+    private readonly probeOutcomeRepository: Repository<ExperimentProbeOutcome>,
   ) {
     super();
   }
@@ -556,5 +571,22 @@ export class TypeOrmExperimentStore extends ExperimentStore {
       .where("id = :id AND lease_owner = :owner", { id, owner })
       .execute();
     if (!result.affected) throw new ExperimentLeaseLost();
+  }
+
+  async saveProbeOutcome(outcome: ProbeOutcome): Promise<void> {
+    await this.probeOutcomeRepository.query(
+      `INSERT INTO experiment_probe_outcome
+         ("experimentId", "datasetEntryId", commit_hash, committed_at, packages)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT ("experimentId", "datasetEntryId", commit_hash)
+       DO UPDATE SET committed_at = EXCLUDED.committed_at, packages = EXCLUDED.packages`,
+      [
+        outcome.experimentId,
+        outcome.datasetEntryId,
+        outcome.commitHash,
+        outcome.committedAt,
+        JSON.stringify(outcome.packages),
+      ],
+    );
   }
 }

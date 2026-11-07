@@ -22,6 +22,7 @@ import {
   type ExperimentFinish,
   ExperimentLeaseLost,
   ExperimentStore,
+  type ProbeOutcome,
   type RunPatch,
 } from "./experiment-store";
 
@@ -89,6 +90,13 @@ class FakeStore extends ExperimentStore {
   results = new Map<string, unknown>();
   /** Copied rows by run id */
   copied = new Map<string, RunRows & { experimentId: string }>();
+  /** Probe outcome rows by `${experimentId}/${entryId}/${commit}` */
+  probeOutcomes = new Map<string, ProbeOutcome>();
+
+  async saveProbeOutcome(outcome: ProbeOutcome): Promise<void> {
+    const key = `${outcome.experimentId}/${outcome.datasetEntryId}/${outcome.commitHash}`;
+    this.probeOutcomes.set(key, outcome);
+  }
 
   async claimNext(
     owner: string,
@@ -1313,6 +1321,58 @@ describe("ExperimentRunnerService", () => {
       expect(store.experiments.get("exp-1")!.status).toBe(
         ExperimentStatus.COMPLETED,
       );
+    });
+
+    it("writes one probe outcome row per analysed commit, with each workspace's packages", async () => {
+      addExperiment("exp-1", ["octo/app"], {}, [
+        "2025-04-01T00:00:00Z",
+        "2025-05-01T00:00:00Z",
+      ]);
+      const service = runner();
+      await service.tick();
+      finishAnalysis("octo/app", AnalysisStatus.SUCCESS, undefined, 0);
+      finishAnalysis("octo/app", AnalysisStatus.SUCCESS);
+      await service.tick();
+
+      const entryId = store.run("octo/app").dataset_entry.id;
+      expect([...store.probeOutcomes.values()]).toEqual([
+        {
+          experimentId: "exp-1",
+          datasetEntryId: entryId,
+          commitHash: "sha-mar",
+          committedAt: new Date("2025-03-15T18:30:00Z"),
+          packages: [
+            { workspace: ".", name: "lodash", version: "4.17.20", direct: true },
+            { workspace: ".", name: "minimist", version: "1.2.5", direct: false },
+          ],
+        },
+        expect.objectContaining({ commitHash: "sha-octo/app" }),
+      ]);
+    });
+
+    it("writes an empty probe outcome row for a commit without a lockfile, and none before the first commit", async () => {
+      addExperiment("exp-1", ["octo/app"], {}, [
+        "2024-12-01T00:00:00Z",
+        "2025-02-01T00:00:00Z",
+      ]);
+      const service = runner();
+      await service.tick();
+
+      const analysis = store.analysisOf("octo/app", 1);
+      analysis.status = AnalysisStatus.FAILED;
+      store.results.set(`${analysis.id}/js-sbom`, {
+        workspaces: {},
+        analysis_info: {
+          status: "failure",
+          errors: [{ private_error: { description: "no lock file found" } }],
+        },
+      });
+      await service.tick();
+
+      expect(store.run("octo/app", 1).error).toBe("no_lockfile_yet");
+      expect([...store.probeOutcomes.values()]).toEqual([
+        expect.objectContaining({ commitHash: "sha-jan", packages: [] }),
+      ]);
     });
 
     it("counts one in-flight analysis per commit against the cap, not one per snapshot", async () => {
