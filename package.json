@@ -55,7 +55,7 @@
     "bcrypt": "6.0.0",
     "class-transformer": "0.5.1",
     "class-validator": "0.15.1",
-    "dotenv": "17.4.2",
+    "dotenv": "18.0.9",
     "fastify": "5.12.8",
     "handlebars": "4.7.10",
     "jsonwebtoken": "9.0.3",
