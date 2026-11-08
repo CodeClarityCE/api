@@ -469,6 +469,8 @@ export interface KmStep {
 }
 
 /** Two-sided 95% standard normal quantile */
+/** Confidence of the Wilson intervals and Greenwood bands, which use Z_95 */
+export const NORMAL_INTERVAL_CONFIDENCE = 0.95;
 const Z_95 = 1.959963984540054;
 
 /** The log-log band; it collapses onto survival at exactly 1 or 0. */
