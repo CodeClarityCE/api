@@ -112,7 +112,7 @@ class FakeStore extends ExperimentStore {
     id: string;
     status: "pending" | "done" | "failed";
     error: string | null;
-    submitted_on: Date;
+    submitted_on: Date | null;
     analysis: { id: string } | null;
   })[] = [];
   intervals: ProbeInterval[] = [];
@@ -221,9 +221,15 @@ class FakeStore extends ExperimentStore {
     return true;
   }
 
+  async failProbeSubmission(probeId: string, error: string): Promise<void> {
+    const probe = this.probes.find((p) => p.id === probeId);
+    if (probe?.status !== "pending") return;
+    Object.assign(probe, { status: "failed", error, submitted_on: null });
+  }
+
   async countSubmittedAnalyses(experimentId: string): Promise<number> {
     const attempts = this.runsOf(experimentId).reduce((sum, r) => sum + r.attempts, 0);
-    return attempts + this.probes.filter((p) => p.experimentId === experimentId).length;
+    return attempts + this.probes.filter((p) => p.experimentId === experimentId && p.submitted_on).length;
   }
 
   probeOf(commit: string): FakeStore["probes"][number] | undefined {
@@ -1980,6 +1986,26 @@ describe("ExperimentRunnerService", () => {
 
         expect(submit).toHaveBeenCalledTimes(4);
         expect(submitProbe).not.toHaveBeenCalled();
+      });
+
+      it("does not count a probe whose submission failed against the budget", async () => {
+        Object.assign(LODASH, { w1a: "4.17.21", w2b: "4.17.15", w3c: "4.17.15", "sha-octo/web": "4.17.15" });
+        github.addHistory("octo/web", [
+          ["w1a", "2025-02-20T12:00:00Z"],
+          ["w2b", "2025-03-10T12:00:00Z"],
+          ["w3c", "2025-03-25T12:00:00Z"],
+        ]);
+        store.experiments.delete("exp-1");
+        store.runs = [];
+        addExperiment("exp-1", ["octo/web", "octo/app"], {}, GRID);
+        // Six snapshot analyses and one probe
+        budgeted(7);
+        submitProbe.mockRejectedValueOnce(new Error("ECONNREFUSED"));
+        await runToEnd();
+
+        expect(store.probeOf("d4e")).toMatchObject({ status: "failed" });
+        expect(submitProbe.mock.calls.map(([request]) => request.head.commitHash)).toEqual(["d4e", "w2b"]);
+        expect(await store.countSubmittedAnalyses("exp-1")).toBe(7);
       });
 
       it("probes fixes before introductions", async () => {

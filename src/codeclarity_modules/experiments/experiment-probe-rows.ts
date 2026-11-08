@@ -115,11 +115,12 @@ export async function readPlanningRows(
   return { runs, vulnerabilities, probes, ...probeRows };
 }
 
-/** Snapshot attempts plus fix probes: what the analysis budget counts. */
+/** Snapshot attempts plus submitted fix probes: what the analysis budget counts. */
 export async function readAnalysesSubmitted(query: RawQuery, experimentId: string): Promise<number> {
   const [row] = await query<{ submitted: string | number }>(
     `SELECT (SELECT COALESCE(SUM(attempts), 0) FROM experiment_run WHERE "experimentId" = $1)
-          + (SELECT COUNT(*) FROM experiment_probe WHERE "experimentId" = $1) AS submitted`,
+          + (SELECT COUNT(*) FROM experiment_probe
+              WHERE "experimentId" = $1 AND submitted_on IS NOT NULL) AS submitted`,
     [experimentId],
   );
   return Number(row?.submitted ?? 0);

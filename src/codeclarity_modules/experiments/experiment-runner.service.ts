@@ -728,7 +728,7 @@ export class ExperimentRunnerService
         );
       }
       const reason = `submission failed: ${describeBuildError(err)}`;
-      await this.store.endProbe(probeId, "failed", reason);
+      await this.store.failProbeSubmission(probeId, reason);
       this.logger.warn("Experiment probe submission failed", { ...logContext, reason });
       return;
     }
