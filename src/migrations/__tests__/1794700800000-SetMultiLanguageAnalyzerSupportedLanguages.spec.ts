@@ -1,6 +1,6 @@
 import type { QueryRunner } from "typeorm";
 
-import { SetMultiLanguageAnalyzerSupportedLanguages1794700800000 as Migration } from "./1794700800000-SetMultiLanguageAnalyzerSupportedLanguages";
+import { SetMultiLanguageAnalyzerSupportedLanguages1794700800000 as Migration } from "../codeclarity/1794700800000-SetMultiLanguageAnalyzerSupportedLanguages";
 
 const seededAnalyzerOnly = `WHERE "name" = 'Multi-Language Analyzer' AND "language_config" ?& array['javascript','php']`;
 
