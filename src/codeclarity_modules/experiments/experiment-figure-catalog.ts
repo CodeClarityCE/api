@@ -45,7 +45,7 @@ const VIEW_FILTER: FigureFilter = {
 const STEP = { id: "step", label: "Step" };
 const BY_SEVERITY = { id: "severity", label: "Severity" };
 
-const SWEEP_FILTER: FigureFilter = {
+export const SWEEP_FILTER: FigureFilter = {
   id: "sweep",
   label: "Sweep subset",
   options: [
@@ -54,7 +54,7 @@ const SWEEP_FILTER: FigureFilter = {
   ],
 };
 
-const DATING_PRECISION_FILTER: FigureFilter = {
+export const DATING_PRECISION_FILTER: FigureFilter = {
   id: "dating_precision",
   label: "Dating precision",
   options: [
