@@ -423,6 +423,25 @@ export class ExperimentResultsService {
   }
 
   /**
+   * The metric version a publish would store now.
+   * @throws {NotAuthorized} If the user is not a member of the org
+   * @throws {EntityNotFound} If the org has no such experiment
+   */
+  async currentMetricVersion(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+  ): Promise<{ metric_version: number }> {
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.USER,
+    );
+    await findExperimentInOrg(this.experimentRepository, orgId, experimentId);
+    return { metric_version: METRIC_VERSION };
+  }
+
+  /**
    * The Published results versions of an experiment, newest first.
    * @throws {NotAuthorized} If the user is not a member of the org
    * @throws {EntityNotFound} If the org has no such experiment
