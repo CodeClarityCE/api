@@ -55,10 +55,15 @@ const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
 const SEP = "\u0000";
 const HEAD_INDEX = 40;
 
-function loadFixture(): { entries: GridFixtureEntry[]; last: GridFixtureExpected } {
+function loadFixture(): {
+  entries: GridFixtureEntry[];
+  last: GridFixtureExpected;
+} {
   const lines = fixtureLines(readFileSync(FIXTURE));
   return {
-    entries: lines.slice(0, -1).map((line) => JSON.parse(line) as GridFixtureEntry),
+    entries: lines
+      .slice(0, -1)
+      .map((line) => JSON.parse(line) as GridFixtureEntry),
     last: JSON.parse(lines.at(-1)!) as GridFixtureExpected,
   };
 }
@@ -69,17 +74,22 @@ function isAnalysed(run: GridFixtureRun): boolean {
 }
 
 const dayOf = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
-const utcDay = (iso: string): number => Math.floor(Date.parse(iso) / DAY_MS) * DAY_MS;
+const utcDay = (iso: string): number =>
+  Math.floor(Date.parse(iso) / DAY_MS) * DAY_MS;
 
 /** A publication time in ms; zone-less timestamps are UTC, as pandas reads them. */
 function publishedMs(value: string | null): number {
   if (!value) return NaN;
-  return Date.parse(/[zZ]$|[+-]\d{2}:?\d{2}$/.test(value) ? value : `${value}Z`);
+  return Date.parse(
+    /[zZ]$|[+-]\d{2}:?\d{2}$/.test(value) ? value : `${value}Z`,
+  );
 }
 
 /** The archive's pandas parse: only NVD's zone-less format survives (see header). */
 function archivePublishedMs(value: string | null): number {
-  return value && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+$/.test(value) ? publishedMs(value) : NaN;
+  return value && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+$/.test(value)
+    ? publishedMs(value)
+    : NaN;
 }
 
 /** When a snapshot was observed: its grid date, or HEAD's commit time. */
@@ -107,21 +117,35 @@ interface ArchiveInterval {
   event: 0 | 1;
 }
 
-type InstanceFilter = (run: GridFixtureRun, published: string | null) => boolean;
+type InstanceFilter = (
+  run: GridFixtureRun,
+  published: string | null,
+) => boolean;
 
 /**
  * The archive's stats.presence_intervals over the fixture: a grid date
  * without a done snapshot between two observations censors the interval;
  * durations run from first seen to the next snapshot.
  */
-function archiveIntervals(entries: GridFixtureEntry[], keep: InstanceFilter = () => true): ArchiveInterval[] {
+function archiveIntervals(
+  entries: GridFixtureEntry[],
+  keep: InstanceFilter = () => true,
+): ArchiveInterval[] {
   const grid = [
-    ...new Set(entries.flatMap((e) => e.runs.filter((r) => isAnalysed(r) && r.grid_date).map((r) => r.grid_date!))),
+    ...new Set(
+      entries.flatMap((e) =>
+        e.runs
+          .filter((r) => isAnalysed(r) && r.grid_date)
+          .map((r) => r.grid_date!),
+      ),
+    ),
   ]
     .map((d) => Date.parse(d))
     .sort((a, b) => a - b);
   const out: ArchiveInterval[] = [];
-  for (const entry of [...entries].sort((a, b) => (a.entry < b.entry ? -1 : 1))) {
+  for (const entry of [...entries].sort((a, b) =>
+    a.entry < b.entry ? -1 : 1,
+  )) {
     const presence = new Map<number, Set<string>>();
     const severity = new Map<string, string>();
     for (const run of entry.runs.filter(isAnalysed)) {
@@ -131,7 +155,8 @@ function archiveIntervals(entries: GridFixtureEntry[], keep: InstanceFilter = ()
         if (!keep(run, meta.published_date)) continue;
         const key = `${meta.vulnerability_id}${SEP}${meta.affected_dependency}`;
         keys.add(key);
-        if (meta.severity_class !== null && !severity.has(key)) severity.set(key, meta.severity_class);
+        if (meta.severity_class !== null && !severity.has(key))
+          severity.set(key, meta.severity_class);
       }
       presence.set(run.grid_index, keys);
     }
@@ -146,8 +171,12 @@ function archiveIntervals(entries: GridFixtureEntry[], keep: InstanceFilter = ()
     if (snapshots.length < 2) continue;
     const gapAfter = snapshots
       .slice(0, -1)
-      .map((s, i) => grid.some((d) => d > s.date && d < snapshots[i + 1]!.date));
-    const keys = [...new Set(snapshots.flatMap((s) => [...presence.get(s.grid_index)!]))].sort();
+      .map((s, i) =>
+        grid.some((d) => d > s.date && d < snapshots[i + 1]!.date),
+      );
+    const keys = [
+      ...new Set(snapshots.flatMap((s) => [...presence.get(s.grid_index)!])),
+    ].sort();
     for (const key of keys) {
       let start: ArchiveSnapshot | null = null;
       snapshots.forEach((s, i) => {
@@ -163,10 +192,18 @@ function archiveIntervals(entries: GridFixtureEntry[], keep: InstanceFilter = ()
           first_seen: start.date,
         };
         if (i === snapshots.length - 1 || gapAfter[i]) {
-          out.push({ ...base, duration: (s.date - start.date) / DAY_MS, event: 0 });
+          out.push({
+            ...base,
+            duration: (s.date - start.date) / DAY_MS,
+            event: 0,
+          });
           start = null;
         } else if (!presence.get(snapshots[i + 1]!.grid_index)!.has(key)) {
-          out.push({ ...base, duration: (snapshots[i + 1]!.date - start.date) / DAY_MS, event: 1 });
+          out.push({
+            ...base,
+            duration: (snapshots[i + 1]!.date - start.date) / DAY_MS,
+            event: 1,
+          });
           start = null;
         }
       });
@@ -183,14 +220,23 @@ interface MinedFixes {
 
 /** The mined fix of each (entry, package, last seen), joined as merge_day_resolution does. */
 function minedFixes(events: RemediationEvent[]): MinedFixes {
-  const mined: MinedFixes = { found: new Map(), ambiguous: new Set(), byKey: new Map() };
+  const mined: MinedFixes = {
+    found: new Map(),
+    ambiguous: new Set(),
+    byKey: new Map(),
+  };
   for (const e of events) {
     const key = `${e.npm_name}|${e.affected_dependency}|${e.last_seen}`;
     mined.byKey.set(key, e);
     if (e.status === "found" && e.fixed_at) {
       const day = utcDay(e.fixed_at);
       const known = mined.found.get(key);
-      if (!known || day > known.day) mined.found.set(key, { day, commit: e.fix_commit_sha!, kind: e.fix_kind });
+      if (!known || day > known.day)
+        mined.found.set(key, {
+          day,
+          commit: e.fix_commit_sha!,
+          kind: e.fix_kind,
+        });
     } else if (e.status === "ambiguous") {
       mined.ambiguous.add(key);
     }
@@ -198,18 +244,35 @@ function minedFixes(events: RemediationEvent[]): MinedFixes {
   return mined;
 }
 
-type MergedInterval = ArchiveInterval & { resolution: "day" | "quarter"; excluded: boolean; fix_kind: string | null };
+type MergedInterval = ArchiveInterval & {
+  resolution: "day" | "quarter";
+  excluded: boolean;
+  fix_kind: string | null;
+};
 
 /** The archive's stats.merge_day_resolution: mined fix days replace snapshot durations. */
-function mergeDayResolution(intervals: ArchiveInterval[], mined: MinedFixes): MergedInterval[] {
+function mergeDayResolution(
+  intervals: ArchiveInterval[],
+  mined: MinedFixes,
+): MergedInterval[] {
   return intervals.map((i) => {
-    const out: MergedInterval = { ...i, resolution: "quarter", excluded: false, fix_kind: null };
+    const out: MergedInterval = {
+      ...i,
+      resolution: "quarter",
+      excluded: false,
+      fix_kind: null,
+    };
     if (i.event !== 1) return out;
     const key = `${i.entry}|${i.key.split(SEP)[1]}|${i.last_seen}`;
     const found = mined.found.get(key);
     if (found) {
       if (found.day >= i.first_seen) {
-        return { ...out, duration: (found.day - i.first_seen) / DAY_MS, resolution: "day", fix_kind: found.kind };
+        return {
+          ...out,
+          duration: (found.day - i.first_seen) / DAY_MS,
+          resolution: "day",
+          fix_kind: found.kind,
+        };
       }
     } else if (mined.ambiguous.has(key)) {
       out.excluded = true;
@@ -225,26 +288,39 @@ function survivalBlock(intervals: ArchiveInterval[]): Record<string, unknown> {
     intervals: intervals.length,
     fixed,
     censored: intervals.length - fixed,
-    unclassed_intervals: intervals.length - Object.values(byClass).reduce((n, s) => n + s.n, 0),
+    unclassed_intervals:
+      intervals.length - Object.values(byClass).reduce((n, s) => n + s.n, 0),
     km_by_severity: byClass,
   };
 }
 
 /** Archive km_by_severity: n and Kaplan-Meier median per severity class. */
-function kmBySeverity(intervals: readonly ArchiveInterval[]): Record<string, { n: number; km_median_days: number }> {
+function kmBySeverity(
+  intervals: readonly ArchiveInterval[],
+): Record<string, { n: number; km_median_days: number }> {
   return Object.fromEntries(
     SEVERITIES.map((sev) => {
       const s = intervals.filter((i) => i.severity?.toUpperCase() === sev);
-      const median = kmMedian(kaplanMeier(s.map((i) => i.duration), s.map((i) => i.event === 1)));
+      const median = kmMedian(
+        kaplanMeier(
+          s.map((i) => i.duration),
+          s.map((i) => i.event === 1),
+        ),
+      );
       return [sev, { n: s.length, km_median_days: median }];
     }),
   );
 }
 
-const indexOfLabel = (label: string | null, dates: readonly string[]): number =>
-  label === null ? HEAD_INDEX : dates.indexOf(label);
+const indexOfLabel = (
+  label: string | null,
+  dates: readonly string[],
+): number => (label === null ? HEAD_INDEX : dates.indexOf(label));
 
-function tally(): { counts: Record<string, number>; add: (key: string) => void } {
+function tally(): {
+  counts: Record<string, number>;
+  add: (key: string) => void;
+} {
   const counts: Record<string, number> = {};
   return { counts, add: (key) => (counts[key] = (counts[key] ?? 0) + 1) };
 }
@@ -258,7 +334,9 @@ function classifyExposures(
   intervals: ArchiveInterval[],
   exposures: Exposure[],
 ): Record<string, number> {
-  const dates = entries[0]!.runs.filter((r) => r.grid_date).map((r) => r.grid_date!);
+  const dates = entries[0]!.runs
+    .filter((r) => r.grid_date)
+    .map((r) => r.grid_date!);
   const byKey = new Map<string, ArchiveInterval[]>();
   for (const i of intervals) {
     const key = `${i.entry}${SEP}${i.key}`;
@@ -269,28 +347,47 @@ function classifyExposures(
     entries
       .filter((entry) => {
         const head = entry.runs.at(-1)!;
-        const lastDated = entry.runs.filter((r) => isAnalysed(r) && r.grid_date).at(-1)?.grid_date;
-        return isAnalysed(head) && lastDated && utcDay(head.committed_at!) < Date.parse(lastDated);
+        const lastDated = entry.runs
+          .filter((r) => isAnalysed(r) && r.grid_date)
+          .at(-1)?.grid_date;
+        return (
+          isAnalysed(head) &&
+          lastDated &&
+          utcDay(head.committed_at!) < Date.parse(lastDated)
+        );
       })
       .map((entry) => entry.entry),
   );
-  const single = new Set(entries.filter((e) => e.runs.filter(isAnalysed).length < 2).map((e) => e.entry));
+  const single = new Set(
+    entries
+      .filter((e) => e.runs.filter(isAnalysed).length < 2)
+      .map((e) => e.entry),
+  );
   const { counts, add } = tally();
   const used = new Set<ArchiveInterval>();
   for (const e of exposures) {
     const first = indexOfLabel(e.first_present, dates);
     const last = indexOfLabel(e.last_present, dates);
-    const chain = (byKey.get(`${e.dataset_entry_id}${SEP}${e.vulnerability_id}${SEP}${e.affected_dependency}`) ?? [])
+    const chain = (
+      byKey.get(
+        `${e.dataset_entry_id}${SEP}${e.vulnerability_id}${SEP}${e.affected_dependency}`,
+      ) ?? []
+    )
       .filter((i) => i.first >= first && i.last <= last)
       .sort((a, b) => a.first - b.first);
     chain.forEach((i) => used.add(i));
     const why = ((): string => {
       if (chain.length === 0) return "unexplained: no archive interval";
-      if (chain[0]!.first !== first || chain.at(-1)!.last !== last) return "unexplained: span differs";
-      if (chain.slice(0, -1).some((i) => i.event !== 0)) return "unexplained: fixed inside span";
+      if (chain[0]!.first !== first || chain.at(-1)!.last !== last)
+        return "unexplained: span differs";
+      if (chain.slice(0, -1).some((i) => i.event !== 0))
+        return "unexplained: fixed inside span";
       if ((chain.at(-1)!.event === 1) !== (e.fix !== null)) {
-        const afterGap = e.fix !== null && indexOfLabel(e.fix.interval_to, dates) - last > 1;
-        return afterGap ? "fixed after a gap the archive censored at" : "unexplained: fix differs";
+        const afterGap =
+          e.fix !== null && indexOfLabel(e.fix.interval_to, dates) - last > 1;
+        return afterGap
+          ? "fixed after a gap the archive censored at"
+          : "unexplained: fix differs";
       }
       return chain.length > 1 ? "joined across gaps" : "same";
     })();
@@ -301,7 +398,11 @@ function classifyExposures(
   }
   for (const i of intervals) {
     if (used.has(i)) continue;
-    add(headEarly.has(i.entry) ? "HEAD out of grid order" : "unexplained: archive interval unmatched");
+    add(
+      headEarly.has(i.entry)
+        ? "HEAD out of grid order"
+        : "unexplained: archive interval unmatched",
+    );
   }
   return counts;
 }
@@ -312,20 +413,29 @@ function compareFixDating(
   exposures: Exposure[],
   mined: MinedFixes,
 ): { counts: Record<string, number>; kinds: Record<string, number> } {
-  const dates = entries[0]!.runs.filter((r) => r.grid_date).map((r) => r.grid_date!);
+  const dates = entries[0]!.runs
+    .filter((r) => r.grid_date)
+    .map((r) => r.grid_date!);
   const byEntry = new Map(entries.map((e) => [e.entry, e]));
   const packagesAt = new Map<string, ProbePackage[]>(
-    entries.flatMap((e) => e.probes.map((p) => [`${e.entry}|${p.commit_hash}`, p.packages] as const)),
+    entries.flatMap((e) =>
+      e.probes.map((p) => [`${e.entry}|${p.commit_hash}`, p.packages] as const),
+    ),
   );
   const ranges = new Map<string, VulnerableVersions>();
   for (const e of entries) {
     for (const m of e.meta) {
-      if (m.vulnerable_versions) ranges.set(`${m.vulnerability_id}|${m.affected_dependency}`, m.vulnerable_versions);
+      if (m.vulnerable_versions)
+        ranges.set(
+          `${m.vulnerability_id}|${m.affected_dependency}`,
+          m.vulnerable_versions,
+        );
     }
   }
   const { counts, add } = tally();
   const kinds = tally();
-  const family = (kind: string | null): string | null => (kind?.startsWith("removed") ? "removed" : kind);
+  const family = (kind: string | null): string | null =>
+    kind?.startsWith("removed") ? "removed" : kind;
   for (const e of exposures) {
     if (!e.fix) continue;
     const last = indexOfLabel(e.last_present, dates);
@@ -341,10 +451,18 @@ function compareFixDating(
     else if (mined.ambiguous.has(key)) archive = "ambiguous";
     const v2 = e.fix.probe_outcome ?? "undated";
     if (archive !== "found" || v2 !== "found") {
-      if (archive === "found" && v2 === "not_found" && found!.commit === lastRun.commit_hash) {
+      if (
+        archive === "found" &&
+        v2 === "not_found" &&
+        found!.commit === lastRun.commit_hash
+      ) {
         // The archive's window started at, and included, the last-seen commit
         add("found/not_found: archive dated it to the last-seen commit");
-      } else if (archive === "ambiguous" && v2 === "found" && mined.byKey.get(key)?.method === "not_in_root_lockfile") {
+      } else if (
+        archive === "ambiguous" &&
+        v2 === "found" &&
+        mined.byKey.get(key)?.method === "not_in_root_lockfile"
+      ) {
         add("ambiguous/found: not in the root lockfile, found in a workspace");
       } else {
         add(`${archive}/${v2}`);
@@ -353,15 +471,25 @@ function compareFixDating(
     }
     if (e.fix.commit_hash === found!.commit) {
       add("same commit");
-      kinds.add(family(found!.kind) === family(e.fix.kind) ? "same kind" : "other kind");
+      kinds.add(
+        family(found!.kind) === family(e.fix.kind) ? "same kind" : "other kind",
+      );
       continue;
     }
-    const atArchive = packagesAt.get(`${e.dataset_entry_id}|${found!.commit}`) ?? [];
-    const vv = ranges.get(`${e.vulnerability_id}|${e.affected_dependency}`) ?? null;
+    const atArchive =
+      packagesAt.get(`${e.dataset_entry_id}|${found!.commit}`) ?? [];
+    const vv =
+      ranges.get(`${e.vulnerability_id}|${e.affected_dependency}`) ?? null;
     const stillVulnerable = atArchive.some(
-      (p) => p.name === e.affected_dependency && isVulnerableVersion(p.version, vv) === true,
+      (p) =>
+        p.name === e.affected_dependency &&
+        isVulnerableVersion(p.version, vv) === true,
     );
-    add(stillVulnerable && Date.parse(e.fix.date!) > found!.day ? "later commit: bump stayed vulnerable" : "other commit");
+    add(
+      stillVulnerable && Date.parse(e.fix.date!) > found!.day
+        ? "later commit: bump stayed vulnerable"
+        : "other commit",
+    );
   }
   return { counts, kinds: kinds.counts };
 }
@@ -390,14 +518,21 @@ function resultsInput(entries: GridFixtureEntry[]): ExperimentResultsInput {
       input.runs.push({
         status: run.status,
         error: run.error,
-        grid_date: run.grid_date ? new Date(`${run.grid_date}T00:00:00Z`) : null,
+        grid_date: run.grid_date
+          ? new Date(`${run.grid_date}T00:00:00Z`)
+          : null,
         rows_run_id: run.id,
         dataset_entry_id: entry.entry,
         grid_index: run.grid_index,
         commit_hash: run.commit_hash,
         committed_at: run.committed_at ? new Date(run.committed_at) : null,
       });
-      if (run.summary) input.summaries.push({ ...run.summary, run_id: run.id, rank: entry.rank });
+      if (run.summary)
+        input.summaries.push({
+          ...run.summary,
+          run_id: run.id,
+          rank: entry.rank,
+        });
       for (const [workspace, metaIndex, version, direct] of run.instances) {
         input.vulnerabilities.push({
           ...entry.meta[metaIndex]!,
@@ -408,12 +543,20 @@ function resultsInput(entries: GridFixtureEntry[]): ExperimentResultsInput {
         });
       }
     }
-    for (const probe of entry.probes) input.probes!.push({ dataset_entry_id: entry.entry, ...probe });
+    for (const probe of entry.probes)
+      input.probes!.push({ dataset_entry_id: entry.entry, ...probe });
     for (const interval of entry.probe_intervals) {
-      input.probe_intervals!.push({ dataset_entry_id: entry.entry, ...interval, error: null });
+      input.probe_intervals!.push({
+        dataset_entry_id: entry.entry,
+        ...interval,
+        error: null,
+      });
     }
     for (const analysis of entry.probe_analyses) {
-      input.probe_analyses!.push({ dataset_entry_id: entry.entry, ...analysis });
+      input.probe_analyses!.push({
+        dataset_entry_id: entry.entry,
+        ...analysis,
+      });
     }
   }
   return input;
@@ -443,14 +586,24 @@ describeWithFixture("parity with the archived top100 grid study", () => {
 
   describe("the fixture carries the archive's input", () => {
     it("matches coverage per grid date, with pre-repo dates as empty runs", () => {
-      const coverage = expected["coverage"] as { per_date_completed: Record<string, number>; head_completed: number };
+      const coverage = expected["coverage"] as {
+        per_date_completed: Record<string, number>;
+        head_completed: number;
+      };
       const done = Object.fromEntries(
-        results.grid_coverage.filter((row) => row.grid_date !== null).map((row) => [row.grid_date, row.done]),
+        results.grid_coverage
+          .filter((row) => row.grid_date !== null)
+          .map((row) => [row.grid_date, row.done]),
       );
       expect(done).toEqual(coverage.per_date_completed);
-      expect(results.grid_coverage.at(-1)).toMatchObject({ grid_date: null, done: coverage.head_completed });
+      expect(results.grid_coverage.at(-1)).toMatchObject({
+        grid_date: null,
+        done: coverage.head_completed,
+      });
       // 100 entries x 41 snapshots, less the 3574 manifest rows
-      expect(results.grid_coverage.reduce((n, row) => n + row.empty, 0)).toBe(526);
+      expect(results.grid_coverage.reduce((n, row) => n + row.empty, 0)).toBe(
+        526,
+      );
     });
 
     it("reproduces survival_residence with the archive's interval rules", () => {
@@ -458,7 +611,10 @@ describeWithFixture("parity with the archived top100 grid study", () => {
     });
 
     it("reproduces survival_disclosed, pandas date quirk included", () => {
-      const disclosed = archiveIntervals(entries, (run, published) => archivePublishedMs(published) <= observedMs(run));
+      const disclosed = archiveIntervals(
+        entries,
+        (run, published) => archivePublishedMs(published) <= observedMs(run),
+      );
       expect(survivalBlock(disclosed)).toEqual(expected["survival_disclosed"]);
     });
 
@@ -496,46 +652,79 @@ describeWithFixture("parity with the archived top100 grid study", () => {
         excluded_ambiguous: block.residence.excluded_ambiguous,
         day_fixed_split: block.residence.fix_kind.day_fixed_split,
         km_by_severity: Object.fromEntries(
-          Object.entries(block.residence.km_by_severity).map(([sev, s]) => [sev, { n: s.n, km_median_days: s.km_median_days }]),
+          Object.entries(block.residence.km_by_severity).map(([sev, s]) => [
+            sev,
+            { n: s.n, km_median_days: s.km_median_days },
+          ]),
         ),
       });
     });
 
     it("reproduces trajectory_balanced, pandas date quirk included", () => {
-      const panel = entries.filter((e) => e.runs.slice(0, -1).every(isAnalysed));
+      const panel = entries.filter((e) =>
+        e.runs.slice(0, -1).every(isAnalysed),
+      );
       const trajectory: Record<string, number> = {};
       for (const entry of panel) {
         for (const run of entry.runs.slice(0, -1)) {
-          const known = run.instances.filter(([, m]) => archivePublishedMs(entry.meta[m]!.published_date) <= observedMs(run));
-          trajectory[run.grid_date!] = (trajectory[run.grid_date!] ?? 0) + known.length / panel.length;
+          const known = run.instances.filter(
+            ([, m]) =>
+              archivePublishedMs(entry.meta[m]!.published_date) <=
+              observedMs(run),
+          );
+          trajectory[run.grid_date!] =
+            (trajectory[run.grid_date!] ?? 0) + known.length / panel.length;
         }
       }
       const archive = expected["trajectory_balanced"] as Record<string, number>;
       expect(Object.keys(trajectory)).toEqual(Object.keys(archive));
-      for (const [date, mean] of Object.entries(archive)) expect(trajectory[date]).toBeCloseTo(mean, 9);
-      expect(panel).toHaveLength((expected["trajectory_balanced_meta"] as { panel_n: number }).panel_n);
+      for (const [date, mean] of Object.entries(archive))
+        expect(trajectory[date]).toBeCloseTo(mean, 9);
+      expect(panel).toHaveLength(
+        (expected["trajectory_balanced_meta"] as { panel_n: number }).panel_n,
+      );
     });
   });
 
   describe("v2 against the archive", () => {
     it("keeps the HEAD blocks of the v1 parity test", () => {
-      const v1 = JSON.parse(readFileSync(resolve(__dirname, "top100-expected.json"), "utf8")) as {
+      const v1 = JSON.parse(
+        readFileSync(resolve(__dirname, "top100-expected.json"), "utf8"),
+      ) as {
         headline: Record<string, unknown>;
       };
-      const { n_projects, n_affected, instances, distinct_vuln_packages, top_packages } = v1.headline;
-      expect(results.headline).toMatchObject({ n_projects, n_affected, instances, distinct_vuln_packages, top_packages });
+      const {
+        n_projects,
+        n_affected,
+        instances,
+        distinct_vuln_packages,
+        top_packages,
+      } = v1.headline;
+      expect(results.headline).toMatchObject({
+        n_projects,
+        n_affected,
+        instances,
+        distinct_vuln_packages,
+        top_packages,
+      });
     });
 
     it("loads the balanced panel as the archive does, as-of only adding same-day disclosures", () => {
-      const panel = entries.filter((e) => e.runs.slice(0, -1).every(isAnalysed));
+      const panel = entries.filter((e) =>
+        e.runs.slice(0, -1).every(isAnalysed),
+      );
       const ids = new Set(panel.map((e) => e.entry));
       const rows = loadOverTime({
         runs: input.runs.filter((r) => ids.has(r.dataset_entry_id!)),
         vulnerabilities: input.vulnerabilities,
         head_cutoff: new Date(), // HEAD is sliced off below
       }).slice(0, -1);
-      const meta = expected["trajectory_balanced_meta"] as { panel_hist_rows_total: number };
-      expect(rows.reduce((n, r) => n + r.hindsight!, 0)).toBe(meta.panel_hist_rows_total);
+      const meta = expected["trajectory_balanced_meta"] as {
+        panel_hist_rows_total: number;
+      };
+      expect(rows.reduce((n, r) => n + r.hindsight!, 0)).toBe(
+        meta.panel_hist_rows_total,
+      );
       // With every date format read, v2 counts an advisory published on the grid day
       // itself (cutoff by day); the archive stopped at midnight
       for (const row of rows) {
@@ -549,7 +738,10 @@ describeWithFixture("parity with the archived top100 grid study", () => {
             else if (publishedDay(published) === row.grid_date) sameDay++;
           }
         }
-        expect({ date: row.grid_date, as_of: row.as_of! - row.undated }).toEqual({ date: row.grid_date, as_of: byMidnight + sameDay });
+        expect({
+          date: row.grid_date,
+          as_of: row.as_of! - row.undated,
+        }).toEqual({ date: row.grid_date, as_of: byMidnight + sameDay });
       }
     });
 
@@ -564,7 +756,11 @@ describeWithFixture("parity with the archived top100 grid study", () => {
     });
 
     it("dates fixes to the archive's mined commits within the tolerance", () => {
-      const { counts, kinds } = compareFixDating(entries, exposures, minedFixes(events));
+      const { counts, kinds } = compareFixDating(
+        entries,
+        exposures,
+        minedFixes(events),
+      );
       const same = counts["same commit"] ?? 0;
       const bump = counts["later commit: bump stayed vulnerable"] ?? 0;
       const other = counts["other commit"] ?? 0;
@@ -572,7 +768,9 @@ describeWithFixture("parity with the archived top100 grid study", () => {
       expect(same / (same + other)).toBeGreaterThanOrEqual(0.98);
       expect((kinds["same kind"] ?? 0) / same).toBeGreaterThanOrEqual(0.99);
       // Windows without lockfile commits agree exactly
-      expect(Object.keys(counts).filter((k) => k.startsWith("not_found/"))).toEqual(["not_found/not_found"]);
+      expect(
+        Object.keys(counts).filter((k) => k.startsWith("not_found/")),
+      ).toEqual(["not_found/not_found"]);
       // Every other pairing is a named class
       expect(Object.keys(counts).sort()).toEqual(
         [
@@ -595,7 +793,10 @@ describeWithFixture("parity with the archived top100 grid study", () => {
   });
 });
 
-function tallyBy<T>(items: readonly T[], key: (item: T) => string): Record<string, number> {
+function tallyBy<T>(
+  items: readonly T[],
+  key: (item: T) => string,
+): Record<string, number> {
   const { counts, add } = tally();
   for (const item of items) add(key(item));
   return counts;

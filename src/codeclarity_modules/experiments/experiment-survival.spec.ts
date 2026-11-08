@@ -82,15 +82,34 @@ describe("exposure survival in the results", () => {
       // Present throughout: censored at HEAD after 104 days
       entry("e3", ["P", "P", "P", "P"], DATES),
       // Fixed at the 2025-01-25 snapshot: 24 days
-      entry("e4", ["P", "A", "A", "A"], ["2024-12-20", "2025-01-25", "2025-02-20", "2025-04-01"], "CRITICAL"),
+      entry(
+        "e4",
+        ["P", "A", "A", "A"],
+        ["2024-12-20", "2025-01-25", "2025-02-20", "2025-04-01"],
+        "CRITICAL",
+      ),
     ]),
   );
 
   it("censors open exposures at HEAD and counts a failed snapshot as a gap, not a fix", () => {
     const { overall, censored_at } = results.exposure_survival;
     expect(censored_at).toBe("2025-04-15");
-    expect(overall).toMatchObject({ key: "all", n: 4, fixed: 2, censored: 2, median_days: 50 });
-    expect(overall.curve.map((s) => [s.time, s.survival, s.at_risk, s.events, s.censored])).toEqual([
+    expect(overall).toMatchObject({
+      key: "all",
+      n: 4,
+      fixed: 2,
+      censored: 2,
+      median_days: 50,
+    });
+    expect(
+      overall.curve.map((s) => [
+        s.time,
+        s.survival,
+        s.at_risk,
+        s.events,
+        s.censored,
+      ]),
+    ).toEqual([
       [24, 0.75, 4, 1, 0],
       [50, 0.5, 3, 1, 0],
       [90, 0.5, 2, 0, 1],
@@ -99,7 +118,15 @@ describe("exposure survival in the results", () => {
   });
 
   it("splits the curve by severity, with no median where survival stays above one half", () => {
-    expect(results.exposure_survival.by_severity.map((g) => [g.key, g.n, g.fixed, g.censored, g.median_days])).toEqual([
+    expect(
+      results.exposure_survival.by_severity.map((g) => [
+        g.key,
+        g.n,
+        g.fixed,
+        g.censored,
+        g.median_days,
+      ]),
+    ).toEqual([
       ["CRITICAL", 1, 1, 0, 24],
       ["MEDIUM", 3, 1, 2, null],
     ]);
@@ -112,15 +139,27 @@ describe("exposure survival in the results", () => {
   it("cuts HEAD off at the read time while the experiment runs, in survival and the as-of view alike", () => {
     const running = input([entry("e3", ["P", "P", "P", "P"], DATES)], null);
     // An advisory published after the read time
-    running.vulnerabilities.push({ ...running.vulnerabilities[3]!, vulnerability_id: "CVE-2025-0002", published_date: "2025-05-01" });
+    running.vulnerabilities.push({
+      ...running.vulnerabilities[3]!,
+      vulnerability_id: "CVE-2025-0002",
+      published_date: "2025-05-01",
+    });
     const { exposure_survival, load_over_time } = aggregateExperimentResults({
       ...running,
       read_at: new Date("2025-04-20T08:00:00Z"),
     });
     expect(exposure_survival.censored_at).toBe("2025-04-20");
     // e3 runs from the first grid date to the read time
-    expect(exposure_survival.overall.curve.at(-1)).toMatchObject({ time: 109, censored: 1 });
-    expect(load_over_time.at(-1)).toMatchObject({ grid_date: null, as_of_date: "2025-04-20", hindsight: 2, as_of: 1 });
+    expect(exposure_survival.overall.curve.at(-1)).toMatchObject({
+      time: 109,
+      censored: 1,
+    });
+    expect(load_over_time.at(-1)).toMatchObject({
+      grid_date: null,
+      as_of_date: "2025-04-20",
+      hindsight: 2,
+      as_of: 1,
+    });
   });
 
   it("is empty without exposures", () => {

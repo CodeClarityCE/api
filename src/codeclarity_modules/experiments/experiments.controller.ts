@@ -98,7 +98,9 @@ export class ExperimentsController {
   }
 
   @Get("estimate")
-  @ApiOperation({ summary: "What the create form estimates an experiment's analyses from" })
+  @ApiOperation({
+    summary: "What the create form estimates an experiment's analyses from",
+  })
   @ApiParam({ name: "org_id", description: "Organization ID" })
   getEstimate(): TypedResponse<ExperimentEstimateBasis> {
     return { data: { probes_per_entry_interval: PROBES_PER_ENTRY_INTERVAL } };
@@ -153,11 +155,7 @@ export class ExperimentsController {
     @Param("experiment_id") experiment_id: string,
   ): Promise<TypedResponse<ExperimentResults>> {
     return {
-      data: await this.resultsService.getResults(
-        org_id,
-        experiment_id,
-        user,
-      ),
+      data: await this.resultsService.getResults(org_id, experiment_id, user),
     };
   }
 
@@ -181,8 +179,11 @@ export class ExperimentsController {
     @Param("experiment_id") experiment_id: string,
     @Res() reply: FastifyReply,
   ): Promise<void> {
-    const { experiment_name, stream } =
-      await this.resultsService.exportRunsCsv(org_id, experiment_id, user);
+    const { experiment_name, stream } = await this.resultsService.exportRunsCsv(
+      org_id,
+      experiment_id,
+      user,
+    );
     await reply
       .header("content-type", CSV_CONTENT_TYPE)
       .header("content-disposition", attachment(experiment_name, "runs.csv"))
@@ -234,7 +235,10 @@ export class ExperimentsController {
       await this.resultsService.exportExposuresCsv(org_id, experiment_id, user);
     await reply
       .header("content-type", CSV_CONTENT_TYPE)
-      .header("content-disposition", attachment(experiment_name, "exposures.csv"))
+      .header(
+        "content-disposition",
+        attachment(experiment_name, "exposures.csv"),
+      )
       .send(stream);
   }
 

@@ -17,13 +17,21 @@ class FakeAnalyzers {
   saved: Analyzer[] = [];
   lookupError: Error | undefined;
 
-  async findByNameAndOrganization(name: string, orgId: string): Promise<Analyzer | null> {
+  async findByNameAndOrganization(
+    name: string,
+    orgId: string,
+  ): Promise<Analyzer | null> {
     if (this.lookupError) throw this.lookupError;
-    return this.saved.find((a) => a.name === name && a.organization?.id === orgId) ?? null;
+    return (
+      this.saved.find((a) => a.name === name && a.organization?.id === orgId) ??
+      null
+    );
   }
 
   async saveAnalyzer(analyzer: Analyzer): Promise<Analyzer> {
-    const stored = Object.assign(analyzer, { id: analyzer.id ?? `analyzer-${this.saved.length + 1}` });
+    const stored = Object.assign(analyzer, {
+      id: analyzer.id ?? `analyzer-${this.saved.length + 1}`,
+    });
     if (!this.saved.includes(stored)) this.saved.push(stored);
     return stored;
   }
@@ -58,7 +66,9 @@ describe("ExperimentRunSubmission fix probes", () => {
         _project: string,
         body: AnalysisCreateBody,
         _creator: AuthenticatedUser,
-        options: { inTransaction: (manager: unknown, id: string) => Promise<void> },
+        options: {
+          inTransaction: (manager: unknown, id: string) => Promise<void>;
+        },
       ) => {
         bodies.push(body);
         const id = `analysis-${bodies.length}`;
@@ -67,7 +77,9 @@ describe("ExperimentRunSubmission fix probes", () => {
       },
     };
     submission = new ExperimentRunSubmission(
-      { importForExperiment: async () => "project-1" } as unknown as ProjectService,
+      {
+        importForExperiment: async () => "project-1",
+      } as unknown as ProjectService,
       analysesService as unknown as AnalysesService,
       {} as AnalysesRepository,
       { linkProbe: async () => true } as unknown as ExperimentStore,
@@ -79,9 +91,17 @@ describe("ExperimentRunSubmission fix probes", () => {
     return submission.submitProbe({
       experiment: exp,
       probeId: "probe-1",
-      entry: { git_url: "https://github.com/octo/app", full_name: "octo/app" } as DatasetEntry,
+      entry: {
+        git_url: "https://github.com/octo/app",
+        full_name: "octo/app",
+      } as DatasetEntry,
       integrationId: "integration-1",
-      head: { branch: "main", commitHash: "d4e", committedAt: null, description: null },
+      head: {
+        branch: "main",
+        commitHash: "d4e",
+        committedAt: null,
+        description: null,
+      },
       creator: new AuthenticatedUser("user-1", [ROLE.USER], true),
     });
   }
@@ -94,7 +114,9 @@ describe("ExperimentRunSubmission fix probes", () => {
     expect(analyzer!.name).toMatch(/experiment/i);
     expect(analyzer!.name).toContain("v1.0.0");
     expect(analyzer!.description).toMatch(/managed by experiments/i);
-    expect(analyzer!.steps).toEqual([[{ name: "js-sbom", version: "v1.0.0", config: {} }]]);
+    expect(analyzer!.steps).toEqual([
+      [{ name: "js-sbom", version: "v1.0.0", config: {} }],
+    ]);
     expect(bodies[0]!.analyzer_id).toBe(analyzer!.id);
   });
 
@@ -106,7 +128,11 @@ describe("ExperimentRunSubmission fix probes", () => {
 
     expect(analyzers.saved).toHaveLength(2);
     expect(analyzers.saved[0]!.steps).toEqual(first);
-    expect(bodies.map((b) => b.analyzer_id)).toEqual(["analyzer-1", "analyzer-2", "analyzer-1"]);
+    expect(bodies.map((b) => b.analyzer_id)).toEqual([
+      "analyzer-1",
+      "analyzer-2",
+      "analyzer-1",
+    ]);
   });
 
   it("keeps probe analyzer names within the 25 characters analyzers allow, distinct per version", async () => {
@@ -122,7 +148,9 @@ describe("ExperimentRunSubmission fix probes", () => {
   it("fails the submission when the analyzer lookup fails", async () => {
     analyzers.lookupError = new Error("connection reset");
 
-    await expect(probe(experiment("v1.0.0"))).rejects.toThrow("connection reset");
+    await expect(probe(experiment("v1.0.0"))).rejects.toThrow(
+      "connection reset",
+    );
     expect(analyzers.saved).toEqual([]);
   });
 });

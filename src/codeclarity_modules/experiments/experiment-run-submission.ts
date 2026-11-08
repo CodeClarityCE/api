@@ -34,8 +34,10 @@ export interface RunSubmissionRequest {
   creator: AuthenticatedUser;
 }
 
-export interface ProbeSubmissionRequest
-  extends Omit<RunSubmissionRequest, "runId"> {
+export interface ProbeSubmissionRequest extends Omit<
+  RunSubmissionRequest,
+  "runId"
+> {
   probeId: string;
 }
 
@@ -78,7 +80,8 @@ export class ExperimentRunSubmission {
     const { experiment, runId } = request;
     return this.create(
       request,
-      (orgId, projectId) => analysisBody(experiment, orgId, projectId, request.head),
+      (orgId, projectId) =>
+        analysisBody(experiment, orgId, projectId, request.head),
       (manager, analysisId) => this.store.linkRun(manager, runId, analysisId),
     );
   }
@@ -88,12 +91,16 @@ export class ExperimentRunSubmission {
    * analyzer, linked to the probe in the same transaction.
    * @returns the linked analysis id, or undefined if the probe is no longer pending
    */
-  async submitProbe(request: ProbeSubmissionRequest): Promise<string | undefined> {
+  async submitProbe(
+    request: ProbeSubmissionRequest,
+  ): Promise<string | undefined> {
     const analyzerId = await this.probeAnalyzerId(request.experiment);
     return this.create(
       request,
-      (orgId, projectId) => probeBody(analyzerId, orgId, projectId, request.head),
-      (manager, analysisId) => this.store.linkProbe(manager, request.probeId, analysisId),
+      (orgId, projectId) =>
+        probeBody(analyzerId, orgId, projectId, request.head),
+      (manager, analysisId) =>
+        this.store.linkProbe(manager, request.probeId, analysisId),
     );
   }
 
@@ -140,11 +147,17 @@ export class ExperimentRunSubmission {
    * on first use. Keyed by version, so one in use is never changed.
    */
   private async probeAnalyzerId(experiment: Experiment): Promise<string> {
-    const step = experiment.analyzer?.steps.flat().find((s) => s.name === SBOM_PLUGIN);
-    if (!step) throw new Error("The analyzer of this experiment has no js-sbom step");
+    const step = experiment.analyzer?.steps
+      .flat()
+      .find((s) => s.name === SBOM_PLUGIN);
+    if (!step)
+      throw new Error("The analyzer of this experiment has no js-sbom step");
     const orgId = experiment.organization.id;
     const name = probeAnalyzerName(step.version);
-    const found = await this.analyzersRepository.findByNameAndOrganization(name, orgId);
+    const found = await this.analyzersRepository.findByNameAndOrganization(
+      name,
+      orgId,
+    );
     if (found) return found.id;
     const created = await this.analyzersRepository.saveAnalyzer(
       Object.assign(new Analyzer(), {
@@ -157,7 +170,9 @@ export class ExperimentRunSubmission {
         language_config: { javascript: { plugins: [SBOM_PLUGIN] } },
         logo: "js",
         organization: { id: orgId },
-        ...(experiment.created_by ? { created_by: { id: experiment.created_by.id } } : {}),
+        ...(experiment.created_by
+          ? { created_by: { id: experiment.created_by.id } }
+          : {}),
       }),
     );
     return created.id;

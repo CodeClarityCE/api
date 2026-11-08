@@ -149,7 +149,8 @@ export interface ExperimentResultsExport {
 export class ExperimentResultsService {
   private readonly logger = CodeClarityLogger.forService("Experiments");
 
-  private readonly rawQuery: RawQuery = (sql, params) => this.probeOutcomeRepository.query(sql, params);
+  private readonly rawQuery: RawQuery = (sql, params) =>
+    this.probeOutcomeRepository.query(sql, params);
 
   constructor(
     private readonly membershipsRepository: MembershipsRepository,
@@ -194,7 +195,11 @@ export class ExperimentResultsService {
       user.userId,
       MemberRole.USER,
     );
-    const experiment = await findExperimentInOrg(this.experimentRepository, orgId, experimentId);
+    const experiment = await findExperimentInOrg(
+      this.experimentRepository,
+      orgId,
+      experimentId,
+    );
 
     const [rows, summaries] = await Promise.all([
       this.exposureRows(experiment, null),
@@ -258,7 +263,9 @@ export class ExperimentResultsService {
     for (const column of INSTANCE_COLUMNS) {
       instances.addSelect(`instance.${column}`, column);
     }
-    instances.where('instance."experimentId" = :experimentId', { experimentId });
+    instances.where('instance."experimentId" = :experimentId', {
+      experimentId,
+    });
     if (entryIds) {
       instances.andWhere('instance."runId" IN (:...runIds)', {
         runIds: runs.length ? runs.map((run) => run.id) : [null],
@@ -284,7 +291,9 @@ export class ExperimentResultsService {
         committed_at: run.committed_at ?? null,
         rows_run_id: run.shared_from?.id ?? run.id,
         knowledge: knowledgeSnapshot(run.knowledge),
-        ...(run.dataset_entry ? { dataset_entry_id: run.dataset_entry.id } : {}),
+        ...(run.dataset_entry
+          ? { dataset_entry_id: run.dataset_entry.id }
+          : {}),
       })),
       vulnerabilities,
       probes,
@@ -307,8 +316,13 @@ export class ExperimentResultsService {
     experimentId: string,
     user: AuthenticatedUser,
   ): Promise<ExperimentCsvExport> {
-    return this.exportExposureCsv(orgId, experimentId, user, "exposures.csv", EXPOSURE_CSV_COLUMNS, (entry, exposure) =>
-      exposureCsvRow(entry, exposure),
+    return this.exportExposureCsv(
+      orgId,
+      experimentId,
+      user,
+      "exposures.csv",
+      EXPOSURE_CSV_COLUMNS,
+      (entry, exposure) => exposureCsvRow(entry, exposure),
     );
   }
 
@@ -323,7 +337,14 @@ export class ExperimentResultsService {
     experimentId: string,
     user: AuthenticatedUser,
   ): Promise<ExperimentCsvExport> {
-    return this.exportExposureCsv(orgId, experimentId, user, "fixes.csv", FIX_CSV_COLUMNS, fixCsvRow);
+    return this.exportExposureCsv(
+      orgId,
+      experimentId,
+      user,
+      "fixes.csv",
+      FIX_CSV_COLUMNS,
+      fixCsvRow,
+    );
   }
 
   private async exportExposureCsv(
@@ -339,7 +360,11 @@ export class ExperimentResultsService {
       user.userId,
       MemberRole.USER,
     );
-    const experiment = await findExperimentInOrg(this.experimentRepository, orgId, experimentId);
+    const experiment = await findExperimentInOrg(
+      this.experimentRepository,
+      orgId,
+      experimentId,
+    );
     // Read once over every entry, so each chunk dates fixes as the results page does
     let knownVersions: Promise<KnownVersionsInput[]> | null = null;
 
@@ -372,7 +397,10 @@ export class ExperimentResultsService {
         const byId = new Map(entries.map((entry) => [entry.id, entry]));
         const exposures = deriveExposures({
           ...(await this.exposureRows(experiment, [...byId.keys()])),
-          known_versions: await (knownVersions ??= readKnownVersions(this.rawQuery, experiment.id)),
+          known_versions: await (knownVersions ??= readKnownVersions(
+            this.rawQuery,
+            experiment.id,
+          )),
         });
         const rows = exposures
           .map((exposure) => {
@@ -413,7 +441,11 @@ export class ExperimentResultsService {
       user.userId,
       MemberRole.USER,
     );
-    const experiment = await findExperimentInOrg(this.experimentRepository, orgId, experimentId);
+    const experiment = await findExperimentInOrg(
+      this.experimentRepository,
+      orgId,
+      experimentId,
+    );
 
     const nextChunk = (after: CsvRow | null): Promise<CsvRow[]> => {
       const query = this.runRepository
@@ -425,7 +457,10 @@ export class ExperimentResultsService {
           'summary."runId" = COALESCE(run."sharedFromId", run.id) AND run.status = :done',
           { done: ExperimentRunStatus.DONE },
         )
-        .select([...exportSelect(RUN_CSV_COLUMNS, "summary"), GRID_INDEX_SELECT])
+        .select([
+          ...exportSelect(RUN_CSV_COLUMNS, "summary"),
+          GRID_INDEX_SELECT,
+        ])
         .where('run."experimentId" = :experimentId', {
           experimentId: experiment.id,
         });
@@ -467,7 +502,11 @@ export class ExperimentResultsService {
       user.userId,
       MemberRole.USER,
     );
-    const experiment = await findExperimentInOrg(this.experimentRepository, orgId, experimentId);
+    const experiment = await findExperimentInOrg(
+      this.experimentRepository,
+      orgId,
+      experimentId,
+    );
 
     const nextChunk = async (after: CsvRow | null): Promise<CsvRow[]> => {
       let cursor = after;

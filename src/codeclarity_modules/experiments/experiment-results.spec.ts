@@ -167,7 +167,9 @@ describe("aggregateExperimentResults", () => {
           ],
         }),
       );
-      expect(sweep.map((row) => [row.subset, row.n_projects, row.instances])).toEqual([
+      expect(
+        sweep.map((row) => [row.subset, row.n_projects, row.instances]),
+      ).toEqual([
         ["all", 2, 3],
         ["match_correct_only", 2, 2],
         ["non_withdrawn", 2, 2],
@@ -231,7 +233,11 @@ describe("aggregateExperimentResults", () => {
         summary("r1", 0, { total_dependencies: 0, package_manager: null }),
         summary("r2", 1, { total_dependencies: 10, total_vulnerabilities: 1 }),
         summary("r3", 2, { total_dependencies: 30, total_vulnerabilities: 3 }),
-        summary("r4", 3, { total_dependencies: 20, total_vulnerabilities: 4, package_manager: "YARN" }),
+        summary("r4", 3, {
+          total_dependencies: 20,
+          total_vulnerabilities: 4,
+          package_manager: "YARN",
+        }),
       ],
     });
 
@@ -301,8 +307,18 @@ describe("aggregateExperimentResults", () => {
         { status: "done", error: null, grid_date: null, rows_run_id: "aH" },
         { status: "done", error: null, grid_date: grid, rows_run_id: "b0" },
         { status: "done", error: null, grid_date: null, rows_run_id: "b0" },
-        { status: "failed", error: "ceiling", grid_date: grid, rows_run_id: "c0" },
-        { status: "skipped", error: "gone", grid_date: null, rows_run_id: "cH" },
+        {
+          status: "failed",
+          error: "ceiling",
+          grid_date: grid,
+          rows_run_id: "c0",
+        },
+        {
+          status: "skipped",
+          error: "gone",
+          grid_date: null,
+          rows_run_id: "cH",
+        },
       ],
       summaries: [summary("a0", 0), summary("aH", 0), summary("b0", 1)],
       vulnerabilities: [
@@ -343,8 +359,26 @@ describe("aggregateExperimentResults", () => {
       const { grid_coverage } = aggregateExperimentResults(gridExperiment);
 
       expect(grid_coverage).toEqual([
-        { grid_date: "2026-10-07", runs: 3, done: 2, empty: 0, failed: 1, skipped: 0, pending: 0, mixed_knowledge: false },
-        { grid_date: null, runs: 3, done: 2, empty: 0, failed: 0, skipped: 1, pending: 0, mixed_knowledge: false },
+        {
+          grid_date: "2026-10-07",
+          runs: 3,
+          done: 2,
+          empty: 0,
+          failed: 1,
+          skipped: 0,
+          pending: 0,
+          mixed_knowledge: false,
+        },
+        {
+          grid_date: null,
+          runs: 3,
+          done: 2,
+          empty: 0,
+          failed: 0,
+          skipped: 1,
+          pending: 0,
+          mixed_knowledge: false,
+        },
       ]);
     });
 
@@ -353,27 +387,78 @@ describe("aggregateExperimentResults", () => {
       const { grid_coverage } = aggregateExperimentResults(
         input({
           runs: [
-            { status: "pending", error: null, grid_date: null, rows_run_id: "aH" },
+            {
+              status: "pending",
+              error: null,
+              grid_date: null,
+              rows_run_id: "aH",
+            },
             { status: "done", error: null, grid_date: grid, rows_run_id: "a1" },
-            { status: "done", error: "no_lockfile_yet", grid_date: older, rows_run_id: "a0" },
+            {
+              status: "done",
+              error: "no_lockfile_yet",
+              grid_date: older,
+              rows_run_id: "a0",
+            },
           ],
         }),
       );
 
       expect(grid_coverage).toEqual([
-        { grid_date: "2026-09-07", runs: 1, done: 0, empty: 1, failed: 0, skipped: 0, pending: 0, mixed_knowledge: false },
-        { grid_date: "2026-10-07", runs: 1, done: 1, empty: 0, failed: 0, skipped: 0, pending: 0, mixed_knowledge: false },
-        { grid_date: null, runs: 1, done: 0, empty: 0, failed: 0, skipped: 0, pending: 1, mixed_knowledge: false },
+        {
+          grid_date: "2026-09-07",
+          runs: 1,
+          done: 0,
+          empty: 1,
+          failed: 0,
+          skipped: 0,
+          pending: 0,
+          mixed_knowledge: false,
+        },
+        {
+          grid_date: "2026-10-07",
+          runs: 1,
+          done: 1,
+          empty: 0,
+          failed: 0,
+          skipped: 0,
+          pending: 0,
+          mixed_knowledge: false,
+        },
+        {
+          grid_date: null,
+          runs: 1,
+          done: 0,
+          empty: 0,
+          failed: 0,
+          skipped: 0,
+          pending: 1,
+          mixed_knowledge: false,
+        },
       ]);
     });
 
     it("gives a HEAD-only experiment a single HEAD coverage row", () => {
       const { grid_coverage } = aggregateExperimentResults(
-        input({ runs: [{ status: "done", error: null }, { status: "failed", error: "x" }] }),
+        input({
+          runs: [
+            { status: "done", error: null },
+            { status: "failed", error: "x" },
+          ],
+        }),
       );
 
       expect(grid_coverage).toEqual([
-        { grid_date: null, runs: 2, done: 1, empty: 0, failed: 1, skipped: 0, pending: 0, mixed_knowledge: false },
+        {
+          grid_date: null,
+          runs: 2,
+          done: 1,
+          empty: 0,
+          failed: 1,
+          skipped: 0,
+          pending: 0,
+          mixed_knowledge: false,
+        },
       ]);
     });
   });
@@ -384,17 +469,39 @@ describe("aggregateExperimentResults", () => {
       knowledge_sources: { nvd, osv: "2026-11-01T00:00:00Z" },
       epss_rows,
     });
-    const flags = (results: ReturnType<typeof aggregateExperimentResults>): [string | null, boolean][] =>
+    const flags = (
+      results: ReturnType<typeof aggregateExperimentResults>,
+    ): [string | null, boolean][] =>
       results.grid_coverage.map((row) => [row.grid_date, row.mixed_knowledge]);
 
     it("flags a grid date whose runs were matched against different knowledge", () => {
       const results = aggregateExperimentResults(
         input({
           runs: [
-            { status: "done", error: null, grid_date: grid, knowledge: knowledge("2026-11-01T00:00:00Z") },
-            { status: "done", error: null, grid_date: grid, knowledge: knowledge("2026-11-02T00:00:00Z") },
-            { status: "done", error: null, grid_date: null, knowledge: knowledge("2026-11-02T00:00:00Z") },
-            { status: "done", error: null, grid_date: null, knowledge: knowledge("2026-11-02T00:00:00Z") },
+            {
+              status: "done",
+              error: null,
+              grid_date: grid,
+              knowledge: knowledge("2026-11-01T00:00:00Z"),
+            },
+            {
+              status: "done",
+              error: null,
+              grid_date: grid,
+              knowledge: knowledge("2026-11-02T00:00:00Z"),
+            },
+            {
+              status: "done",
+              error: null,
+              grid_date: null,
+              knowledge: knowledge("2026-11-02T00:00:00Z"),
+            },
+            {
+              status: "done",
+              error: null,
+              grid_date: null,
+              knowledge: knowledge("2026-11-02T00:00:00Z"),
+            },
           ],
         }),
       );
@@ -409,8 +516,16 @@ describe("aggregateExperimentResults", () => {
       const results = aggregateExperimentResults(
         input({
           runs: [
-            { status: "done", error: null, knowledge: knowledge("2026-11-01T00:00:00Z", 10) },
-            { status: "done", error: null, knowledge: knowledge("2026-11-01T00:00:00Z", 11) },
+            {
+              status: "done",
+              error: null,
+              knowledge: knowledge("2026-11-01T00:00:00Z", 10),
+            },
+            {
+              status: "done",
+              error: null,
+              knowledge: knowledge("2026-11-01T00:00:00Z", 11),
+            },
           ],
         }),
       );
@@ -422,8 +537,18 @@ describe("aggregateExperimentResults", () => {
       const results = aggregateExperimentResults(
         input({
           runs: [
-            { status: "done", error: null, grid_date: grid, knowledge: knowledge("2026-11-01T00:00:00Z") },
-            { status: "done", error: "no_lockfile_yet", grid_date: grid, knowledge: null },
+            {
+              status: "done",
+              error: null,
+              grid_date: grid,
+              knowledge: knowledge("2026-11-01T00:00:00Z"),
+            },
+            {
+              status: "done",
+              error: "no_lockfile_yet",
+              grid_date: grid,
+              knowledge: null,
+            },
             { status: "failed", error: "ceiling", grid_date: grid },
             { status: "done", error: null, grid_date: null },
           ],
@@ -448,7 +573,12 @@ describe("aggregateExperimentResults", () => {
           runs: [
             { status: "done", error: null, grid_date: jan, rows_run_id: "a0" },
             { status: "done", error: null, grid_date: feb, rows_run_id: "a1" },
-            { status: "failed", error: "boom", grid_date: mar, rows_run_id: "a2" },
+            {
+              status: "failed",
+              error: "boom",
+              grid_date: mar,
+              rows_run_id: "a2",
+            },
             { status: "done", error: null, grid_date: null, rows_run_id: "aH" },
             { status: "done", error: null, grid_date: jan, rows_run_id: "b0" },
             { status: "done", error: null, grid_date: feb, rows_run_id: "b0" },
@@ -460,17 +590,50 @@ describe("aggregateExperimentResults", () => {
             vuln("a0", "lodash", midGrid),
             vuln("a1", "lodash", midGrid),
             vuln("aH", "lodash", midGrid),
-            vuln("b0", "minimist", { published_date: "2022-04-06T17:15:08.650" }),
+            vuln("b0", "minimist", {
+              published_date: "2022-04-06T17:15:08.650",
+            }),
           ],
-          provenance: { ...input().provenance, ended_on: new Date("2025-04-02T09:00:00Z") },
+          provenance: {
+            ...input().provenance,
+            ended_on: new Date("2025-04-02T09:00:00Z"),
+          },
         }),
       );
 
       expect(results.load_over_time).toEqual([
-        { grid_date: "2025-01-01", as_of_date: "2025-01-01", projects: 2, hindsight: 2, as_of: 1, undated: 0 },
-        { grid_date: "2025-02-01", as_of_date: "2025-02-01", projects: 2, hindsight: 2, as_of: 1, undated: 0 },
-        { grid_date: "2025-03-01", as_of_date: "2025-03-01", projects: 1, hindsight: 1, as_of: 1, undated: 0 },
-        { grid_date: null, as_of_date: "2025-04-02", projects: 2, hindsight: 2, as_of: 2, undated: 0 },
+        {
+          grid_date: "2025-01-01",
+          as_of_date: "2025-01-01",
+          projects: 2,
+          hindsight: 2,
+          as_of: 1,
+          undated: 0,
+        },
+        {
+          grid_date: "2025-02-01",
+          as_of_date: "2025-02-01",
+          projects: 2,
+          hindsight: 2,
+          as_of: 1,
+          undated: 0,
+        },
+        {
+          grid_date: "2025-03-01",
+          as_of_date: "2025-03-01",
+          projects: 1,
+          hindsight: 1,
+          as_of: 1,
+          undated: 0,
+        },
+        {
+          grid_date: null,
+          as_of_date: "2025-04-02",
+          projects: 2,
+          hindsight: 2,
+          as_of: 2,
+          undated: 0,
+        },
       ]);
     });
   });

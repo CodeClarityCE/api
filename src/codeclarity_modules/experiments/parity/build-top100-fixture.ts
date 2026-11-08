@@ -58,7 +58,10 @@ function mapValues(
 }
 
 /** The Result envelope around a trimmed plugin payload. */
-function envelope(raw: unknown, trim: (payload: unknown) => JsonObject): JsonObject {
+function envelope(
+  raw: unknown,
+  trim: (payload: unknown) => JsonObject,
+): JsonObject {
   return { result: trim(isObject(raw) ? raw["result"] : undefined) };
 }
 
@@ -89,17 +92,17 @@ function trimSbom(payload: unknown): JsonObject {
     analysis_info: pick(info, ["package_manager", "status"]),
     workspaces: mapValues(workspaces, (ws) => ({
       dependencies: Object.fromEntries(
-        Object.values(objectOrEmpty(isObject(ws) ? ws["dependencies"] : undefined)).map(
-          (versions, i) => [
-            i.toString(36),
-            Object.fromEntries(
-              Object.values(objectOrEmpty(versions)).map((flags, j) => [
-                j.toString(36),
-                trueFlags(flags),
-              ]),
-            ),
-          ],
-        ),
+        Object.values(
+          objectOrEmpty(isObject(ws) ? ws["dependencies"] : undefined),
+        ).map((versions, i) => [
+          i.toString(36),
+          Object.fromEntries(
+            Object.values(objectOrEmpty(versions)).map((flags, j) => [
+              j.toString(36),
+              trueFlags(flags),
+            ]),
+          ),
+        ]),
       ),
     })),
   };
@@ -148,7 +151,9 @@ function trimVulns(payload: unknown): JsonObject {
     workspaces: mapValues(workspaces, (ws) => {
       const instances = isObject(ws) ? ws["Vulnerabilities"] : undefined;
       return {
-        Vulnerabilities: Array.isArray(instances) ? instances.map(trimInstance) : [],
+        Vulnerabilities: Array.isArray(instances)
+          ? instances.map(trimInstance)
+          : [],
       };
     }),
   };
@@ -185,7 +190,9 @@ export function headDoneRows(manifest: string): HeadRun[] {
 }
 
 async function main(studyDir: string, outPath: string): Promise<void> {
-  const rows = headDoneRows(readFileSync(join(studyDir, "manifest.jsonl"), "utf8"));
+  const rows = headDoneRows(
+    readFileSync(join(studyDir, "manifest.jsonl"), "utf8"),
+  );
   const compress = createBrotliCompress({
     params: {
       [constants.BROTLI_PARAM_QUALITY]: 11,
@@ -210,7 +217,8 @@ async function main(studyDir: string, outPath: string): Promise<void> {
       sbom,
       vulns,
     };
-    if (!compress.write(`${JSON.stringify(line)}\n`)) await once(compress, "drain");
+    if (!compress.write(`${JSON.stringify(line)}\n`))
+      await once(compress, "drain");
   }
   compress.end();
   await once(out, "finish");
@@ -220,7 +228,9 @@ async function main(studyDir: string, outPath: string): Promise<void> {
 if (require.main === module) {
   const [studyDir, outPath] = process.argv.slice(2);
   if (!studyDir || !outPath) {
-    process.stderr.write("usage: build-top100-fixture.ts <study dir> <out .jsonl.br>\n");
+    process.stderr.write(
+      "usage: build-top100-fixture.ts <study dir> <out .jsonl.br>\n",
+    );
     process.exit(2);
   }
   main(studyDir, outPath).catch((err: unknown) => {

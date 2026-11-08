@@ -1,6 +1,14 @@
 /** Instances per grid date in the hindsight and as-of views (ADR 0004). Pure. */
-import { gridDay, groupByGridDate, instancesByRun, publishedDay } from "./experiment-grid";
-import type { ResultsRunInput, ResultsVulnerabilityInput } from "./experiment-results";
+import {
+  gridDay,
+  groupByGridDate,
+  instancesByRun,
+  publishedDay,
+} from "./experiment-grid";
+import type {
+  ResultsRunInput,
+  ResultsVulnerabilityInput,
+} from "./experiment-results";
 import { NO_LOCKFILE_YET } from "./experiment-row-copy";
 
 /** Instance load of one grid date, summed over the dataset's entries. */
@@ -32,7 +40,9 @@ export interface LoadInput {
  * nothing; empty ones count as projects with no load.
  */
 export function loadOverTime(input: LoadInput): LoadRow[] {
-  const byRun = instancesByRun(input.vulnerabilities.filter((v) => v.affected_dependency !== null));
+  const byRun = instancesByRun(
+    input.vulnerabilities.filter((v) => v.affected_dependency !== null),
+  );
   const headDay = gridDay(input.head_cutoff);
   return groupByGridDate(input.runs).map(({ grid_date, runs }) => {
     const row: LoadRow = {

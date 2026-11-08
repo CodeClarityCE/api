@@ -31,7 +31,11 @@ export function isVulnerableVersion(
   if (versions.universal) return true;
   const v = valid(version, { loose: true });
   if (v === null) return false;
-  if (versions.exact.some((exact) => valid(exact, { loose: true }) && eq(v, exact, { loose: true }))) {
+  if (
+    versions.exact.some(
+      (exact) => valid(exact, { loose: true }) && eq(v, exact, { loose: true }),
+    )
+  ) {
     return true;
   }
   return versions.ranges.some(({ introduced, fixed }) => {

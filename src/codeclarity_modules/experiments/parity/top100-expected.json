@@ -24,46 +24,16 @@
     "pkgs_clear_80": 35,
     "pkgs_clear_90": 61,
     "top_packages": [
-      [
-        "brace-expansion",
-        75
-      ],
-      [
-        "nanoid",
-        60
-      ],
-      [
-        "js-yaml",
-        54
-      ],
-      [
-        "negotiator",
-        48
-      ],
-      [
-        "fast-uri",
-        43
-      ],
-      [
-        "esbuild",
-        32
-      ],
-      [
-        "postcss",
-        31
-      ],
-      [
-        "uuid",
-        31
-      ],
-      [
-        "ajv",
-        30
-      ],
-      [
-        "clone",
-        30
-      ]
+      ["brace-expansion", 75],
+      ["nanoid", 60],
+      ["js-yaml", 54],
+      ["negotiator", 48],
+      ["fast-uri", 43],
+      ["esbuild", 32],
+      ["postcss", 31],
+      ["uuid", 31],
+      ["ajv", 30],
+      ["clone", 30]
     ],
     "high_critical_share_of_classed": 0.5363636363636364
   },

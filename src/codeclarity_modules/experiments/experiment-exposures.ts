@@ -2,7 +2,12 @@
  * Exposures, introductions and fixes, derived on read from snapshot runs,
  * instances and probe outcome rows (ADR 0001). Pure.
  */
-import { DAY_MS, gridDay, instancesByRun, publishedDay } from "./experiment-grid";
+import {
+  DAY_MS,
+  gridDay,
+  instancesByRun,
+  publishedDay,
+} from "./experiment-grid";
 import {
   type DatingTask,
   type ProbeDating,
@@ -104,7 +109,13 @@ function walk(observations: readonly Observation[]): Span[] {
       return;
     }
     if (observation === "present") {
-      current ??= { from: lastAbsent, startAt: i, lastPresent: i, to: null, gaps: 0 };
+      current ??= {
+        from: lastAbsent,
+        startAt: i,
+        lastPresent: i,
+        to: null,
+        gaps: 0,
+      };
       current.lastPresent = i;
       return;
     }
@@ -134,7 +145,10 @@ function isEmpty(run: ResultsRunInput): boolean {
 }
 
 /** The snapshot-precision event: dated to the later snapshot's commit. */
-function snapshotEvent(before: ResultsRunInput, after: ResultsRunInput): ExposureEvent {
+function snapshotEvent(
+  before: ResultsRunInput,
+  after: ResultsRunInput,
+): ExposureEvent {
   return {
     date: after.committed_at ? gridDay(after.committed_at) : gridLabel(after),
     commit_hash: after.commit_hash ?? null,
@@ -147,9 +161,16 @@ function snapshotEvent(before: ResultsRunInput, after: ResultsRunInput): Exposur
 }
 
 /** The event as probes dated it: at the located commit when found. */
-function probedEvent(event: ExposureEvent, dating: ProbeDating | null): ExposureEvent {
+function probedEvent(
+  event: ExposureEvent,
+  dating: ProbeDating | null,
+): ExposureEvent {
   if (!dating) return event;
-  const dated = { ...event, probe_outcome: dating.outcome, probe_reason: dating.reason };
+  const dated = {
+    ...event,
+    probe_outcome: dating.outcome,
+    probe_reason: dating.reason,
+  };
   if (!dating.commit) return dated;
   return {
     ...dated,
@@ -164,7 +185,8 @@ function byKey(a: string, b: string): number {
   return a > b ? 1 : 0;
 }
 
-const keyOf = (vulnerabilityId: string, pkg: string): string => `${vulnerabilityId}\u0000${pkg}`;
+const keyOf = (vulnerabilityId: string, pkg: string): string =>
+  `${vulnerabilityId}\u0000${pkg}`;
 
 /**
  * Every exposure, by entry, vulnerability, package and start. Failed snapshots
@@ -177,11 +199,19 @@ export function deriveExposures(
   const byRun = instancesByRun(input.vulnerabilities);
   const packagesAt = new Map<string, ProbePackage[]>();
   for (const probe of input.probes ?? []) {
-    packagesAt.set(`${probe.dataset_entry_id}\u0000${probe.commit_hash}`, probe.packages);
+    packagesAt.set(
+      `${probe.dataset_entry_id}\u0000${probe.commit_hash}`,
+      probe.packages,
+    );
   }
   const runsByEntry = new Map<string, ResultsRunInput[]>();
   for (const run of input.runs) {
-    if (!run.dataset_entry_id || run.grid_index === undefined || !run.rows_run_id) continue;
+    if (
+      !run.dataset_entry_id ||
+      run.grid_index === undefined ||
+      !run.rows_run_id
+    )
+      continue;
     const list = runsByEntry.get(run.dataset_entry_id) ?? [];
     list.push(run);
     runsByEntry.set(run.dataset_entry_id, list);
@@ -191,7 +221,9 @@ export function deriveExposures(
   for (const [entry, unsorted] of runsByEntry) {
     const runs = [...unsorted].sort((a, b) => a.grid_index! - b.grid_index!);
     // Only empty snapshots before the first lockfile count as absent; later ones are gaps
-    const firstLockfile = runs.findIndex((run) => run.status === "done" && !isEmpty(run));
+    const firstLockfile = runs.findIndex(
+      (run) => run.status === "done" && !isEmpty(run),
+    );
     const lostLockfile = (i: number): boolean =>
       isEmpty(runs[i]!) && firstLockfile !== -1 && i > firstLockfile;
     // Instances of a done snapshot by (vulnerability, package)
@@ -223,7 +255,11 @@ export function deriveExposures(
         const latest = hits[span.lastPresent]!.get(key)![0]!;
         const published = publishedDay(latest.published_date);
         let introduction: Introduction | null = null;
-        const task = (kind: DatingTask["kind"], before: number, after: number): DatingTask => ({
+        const task = (
+          kind: DatingTask["kind"],
+          before: number,
+          after: number,
+        ): DatingTask => ({
           entry,
           kind,
           vulnerability_id: vulnerabilityId,
@@ -236,7 +272,10 @@ export function deriveExposures(
             snapshotEvent(runs[span.from]!, runs[span.startAt]!),
             search.date(task("introduction", span.from, span.startAt)),
           );
-          introduction = { ...event, residence_days: daysBetween(event.date, published) };
+          introduction = {
+            ...event,
+            residence_days: daysBetween(event.date, published),
+          };
         }
         let fix: Fix | null = null;
         if (span.to !== null) {
@@ -249,8 +288,17 @@ export function deriveExposures(
             ...event,
             kind: fixKind(
               located?.packages_before
-                ? located.packages_before.some((p) => p.direct && search.isPresent({ vulnerability_id: vulnerabilityId, pkg }, [p]))
-                : hits[span.lastPresent]!.get(key)!.some((v) => v.direct_dependency === true),
+                ? located.packages_before.some(
+                    (p) =>
+                      p.direct &&
+                      search.isPresent(
+                        { vulnerability_id: vulnerabilityId, pkg },
+                        [p],
+                      ),
+                  )
+                : hits[span.lastPresent]!.get(key)!.some(
+                    (v) => v.direct_dependency === true,
+                  ),
               located?.packages_after
                 ? located.packages_after.some((p) => p.name === pkg)
                 : resolvesAt(entry, pkg, after, packagesAt),
@@ -285,7 +333,9 @@ function resolvesAt(
   packagesAt: ReadonlyMap<string, ProbePackage[]>,
 ): boolean | null {
   if (isEmpty(run)) return false;
-  const packages = run.commit_hash ? packagesAt.get(`${entry}\u0000${run.commit_hash}`) : undefined;
+  const packages = run.commit_hash
+    ? packagesAt.get(`${entry}\u0000${run.commit_hash}`)
+    : undefined;
   return packages ? packages.some((p) => p.name === pkg) : null;
 }
 
@@ -293,7 +343,10 @@ function resolvesAt(
  * Upgraded if the package still resolves after the fix, else removed directly
  * or transitively by how it was depended on before. Null when unknown.
  */
-function fixKind(directBefore: boolean, resolvesAfter: boolean | null): FixKind | null {
+function fixKind(
+  directBefore: boolean,
+  resolvesAfter: boolean | null,
+): FixKind | null {
   if (resolvesAfter === null) return null;
   if (resolvesAfter) return "upgraded";
   return directBefore ? "removed_direct" : "removed_transitive";
@@ -305,9 +358,14 @@ function fixKind(directBefore: boolean, resolvesAfter: boolean | null): FixKind 
  */
 export function planProbes(input: ExposuresInput): ProbePlan {
   const unfinished = new Set(
-    input.runs.filter((run) => run.status === "pending").map((run) => run.dataset_entry_id),
+    input.runs
+      .filter((run) => run.status === "pending")
+      .map((run) => run.dataset_entry_id),
   );
-  const ready = { ...input, runs: input.runs.filter((run) => !unfinished.has(run.dataset_entry_id)) };
+  const ready = {
+    ...input,
+    runs: input.runs.filter((run) => !unfinished.has(run.dataset_entry_id)),
+  };
   const search = new ProbeSearch(ready);
   deriveExposures(ready, search);
   return probePlan(search);

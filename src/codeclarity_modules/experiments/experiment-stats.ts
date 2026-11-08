@@ -79,7 +79,7 @@ export function packagesToClear(
 
 /** Ranks from 1 in input order; tied values share the mean of their ranks. */
 export function averageRanks(values: readonly number[]): number[] {
-  const order = values.map((_, i) => i).sort((a, b) => (values[a]!) - (values[b]!));
+  const order = values.map((_, i) => i).sort((a, b) => values[a]! - values[b]!);
   const ranks = new Array<number>(values.length);
   let start = 0;
   while (start < order.length) {
@@ -105,8 +105,8 @@ function pearson(x: readonly number[], y: readonly number[]): number {
   let sxx = 0;
   let syy = 0;
   for (let i = 0; i < n; i++) {
-    const dx = (x[i]!) - meanX;
-    const dy = (y[i]!) - meanY;
+    const dx = x[i]! - meanX;
+    const dy = y[i]! - meanY;
     sxy += dx * dy;
     sxx += dx * dx;
     syy += dy * dy;
@@ -129,7 +129,7 @@ function lnGamma(z: number): number {
   const shifted = z - 1;
   let series = LANCZOS[0]!;
   for (let i = 1; i < LANCZOS.length; i++) {
-    series += (LANCZOS[i]!) / (shifted + i);
+    series += LANCZOS[i]! / (shifted + i);
   }
   const t = shifted + 7.5;
   return (
@@ -260,7 +260,13 @@ export function kaplanMeier(
       else censored++;
     }
     survival *= 1 - eventCount / atRisk;
-    steps.push({ time, survival, at_risk: atRisk, events: eventCount, censored });
+    steps.push({
+      time,
+      survival,
+      at_risk: atRisk,
+      events: eventCount,
+      censored,
+    });
   }
   return steps;
 }

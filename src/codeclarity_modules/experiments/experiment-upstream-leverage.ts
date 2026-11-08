@@ -3,8 +3,15 @@
  * interval, in the hindsight view. Pure.
  */
 import type { Exposure, FixKind } from "./experiment-exposures";
-import { type GridGroup, groupByGridDate, instancesByRun } from "./experiment-grid";
-import type { ResultsRunInput, ResultsVulnerabilityInput } from "./experiment-results";
+import {
+  type GridGroup,
+  groupByGridDate,
+  instancesByRun,
+} from "./experiment-grid";
+import type {
+  ResultsRunInput,
+  ResultsVulnerabilityInput,
+} from "./experiment-results";
 import { packagesToClear } from "./experiment-stats";
 
 /** Instance concentration at one snapshot of the grid. */
@@ -60,7 +67,10 @@ function packagesToClearRows(
     for (const run of done) {
       for (const v of byRun.get(run.rows_run_id!) ?? []) {
         if (v.affected_dependency === null) continue;
-        counts.set(v.affected_dependency, (counts.get(v.affected_dependency) ?? 0) + 1);
+        counts.set(
+          v.affected_dependency,
+          (counts.get(v.affected_dependency) ?? 0) + 1,
+        );
       }
     }
     const values = [...counts.values()];
@@ -76,8 +86,11 @@ function packagesToClearRows(
   });
 }
 
-function kindCounts(fixes: readonly NonNullable<Exposure["fix"]>[]): FixKindCounts {
-  const count = (kind: FixKind | null): number => fixes.filter((fix) => fix.kind === kind).length;
+function kindCounts(
+  fixes: readonly NonNullable<Exposure["fix"]>[],
+): FixKindCounts {
+  const count = (kind: FixKind | null): number =>
+    fixes.filter((fix) => fix.kind === kind).length;
   const unknown = count(null);
   const known = fixes.length - unknown;
   const transitive = count("removed_transitive");
@@ -89,7 +102,8 @@ function kindCounts(fixes: readonly NonNullable<Exposure["fix"]>[]): FixKindCoun
     unknown,
     removed_transitive_share: known ? transitive / known : null,
     snapshot_precision_share: fixes.length
-      ? fixes.filter((fix) => fix.precision === "snapshot").length / fixes.length
+      ? fixes.filter((fix) => fix.precision === "snapshot").length /
+        fixes.length
       : null,
   };
 }

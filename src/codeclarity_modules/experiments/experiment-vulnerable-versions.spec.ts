@@ -20,11 +20,17 @@ describe("isVulnerableVersion", () => {
 
   it("matches exact versions, and every version when the advisory is universal", () => {
     expect(isVulnerableVersion("4.17.22-beta.1", lodash)).toBe(true);
-    expect(isVulnerableVersion("0.0.1", { ranges: [], exact: [], universal: true })).toBe(true);
+    expect(
+      isVulnerableVersion("0.0.1", { ranges: [], exact: [], universal: true }),
+    ).toBe(true);
   });
 
   it("ignores a range with neither bound, and versions that do not parse", () => {
-    const empty = { ranges: [{ introduced: null, fixed: null }], exact: [], universal: false };
+    const empty = {
+      ranges: [{ introduced: null, fixed: null }],
+      exact: [],
+      universal: false,
+    };
     expect(isVulnerableVersion("1.0.0", empty)).toBe(false);
     expect(isVulnerableVersion("github:lodash/lodash", lodash)).toBe(false);
   });

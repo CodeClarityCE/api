@@ -89,7 +89,9 @@ export function publishedDay(value: string | null | undefined): string | null {
     if (!validDay(Number(day[1]), Number(day[2]), Number(day[3]))) return null;
     if (!OFFSET_SUFFIX.test(text)) return day[0];
     // Shift by the offset to land on the UTC day
-    const parsed = Date.parse(text.replace(" ", "T").replace(/([+-]\d{2})(\d{2})$/, "$1:$2"));
+    const parsed = Date.parse(
+      text.replace(" ", "T").replace(/([+-]\d{2})(\d{2})$/, "$1:$2"),
+    );
     return Number.isNaN(parsed) ? null : gridDay(new Date(parsed));
   }
   // Other formats, such as RFC 2822, as the JS date parser reads them
@@ -109,7 +111,9 @@ export interface GridGroup<R> {
 }
 
 /** Runs grouped by grid date, oldest first, HEAD last. */
-export function groupByGridDate<R extends { grid_date?: Date | null }>(runs: readonly R[]): GridGroup<R>[] {
+export function groupByGridDate<R extends { grid_date?: Date | null }>(
+  runs: readonly R[],
+): GridGroup<R>[] {
   const groups = new Map<string, GridGroup<R>>();
   for (const run of runs) {
     const date = isHead(run) ? null : gridDay(run.grid_date!);
@@ -122,11 +126,15 @@ export function groupByGridDate<R extends { grid_date?: Date | null }>(runs: rea
     group.runs.push(run);
   }
   // YYYY-MM-DD sorts by date and "HEAD" after any digit
-  return [...groups.entries()].sort(([a], [b]) => (a < b ? -1 : Number(a > b))).map(([, group]) => group);
+  return [...groups.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : Number(a > b)))
+    .map(([, group]) => group);
 }
 
 /** Instances by the run whose rows they are (a run's rows_run_id). */
-export function instancesByRun<V extends { run_id: string }>(instances: readonly V[]): Map<string, V[]> {
+export function instancesByRun<V extends { run_id: string }>(
+  instances: readonly V[],
+): Map<string, V[]> {
   const byRun = new Map<string, V[]>();
   for (const v of instances) {
     const list = byRun.get(v.run_id) ?? [];

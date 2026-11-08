@@ -88,7 +88,9 @@ describe("mapRunRows", () => {
             "4.17.21": dep({ Direct: true, Prod: true }),
             "3.10.1": dep({ Transitive: true, Dev: true }),
           },
-          react: { "18.3.1": dep({ Direct: true, Transitive: true, Prod: true }) },
+          react: {
+            "18.3.1": dep({ Direct: true, Transitive: true, Prod: true }),
+          },
         },
         "tools/cli": {
           lodash: { "4.17.21": dep({ Direct: true, Dev: true, Prod: true }) },
@@ -115,7 +117,11 @@ describe("mapRunRows", () => {
         ".": [instance()],
         "tests/kit": [
           instance({ AffectedVersion: "4.17.11" }),
-          instance({ VulnerabilityId: "GHSA-xxxx", AffectedDependency: "minimist", AffectedVersion: "1.2.5" }),
+          instance({
+            VulnerabilityId: "GHSA-xxxx",
+            AffectedDependency: "minimist",
+            AffectedVersion: "1.2.5",
+          }),
         ],
       }),
     );
@@ -141,7 +147,10 @@ describe("mapRunRows", () => {
         withdrawn_date: null,
         vulnerable_versions: null,
       },
-      expect.objectContaining({ workspace: "tests/kit", affected_version: "4.17.11" }),
+      expect.objectContaining({
+        workspace: "tests/kit",
+        affected_version: "4.17.11",
+      }),
       expect.objectContaining({
         workspace: "tests/kit",
         vulnerability_id: "GHSA-xxxx",
@@ -155,7 +164,12 @@ describe("mapRunRows", () => {
   });
 
   it("keeps the affected versions of every source that matched, so other versions can be tested later", () => {
-    const semver = (Major: number, Minor: number, Patch: number, PreReleaseTag = ""): object => ({
+    const semver = (
+      Major: number,
+      Minor: number,
+      Patch: number,
+      PreReleaseTag = "",
+    ): object => ({
       Major,
       Minor,
       Patch,
@@ -166,7 +180,9 @@ describe("mapRunRows", () => {
       Stability: "",
     });
     const zero = semver(0, 0, 0);
-    const noUniversal = { CPEInfo: { criteria: "", criteriaDict: { part: "" }, vulnerable: false } };
+    const noUniversal = {
+      CPEInfo: { criteria: "", criteriaDict: { part: "" }, vulnerable: false },
+    };
     const rows = mapRunRows(
       EMPTY_SBOM,
       vulnFinder({
@@ -175,7 +191,15 @@ describe("mapRunRows", () => {
             OSVMatch: {
               Vulnerable: true,
               Vulnerability: { published: "2021-02-15T13:15:00Z" },
-              AffectedInfo: [{ Exact: null, Ranges: [{ IntroducedSemver: zero, FixedSemver: semver(4, 17, 21) }], Universal: noUniversal }],
+              AffectedInfo: [
+                {
+                  Exact: null,
+                  Ranges: [
+                    { IntroducedSemver: zero, FixedSemver: semver(4, 17, 21) },
+                  ],
+                  Universal: noUniversal,
+                },
+              ],
             },
             NVDMatch: {
               Vulnerable: true,
@@ -183,7 +207,9 @@ describe("mapRunRows", () => {
               AffectedInfo: [
                 {
                   Exact: [{ VersionString: "4.17.22-beta.1" }],
-                  Ranges: [{ IntroducedSemver: semver(5, 0, 0), FixedSemver: zero }],
+                  Ranges: [
+                    { IntroducedSemver: semver(5, 0, 0), FixedSemver: zero },
+                  ],
                   Universal: noUniversal,
                 },
               ],
@@ -191,14 +217,28 @@ describe("mapRunRows", () => {
             GCVEMatch: {
               Vulnerable: false,
               Vulnerability: null,
-              AffectedInfo: [{ Exact: null, Ranges: [{ IntroducedSemver: zero, FixedSemver: semver(9, 0, 0) }], Universal: noUniversal }],
+              AffectedInfo: [
+                {
+                  Exact: null,
+                  Ranges: [
+                    { IntroducedSemver: zero, FixedSemver: semver(9, 0, 0) },
+                  ],
+                  Universal: noUniversal,
+                },
+              ],
             },
           }),
           instance({
             OSVMatch: {
               Vulnerable: true,
               Vulnerability: null,
-              AffectedInfo: [{ Exact: null, Ranges: null, Universal: { CPEInfo: { criteria: "cpe:2.3:a:x:lodash:*" } } }],
+              AffectedInfo: [
+                {
+                  Exact: null,
+                  Ranges: null,
+                  Universal: { CPEInfo: { criteria: "cpe:2.3:a:x:lodash:*" } },
+                },
+              ],
             },
           }),
         ],
@@ -321,7 +361,9 @@ describe("mapRunRows", () => {
   it("leaves EPSS empty when the instance has none", () => {
     const rows = mapRunRows(
       EMPTY_SBOM,
-      vulnFinder({ ".": [instance({ EPSS: undefined }), instance({ EPSS: null })] }),
+      vulnFinder({
+        ".": [instance({ EPSS: undefined }), instance({ EPSS: null })],
+      }),
     );
 
     for (const row of rows.vulnerabilities) {
@@ -338,7 +380,7 @@ describe("isUsablePluginResult", () => {
 
   it.each([
     ["missing", null],
-    ["not an object", "{\"workspaces\": {}}"],
+    ["not an object", '{"workspaces": {}}'],
     ["without workspaces", { analysis_info: { status: "success" } }],
     [
       "from a failed plugin",

@@ -111,7 +111,10 @@ function firstString(...values: unknown[]): string | null {
   return null;
 }
 
-function instanceRow(workspace: string, instance: JsonObject): VulnerabilityInstanceRow {
+function instanceRow(
+  workspace: string,
+  instance: JsonObject,
+): VulnerabilityInstanceRow {
   const severity = objectOrEmpty(instance["Severity"]);
   const epss = objectOrEmpty(instance["EPSS"]);
   const conflict = objectOrEmpty(instance["Conflict"]);
@@ -154,7 +157,9 @@ function instanceRow(workspace: string, instance: JsonObject): VulnerabilityInst
 /** A vuln-finder Semver as a version string, null for the zero (unset) one. */
 function semverString(value: unknown): string | null {
   if (!isObject(value)) return null;
-  const [major, minor, patch] = ["Major", "Minor", "Patch"].map((key) => numberOrNull(value[key]) ?? 0);
+  const [major, minor, patch] = ["Major", "Minor", "Patch"].map(
+    (key) => numberOrNull(value[key]) ?? 0,
+  );
   const pre = stringOrNull(value["PreReleaseTag"]);
   if (!major && !minor && !patch && pre === null) return null;
   return `${major}.${minor}.${patch}${pre === null ? "" : `-${pre}`}`;
@@ -174,17 +179,27 @@ function vulnerableVersions(instance: JsonObject): VulnerableVersions | null {
     .map((key) => objectOrEmpty(instance[key]))
     .filter((match) => match["Vulnerable"] === true);
   if (matches.length === 0) return null;
-  const versions: VulnerableVersions = { ranges: [], exact: [], universal: false };
+  const versions: VulnerableVersions = {
+    ranges: [],
+    exact: [],
+    universal: false,
+  };
   for (const match of matches) {
-    const affected = Array.isArray(match["AffectedInfo"]) ? match["AffectedInfo"] : [];
+    const affected = Array.isArray(match["AffectedInfo"])
+      ? match["AffectedInfo"]
+      : [];
     for (const info of affected.filter(isObject)) {
-      for (const range of Array.isArray(info["Ranges"]) ? info["Ranges"].filter(isObject) : []) {
+      for (const range of Array.isArray(info["Ranges"])
+        ? info["Ranges"].filter(isObject)
+        : []) {
         versions.ranges.push({
           introduced: semverString(range["IntroducedSemver"]),
           fixed: semverString(range["FixedSemver"]),
         });
       }
-      for (const exact of Array.isArray(info["Exact"]) ? info["Exact"].filter(isObject) : []) {
+      for (const exact of Array.isArray(info["Exact"])
+        ? info["Exact"].filter(isObject)
+        : []) {
         const version = stringOrNull(exact["VersionString"]);
         if (version !== null) versions.exact.push(version);
       }
@@ -325,10 +340,17 @@ export function mapRunRows(sbom: unknown, vulns: unknown): RunRows {
 export function mapProbePackages(sbom: unknown): ProbePackage[] {
   const packages: ProbePackage[] = [];
   for (const [workspace, ws] of workspaces(sbom)) {
-    for (const [name, versions] of Object.entries(objectOrEmpty(ws["dependencies"]))) {
+    for (const [name, versions] of Object.entries(
+      objectOrEmpty(ws["dependencies"]),
+    )) {
       for (const [version, flags] of Object.entries(objectOrEmpty(versions))) {
         if (!isObject(flags)) continue;
-        packages.push({ workspace, name, version, direct: flags["Direct"] === true });
+        packages.push({
+          workspace,
+          name,
+          version,
+          direct: flags["Direct"] === true,
+        });
       }
     }
   }

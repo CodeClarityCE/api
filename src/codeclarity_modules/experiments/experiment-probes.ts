@@ -2,8 +2,15 @@
  * Fix probes (ADR 0005): date a change to a commit by halving over the
  * lockfile commits between two snapshots. Used on read and by the runner. Pure.
  */
-import { type AnalysisBudgetUsage, BUDGET_SPENT_REASON, isBudgetSpent } from "./experiment-budget";
-import type { ResultsRunInput, ResultsVulnerabilityInput } from "./experiment-results";
+import {
+  type AnalysisBudgetUsage,
+  BUDGET_SPENT_REASON,
+  isBudgetSpent,
+} from "./experiment-budget";
+import type {
+  ResultsRunInput,
+  ResultsVulnerabilityInput,
+} from "./experiment-results";
 import type { ProbePackage } from "./experiment-row-copy";
 import { isVulnerableVersion } from "./experiment-vulnerable-versions";
 
@@ -41,7 +48,10 @@ export interface ResultsProbeAnalysisInput {
 /** What an instance says about which versions of a package are vulnerable. */
 export type KnownVersionsInput = Pick<
   ResultsVulnerabilityInput,
-  "vulnerability_id" | "affected_dependency" | "affected_version" | "vulnerable_versions"
+  | "vulnerability_id"
+  | "affected_dependency"
+  | "affected_version"
+  | "vulnerable_versions"
 >;
 
 /** Rows the probe search reads, besides the snapshot runs and instances. */
@@ -50,7 +60,11 @@ export interface ProbeRows {
   vulnerabilities: readonly ResultsVulnerabilityInput[];
   /** Vulnerable versions across every entry; defaults to `vulnerabilities` */
   known_versions?: readonly KnownVersionsInput[];
-  probes?: readonly { dataset_entry_id: string; commit_hash: string; packages: ProbePackage[] }[];
+  probes?: readonly {
+    dataset_entry_id: string;
+    commit_hash: string;
+    packages: ProbePackage[];
+  }[];
   probe_intervals?: readonly ResultsProbeIntervalInput[];
   probe_analyses?: readonly ResultsProbeAnalysisInput[];
   /** Once spent, a search that needs another probe ends as budget spent */
@@ -91,8 +105,10 @@ export interface IntervalRequest {
   to: ResultsRunInput;
 }
 
-export const AMBIGUOUS_REASON = "a known commit in the interval contradicts a single boundary";
-export const NO_CANDIDATES_REASON = "no lockfile-touching commit in the interval";
+export const AMBIGUOUS_REASON =
+  "a known commit in the interval contradicts a single boundary";
+export const NO_CANDIDATES_REASON =
+  "no lockfile-touching commit in the interval";
 
 type CommitState =
   | { state: "present" | "absent"; packages: ProbePackage[] }
@@ -117,7 +133,15 @@ export class ProbeSearch {
   private readonly failedAt = new Map<string, string>();
   private readonly pendingAt = new Set<string>();
   private readonly intervals = new Map<string, ResultsProbeIntervalInput>();
-  private readonly versions = new Map<string, { ranges: NonNullable<ResultsVulnerabilityInput["vulnerable_versions"]> | null; seen: Set<string> }>();
+  private readonly versions = new Map<
+    string,
+    {
+      ranges: NonNullable<
+        ResultsVulnerabilityInput["vulnerable_versions"]
+      > | null;
+      seen: Set<string>;
+    }
+  >();
 
   /** Requests in the order tasks were searched */
   readonly probeRequests: { task: DatingTask; commit: ProbeCandidate }[] = [];
@@ -128,25 +152,42 @@ export class ProbeSearch {
   constructor(rows: ProbeRows) {
     this.budgetSpent = isBudgetSpent(rows.budget);
     for (const probe of rows.probes ?? []) {
-      this.packagesAt.set(`${probe.dataset_entry_id}${SEP}${probe.commit_hash}`, probe.packages);
+      this.packagesAt.set(
+        `${probe.dataset_entry_id}${SEP}${probe.commit_hash}`,
+        probe.packages,
+      );
     }
     for (const run of rows.runs) {
       if (run.status === "failed" && run.dataset_entry_id && run.commit_hash) {
-        this.failedAt.set(`${run.dataset_entry_id}${SEP}${run.commit_hash}`, run.error ?? "analysis failed");
+        this.failedAt.set(
+          `${run.dataset_entry_id}${SEP}${run.commit_hash}`,
+          run.error ?? "analysis failed",
+        );
       }
     }
     for (const analysis of rows.probe_analyses ?? []) {
       const key = `${analysis.dataset_entry_id}${SEP}${analysis.commit_hash}`;
-      if (analysis.status === "failed") this.failedAt.set(key, analysis.error ?? "analysis failed");
+      if (analysis.status === "failed")
+        this.failedAt.set(key, analysis.error ?? "analysis failed");
       else if (analysis.status === "pending") this.pendingAt.add(key);
     }
     for (const interval of rows.probe_intervals ?? []) {
-      this.intervals.set(intervalKey(interval.dataset_entry_id, interval.from_commit, interval.to_commit), interval);
+      this.intervals.set(
+        intervalKey(
+          interval.dataset_entry_id,
+          interval.from_commit,
+          interval.to_commit,
+        ),
+        interval,
+      );
     }
     for (const v of rows.known_versions ?? rows.vulnerabilities) {
       if (!v.vulnerability_id || !v.affected_dependency) continue;
       const key = `${v.vulnerability_id}${SEP}${v.affected_dependency}`;
-      const known = this.versions.get(key) ?? { ranges: null, seen: new Set<string>() };
+      const known = this.versions.get(key) ?? {
+        ranges: null,
+        seen: new Set<string>(),
+      };
       known.ranges ??= v.vulnerable_versions ?? null;
       if (v.affected_version) known.seen.add(v.affected_version);
       this.versions.set(key, known);
@@ -158,9 +199,16 @@ export class ProbeSearch {
     const step = this.search(task);
     if (step.step === "done") return step.dating;
     if (step.step === "probe" && this.budgetSpent) {
-      return { outcome: "not_found", reason: BUDGET_SPENT_REASON, commit: null, packages_before: null, packages_after: null };
+      return {
+        outcome: "not_found",
+        reason: BUDGET_SPENT_REASON,
+        commit: null,
+        packages_before: null,
+        packages_after: null,
+      };
     }
-    if (step.step === "probe") this.probeRequests.push({ task, commit: step.commit });
+    if (step.step === "probe")
+      this.probeRequests.push({ task, commit: step.commit });
     else if (step.step === "list") this.intervalRequests.push({ task });
     else this.waiting++;
     return null;
@@ -169,7 +217,9 @@ export class ProbeSearch {
   private search(task: DatingTask): SearchStep {
     const to = task.after.commit_hash;
     if (!to) return notFound("the later snapshot has no commit");
-    const interval = this.intervals.get(intervalKey(task.entry, task.before.commit_hash ?? null, to));
+    const interval = this.intervals.get(
+      intervalKey(task.entry, task.before.commit_hash ?? null, to),
+    );
     if (!interval) return { step: "list" };
     if (interval.error) return notFound(interval.error);
     const candidates = interval.candidates;
@@ -184,7 +234,9 @@ export class ProbeSearch {
       const commit = candidates[mid]!;
       const known = this.stateAt(task, commit.sha);
       if (known.state === "failed") {
-        return notFound(`probe of ${commit.sha.slice(0, 7)} failed: ${known.reason}`);
+        return notFound(
+          `probe of ${commit.sha.slice(0, 7)} failed: ${known.reason}`,
+        );
       }
       if (known.state === "pending") return { step: "wait" };
       if (known.state === "unknown") return { step: "probe", commit };
@@ -196,8 +248,20 @@ export class ProbeSearch {
     for (const [i, commit] of candidates.entries()) {
       const known = this.stateAt(task, commit.sha);
       if (known.state !== "present" && known.state !== "absent") continue;
-      if ((known.state === "present") !== (i >= hi ? afterPresent : !afterPresent)) {
-        return { step: "done", dating: { outcome: "ambiguous", reason: AMBIGUOUS_REASON, commit: null, packages_before: null, packages_after: null } };
+      if (
+        (known.state === "present") !==
+        (i >= hi ? afterPresent : !afterPresent)
+      ) {
+        return {
+          step: "done",
+          dating: {
+            outcome: "ambiguous",
+            reason: AMBIGUOUS_REASON,
+            commit: null,
+            packages_before: null,
+            packages_after: null,
+          },
+        };
       }
     }
     const packagesOf = (i: number): ProbePackage[] | null => {
@@ -220,7 +284,10 @@ export class ProbeSearch {
     const key = `${task.entry}${SEP}${sha}`;
     const packages = this.packagesAt.get(key);
     if (packages) {
-      return { state: this.isPresent(task, packages) ? "present" : "absent", packages };
+      return {
+        state: this.isPresent(task, packages) ? "present" : "absent",
+        packages,
+      };
     }
     const reason = this.failedAt.get(key);
     if (reason !== undefined) return { state: "failed", reason };
@@ -228,18 +295,34 @@ export class ProbeSearch {
   }
 
   /** The package resolves to a vulnerable version in some workspace. */
-  isPresent(task: Pick<DatingTask, "vulnerability_id" | "pkg">, packages: readonly ProbePackage[]): boolean {
-    const known = this.versions.get(`${task.vulnerability_id}${SEP}${task.pkg}`);
+  isPresent(
+    task: Pick<DatingTask, "vulnerability_id" | "pkg">,
+    packages: readonly ProbePackage[],
+  ): boolean {
+    const known = this.versions.get(
+      `${task.vulnerability_id}${SEP}${task.pkg}`,
+    );
     return packages.some(
       (p) =>
         p.name === task.pkg &&
-        (isVulnerableVersion(p.version, known?.ranges ?? null) ?? known?.seen.has(p.version) ?? false),
+        (isVulnerableVersion(p.version, known?.ranges ?? null) ??
+          known?.seen.has(p.version) ??
+          false),
     );
   }
 }
 
 function notFound(reason: string): SearchStep {
-  return { step: "done", dating: { outcome: "not_found", reason, commit: null, packages_before: null, packages_after: null } };
+  return {
+    step: "done",
+    dating: {
+      outcome: "not_found",
+      reason,
+      commit: null,
+      packages_before: null,
+      packages_after: null,
+    },
+  };
 }
 
 function intervalKey(entry: string, from: string | null, to: string): string {
@@ -272,25 +355,48 @@ function taskOrder(a: DatingTask, b: DatingTask): number {
  */
 export function probePlan(search: ProbeSearch): ProbePlan {
   const intervals = new Map<string, IntervalRequest>();
-  for (const { task } of [...search.intervalRequests].sort((a, b) => taskOrder(a.task, b.task))) {
-    const key = intervalKey(task.entry, task.before.commit_hash ?? null, task.after.commit_hash!);
-    if (!intervals.has(key)) intervals.set(key, { entry: task.entry, from: task.before, to: task.after });
+  for (const { task } of [...search.intervalRequests].sort((a, b) =>
+    taskOrder(a.task, b.task),
+  )) {
+    const key = intervalKey(
+      task.entry,
+      task.before.commit_hash ?? null,
+      task.after.commit_hash!,
+    );
+    if (!intervals.has(key))
+      intervals.set(key, {
+        entry: task.entry,
+        from: task.before,
+        to: task.after,
+      });
   }
   const probes = new Map<string, ProbeRequest>();
-  for (const { task, commit } of [...search.probeRequests].sort((a, b) => taskOrder(a.task, b.task))) {
+  for (const { task, commit } of [...search.probeRequests].sort((a, b) =>
+    taskOrder(a.task, b.task),
+  )) {
     const key = `${task.entry}${SEP}${commit.sha}`;
     if (!probes.has(key)) probes.set(key, { entry: task.entry, commit });
   }
-  return { intervals: [...intervals.values()], probes: [...probes.values()], waiting: search.waiting };
+  return {
+    intervals: [...intervals.values()],
+    probes: [...probes.values()],
+    waiting: search.waiting,
+  };
 }
 
 /**
  * The repository-relative lockfile path of a js-sbom result, whose
  * relative path starts with the analysed commit's directory. Null if unknown.
  */
-export function repoLockfilePath(sbom: unknown, commitHash: string): string | null {
-  const info = (sbom as { analysis_info?: { paths?: { relative_lock_file_path?: unknown } } } | null)
-    ?.analysis_info;
+export function repoLockfilePath(
+  sbom: unknown,
+  commitHash: string,
+): string | null {
+  const info = (
+    sbom as {
+      analysis_info?: { paths?: { relative_lock_file_path?: unknown } };
+    } | null
+  )?.analysis_info;
   const path = info?.paths?.relative_lock_file_path;
   if (typeof path !== "string" || path === "") return null;
   const prefix = `${commitHash}/`;

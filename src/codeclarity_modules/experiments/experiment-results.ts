@@ -365,7 +365,10 @@ function ratio(numerator: number, denominator: number): number | null {
   return denominator ? numerator / denominator : null;
 }
 
-function countBy<T>(items: readonly T[], key: (item: T) => string | null): Map<string, number> {
+function countBy<T>(
+  items: readonly T[],
+  key: (item: T) => string | null,
+): Map<string, number> {
   const counts = new Map<string, number>();
   for (const item of items) {
     const k = key(item);
@@ -386,7 +389,6 @@ function rankedEntries(counts: Map<string, number>): [string, number][] {
     ([ka, a], [kb, b]) => b - a || byKey(ka, kb),
   );
 }
-
 
 function sumOf(values: readonly number[]): number {
   return values.reduce((total, value) => total + value, 0);
@@ -450,7 +452,10 @@ export function headline(
     load_max: nProjects ? Math.max(...loads) : null,
     sev_counts: sevCounts,
     high_critical_share: ratio(critHigh, instances),
-    top10_pkg_share: ratio(sumOf(largestFirst(packageCounts).slice(0, 10)), instances),
+    top10_pkg_share: ratio(
+      sumOf(largestFirst(packageCounts).slice(0, 10)),
+      instances,
+    ),
     top10_proj_share: ratio(sumOf(largestFirst(loads).slice(0, 10)), total),
     gini_pkg: nullIfNaN(gini(packageCounts)),
     gini_proj: nullIfNaN(gini(loads)),
@@ -458,10 +463,7 @@ export function headline(
     pkgs_clear_80: packagesToClear(packageCounts, 0.8),
     pkgs_clear_90: packagesToClear(packageCounts, 0.9),
     top_packages: rankedEntries(spread).slice(0, 10),
-    high_critical_share_of_classed: ratio(
-      critHigh,
-      instances - sevCounts.NONE,
-    ),
+    high_critical_share_of_classed: ratio(critHigh, instances - sevCounts.NONE),
   };
 }
 
@@ -595,7 +597,8 @@ function gridCoverage(runs: readonly ResultsRunInput[]): GridCoverageRow[] {
     for (const run of group) {
       if (run.knowledge) {
         if (!first) first = run.knowledge;
-        else if (!sameKnowledge(first, run.knowledge)) row.mixed_knowledge = true;
+        else if (!sameKnowledge(first, run.knowledge))
+          row.mixed_knowledge = true;
       }
       if (run.status === "done") {
         if (run.error === NO_LOCKFILE_YET) row.empty++;
@@ -629,17 +632,28 @@ function lagGroups(
   return keys
     .map((key) => ({
       key,
-      ...lagSummary(points.filter((p) => keyOf(p) === key).map((p) => p.lag_days)),
+      ...lagSummary(
+        points.filter((p) => keyOf(p) === key).map((p) => p.lag_days),
+      ),
     }))
     .filter((group) => group.n > 0);
 }
 
 function fixLag(exposures: readonly Exposure[]): FixLagBlock {
-  const fixes = exposures.flatMap((e) => (e.fix ? [{ ...e.fix, severity: e.severity }] : []));
+  const fixes = exposures.flatMap((e) =>
+    e.fix ? [{ ...e.fix, severity: e.severity }] : [],
+  );
   const points: FixLagPoint[] = fixes.flatMap((fix) =>
     fix.lag_days === null
       ? []
-      : [{ severity: fix.severity, kind: fix.kind, lag_days: fix.lag_days, precision: fix.precision }],
+      : [
+          {
+            severity: fix.severity,
+            kind: fix.kind,
+            lag_days: fix.lag_days,
+            precision: fix.precision,
+          },
+        ],
   );
   return {
     fixes: fixes.length,
@@ -649,13 +663,19 @@ function fixLag(exposures: readonly Exposure[]): FixLagBlock {
     ),
     overall: lagSummary(points.map((p) => p.lag_days)),
     by_severity: lagGroups(points, SEVERITY_ORDER, (p) => p.severity),
-    by_kind: lagGroups(points, [...FIX_KINDS, "unknown"], (p) => p.kind ?? "unknown"),
+    by_kind: lagGroups(
+      points,
+      [...FIX_KINDS, "unknown"],
+      (p) => p.kind ?? "unknown",
+    ),
     points,
   };
 }
 
 function exposuresBlock(exposures: readonly Exposure[]): ExposuresBlock {
-  const precision = (events: readonly ({ precision: DatingPrecision } | null)[]): Record<DatingPrecision, number> => ({
+  const precision = (
+    events: readonly ({ precision: DatingPrecision } | null)[],
+  ): Record<DatingPrecision, number> => ({
     commit: events.filter((e) => e?.precision === "commit").length,
     snapshot: events.filter((e) => e?.precision === "snapshot").length,
   });
@@ -664,7 +684,8 @@ function exposuresBlock(exposures: readonly Exposure[]): ExposuresBlock {
     open: exposures.filter((e) => e.open).length,
     fixed: exposures.filter((e) => e.fix).length,
     introductions: exposures.filter((e) => e.introduction).length,
-    present_at_first_observation: exposures.filter((e) => !e.introduction).length,
+    present_at_first_observation: exposures.filter((e) => !e.introduction)
+      .length,
     fix_precision: precision(exposures.map((e) => e.fix)),
     introduction_precision: precision(exposures.map((e) => e.introduction)),
   };
@@ -681,8 +702,12 @@ function probesBlock(
     not_probed: events.filter((e) => e.probe_outcome === null).length,
   });
   const fixes = exposures.flatMap((e) => (e.fix ? [e.fix] : []));
-  const introductions = exposures.flatMap((e) => (e.introduction ? [e.introduction] : []));
-  const notFound = [...fixes, ...introductions].filter((e) => e.probe_outcome === "not_found");
+  const introductions = exposures.flatMap((e) =>
+    e.introduction ? [e.introduction] : [],
+  );
+  const notFound = [...fixes, ...introductions].filter(
+    (e) => e.probe_outcome === "not_found",
+  );
   return {
     fixes: counts(fixes),
     introductions: counts(introductions),
@@ -714,7 +739,8 @@ function provenance(input: ResultsProvenanceInput): ProvenanceBlock {
   const { knowledge_start: start, knowledge_end: end } = input;
   return {
     ...input,
-    knowledge_changed: start !== null && end !== null && !sameKnowledge(start, end),
+    knowledge_changed:
+      start !== null && end !== null && !sameKnowledge(start, end),
   };
 }
 
@@ -742,7 +768,10 @@ export function aggregateExperimentResults(
   input: ExperimentResultsInput,
 ): ExperimentResults {
   const exposures = deriveExposures(input);
-  const head = headCutoff(input.provenance.ended_on, input.read_at ?? new Date());
+  const head = headCutoff(
+    input.provenance.ended_on,
+    input.read_at ?? new Date(),
+  );
   const gridOnly = gridOnlyRunIds(input.runs);
   const summaries = input.summaries.filter((s) => !gridOnly.has(s.run_id));
   const universe = summaries.map((s) => s.run_id);
@@ -770,7 +799,11 @@ export function aggregateExperimentResults(
     }),
     residence: residenceBlock(exposures),
     exposure_survival: exposureSurvival(exposures, head),
-    upstream_leverage: upstreamLeverage(input.runs, input.vulnerabilities, exposures),
+    upstream_leverage: upstreamLeverage(
+      input.runs,
+      input.vulnerabilities,
+      exposures,
+    ),
     provenance: provenance(input.provenance),
   };
 }

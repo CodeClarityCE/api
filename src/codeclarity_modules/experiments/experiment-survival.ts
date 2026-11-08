@@ -64,17 +64,25 @@ export function exposureSurvival(
     const start = e.introduction?.date ?? e.first_present ?? headDay;
     const end = e.fix?.date ?? headDay;
     const days = Math.round((Date.parse(end) - Date.parse(start)) / DAY_MS);
-    return { severity: e.severity, days: Math.max(0, days), fixed: e.fix !== null };
+    return {
+      severity: e.severity,
+      days: Math.max(0, days),
+      fixed: e.fix !== null,
+    };
   });
   const fixes = exposures.filter((e) => e.fix !== null);
   return {
     censored_at: headDay,
     snapshot_precision_share: fixes.length
-      ? fixes.filter((e) => e.fix!.precision === "snapshot").length / fixes.length
+      ? fixes.filter((e) => e.fix!.precision === "snapshot").length /
+        fixes.length
       : null,
     overall: group("all", durations),
     by_severity: SEVERITY_ORDER.map((severity) =>
-      group(severity, durations.filter((d) => d.severity === severity)),
+      group(
+        severity,
+        durations.filter((d) => d.severity === severity),
+      ),
     ).filter((g) => g.n > 0),
   };
 }

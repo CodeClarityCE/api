@@ -128,13 +128,17 @@ describe("experiment stats", () => {
 
     it("has no steps for no observations and stays at 1 when all are censored", () => {
       expect(kaplanMeier([], [])).toEqual([]);
-      expect(kaplanMeier([4, 9], [false, false]).map((s) => s.survival)).toEqual([1, 1]);
+      expect(
+        kaplanMeier([4, 9], [false, false]).map((s) => s.survival),
+      ).toEqual([1, 1]);
     });
 
     it("gives the median as the first time survival reaches one half, else NaN", () => {
       expect(kmMedian(kaplanMeier(durations, events))).toBe(3);
       // Two of four fixed by day 10: S(10) = 0.5 exactly
-      expect(kmMedian(kaplanMeier([10, 10, 20, 30], [true, true, false, false]))).toBe(10);
+      expect(
+        kmMedian(kaplanMeier([10, 10, 20, 30], [true, true, false, false])),
+      ).toBe(10);
       // One of three fixed: S never falls below 2/3
       expect(kmMedian(kaplanMeier([4, 9, 9], [true, false, false]))).toBeNaN();
       expect(kmMedian([])).toBeNaN();

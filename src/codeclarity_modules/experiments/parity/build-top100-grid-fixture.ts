@@ -12,9 +12,19 @@
  */
 /* eslint-disable security/detect-non-literal-fs-filename -- a dev script reading and writing the paths it is given */
 import { once } from "node:events";
-import { createWriteStream, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
+import {
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
-import { brotliDecompressSync, constants, createBrotliCompress } from "node:zlib";
+import {
+  brotliDecompressSync,
+  constants,
+  createBrotliCompress,
+} from "node:zlib";
 
 import type { ProbeCandidate } from "../experiment-probes";
 import {
@@ -52,7 +62,11 @@ export interface GridFixtureRun {
   commit_hash: string | null;
   committed_at: string | null;
   /** Done runs with rows only */
-  summary: { total_dependencies: number; total_vulnerabilities: number; package_manager: string | null } | null;
+  summary: {
+    total_dependencies: number;
+    total_vulnerabilities: number;
+    package_manager: string | null;
+  } | null;
   instances: GridInstance[];
 }
 
@@ -64,7 +78,11 @@ export interface GridFixtureEntry {
   meta: GridInstanceMeta[];
   runs: GridFixtureRun[];
   probes: { commit_hash: string; packages: ProbePackage[] }[];
-  probe_intervals: { from_commit: string; to_commit: string; candidates: ProbeCandidate[] }[];
+  probe_intervals: {
+    from_commit: string;
+    to_commit: string;
+    candidates: ProbeCandidate[];
+  }[];
   probe_analyses: { commit_hash: string; status: "failed"; error: string }[];
 }
 
@@ -148,7 +166,11 @@ export function fixtureLines(compressed: Buffer): string[] {
   const buffer = brotliDecompressSync(compressed);
   const lines: string[] = [];
   let start = 0;
-  for (let end = buffer.indexOf(10); end !== -1; end = buffer.indexOf(10, start)) {
+  for (
+    let end = buffer.indexOf(10);
+    end !== -1;
+    end = buffer.indexOf(10, start)
+  ) {
     if (end > start) lines.push(buffer.subarray(start, end).toString("utf8"));
     start = end + 1;
   }
@@ -156,14 +178,19 @@ export function fixtureLines(compressed: Buffer): string[] {
 }
 
 async function writeFixture(outPath: string, lines: unknown[]): Promise<void> {
-  if (!existsSync(dirname(outPath))) mkdirSync(dirname(outPath), { recursive: true });
+  if (!existsSync(dirname(outPath)))
+    mkdirSync(dirname(outPath), { recursive: true });
   const compress = createBrotliCompress({
-    params: { [constants.BROTLI_PARAM_QUALITY]: 9, [constants.BROTLI_PARAM_LGWIN]: 24 },
+    params: {
+      [constants.BROTLI_PARAM_QUALITY]: 9,
+      [constants.BROTLI_PARAM_LGWIN]: 24,
+    },
   });
   const out = createWriteStream(outPath);
   compress.pipe(out);
   for (const line of lines) {
-    if (!compress.write(`${JSON.stringify(line)}\n`)) await once(compress, "drain");
+    if (!compress.write(`${JSON.stringify(line)}\n`))
+      await once(compress, "drain");
   }
   compress.end();
   await once(out, "finish");
@@ -171,16 +198,24 @@ async function writeFixture(outPath: string, lines: unknown[]): Promise<void> {
 
 /** Rewrite an existing fixture with compacted probe packages, without the raw results. */
 async function recompact(inPath: string, outPath: string): Promise<void> {
-  const lines = fixtureLines(readFileSync(inPath)).map((line) => JSON.parse(line) as GridFixtureEntry | GridFixtureExpected);
+  const lines = fixtureLines(readFileSync(inPath)).map(
+    (line) => JSON.parse(line) as GridFixtureEntry | GridFixtureExpected,
+  );
   for (const line of lines) {
-    if ("probes" in line) for (const probe of line.probes) probe.packages = compactPackages(probe.packages);
+    if ("probes" in line)
+      for (const probe of line.probes)
+        probe.packages = compactPackages(probe.packages);
   }
   await writeFixture(outPath, lines);
   process.stdout.write(`${lines.length - 1} entries rewritten to ${outPath}\n`);
 }
 
 /** Copy one entry's runs and snapshot probe rows from the raw results. */
-function copyEntry(studyDir: string, rows: ManifestRow[], dates: string[]): {
+function copyEntry(
+  studyDir: string,
+  rows: ManifestRow[],
+  dates: string[],
+): {
   line: GridFixtureEntry;
   names: Set<string>;
 } {
@@ -192,10 +227,22 @@ function copyEntry(studyDir: string, rows: ManifestRow[], dates: string[]): {
   const sboms = new Map<string, unknown>();
   const runs: GridFixtureRun[] = [...dates, "HEAD"].map((date, gridIndex) => {
     const row = bySnapshot.get(date);
-    const base = { grid_index: gridIndex, grid_date: date === "HEAD" ? null : date, summary: null, instances: [] };
+    const base = {
+      grid_index: gridIndex,
+      grid_date: date === "HEAD" ? null : date,
+      summary: null,
+      instances: [],
+    };
     if (!row) {
       // No manifest row: the repo did not exist yet at that date
-      return { ...base, id: `${first.npm_name}@${date}`, status: "done", error: NO_LOCKFILE_YET, commit_hash: null, committed_at: null };
+      return {
+        ...base,
+        id: `${first.npm_name}@${date}`,
+        status: "done",
+        error: NO_LOCKFILE_YET,
+        commit_hash: null,
+        committed_at: null,
+      };
     }
     const run = {
       ...base,
@@ -208,7 +255,10 @@ function copyEntry(studyDir: string, rows: ManifestRow[], dates: string[]): {
     }
     const dir = join(studyDir, "raw", row.project_id, row.analysis_id);
     const sbom = unwrapResultEnvelope(readJson(join(dir, "js-sbom.json")));
-    const copied = mapRunRows(sbom, unwrapResultEnvelope(readJson(join(dir, "vuln-finder.json"))));
+    const copied = mapRunRows(
+      sbom,
+      unwrapResultEnvelope(readJson(join(dir, "vuln-finder.json"))),
+    );
     if (row.commit_hash) sboms.set(row.commit_hash, sbom);
     const instances = copied.vulnerabilities.map((v): GridInstance => {
       const shared: GridInstanceMeta = {
@@ -231,7 +281,8 @@ function copyEntry(studyDir: string, rows: ManifestRow[], dates: string[]): {
       if (v.affected_dependency) names.add(v.affected_dependency);
       return [v.workspace, index, v.affected_version, v.direct_dependency];
     });
-    const { total_dependencies, total_vulnerabilities, package_manager } = copied.summary;
+    const { total_dependencies, total_vulnerabilities, package_manager } =
+      copied.summary;
     return {
       ...run,
       status: "done",
@@ -243,7 +294,9 @@ function copyEntry(studyDir: string, rows: ManifestRow[], dates: string[]): {
   // Snapshot commits feed the probe outcome rows too, with the packages instances name
   const probes = [...sboms].map(([commit, sbom]) => ({
     commit_hash: commit,
-    packages: compactPackages(mapProbePackages(sbom).filter((p) => names.has(p.name))),
+    packages: compactPackages(
+      mapProbePackages(sbom).filter((p) => names.has(p.name)),
+    ),
   }));
   return {
     line: {
@@ -282,29 +335,44 @@ function isoSecond(value: string): string {
 }
 
 /** Add the probe rows the archive's lockfile mining cached. */
-function addMinedProbes(studyDir: string, entries: Map<string, { line: GridFixtureEntry; names: Set<string> }>): void {
+function addMinedProbes(
+  studyDir: string,
+  entries: Map<string, { line: GridFixtureEntry; names: Set<string> }>,
+): void {
   const directAt = new Map<string, Set<string>>();
   for (const file of cacheFiles<ManifestFile>(studyDir, "manifests")) {
-    if (file.deps) directAt.set(`${file.key.slug}@${file.key.sha}`, new Set(file.deps));
+    if (file.deps)
+      directAt.set(`${file.key.slug}@${file.key.sha}`, new Set(file.deps));
   }
   const blobsAt = new Map<string, BlobFile[]>();
   for (const file of cacheFiles<BlobFile>(studyDir, "blobs")) {
     const entry = entries.get(file.key.slug);
     if (!entry) continue;
     const versions = file.versions
-      ? Object.fromEntries(Object.entries(file.versions).filter(([name]) => entry.names.has(name)))
+      ? Object.fromEntries(
+          Object.entries(file.versions).filter(([name]) =>
+            entry.names.has(name),
+          ),
+        )
       : null;
     const key = `${file.key.slug}@${file.key.sha}`;
     blobsAt.set(key, [...(blobsAt.get(key) ?? []), { ...file, versions }]);
   }
   for (const [key, blobs] of blobsAt) {
-    const [slug, sha] = [key.slice(0, key.lastIndexOf("@")), key.slice(key.lastIndexOf("@") + 1)];
+    const [slug, sha] = [
+      key.slice(0, key.lastIndexOf("@")),
+      key.slice(key.lastIndexOf("@") + 1),
+    ];
     const { line } = entries.get(slug)!;
     if (line.probes.some((p) => p.commit_hash === sha)) continue;
     const parsed = blobs.filter((b) => b.status === "parsed");
     const unparseable = blobs.find((b) => b.status === "unparseable");
     if (parsed.length === 0 && unparseable) {
-      line.probe_analyses.push({ commit_hash: sha, status: "failed", error: `unparseable ${unparseable.key.lockfile}` });
+      line.probe_analyses.push({
+        commit_hash: sha,
+        status: "failed",
+        error: `unparseable ${unparseable.key.lockfile}`,
+      });
       continue;
     }
     const direct = directAt.get(key);
@@ -313,7 +381,12 @@ function addMinedProbes(studyDir: string, entries: Map<string, { line: GridFixtu
       packages: compactPackages(
         parsed.flatMap((b) =>
           Object.entries(b.versions ?? {}).flatMap(([name, versions]) =>
-            versions.map((version) => ({ workspace: b.key.lockfile, name, version, direct: direct?.has(name) ?? false })),
+            versions.map((version) => ({
+              workspace: b.key.lockfile,
+              name,
+              version,
+              direct: direct?.has(name) ?? false,
+            })),
           ),
         ),
       ),
@@ -321,46 +394,77 @@ function addMinedProbes(studyDir: string, entries: Map<string, { line: GridFixtu
   }
 
   // Mined windows, keyed by their two snapshot commits
-  const windows = new Map<string, { slug: string; since: string; until: string; commits: Map<string, string> }>();
+  const windows = new Map<
+    string,
+    { slug: string; since: string; until: string; commits: Map<string, string> }
+  >();
   for (const file of cacheFiles<CommitListFile>(studyDir, "commit_lists")) {
     if (!entries.has(file.key.slug)) continue;
     const key = `${file.key.slug}|${file.key.since}|${file.key.until}`;
-    const window = windows.get(key) ?? { ...file.key, commits: new Map<string, string>() };
-    for (const commit of file.commits) window.commits.set(commit.sha, commit.date);
+    const window = windows.get(key) ?? {
+      ...file.key,
+      commits: new Map<string, string>(),
+    };
+    for (const commit of file.commits)
+      window.commits.set(commit.sha, commit.date);
     windows.set(key, window);
   }
   for (const window of windows.values()) {
     const { line } = entries.get(window.slug)!;
     const commitAt = (iso: string): string | null =>
-      line.runs.find((r) => r.status === "done" && r.committed_at && isoSecond(r.committed_at) === iso)?.commit_hash ?? null;
+      line.runs.find(
+        (r) =>
+          r.status === "done" &&
+          r.committed_at &&
+          isoSecond(r.committed_at) === iso,
+      )?.commit_hash ?? null;
     const from = commitAt(window.since);
     const to = commitAt(window.until);
     if (!from || !to) continue;
-    if (line.probe_intervals.some((i) => i.from_commit === from && i.to_commit === to)) continue;
+    if (
+      line.probe_intervals.some(
+        (i) => i.from_commit === from && i.to_commit === to,
+      )
+    )
+      continue;
     const candidates = [...window.commits]
       .filter(([sha]) => sha !== from)
       .map(([sha, date]) => ({ sha, committed_at: date }))
-      .sort((a, b) => a.committed_at.localeCompare(b.committed_at) || a.sha.localeCompare(b.sha));
+      .sort(
+        (a, b) =>
+          a.committed_at.localeCompare(b.committed_at) ||
+          a.sha.localeCompare(b.sha),
+      );
     line.probe_intervals.push({ from_commit: from, to_commit: to, candidates });
   }
 }
 
 async function main(studyDir: string, outPath: string): Promise<void> {
   const manifest = jsonLines<ManifestRow>(join(studyDir, "manifest.jsonl"));
-  const dates = [...new Set(manifest.map((r) => r.snapshot_date))].filter((d) => d !== "HEAD").sort();
+  const dates = [...new Set(manifest.map((r) => r.snapshot_date))]
+    .filter((d) => d !== "HEAD")
+    .sort();
   const byRepo = new Map<string, ManifestRow[]>();
-  for (const row of manifest) byRepo.set(row.npm_name, [...(byRepo.get(row.npm_name) ?? []), row]);
+  for (const row of manifest)
+    byRepo.set(row.npm_name, [...(byRepo.get(row.npm_name) ?? []), row]);
 
-  const entries = new Map<string, { line: GridFixtureEntry; names: Set<string> }>();
+  const entries = new Map<
+    string,
+    { line: GridFixtureEntry; names: Set<string> }
+  >();
   for (const [name, rows] of byRepo) {
     entries.set(name, copyEntry(studyDir, rows, dates));
     process.stdout.write(`copied ${entries.size}/${byRepo.size} ${name}\n`);
   }
   addMinedProbes(studyDir, entries);
 
-  const numbers = readJson(join(studyDir, "tables", "results_numbers.json")) as Record<string, unknown>;
+  const numbers = readJson(
+    join(studyDir, "tables", "results_numbers.json"),
+  ) as Record<string, unknown>;
   const last: GridFixtureExpected = {
-    expected: Object.fromEntries(COMPARED_BLOCKS.map((block) => [block, numbers[block]])),
+    expected: Object.fromEntries(
+      COMPARED_BLOCKS.map((block) => [block, numbers[block]]),
+    ),
     remediation_events: jsonLines<RemediationEvent & { unit_key: string }>(
       join(studyDir, "mining_cache", "results.jsonl"),
     ).map((e) => ({
@@ -377,7 +481,10 @@ async function main(studyDir: string, outPath: string): Promise<void> {
     })),
   };
 
-  await writeFixture(outPath, [...[...entries.values()].map((e) => e.line), last]);
+  await writeFixture(outPath, [
+    ...[...entries.values()].map((e) => e.line),
+    last,
+  ]);
   process.stdout.write(`${entries.size} entries written to ${outPath}\n`);
 }
 
@@ -386,11 +493,15 @@ if (require.main === module) {
   const again = args[0] === "--recompact";
   const [source, outPath] = again ? args.slice(1) : args;
   if (!source || !outPath) {
-    process.stderr.write("usage: build-top100-grid-fixture.ts [--recompact <in .jsonl.br> | <study dir>] <out .jsonl.br>\n");
+    process.stderr.write(
+      "usage: build-top100-grid-fixture.ts [--recompact <in .jsonl.br> | <study dir>] <out .jsonl.br>\n",
+    );
     process.exit(2);
   }
-  (again ? recompact(source, outPath) : main(source, outPath)).catch((err: unknown) => {
-    process.stderr.write(`${String(err)}\n`);
-    process.exit(1);
-  });
+  (again ? recompact(source, outPath) : main(source, outPath)).catch(
+    (err: unknown) => {
+      process.stderr.write(`${String(err)}\n`);
+      process.exit(1);
+    },
+  );
 }

@@ -11,7 +11,11 @@ import { Experiment, ExperimentStatus } from "./experiment.entity";
 import type { ExposuresInput } from "./experiment-exposures";
 import { ExperimentProbe } from "./experiment-probe.entity";
 import { ExperimentProbeOutcome } from "./experiment-probe-outcome.entity";
-import { type RawQuery, readAnalysesSubmitted, readPlanningRows } from "./experiment-probe-rows";
+import {
+  type RawQuery,
+  readAnalysesSubmitted,
+  readPlanningRows,
+} from "./experiment-probe-rows";
 import type { ProbeCandidate } from "./experiment-probes";
 import type { ResultsRunInput } from "./experiment-results";
 import type { ProbePackage, RunRows } from "./experiment-row-copy";
@@ -672,7 +676,8 @@ export class TypeOrmExperimentStore extends ExperimentStore {
   async getProbeRows(
     experimentId: string,
   ): Promise<ExposuresInput & { runs: ResultsRunInput[] }> {
-    const query: RawQuery = (sql, params) => this.runRepository.query(sql, params);
+    const query: RawQuery = (sql, params) =>
+      this.runRepository.query(sql, params);
     return readPlanningRows(query, experimentId);
   }
 
@@ -706,7 +711,12 @@ export class TypeOrmExperimentStore extends ExperimentStore {
        VALUES ($1, $2, $3, $4, 'pending', now())
        ON CONFLICT ("experimentId", "datasetEntryId", commit_hash) DO NOTHING
        RETURNING id`,
-      [probe.experimentId, probe.datasetEntryId, probe.commitHash, probe.committedAt],
+      [
+        probe.experimentId,
+        probe.datasetEntryId,
+        probe.commitHash,
+        probe.committedAt,
+      ],
     );
     return rows[0]?.id ?? null;
   }
@@ -726,7 +736,8 @@ export class TypeOrmExperimentStore extends ExperimentStore {
   }
 
   async countSubmittedAnalyses(experimentId: string): Promise<number> {
-    const query: RawQuery = (sql, params) => this.runRepository.query(sql, params);
+    const query: RawQuery = (sql, params) =>
+      this.runRepository.query(sql, params);
     return readAnalysesSubmitted(query, experimentId);
   }
 

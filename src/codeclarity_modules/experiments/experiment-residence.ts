@@ -89,11 +89,16 @@ export function residenceBlock(exposures: readonly Exposure[]): ResidenceBlock {
       after.push({ severity: intro.severity, days: -intro.residence_days });
     }
   }
-  const before = points.map((p) => ({ severity: p.severity, days: p.residence_days }));
+  const before = points.map((p) => ({
+    severity: p.severity,
+    days: p.residence_days,
+  }));
   const snapshot = introduced.filter((i) => i.precision === "snapshot").length;
   return {
     introductions: introduced.length,
-    snapshot_precision_share: introduced.length ? snapshot / introduced.length : null,
+    snapshot_precision_share: introduced.length
+      ? snapshot / introduced.length
+      : null,
     present_at_first_observation: exposures.length - introduced.length,
     undated: introduced.filter((i) => i.residence_days === null).length,
     overall: daysSummary(before.map((b) => b.days)),

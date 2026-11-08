@@ -1,6 +1,9 @@
 import { publishedDay } from "./experiment-grid";
 import { loadOverTime } from "./experiment-load";
-import type { ResultsRunInput, ResultsVulnerabilityInput } from "./experiment-results";
+import type {
+  ResultsRunInput,
+  ResultsVulnerabilityInput,
+} from "./experiment-results";
 import { NO_LOCKFILE_YET } from "./experiment-row-copy";
 
 describe("publishedDay", () => {
@@ -18,12 +21,17 @@ describe("publishedDay", () => {
     expect(publishedDay(value)).toBe(day);
   });
 
-  it.each([null, undefined, "", "   ", "unknown", "2025-13-45", "2025-02-30T00:00:00Z"])(
-    "has no day for %j",
-    (value) => {
-      expect(publishedDay(value)).toBeNull();
-    },
-  );
+  it.each([
+    null,
+    undefined,
+    "",
+    "   ",
+    "unknown",
+    "2025-13-45",
+    "2025-02-30T00:00:00Z",
+  ])("has no day for %j", (value) => {
+    expect(publishedDay(value)).toBeNull();
+  });
 });
 
 const MID_GRID = "2025-02-15T10:00:00Z";
@@ -66,10 +74,17 @@ const NOW = new Date("2026-01-01T00:00:00Z");
 describe("loadOverTime", () => {
   it("drops an advisory published mid-grid from the as-of view until its grid date passes", () => {
     const rows = loadOverTime({
-      runs: [run("a1", "2025-01-01"), run("a2", "2025-02-01"), run("a3", "2025-03-01"), run("a4", null)],
+      runs: [
+        run("a1", "2025-01-01"),
+        run("a2", "2025-02-01"),
+        run("a3", "2025-03-01"),
+        run("a4", null),
+      ],
       vulnerabilities: [
         instance("a1", MID_GRID),
-        instance("a1", "2024-06-01T00:00:00Z", { vulnerability_id: "GHSA-old" }),
+        instance("a1", "2024-06-01T00:00:00Z", {
+          vulnerability_id: "GHSA-old",
+        }),
         instance("a2", MID_GRID),
         instance("a3", MID_GRID),
         instance("a4", MID_GRID),
@@ -78,10 +93,38 @@ describe("loadOverTime", () => {
     });
 
     expect(rows).toEqual([
-      { grid_date: "2025-01-01", as_of_date: "2025-01-01", projects: 1, hindsight: 2, as_of: 1, undated: 0 },
-      { grid_date: "2025-02-01", as_of_date: "2025-02-01", projects: 1, hindsight: 1, as_of: 0, undated: 0 },
-      { grid_date: "2025-03-01", as_of_date: "2025-03-01", projects: 1, hindsight: 1, as_of: 1, undated: 0 },
-      { grid_date: null, as_of_date: "2025-04-02", projects: 1, hindsight: 1, as_of: 1, undated: 0 },
+      {
+        grid_date: "2025-01-01",
+        as_of_date: "2025-01-01",
+        projects: 1,
+        hindsight: 2,
+        as_of: 1,
+        undated: 0,
+      },
+      {
+        grid_date: "2025-02-01",
+        as_of_date: "2025-02-01",
+        projects: 1,
+        hindsight: 1,
+        as_of: 0,
+        undated: 0,
+      },
+      {
+        grid_date: "2025-03-01",
+        as_of_date: "2025-03-01",
+        projects: 1,
+        hindsight: 1,
+        as_of: 1,
+        undated: 0,
+      },
+      {
+        grid_date: null,
+        as_of_date: "2025-04-02",
+        projects: 1,
+        hindsight: 1,
+        as_of: 1,
+        undated: 0,
+      },
     ]);
   });
 
@@ -98,7 +141,10 @@ describe("loadOverTime", () => {
   it("filters HEAD by its cutoff day", () => {
     const [row] = loadOverTime({
       runs: [run("h", null)],
-      vulnerabilities: [instance("h", "2025-05-01T00:00:00Z"), instance("h", "2025-05-03T00:00:00Z")],
+      vulnerabilities: [
+        instance("h", "2025-05-01T00:00:00Z"),
+        instance("h", "2025-05-03T00:00:00Z"),
+      ],
       head_cutoff: new Date("2025-05-02T23:59:00Z"),
     });
 
@@ -115,7 +161,11 @@ describe("loadOverTime", () => {
   it("keeps instances with an unreadable published date in the as-of view and counts them", () => {
     const [row] = loadOverTime({
       runs: [run("a1", "2025-01-01")],
-      vulnerabilities: [instance("a1", null), instance("a1", "not a date"), instance("a1", MID_GRID)],
+      vulnerabilities: [
+        instance("a1", null),
+        instance("a1", "not a date"),
+        instance("a1", MID_GRID),
+      ],
       head_cutoff: NOW,
     });
 
@@ -141,14 +191,31 @@ describe("loadOverTime", () => {
     });
 
     expect(rows).toEqual([
-      { grid_date: "2025-01-01", as_of_date: "2025-01-01", projects: 2, hindsight: 2, as_of: 2, undated: 0 },
-      { grid_date: "2025-02-01", as_of_date: "2025-02-01", projects: 0, hindsight: null, as_of: null, undated: 0 },
+      {
+        grid_date: "2025-01-01",
+        as_of_date: "2025-01-01",
+        projects: 2,
+        hindsight: 2,
+        as_of: 2,
+        undated: 0,
+      },
+      {
+        grid_date: "2025-02-01",
+        as_of_date: "2025-02-01",
+        projects: 0,
+        hindsight: null,
+        as_of: null,
+        undated: 0,
+      },
     ]);
   });
 
   it("reads a shared snapshot's rows from the run that owns its commit", () => {
     const rows = loadOverTime({
-      runs: [run("a1", "2025-01-01"), run("a2", "2025-03-01", { rows_run_id: "a1" })],
+      runs: [
+        run("a1", "2025-01-01"),
+        run("a2", "2025-03-01", { rows_run_id: "a1" }),
+      ],
       vulnerabilities: [instance("a1", MID_GRID)],
       head_cutoff: NOW,
     });
@@ -162,7 +229,9 @@ describe("loadOverTime", () => {
   it("ignores instances without an affected package, as the headline does", () => {
     const [row] = loadOverTime({
       runs: [run("a1", "2025-01-01")],
-      vulnerabilities: [instance("a1", "2024-01-01", { affected_dependency: null })],
+      vulnerabilities: [
+        instance("a1", "2024-01-01", { affected_dependency: null }),
+      ],
       head_cutoff: NOW,
     });
 

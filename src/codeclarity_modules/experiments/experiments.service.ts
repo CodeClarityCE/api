@@ -411,7 +411,10 @@ export class ExperimentsService {
       run_count: runCount,
       run_counts: runCounts,
       // One run per entry per snapshot
-      estimated_analyses: estimateAnalyses(Math.round(runCount / (experiment.grid_count + 1)), experiment.grid_count),
+      estimated_analyses: estimateAnalyses(
+        Math.round(runCount / (experiment.grid_count + 1)),
+        experiment.grid_count,
+      ),
     };
   }
 }

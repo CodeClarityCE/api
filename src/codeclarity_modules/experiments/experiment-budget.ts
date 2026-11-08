@@ -17,12 +17,16 @@ export interface AnalysisBudgetUsage {
 }
 
 /** Analyses the budget still allows; Infinity without a budget. */
-export function analysesLeft(usage: AnalysisBudgetUsage | null | undefined): number {
+export function analysesLeft(
+  usage: AnalysisBudgetUsage | null | undefined,
+): number {
   if (usage?.analysis_budget == null) return Number.POSITIVE_INFINITY;
   return Math.max(0, usage.analysis_budget - usage.analyses_submitted);
 }
 
-export function isBudgetSpent(usage: AnalysisBudgetUsage | null | undefined): boolean {
+export function isBudgetSpent(
+  usage: AnalysisBudgetUsage | null | undefined,
+): boolean {
   return analysesLeft(usage) === 0;
 }
 
@@ -34,5 +38,7 @@ export const PROBES_PER_ENTRY_INTERVAL = 2;
 
 /** Every snapshot (grid dates plus HEAD) of every entry, plus the probe estimate. */
 export function estimateAnalyses(entries: number, gridCount: number): number {
-  return entries * (gridCount + 1) + entries * gridCount * PROBES_PER_ENTRY_INTERVAL;
+  return (
+    entries * (gridCount + 1) + entries * gridCount * PROBES_PER_ENTRY_INTERVAL
+  );
 }

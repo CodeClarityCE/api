@@ -83,12 +83,18 @@ export function readProbeOutcomes(
   entryIds: string[] | null,
 ): Promise<ResultsProbeInput[]> {
   return entryIds
-    ? query<ResultsProbeInput>(`${PROBE_OUTCOME_SELECT} AND probe."datasetEntryId" = ANY($2)`, [experimentId, entryIds])
+    ? query<ResultsProbeInput>(
+        `${PROBE_OUTCOME_SELECT} AND probe."datasetEntryId" = ANY($2)`,
+        [experimentId, entryIds],
+      )
     : query<ResultsProbeInput>(PROBE_OUTCOME_SELECT, [experimentId]);
 }
 
 /** The distinct vulnerable versions the instances of every entry name. */
-export function readKnownVersions(query: RawQuery, experimentId: string): Promise<KnownVersionsInput[]> {
+export function readKnownVersions(
+  query: RawQuery,
+  experimentId: string,
+): Promise<KnownVersionsInput[]> {
   return query<KnownVersionsInput>(
     `SELECT DISTINCT vulnerability_id, affected_dependency, affected_version, vulnerable_versions
        FROM experiment_vulnerability_instance
@@ -118,34 +124,44 @@ export async function readPlanningRows(
     await query<{ datasetEntryId: string }>(ENDED_ENTRIES, [experimentId])
   ).map((row) => row.datasetEntryId);
   if (entryIds.length === 0) {
-    return { runs: [], vulnerabilities: [], probes: [], probe_intervals: [], probe_analyses: [] };
+    return {
+      runs: [],
+      vulnerabilities: [],
+      probes: [],
+      probe_intervals: [],
+      probe_analyses: [],
+    };
   }
-  const [runs, vulnerabilities, probes, probeRows, known_versions] = await Promise.all([
-    query<ResultsRunInput>(
-      `SELECT run.status, run.error, run.grid_index, run.grid_date, run.commit_hash,
+  const [runs, vulnerabilities, probes, probeRows, known_versions] =
+    await Promise.all([
+      query<ResultsRunInput>(
+        `SELECT run.status, run.error, run.grid_index, run.grid_date, run.commit_hash,
               run.committed_at, run.branch, run."analysisId" AS analysis_id,
               COALESCE(run."sharedFromId", run.id) AS rows_run_id,
               run."datasetEntryId" AS dataset_entry_id
          FROM experiment_run AS run
         WHERE run."experimentId" = $1 AND run."datasetEntryId" = ANY($2)`,
-      [experimentId, entryIds],
-    ),
-    query<ResultsVulnerabilityInput>(
-      `SELECT instance."runId" AS run_id, ${INSTANCE_COLUMNS.map((c) => `instance.${c}`).join(", ")}
+        [experimentId, entryIds],
+      ),
+      query<ResultsVulnerabilityInput>(
+        `SELECT instance."runId" AS run_id, ${INSTANCE_COLUMNS.map((c) => `instance.${c}`).join(", ")}
          FROM experiment_vulnerability_instance AS instance
          JOIN experiment_run AS run ON run.id = instance."runId"
         WHERE instance."experimentId" = $1 AND run."datasetEntryId" = ANY($2)`,
-      [experimentId, entryIds],
-    ),
-    readProbeOutcomes(query, experimentId, entryIds),
-    readProbeRows(query, experimentId, entryIds),
-    readKnownVersions(query, experimentId),
-  ]);
+        [experimentId, entryIds],
+      ),
+      readProbeOutcomes(query, experimentId, entryIds),
+      readProbeRows(query, experimentId, entryIds),
+      readKnownVersions(query, experimentId),
+    ]);
   return { runs, vulnerabilities, probes, ...probeRows, known_versions };
 }
 
 /** Snapshot attempts plus submitted fix probes: what the analysis budget counts. */
-export async function readAnalysesSubmitted(query: RawQuery, experimentId: string): Promise<number> {
+export async function readAnalysesSubmitted(
+  query: RawQuery,
+  experimentId: string,
+): Promise<number> {
   const [row] = await query<{ submitted: string | number }>(
     `SELECT (SELECT COALESCE(SUM(attempts), 0) FROM experiment_run WHERE "experimentId" = $1)
           + (SELECT COUNT(*) FROM experiment_probe

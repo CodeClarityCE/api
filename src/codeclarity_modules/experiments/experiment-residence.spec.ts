@@ -109,7 +109,14 @@ describe("pre-disclosure residence in the results", () => {
     expect(results.residence.snapshot_precision_share).toBe(1);
     expect(results.residence.present_at_first_observation).toBe(1);
     expect(results.residence.undated).toBe(1);
-    expect(results.residence.overall).toEqual({ n: 2, median: 44, p25: 22, p75: 66, min: 0, max: 88 });
+    expect(results.residence.overall).toEqual({
+      n: 2,
+      median: 44,
+      p25: 22,
+      p75: 66,
+      min: 0,
+      max: 88,
+    });
     expect(results.residence.by_severity).toEqual([
       { key: "CRITICAL", n: 1, median: 88, p25: 88, p75: 88, min: 88, max: 88 },
       { key: "HIGH", n: 1, median: 0, p25: 0, p75: 0, min: 0, max: 0 },
@@ -121,15 +128,31 @@ describe("pre-disclosure residence in the results", () => {
   });
 
   it("counts introductions after disclosure apart, by days since publication", () => {
-    expect(results.residence.after_disclosure).toEqual({ n: 1, median: 99, p25: 99, p75: 99, min: 99, max: 99 });
+    expect(results.residence.after_disclosure).toEqual({
+      n: 1,
+      median: 99,
+      p25: 99,
+      p75: 99,
+      min: 99,
+      max: 99,
+    });
     expect(results.residence.after_disclosure_by_severity).toEqual([
       { key: "HIGH", n: 1, median: 99, p25: 99, p75: 99, min: 99, max: 99 },
     ]);
-    expect(results.residence.points.every((p) => p.residence_days >= 0)).toBe(true);
+    expect(results.residence.points.every((p) => p.residence_days >= 0)).toBe(
+      true,
+    );
   });
 
   it("is empty without introductions", () => {
-    const empty = { n: 0, median: null, p25: null, p75: null, min: null, max: null };
+    const empty = {
+      n: 0,
+      median: null,
+      p25: null,
+      p75: null,
+      min: null,
+      max: null,
+    };
     expect(aggregateExperimentResults(input()).residence).toEqual({
       introductions: 0,
       snapshot_precision_share: null,

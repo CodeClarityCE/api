@@ -395,7 +395,11 @@ describe("ExperimentsService", () => {
     });
 
     it("get estimates the analyses: every snapshot plus about two fix probes per entry per grid interval", async () => {
-      experimentRepository["findOne"]!.mockResolvedValue({ ...experiment, grid_interval: "week", grid_count: 2 });
+      experimentRepository["findOne"]!.mockResolvedValue({
+        ...experiment,
+        grid_interval: "week",
+        grid_count: 2,
+      });
       // Three entries, each with two grid dates and HEAD
       runRepository["createQueryBuilder"]!().getRawMany.mockResolvedValue([
         { experiment_id: "exp-1", status: "pending", count: "9" },
@@ -407,7 +411,10 @@ describe("ExperimentsService", () => {
     });
 
     it("get reports the analysis budget", async () => {
-      experimentRepository["findOne"]!.mockResolvedValue({ ...experiment, analysis_budget: 500 });
+      experimentRepository["findOne"]!.mockResolvedValue({
+        ...experiment,
+        analysis_budget: 500,
+      });
 
       const summary = await service.get("org-1", "exp-1", user);
 

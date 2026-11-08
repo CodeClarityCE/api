@@ -123,7 +123,9 @@ class FakeStore extends ExperimentStore {
   ): Promise<ExposuresInput & { runs: ResultsRunInput[] }> {
     const runs = this.runsOf(experimentId);
     const pending = new Set(
-      runs.filter((r) => r.status === ExperimentRunStatus.PENDING).map((r) => r.dataset_entry.id),
+      runs
+        .filter((r) => r.status === ExperimentRunStatus.PENDING)
+        .map((r) => r.dataset_entry.id),
     );
     const ended = runs.filter((r) => !pending.has(r.dataset_entry.id));
     const entries = new Set(ended.map((r) => r.dataset_entry.id));
@@ -141,13 +143,26 @@ class FakeStore extends ExperimentStore {
         dataset_entry_id: r.dataset_entry.id,
       })),
       vulnerabilities: ended.flatMap((r) =>
-        (this.copied.get(r.id)?.vulnerabilities ?? []).map((v) => ({ ...v, run_id: r.id })),
+        (this.copied.get(r.id)?.vulnerabilities ?? []).map((v) => ({
+          ...v,
+          run_id: r.id,
+        })),
       ),
       probes: [...this.probeOutcomes.values()]
-        .filter((o) => o.experimentId === experimentId && entries.has(o.datasetEntryId))
-        .map((o) => ({ dataset_entry_id: o.datasetEntryId, commit_hash: o.commitHash, packages: o.packages })),
+        .filter(
+          (o) =>
+            o.experimentId === experimentId && entries.has(o.datasetEntryId),
+        )
+        .map((o) => ({
+          dataset_entry_id: o.datasetEntryId,
+          commit_hash: o.commitHash,
+          packages: o.packages,
+        })),
       probe_intervals: this.intervals
-        .filter((i) => i.experimentId === experimentId && entries.has(i.datasetEntryId))
+        .filter(
+          (i) =>
+            i.experimentId === experimentId && entries.has(i.datasetEntryId),
+        )
         .map((i) => ({
           dataset_entry_id: i.datasetEntryId,
           from_commit: i.fromCommit,
@@ -156,13 +171,23 @@ class FakeStore extends ExperimentStore {
           error: i.error,
         })),
       probe_analyses: this.probes
-        .filter((p) => p.experimentId === experimentId && entries.has(p.datasetEntryId))
-        .map((p) => ({ dataset_entry_id: p.datasetEntryId, commit_hash: p.commitHash, status: p.status, error: p.error })),
+        .filter(
+          (p) =>
+            p.experimentId === experimentId && entries.has(p.datasetEntryId),
+        )
+        .map((p) => ({
+          dataset_entry_id: p.datasetEntryId,
+          commit_hash: p.commitHash,
+          status: p.status,
+          error: p.error,
+        })),
     };
   }
 
   async getDatasetEntries(ids: string[]): Promise<DatasetEntry[]> {
-    const found = new Map(this.runs.map((r) => [r.dataset_entry.id, r.dataset_entry]));
+    const found = new Map(
+      this.runs.map((r) => [r.dataset_entry.id, r.dataset_entry]),
+    );
     return ids.flatMap((id) => (found.has(id) ? [found.get(id)!] : []));
   }
 
@@ -186,11 +211,22 @@ class FakeStore extends ExperimentStore {
     );
     if (taken) return null;
     const id = `probe-${this.probes.length + 1}`;
-    this.probes.push({ ...probe, id, status: "pending", error: null, submitted_on: new Date(), analysis: null });
+    this.probes.push({
+      ...probe,
+      id,
+      status: "pending",
+      error: null,
+      submitted_on: new Date(),
+      analysis: null,
+    });
     return id;
   }
 
-  async linkProbe(_manager: unknown, probeId: string, analysisId: string): Promise<boolean> {
+  async linkProbe(
+    _manager: unknown,
+    probeId: string,
+    analysisId: string,
+  ): Promise<boolean> {
     const probe = this.probes.find((p) => p.id === probeId);
     if (probe?.status !== "pending") return false;
     probe.analysis = { id: analysisId };
@@ -209,12 +245,18 @@ class FakeStore extends ExperimentStore {
             status: p.status,
             submitted_on: p.submitted_on,
             dataset_entry: { id: p.datasetEntryId },
-            analysis: p.analysis ? (this.analyses.get(p.analysis.id) ?? null) : null,
+            analysis: p.analysis
+              ? (this.analyses.get(p.analysis.id) ?? null)
+              : null,
           }) as unknown as ExperimentProbe,
       );
   }
 
-  async endProbe(probeId: string, status: "done" | "failed", error?: string): Promise<boolean> {
+  async endProbe(
+    probeId: string,
+    status: "done" | "failed",
+    error?: string,
+  ): Promise<boolean> {
     const probe = this.probes.find((p) => p.id === probeId);
     if (probe?.status !== "pending") return false;
     probe.status = status;
@@ -229,8 +271,16 @@ class FakeStore extends ExperimentStore {
   }
 
   async countSubmittedAnalyses(experimentId: string): Promise<number> {
-    const attempts = this.runsOf(experimentId).reduce((sum, r) => sum + r.attempts, 0);
-    return attempts + this.probes.filter((p) => p.experimentId === experimentId && p.submitted_on).length;
+    const attempts = this.runsOf(experimentId).reduce(
+      (sum, r) => sum + r.attempts,
+      0,
+    );
+    return (
+      attempts +
+      this.probes.filter(
+        (p) => p.experimentId === experimentId && p.submitted_on,
+      ).length
+    );
   }
 
   probeOf(commit: string): FakeStore["probes"][number] | undefined {
@@ -536,7 +586,10 @@ class FakeGithub {
   calls = { get: 0, listCommits: 0 };
 
   /** Earlier default-branch commits by repository, oldest first */
-  history = new Map<string, { sha: string; date: string; paths?: string[] }[]>();
+  history = new Map<
+    string,
+    { sha: string; date: string; paths?: string[] }[]
+  >();
   /** Every listCommits call's parameters */
   listed: Record<string, unknown>[] = [];
   /** The `until` of every listCommits call */
@@ -555,7 +608,11 @@ class FakeGithub {
   addHistory(fullName: string, commits: [string, string, string[]?][]): void {
     this.history.set(
       fullName.toLowerCase(),
-      commits.map(([sha, date, paths]) => ({ sha, date, ...(paths ? { paths } : {}) })),
+      commits.map(([sha, date, paths]) => ({
+        sha,
+        date,
+        ...(paths ? { paths } : {}),
+      })),
     );
   }
 
@@ -597,9 +654,15 @@ class FakeGithub {
             const key = `${owner}/${repo}`.toLowerCase();
             const found = this.repos.get(key);
             if (!found) throw githubError(404, "Not Found");
-            const all = [...(this.history.get(key) ?? []), { sha: found.sha, date: found.date }];
+            const all = [
+              ...(this.history.get(key) ?? []),
+              { sha: found.sha, date: found.date },
+            ];
             // A branch lists from its tip, a commit from itself
-            const tip = sha === found.default_branch ? all.length - 1 : all.findIndex((c) => c.sha === sha);
+            const tip =
+              sha === found.default_branch
+                ? all.length - 1
+                : all.findIndex((c) => c.sha === sha);
             if (tip === -1) throw githubError(404, "Not Found");
             // Commits touch package-lock.json unless told otherwise
             const at = (date: string): number => Date.parse(date);
@@ -607,7 +670,13 @@ class FakeGithub {
               .slice(0, tip + 1)
               .filter((c) => !until || at(c.date) <= at(until))
               .filter((c) => !since || at(c.date) >= at(since))
-              .filter((c) => !path || ("paths" in c ? c.paths : ["package-lock.json"]).includes(path))
+              .filter(
+                (c) =>
+                  !path ||
+                  ("paths" in c ? c.paths : ["package-lock.json"]).includes(
+                    path,
+                  ),
+              )
               .reverse();
             const perPage = params.per_page ?? 30;
             const start = ((params.page ?? 1) - 1) * perPage;
@@ -628,7 +697,10 @@ describe("ExperimentRunnerService", () => {
   let store: FakeStore;
   let github: FakeGithub;
   let submit: jest.Mock<Promise<string | undefined>, [RunSubmissionRequest]>;
-  let submitProbe: jest.Mock<Promise<string | undefined>, [ProbeSubmissionRequest]>;
+  let submitProbe: jest.Mock<
+    Promise<string | undefined>,
+    [ProbeSubmissionRequest]
+  >;
   let abandon: jest.Mock<Promise<void>, [string]>;
   let getProvenance: jest.Mock;
   let getToken: jest.Mock;
@@ -1500,8 +1572,18 @@ describe("ExperimentRunnerService", () => {
           commitHash: "sha-mar",
           committedAt: new Date("2025-03-15T18:30:00Z"),
           packages: [
-            { workspace: ".", name: "lodash", version: "4.17.20", direct: true },
-            { workspace: ".", name: "minimist", version: "1.2.5", direct: false },
+            {
+              workspace: ".",
+              name: "lodash",
+              version: "4.17.20",
+              direct: true,
+            },
+            {
+              workspace: ".",
+              name: "minimist",
+              version: "1.2.5",
+              direct: false,
+            },
           ],
         },
         expect.objectContaining({ commitHash: "sha-octo/app" }),
@@ -1600,7 +1682,9 @@ describe("ExperimentRunnerService", () => {
           status: "failure",
           errors: [
             {
-              public_error: { description: "Project not compatible with analyzer" },
+              public_error: {
+                description: "Project not compatible with analyzer",
+              },
               private_error: {
                 description:
                   "project at /private/org/projects/p/sha cannot be analyzed by JavaScript analyzer",
@@ -1804,7 +1888,9 @@ describe("ExperimentRunnerService", () => {
       return {
         workspaces: {
           ".": {
-            dependencies: { lodash: { [LODASH[sha]!]: { Direct: true, Prod: true } } },
+            dependencies: {
+              lodash: { [LODASH[sha]!]: { Direct: true, Prod: true } },
+            },
             start: {},
           },
         },
@@ -1818,9 +1904,16 @@ describe("ExperimentRunnerService", () => {
 
     function lodashVulns(sha: string): unknown {
       const version = LODASH[sha]!;
-      const [, minor, patch] = version.split(".").map(Number) as [number, number, number];
+      const [, minor, patch] = version.split(".").map(Number) as [
+        number,
+        number,
+        number,
+      ];
       const ids = Object.entries(FIXED)
-        .filter(([, [, fMinor, fPatch]]) => minor < fMinor || (minor === fMinor && patch < fPatch))
+        .filter(
+          ([, [, fMinor, fPatch]]) =>
+            minor < fMinor || (minor === fMinor && patch < fPatch),
+        )
         .map(([id]) => id);
       return {
         workspaces: {
@@ -1832,12 +1925,17 @@ describe("ExperimentRunnerService", () => {
                 AffectedDependency: "lodash",
                 AffectedVersion: version,
                 Severity: { SeverityClass: "HIGH" },
-                Conflict: { ConflictFlag: "MATCH_CORRECT", ConflictWinner: "OSV" },
+                Conflict: {
+                  ConflictFlag: "MATCH_CORRECT",
+                  ConflictWinner: "OSV",
+                },
                 direct_dependency: true,
                 OSVMatch: {
                   Vulnerable: true,
                   Vulnerability: { published: "2025-02-01T00:00:00Z" },
-                  AffectedInfo: [{ Ranges: [{ FixedSemver: { Major, Minor, Patch } }] }],
+                  AffectedInfo: [
+                    { Ranges: [{ FixedSemver: { Major, Minor, Patch } }] },
+                  ],
                 },
               };
             }),
@@ -1851,7 +1949,8 @@ describe("ExperimentRunnerService", () => {
     function settle(failing: Record<string, string> = {}): void {
       const commits = new Map<string, string>();
       for (const run of store.runs) {
-        if (run.analysis && run.commit_hash) commits.set(run.analysis.id, run.commit_hash);
+        if (run.analysis && run.commit_hash)
+          commits.set(run.analysis.id, run.commit_hash);
       }
       for (const probe of store.probes) {
         if (probe.analysis) commits.set(probe.analysis.id, probe.commitHash);
@@ -1859,7 +1958,9 @@ describe("ExperimentRunnerService", () => {
       for (const analysis of store.analyses.values()) {
         const sha = commits.get(analysis.id);
         if (analysis.status !== AnalysisStatus.REQUESTED || !sha) continue;
-        const isProbe = store.probes.some((p) => p.analysis?.id === analysis.id);
+        const isProbe = store.probes.some(
+          (p) => p.analysis?.id === analysis.id,
+        );
         if (isProbe && failing[sha]) {
           analysis.status = AnalysisStatus.FAILED;
           analysis.failure_reason = failing[sha];
@@ -1867,14 +1968,21 @@ describe("ExperimentRunnerService", () => {
         }
         analysis.status = AnalysisStatus.SUCCESS;
         store.results.set(`${analysis.id}/js-sbom`, lodashSbom(sha));
-        if (!isProbe) store.results.set(`${analysis.id}/vuln-finder`, lodashVulns(sha));
+        if (!isProbe)
+          store.results.set(`${analysis.id}/vuln-finder`, lodashVulns(sha));
       }
     }
 
-    async function runToEnd(failing: Record<string, string> = {}, service = runner()): Promise<void> {
+    async function runToEnd(
+      failing: Record<string, string> = {},
+      service = runner(),
+    ): Promise<void> {
       for (let pass = 0; pass < 12; pass++) {
         await service.tick();
-        if (store.experiments.get("exp-1")!.status === ExperimentStatus.COMPLETED) return;
+        if (
+          store.experiments.get("exp-1")!.status === ExperimentStatus.COMPLETED
+        )
+          return;
         settle(failing);
       }
       throw new Error("experiment did not complete");
@@ -1899,7 +2007,9 @@ describe("ExperimentRunnerService", () => {
       await runToEnd();
 
       // Candidates d4e, e5f, f6a: f6a is the later snapshot, never probed
-      expect(submitProbe.mock.calls.map(([request]) => request.head.commitHash)).toEqual(["d4e", "e5f"]);
+      expect(
+        submitProbe.mock.calls.map(([request]) => request.head.commitHash),
+      ).toEqual(["d4e", "e5f"]);
       expect(submitProbe).toHaveBeenCalledWith(
         expect.objectContaining({
           probeId: store.probeOf("d4e")!.id,
@@ -1908,12 +2018,31 @@ describe("ExperimentRunnerService", () => {
         }),
       );
       expect(github.listed).toEqual([
-        expect.objectContaining({ path: "package-lock.json", sha: "f6a", since: "2025-02-25T12:00:00.000Z" }),
+        expect.objectContaining({
+          path: "package-lock.json",
+          sha: "f6a",
+          since: "2025-02-25T12:00:00.000Z",
+        }),
       ]);
       expect(github.listed[0]).not.toHaveProperty("until");
       expect(await fixes()).toEqual([
-        ["CVE-A", expect.objectContaining({ commit_hash: "e5f", precision: "commit", probe_outcome: "found", interval_to: "2025-04-01" })],
-        ["CVE-B", expect.objectContaining({ commit_hash: "d4e", precision: "commit", probe_outcome: "found" })],
+        [
+          "CVE-A",
+          expect.objectContaining({
+            commit_hash: "e5f",
+            precision: "commit",
+            probe_outcome: "found",
+            interval_to: "2025-04-01",
+          }),
+        ],
+        [
+          "CVE-B",
+          expect.objectContaining({
+            commit_hash: "d4e",
+            precision: "commit",
+            probe_outcome: "found",
+          }),
+        ],
       ]);
       expect(store.probes.map((p) => p.status)).toEqual(["done", "done"]);
     });
@@ -1924,7 +2053,9 @@ describe("ExperimentRunnerService", () => {
       settle();
       await service.tick();
 
-      expect(store.runs.every((r) => r.status === ExperimentRunStatus.DONE)).toBe(true);
+      expect(
+        store.runs.every((r) => r.status === ExperimentRunStatus.DONE),
+      ).toBe(true);
       expect(submitProbe).toHaveBeenCalledTimes(1);
       expect(submit).toHaveBeenCalledTimes(3);
     });
@@ -1933,10 +2064,26 @@ describe("ExperimentRunnerService", () => {
       await runToEnd({ d4e: "clone failed" });
 
       expect(submitProbe).toHaveBeenCalledTimes(1);
-      expect(store.probeOf("d4e")).toMatchObject({ status: "failed", error: "clone failed" });
+      expect(store.probeOf("d4e")).toMatchObject({
+        status: "failed",
+        error: "clone failed",
+      });
       expect(await fixes()).toEqual([
-        ["CVE-A", expect.objectContaining({ precision: "snapshot", probe_outcome: "not_found", probe_reason: "probe of d4e failed: clone failed" })],
-        ["CVE-B", expect.objectContaining({ precision: "snapshot", probe_outcome: "not_found" })],
+        [
+          "CVE-A",
+          expect.objectContaining({
+            precision: "snapshot",
+            probe_outcome: "not_found",
+            probe_reason: "probe of d4e failed: clone failed",
+          }),
+        ],
+        [
+          "CVE-B",
+          expect.objectContaining({
+            precision: "snapshot",
+            probe_outcome: "not_found",
+          }),
+        ],
       ]);
     });
 
@@ -1945,13 +2092,31 @@ describe("ExperimentRunnerService", () => {
         `m${i}`,
         new Date(Date.parse("2025-03-02T00:00:00Z") + i * 60_000).toISOString(),
       ]);
-      github.addHistory("octo/app", [["c3d", "2025-02-25T12:00:00Z"], ...many, ["f6a", "2025-03-28T12:00:00Z"]]);
+      github.addHistory("octo/app", [
+        ["c3d", "2025-02-25T12:00:00Z"],
+        ...many,
+        ["f6a", "2025-03-28T12:00:00Z"],
+      ]);
       await runToEnd();
 
       expect(submitProbe).not.toHaveBeenCalled();
       expect(await fixes()).toEqual([
-        ["CVE-A", expect.objectContaining({ precision: "snapshot", probe_outcome: "not_found", probe_reason: "too many commits" })],
-        ["CVE-B", expect.objectContaining({ precision: "snapshot", probe_outcome: "not_found", probe_reason: "too many commits" })],
+        [
+          "CVE-A",
+          expect.objectContaining({
+            precision: "snapshot",
+            probe_outcome: "not_found",
+            probe_reason: "too many commits",
+          }),
+        ],
+        [
+          "CVE-B",
+          expect.objectContaining({
+            precision: "snapshot",
+            probe_outcome: "not_found",
+            probe_reason: "too many commits",
+          }),
+        ],
       ]);
     });
 
@@ -1962,14 +2127,23 @@ describe("ExperimentRunnerService", () => {
       const probe = store.probeOf("d4e")!;
       expect(warn).toHaveBeenCalledWith(
         "Experiment probe failed",
-        expect.objectContaining({ experimentId: "exp-1", probeId: probe.id, analysisId: probe.analysis!.id, reason: "clone failed" }),
+        expect.objectContaining({
+          experimentId: "exp-1",
+          probeId: probe.id,
+          analysisId: probe.analysis!.id,
+          reason: "clone failed",
+        }),
       );
       warn.mockRestore();
     });
 
     it("logs a probe whose analysis was deleted at warn", async () => {
       const service = runner();
-      for (let pass = 0; pass < 6 && submitProbe.mock.calls.length === 0; pass++) {
+      for (
+        let pass = 0;
+        pass < 6 && submitProbe.mock.calls.length === 0;
+        pass++
+      ) {
         await service.tick();
         settle();
       }
@@ -1978,10 +2152,17 @@ describe("ExperimentRunnerService", () => {
       const warn = jest.spyOn(CodeClarityLogger.prototype, "warn");
       await service.tick();
 
-      expect(probe).toMatchObject({ status: "failed", error: "analysis deleted" });
+      expect(probe).toMatchObject({
+        status: "failed",
+        error: "analysis deleted",
+      });
       expect(warn).toHaveBeenCalledWith(
         "Experiment probe failed",
-        expect.objectContaining({ experimentId: "exp-1", probeId: probe.id, reason: "analysis deleted" }),
+        expect.objectContaining({
+          experimentId: "exp-1",
+          probeId: probe.id,
+          reason: "analysis deleted",
+        }),
       );
       warn.mockRestore();
     });
@@ -2009,10 +2190,14 @@ describe("ExperimentRunnerService", () => {
       async function budgetedFixes(): Promise<[string, unknown][]> {
         const rows = await store.getProbeRows("exp-1");
         const budget = {
-          analysis_budget: store.experiments.get("exp-1")!.analysis_budget ?? null,
+          analysis_budget:
+            store.experiments.get("exp-1")!.analysis_budget ?? null,
           analyses_submitted: await store.countSubmittedAnalyses("exp-1"),
         };
-        return deriveExposures({ ...rows, budget }).map((e) => [e.vulnerability_id, e.fix]);
+        return deriveExposures({ ...rows, budget }).map((e) => [
+          e.vulnerability_id,
+          e.fix,
+        ]);
       }
 
       it("stops probing once snapshots and probes have spent the budget, then completes", async () => {
@@ -2021,10 +2206,27 @@ describe("ExperimentRunnerService", () => {
         await runToEnd();
 
         expect(submit).toHaveBeenCalledTimes(3);
-        expect(submitProbe.mock.calls.map(([request]) => request.head.commitHash)).toEqual(["d4e"]);
+        expect(
+          submitProbe.mock.calls.map(([request]) => request.head.commitHash),
+        ).toEqual(["d4e"]);
         expect(await budgetedFixes()).toEqual([
-          ["CVE-A", expect.objectContaining({ commit_hash: "f6a", precision: "snapshot", probe_outcome: "not_found", probe_reason: "budget spent" })],
-          ["CVE-B", expect.objectContaining({ commit_hash: "d4e", precision: "commit", probe_outcome: "found" })],
+          [
+            "CVE-A",
+            expect.objectContaining({
+              commit_hash: "f6a",
+              precision: "snapshot",
+              probe_outcome: "not_found",
+              probe_reason: "budget spent",
+            }),
+          ],
+          [
+            "CVE-B",
+            expect.objectContaining({
+              commit_hash: "d4e",
+              precision: "commit",
+              probe_outcome: "found",
+            }),
+          ],
         ]);
       });
 
@@ -2033,11 +2235,19 @@ describe("ExperimentRunnerService", () => {
         await runToEnd();
 
         expect(submit).toHaveBeenCalledTimes(3);
-        expect(store.runs.every((r) => r.status === ExperimentRunStatus.DONE)).toBe(true);
+        expect(
+          store.runs.every((r) => r.status === ExperimentRunStatus.DONE),
+        ).toBe(true);
         expect(submitProbe).not.toHaveBeenCalled();
         expect((await budgetedFixes()).map(([, fix]) => fix)).toEqual([
-          expect.objectContaining({ precision: "snapshot", probe_reason: "budget spent" }),
-          expect.objectContaining({ precision: "snapshot", probe_reason: "budget spent" }),
+          expect.objectContaining({
+            precision: "snapshot",
+            probe_reason: "budget spent",
+          }),
+          expect.objectContaining({
+            precision: "snapshot",
+            probe_reason: "budget spent",
+          }),
         ]);
       });
 
@@ -2053,7 +2263,12 @@ describe("ExperimentRunnerService", () => {
       });
 
       it("does not count a probe whose submission failed against the budget", async () => {
-        Object.assign(LODASH, { w1a: "4.17.21", w2b: "4.17.15", w3c: "4.17.15", "sha-octo/web": "4.17.15" });
+        Object.assign(LODASH, {
+          w1a: "4.17.21",
+          w2b: "4.17.15",
+          w3c: "4.17.15",
+          "sha-octo/web": "4.17.15",
+        });
         github.addHistory("octo/web", [
           ["w1a", "2025-02-20T12:00:00Z"],
           ["w2b", "2025-03-10T12:00:00Z"],
@@ -2068,13 +2283,20 @@ describe("ExperimentRunnerService", () => {
         await runToEnd();
 
         expect(store.probeOf("d4e")).toMatchObject({ status: "failed" });
-        expect(submitProbe.mock.calls.map(([request]) => request.head.commitHash)).toEqual(["d4e", "w2b"]);
+        expect(
+          submitProbe.mock.calls.map(([request]) => request.head.commitHash),
+        ).toEqual(["d4e", "w2b"]);
         expect(await store.countSubmittedAnalyses("exp-1")).toBe(7);
       });
 
       it("probes fixes before introductions", async () => {
         // octo/web gains vulnerable lodash between its first two snapshots
-        Object.assign(LODASH, { w1a: "4.17.21", w2b: "4.17.15", w3c: "4.17.15", "sha-octo/web": "4.17.15" });
+        Object.assign(LODASH, {
+          w1a: "4.17.21",
+          w2b: "4.17.15",
+          w3c: "4.17.15",
+          "sha-octo/web": "4.17.15",
+        });
         github.addHistory("octo/web", [
           ["w1a", "2025-02-20T12:00:00Z"],
           ["w2b", "2025-03-10T12:00:00Z"],
@@ -2087,15 +2309,28 @@ describe("ExperimentRunnerService", () => {
         budgeted(7);
         await runToEnd();
 
-        expect(submitProbe.mock.calls.map(([request]) => request.head.commitHash)).toEqual(["d4e"]);
+        expect(
+          submitProbe.mock.calls.map(([request]) => request.head.commitHash),
+        ).toEqual(["d4e"]);
         const rows = await store.getProbeRows("exp-1");
         const intros = deriveExposures({
           ...rows,
-          budget: { analysis_budget: 7, analyses_submitted: await store.countSubmittedAnalyses("exp-1") },
+          budget: {
+            analysis_budget: 7,
+            analyses_submitted: await store.countSubmittedAnalyses("exp-1"),
+          },
         }).flatMap((e) => (e.introduction ? [e.introduction] : []));
         expect(intros).toEqual([
-          expect.objectContaining({ commit_hash: "w3c", precision: "snapshot", probe_reason: "budget spent" }),
-          expect.objectContaining({ commit_hash: "w3c", precision: "snapshot", probe_reason: "budget spent" }),
+          expect.objectContaining({
+            commit_hash: "w3c",
+            precision: "snapshot",
+            probe_reason: "budget spent",
+          }),
+          expect.objectContaining({
+            commit_hash: "w3c",
+            precision: "snapshot",
+            probe_reason: "budget spent",
+          }),
         ]);
       });
     });
@@ -2114,7 +2349,9 @@ describe("ExperimentRunnerService", () => {
       await service.tick();
 
       expect(submitProbe).toHaveBeenCalledTimes(1);
-      expect(store.experiments.get("exp-1")).toMatchObject({ status: ExperimentStatus.CANCELLED });
+      expect(store.experiments.get("exp-1")).toMatchObject({
+        status: ExperimentStatus.CANCELLED,
+      });
       expect(store.experiments.get("exp-1")!.ended_on).toBeTruthy();
     });
   });

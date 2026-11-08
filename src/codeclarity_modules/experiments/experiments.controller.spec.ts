@@ -89,7 +89,10 @@ describe("ExperimentsController exports", () => {
     ["exportFixesCsv", "fixes.csv"],
   ] as const)("%s sends %s as a CSV attachment", async (method, file) => {
     const stream = Readable.from(["rank\r\n"]);
-    service[method]!.mockResolvedValue({ experiment_name: "top100-head", stream });
+    service[method]!.mockResolvedValue({
+      experiment_name: "top100-head",
+      stream,
+    });
 
     await controller[method](user, "org-1", "exp-1", reply);
 
@@ -143,8 +146,13 @@ describe("ExperimentsController exports", () => {
 
 describe("ExperimentsController estimate", () => {
   it("serves the fix probes estimated per entry per grid interval, for the create form", () => {
-    const controller = new ExperimentsController({} as ExperimentsService, {} as ExperimentResultsService);
+    const controller = new ExperimentsController(
+      {} as ExperimentsService,
+      {} as ExperimentResultsService,
+    );
 
-    expect(controller.getEstimate()).toEqual({ data: { probes_per_entry_interval: 2 } });
+    expect(controller.getEstimate()).toEqual({
+      data: { probes_per_entry_interval: 2 },
+    });
   });
 });
