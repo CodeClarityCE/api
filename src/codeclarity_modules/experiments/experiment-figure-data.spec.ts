@@ -98,4 +98,29 @@ describe("computeFigureData for load over time", () => {
       computeFigureData(ROWS, definition),
     );
   });
+
+  it("captions the projects behind each grid date and the empty ones", () => {
+    const data = computeFigureData(
+      {
+        ...ROWS,
+        runs: [
+          { ...run("a1", "2025-01-01"), status: "failed" },
+          run("a2", "2025-03-01"),
+          run("aH", null),
+          run("bH", null),
+        ],
+      },
+      {
+        metric: "load_over_time",
+        chart_form: "line",
+        group_by: null,
+        filters: {},
+      },
+    );
+
+    expect(data.caption).toEqual({
+      n: "n = 1 to 2 projects with a done snapshot per grid date",
+      exclusions: ["1 grid date without a done snapshot"],
+    });
+  });
 });

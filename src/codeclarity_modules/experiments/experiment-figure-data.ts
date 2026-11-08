@@ -4,9 +4,10 @@ import {
   type Exposure,
   type ExposuresInput,
 } from "./experiment-exposures";
-import type {
-  FigureDefinition,
-  FigureMetricId,
+import {
+  type FigureDefinition,
+  type FigureMetricId,
+  SWEEP_FILTER,
 } from "./experiment-figure-catalog";
 import { loadOverTime, type LoadRow } from "./experiment-load";
 import { SWEEP_FILTERS, type SweepSubset } from "./experiment-results";
@@ -33,6 +34,12 @@ export interface FigureSeries {
   censored?: number[];
 }
 
+/** What a Figure's caption says about its sample, after its filters. */
+export interface FigureCaptionFacts {
+  n: string;
+  exclusions: string[];
+}
+
 export interface FigureData {
   x_title: string;
   y_title: string;
@@ -41,12 +48,34 @@ export interface FigureData {
   series: FigureSeries[];
   /** YYYY-MM-DD open exposures are censored at, on survival Figures */
   censored_at?: string;
+  caption?: FigureCaptionFacts;
 }
 
 const LOAD_VIEWS = [
   { key: "hindsight", label: "Hindsight" },
   { key: "as_of", label: "As-of" },
 ] as const satisfies readonly { key: keyof LoadRow; label: string }[];
+
+/** Projects behind the load lines, and the grid dates with none done. */
+function loadCaption(load: readonly LoadRow[]): FigureCaptionFacts {
+  const counts = load
+    .filter((r) => r.hindsight !== null)
+    .map((r) => r.projects);
+  const low = Math.min(...counts);
+  const high = Math.max(...counts, 0);
+  const range =
+    counts.length === 0 || low === high ? `${high}` : `${low} to ${high}`;
+  const empty = load.length - counts.length;
+  return {
+    n: `n = ${range} projects with a done snapshot per grid date`,
+    exclusions:
+      empty > 0
+        ? [
+            `${empty} grid ${empty === 1 ? "date" : "dates"} without a done snapshot`,
+          ]
+        : [],
+  };
+}
 
 function loadOverTimeFigure(
   rows: FigureRows,
@@ -65,6 +94,7 @@ function loadOverTimeFigure(
         values: load.map((row) => row[key]),
       }),
     ),
+    caption: loadCaption(load),
   };
 }
 
@@ -133,19 +163,54 @@ function filteredExposures(
   );
 }
 
+function exposuresPhrase(count: number, rest: string): string[] {
+  if (count <= 0) return [];
+  return [`${count} ${count === 1 ? "exposure" : "exposures"} ${rest}`];
+}
+
+/** Names the chosen sweep subset and what it left out of the Figure. */
+function sweepExclusions(
+  rows: FigureRows,
+  definition: FigureDefinition,
+  kept: number,
+): string[] {
+  const subset = definition.filters["sweep"];
+  if (!subset) return [];
+  const label = SWEEP_FILTER.options.find(({ id }) => id === subset)?.label;
+  return exposuresPhrase(
+    deriveExposures(rows).length - kept,
+    `outside ${label ?? subset}`,
+  );
+}
+
+/** The sample of a step Figure; `dropped` are exposures it could not plot. */
+function stepCaption(
+  { overall, censored_at }: { overall: SurvivalGroup; censored_at: string },
+  sweep: string[],
+  dropped: string[],
+): FigureCaptionFacts {
+  return {
+    n: `n = ${overall.n} exposures, ${overall.fixed} fixed, ${overall.censored} censored at ${censored_at}`,
+    exclusions: [...sweep, ...dropped],
+  };
+}
+
 function survivalFigure(
   rows: FigureRows,
   definition: FigureDefinition,
 ): FigureData {
-  const block = exposureSurvival(
-    filteredExposures(rows, definition),
-    rows.head_cutoff,
-  );
+  const exposures = filteredExposures(rows, definition);
+  const block = exposureSurvival(exposures, rows.head_cutoff);
   return {
     x_title: "Days exposed",
     y_title: "Share still exposed",
     ...stepSeries(survivalGroups(block, definition)),
     censored_at: block.censored_at,
+    caption: stepCaption(
+      block,
+      sweepExclusions(rows, definition, exposures.length),
+      [],
+    ),
   };
 }
 
@@ -153,15 +218,21 @@ function fixLagFigure(
   rows: FigureRows,
   definition: FigureDefinition,
 ): FigureData {
-  const block = fixLagSurvival(
-    filteredExposures(rows, definition),
-    rows.head_cutoff,
-  );
+  const exposures = filteredExposures(rows, definition);
+  const block = fixLagSurvival(exposures, rows.head_cutoff);
   return {
     x_title: "Days since disclosure",
     y_title: "Share not yet fixed",
     ...stepSeries(survivalGroups(block, definition)),
     censored_at: block.censored_at,
+    caption: stepCaption(
+      block,
+      sweepExclusions(rows, definition, exposures.length),
+      exposuresPhrase(
+        exposures.length - block.overall.n,
+        "without a disclosure or fix date",
+      ),
+    ),
   };
 }
 
