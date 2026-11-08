@@ -7,9 +7,7 @@
     "^src/(.*)$": "<rootDir>/../src/$1"
   },
   "setupFilesAfterEnv": ["<rootDir>/setup-e2e.ts"],
-  "transformIgnorePatterns": [
-    "^(?!.*@nestjs\\+).*/node_modules/"
-  ],
+  "transformIgnorePatterns": ["^(?!.*@nestjs\\+).*/node_modules/"],
   "transform": {
     "^.+\\.(t|j)s$": [
       "@swc/jest",
