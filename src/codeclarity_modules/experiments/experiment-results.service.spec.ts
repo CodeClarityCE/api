@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { crc32, inflateRawSync } from "node:zlib";
 import { QueryFailedError } from "typeorm";
 
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
@@ -37,11 +39,13 @@ describe("ExperimentResultsService", () => {
       "select",
       "addSelect",
       "innerJoin",
+      "leftJoin",
       "where",
       "andWhere",
       "groupBy",
       "addGroupBy",
       "orderBy",
+      "addOrderBy",
       "limit",
     ]) {
       builder[method] = jest.fn().mockReturnValue(builder);
@@ -55,7 +59,9 @@ describe("ExperimentResultsService", () => {
     experimentRepository = { findOne: jest.fn() };
     runRepository = {
       find: jest.fn().mockResolvedValue([]),
-      createQueryBuilder: jest.fn(() => rowsBuilder(jest.fn())),
+      createQueryBuilder: jest.fn(() =>
+        rowsBuilder(jest.fn().mockResolvedValue([])),
+      ),
     };
     summaryRows = jest.fn().mockResolvedValue([]);
     vulnerabilityRows = jest.fn().mockResolvedValue([]);
@@ -80,6 +86,35 @@ describe("ExperimentResultsService", () => {
       publishedRepository as never,
     );
   });
+
+  /** Reads a ZIP from its central directory, checking each entry's CRC. */
+  function unzip(archive: Buffer): Map<string, string> {
+    const end = archive.lastIndexOf(Buffer.from("PK\x05\x06", "latin1"));
+    const count = archive.readUInt16LE(end + 10);
+    let at = archive.readUInt32LE(end + 16);
+    const files = new Map<string, string>();
+    for (let index = 0; index < count; index++) {
+      const crc = archive.readUInt32LE(at + 16);
+      const compressedSize = archive.readUInt32LE(at + 20);
+      const nameLength = archive.readUInt16LE(at + 28);
+      const extraLength = archive.readUInt16LE(at + 30);
+      const commentLength = archive.readUInt16LE(at + 32);
+      const local = archive.readUInt32LE(at + 42);
+      const name = archive.toString("utf8", at + 46, at + 46 + nameLength);
+      const start =
+        local +
+        30 +
+        archive.readUInt16LE(local + 26) +
+        archive.readUInt16LE(local + 28);
+      const body = inflateRawSync(
+        archive.subarray(start, start + compressedSize),
+      );
+      expect(crc32(body)).toBe(crc);
+      files.set(name, body.toString("utf8"));
+      at += 46 + nameLength + extraLength + commentLength;
+    }
+    return files;
+  }
 
   /** Two snapshots of one entry: lodash present, then upgraded away. */
   function fixedLodash(): void {
@@ -832,10 +867,18 @@ describe("ExperimentResultsService", () => {
     };
 
     /** A done HEAD run with one summary row and five vulnerabilities. */
-    function doneRun(): void {
-      experimentRepository["findOne"]!.mockResolvedValue(completed);
+    function doneRun(experiment: object = completed): void {
+      experimentRepository["findOne"]!.mockResolvedValue(experiment);
       runRepository["find"]!.mockResolvedValue([
-        { id: "r1", status: "done", error: null, grid_date: null },
+        {
+          id: "r1",
+          status: "done",
+          error: null,
+          grid_date: null,
+          branch: "main",
+          commit_hash: "abc123",
+          dataset_entry: { id: "e1", rank: 0, full_name: "lodash/lodash" },
+        },
       ]);
       summaryRows.mockResolvedValue([
         {
@@ -866,6 +909,158 @@ describe("ExperimentResultsService", () => {
       expect(published).toMatchObject({ metric_version: 1 });
     });
 
+    describe("replication package", () => {
+      interface StoredPackage {
+        package_archive: Buffer;
+        package_checksum: string;
+        results: object;
+      }
+
+      async function publishedRow(
+        experiment: object = completed,
+      ): Promise<StoredPackage> {
+        doneRun(experiment);
+        await service.publish("org-1", "exp-1", user);
+        return publishedRepository["save"]!.mock.calls[0]![0];
+      }
+
+      it("freezes an archive of every listed file, recording its SHA-256", async () => {
+        const stored = await publishedRow();
+
+        expect([...unzip(stored.package_archive).keys()]).toEqual([
+          "runs.csv",
+          "vulnerabilities.csv",
+          "exposures.csv",
+          "fixes.csv",
+          "results.json",
+          "manifest.json",
+        ]);
+        expect(stored.package_checksum).toBe(
+          createHash("sha256").update(stored.package_archive).digest("hex"),
+        );
+      });
+
+      it("records every provenance field in the manifest", async () => {
+        const stored = await publishedRow({
+          ...completed,
+          name: "top100",
+          provenance: {
+            api_version: "0.0.49-alpha",
+            knowledge_start: {
+              knowledge_sources: { nvd: "2026-11-01" },
+              epss_rows: 10,
+            },
+            knowledge_end: {
+              knowledge_sources: { nvd: "2026-11-02" },
+              epss_rows: 12,
+            },
+          },
+        });
+
+        const manifest = JSON.parse(
+          unzip(stored.package_archive).get("manifest.json")!,
+        );
+
+        expect(manifest).toMatchObject({
+          experiment_id: "exp-1",
+          experiment_name: "top100",
+          metric_version: 1,
+          api_version: "0.0.49-alpha",
+          analyzer_steps: [[{ name: "js-sbom", version: "1.0.0" }]],
+          knowledge_start: {
+            knowledge_sources: { nvd: "2026-11-01" },
+            epss_rows: 10,
+          },
+          knowledge_end: {
+            knowledge_sources: { nvd: "2026-11-02" },
+            epss_rows: 12,
+          },
+          knowledge_changed: true,
+          bootstrap: { seed: 20_260_611, resamples: 10_000 },
+          commits: [
+            {
+              rank: 0,
+              full_name: "lodash/lodash",
+              grid_date: "HEAD",
+              status: "done",
+              branch: "main",
+              commit_hash: "abc123",
+            },
+          ],
+        });
+      });
+
+      it("downloads the frozen bytes, unchanged by later data or metric changes", async () => {
+        const stored = await publishedRow();
+        publishedRepository["findOne"]!.mockResolvedValue(stored);
+
+        const first = await service.getPublishedPackage(
+          "org-1",
+          "exp-1",
+          1,
+          user,
+        );
+        fixedLodash();
+        runRepository["createQueryBuilder"]!.mockImplementation(() => {
+          throw new Error("a download must not read the rows");
+        });
+        const second = await service.getPublishedPackage(
+          "org-1",
+          "exp-1",
+          1,
+          user,
+        );
+
+        const digest = (bytes: Buffer): string =>
+          createHash("sha256").update(bytes).digest("hex");
+        expect(digest(first.archive)).toBe(stored.package_checksum);
+        expect(digest(second.archive)).toBe(stored.package_checksum);
+      });
+
+      it("answers not found for a version without a package", async () => {
+        experimentRepository["findOne"]!.mockResolvedValue(completed);
+        publishedRepository["findOne"]!.mockResolvedValue({
+          metric_version: 1,
+          package_archive: null,
+        });
+
+        await expect(
+          service.getPublishedPackage("org-1", "exp-1", 1, user),
+        ).rejects.toBeInstanceOf(EntityNotFound);
+      });
+
+      it("hides the package from non-members", async () => {
+        hasRequiredRole.mockRejectedValue(new NotAuthorized());
+
+        await expect(
+          service.getPublishedPackage("org-1", "exp-1", 1, user),
+        ).rejects.toBeInstanceOf(NotAuthorized);
+        expect(publishedRepository["findOne"]).not.toHaveBeenCalled();
+      });
+
+      it("publishes nothing when a file of the package cannot be read", async () => {
+        doneRun();
+        vulnerabilityRows.mockRejectedValue(new Error("connection lost"));
+
+        await expect(service.publish("org-1", "exp-1", user)).rejects.toThrow(
+          "connection lost",
+        );
+        expect(publishedRepository["save"]).not.toHaveBeenCalled();
+      });
+
+      it("packs the results as stored and the CSVs as exported", async () => {
+        const stored = await publishedRow();
+        const files = unzip(stored.package_archive);
+
+        expect(JSON.parse(files.get("results.json")!)).toEqual(
+          JSON.parse(JSON.stringify(stored.results)),
+        );
+        expect(files.get("fixes.csv")).toBe(
+          "rank,full_name,vulnerability_id,affected_dependency,severity,published_date,fix_date,fix_commit,fix_kind,precision,probe_outcome,probe_reason,interval_from,interval_to,lag_days\r\n",
+        );
+      });
+    });
+
     describe("versions", () => {
       it("lists versions newest first without loading their payloads", async () => {
         experimentRepository["findOne"]!.mockResolvedValue(completed);
@@ -886,8 +1081,14 @@ describe("ExperimentResultsService", () => {
             metric_version: 2,
             published_on: on,
             published_by_name: "Jane Roe",
+            package_checksum: null,
           },
-          { metric_version: 1, published_on: on, published_by_name: null },
+          {
+            metric_version: 1,
+            published_on: on,
+            published_by_name: null,
+            package_checksum: null,
+          },
         ]);
         const query = publishedRepository["find"]!.mock.calls[0]![0];
         expect(query.select.results).toBeUndefined();
