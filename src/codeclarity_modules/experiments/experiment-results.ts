@@ -1,14 +1,6 @@
 /**
- * Experiment results (spec #23, "Data and results"): the dataset-level
- * aggregates of an experiment, computed on read from its tidy rows. Block
- * names and semantics follow the archived js-vuln-study harness
- * (numbers.py, stats.py) so the payload is shaped like its
- * results_numbers.json, minus the blocks v1 drops.
- *
- * Pure and free of Nest and TypeORM imports: the results endpoint, the
- * results.json export and the parity test all call
- * aggregateExperimentResults with plain rows. Where the harness produced
- * NaN the payload carries null.
+ * Experiment results computed on read from tidy rows, shaped like the archived
+ * harness's results_numbers.json. Pure; null where the harness had NaN.
  */
 import { type AnalysisBudgetUsage, isBudgetSpent } from "./experiment-budget";
 import {
@@ -19,7 +11,7 @@ import {
   FIX_KINDS,
   type FixKind,
 } from "./experiment-exposures";
-import { gridDay } from "./experiment-grid";
+import { groupByGridDate, isHead } from "./experiment-grid";
 import { loadOverTime, type LoadRow } from "./experiment-load";
 import type {
   ResultsProbeAnalysisInput,
@@ -149,6 +141,8 @@ export interface ExperimentResultsInput {
   /** The analysis budget and what was submitted, absent without one */
   budget?: AnalysisBudgetUsage | null;
   provenance: ResultsProvenanceInput;
+  /** When the results are read: HEAD's date while the experiment runs; now by default */
+  read_at?: Date;
 }
 
 export { SEVERITY_ORDER, type SeverityCounts } from "./experiment-severity";
@@ -585,43 +579,33 @@ function coverage(runs: readonly ResultsRunInput[]): CoverageBlock {
 }
 
 function gridCoverage(runs: readonly ResultsRunInput[]): GridCoverageRow[] {
-  const rows = new Map<string, GridCoverageRow>();
-  // The first knowledge seen per grid date, to compare the others with
-  const firstKnowledge = new Map<string, KnowledgeSnapshot>();
-  for (const run of runs) {
-    const date = isHead(run) ? null : gridDay(run.grid_date!);
-    const key = date ?? "HEAD";
-    let row = rows.get(key);
-    if (!row) {
-      row = {
-        grid_date: date,
-        runs: 0,
-        done: 0,
-        empty: 0,
-        failed: 0,
-        skipped: 0,
-        pending: 0,
-        mixed_knowledge: false,
-      };
-      rows.set(key, row);
+  return groupByGridDate(runs).map(({ grid_date, runs: group }) => {
+    const row: GridCoverageRow = {
+      grid_date,
+      runs: group.length,
+      done: 0,
+      empty: 0,
+      failed: 0,
+      skipped: 0,
+      pending: 0,
+      mixed_knowledge: false,
+    };
+    // The first knowledge seen, to compare the others with
+    let first: KnowledgeSnapshot | null = null;
+    for (const run of group) {
+      if (run.knowledge) {
+        if (!first) first = run.knowledge;
+        else if (!sameKnowledge(first, run.knowledge)) row.mixed_knowledge = true;
+      }
+      if (run.status === "done") {
+        if (run.error === NO_LOCKFILE_YET) row.empty++;
+        else row.done++;
+      } else if (run.status === "failed") row.failed++;
+      else if (run.status === "skipped") row.skipped++;
+      else row.pending++;
     }
-    row.runs++;
-    if (run.knowledge) {
-      const first = firstKnowledge.get(key);
-      if (!first) firstKnowledge.set(key, run.knowledge);
-      else if (!sameKnowledge(first, run.knowledge)) row.mixed_knowledge = true;
-    }
-    if (run.status === "done") {
-      if (run.error === NO_LOCKFILE_YET) row.empty++;
-      else row.done++;
-    } else if (run.status === "failed") row.failed++;
-    else if (run.status === "skipped") row.skipped++;
-    else row.pending++;
-  }
-  // YYYY-MM-DD sorts by date; HEAD goes last.
-  return [...rows.values()].sort((a, b) =>
-    byKey(a.grid_date ?? "HEAD", b.grid_date ?? "HEAD"),
-  );
+    return row;
+  });
 }
 
 function lagSummary(lags: readonly number[]): LagSummary {
@@ -734,13 +718,9 @@ function provenance(input: ResultsProvenanceInput): ProvenanceBlock {
   };
 }
 
-/** When HEAD was observed: the experiment's end, else its start or creation. */
-function headObservedOn(p: ResultsProvenanceInput): Date {
-  return p.ended_on ?? p.started_on ?? p.created_on;
-}
-
-function isHead(run: ResultsRunInput): boolean {
-  return !run.grid_date;
+/** HEAD's date: when the experiment ended, else the time the results are read. */
+export function headCutoff(ended_on: Date | null, readAt: Date): Date {
+  return ended_on ?? readAt;
 }
 
 /** Run ids whose rows only grid snapshots read: outside the HEAD blocks. */
@@ -755,15 +735,14 @@ function gridOnlyRunIds(runs: readonly ResultsRunInput[]): Set<string> {
 }
 
 /**
- * Every aggregate of an experiment, from its runs and tidy rows, over the
- * HEAD snapshot. Its done runs (one summary each) are the project
- * universe: a done run without instances counts with load 0, instances of
- * other runs are ignored.
+ * Every aggregate of an experiment. HEAD blocks use HEAD's done runs as the
+ * project universe (load 0 without instances); grid blocks use every run.
  */
 export function aggregateExperimentResults(
   input: ExperimentResultsInput,
 ): ExperimentResults {
   const exposures = deriveExposures(input);
+  const head = headCutoff(input.provenance.ended_on, input.read_at ?? new Date());
   const gridOnly = gridOnlyRunIds(input.runs);
   const summaries = input.summaries.filter((s) => !gridOnly.has(s.run_id));
   const universe = summaries.map((s) => s.run_id);
@@ -787,10 +766,10 @@ export function aggregateExperimentResults(
     load_over_time: loadOverTime({
       runs: input.runs,
       vulnerabilities: input.vulnerabilities,
-      ended_on: input.provenance.ended_on,
+      head_cutoff: head,
     }),
     residence: residenceBlock(exposures),
-    exposure_survival: exposureSurvival(exposures, headObservedOn(input.provenance)),
+    exposure_survival: exposureSurvival(exposures, head),
     upstream_leverage: upstreamLeverage(input.runs, input.vulnerabilities, exposures),
     provenance: provenance(input.provenance),
   };

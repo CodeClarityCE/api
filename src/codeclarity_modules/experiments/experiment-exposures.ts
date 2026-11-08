@@ -1,9 +1,8 @@
 /**
- * Exposures, introductions and fixes of an experiment (spec #30), derived
- * on read from its snapshot runs, copied instances and probe outcome rows
- * (ADR 0001). Pure: no Nest or TypeORM imports.
+ * Exposures, introductions and fixes, derived on read from snapshot runs,
+ * instances and probe outcome rows (ADR 0001). Pure.
  */
-import { gridDay } from "./experiment-grid";
+import { DAY_MS, gridDay, instancesByRun, publishedDay } from "./experiment-grid";
 import {
   type DatingTask,
   type ProbeDating,
@@ -120,17 +119,6 @@ function walk(observations: readonly Observation[]): Span[] {
   return spans;
 }
 
-const DAY_MS = 86_400_000;
-
-/** The calendar day of a timestamp string, whatever its format. */
-function dayOf(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const prefix = /^\d{4}-\d{2}-\d{2}/.exec(value);
-  if (prefix) return prefix[0];
-  const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? null : gridDay(new Date(parsed));
-}
-
 function daysBetween(from: string | null, to: string | null): number | null {
   if (from === null || to === null) return null;
   return Math.round((Date.parse(to) - Date.parse(from)) / DAY_MS);
@@ -165,7 +153,7 @@ function probedEvent(event: ExposureEvent, dating: ProbeDating | null): Exposure
   if (!dating.commit) return dated;
   return {
     ...dated,
-    date: dayOf(dating.commit.committed_at),
+    date: publishedDay(dating.commit.committed_at),
     commit_hash: dating.commit.sha,
     precision: "commit",
   };
@@ -179,21 +167,14 @@ function byKey(a: string, b: string): number {
 const keyOf = (vulnerabilityId: string, pkg: string): string => `${vulnerabilityId}\u0000${pkg}`;
 
 /**
- * Every exposure of the experiment, by entry (in run order), then
- * vulnerability, package and start. "Present" at a snapshot means the
- * package resolves to a vulnerable version in any workspace; failed or
- * skipped snapshots are gaps and empty ones are absent.
+ * Every exposure, by entry, vulnerability, package and start. Failed snapshots
+ * are gaps; empty ones are absent before the first lockfile and gaps after it.
  */
 export function deriveExposures(
   input: ExposuresInput,
   search: ProbeSearch = new ProbeSearch(input),
 ): Exposure[] {
-  const instancesByRun = new Map<string, ResultsVulnerabilityInput[]>();
-  for (const v of input.vulnerabilities) {
-    const list = instancesByRun.get(v.run_id) ?? [];
-    list.push(v);
-    instancesByRun.set(v.run_id, list);
-  }
+  const byRun = instancesByRun(input.vulnerabilities);
   const packagesAt = new Map<string, ProbePackage[]>();
   for (const probe of input.probes ?? []) {
     packagesAt.set(`${probe.dataset_entry_id}\u0000${probe.commit_hash}`, probe.packages);
@@ -209,11 +190,15 @@ export function deriveExposures(
   const exposures: Exposure[] = [];
   for (const [entry, unsorted] of runsByEntry) {
     const runs = [...unsorted].sort((a, b) => a.grid_index! - b.grid_index!);
+    // Only empty snapshots before the first lockfile count as absent; later ones are gaps
+    const firstLockfile = runs.findIndex((run) => run.status === "done" && !isEmpty(run));
+    const lostLockfile = (i: number): boolean =>
+      isEmpty(runs[i]!) && firstLockfile !== -1 && i > firstLockfile;
     // Instances of a done snapshot by (vulnerability, package)
     const hits = runs.map((run) => {
       const byKey = new Map<string, ResultsVulnerabilityInput[]>();
       if (run.status !== "done" || isEmpty(run)) return byKey;
-      for (const v of instancesByRun.get(run.rows_run_id!) ?? []) {
+      for (const v of byRun.get(run.rows_run_id!) ?? []) {
         if (!v.vulnerability_id || !v.affected_dependency) continue;
         const key = keyOf(v.vulnerability_id, v.affected_dependency);
         byKey.set(key, [...(byKey.get(key) ?? []), v]);
@@ -231,12 +216,12 @@ export function deriveExposures(
 
     for (const [key, [vulnerabilityId, pkg]] of sortedKeys) {
       const observations = runs.map((run, i): Observation => {
-        if (run.status !== "done") return "gap";
+        if (run.status !== "done" || lostLockfile(i)) return "gap";
         return hits[i]!.has(key) ? "present" : "absent";
       });
       for (const span of walk(observations)) {
         const latest = hits[span.lastPresent]!.get(key)![0]!;
-        const published = dayOf(latest.published_date);
+        const published = publishedDay(latest.published_date);
         let introduction: Introduction | null = null;
         const task = (kind: DatingTask["kind"], before: number, after: number): DatingTask => ({
           entry,
@@ -305,10 +290,8 @@ function resolvesAt(
 }
 
 /**
- * Upgraded if the package still resolves anywhere after the fix (at a safe
- * version, since it is no longer present), else removed directly when a
- * vulnerable hit before it was a direct dependency, else transitively.
- * Null when the state after the fix is unknown.
+ * Upgraded if the package still resolves after the fix, else removed directly
+ * or transitively by how it was depended on before. Null when unknown.
  */
 function fixKind(directBefore: boolean, resolvesAfter: boolean | null): FixKind | null {
   if (resolvesAfter === null) return null;

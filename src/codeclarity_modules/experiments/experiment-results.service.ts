@@ -24,12 +24,15 @@ import {
 import { deriveExposures, type Exposure } from "./experiment-exposures";
 import { ExperimentProbeOutcome } from "./experiment-probe-outcome.entity";
 import {
-  PROBE_OUTCOME_SELECT,
+  INSTANCE_COLUMNS,
   type RawQuery,
   readAnalysesSubmitted,
+  readKnownVersions,
+  readProbeOutcomes,
   readProbeRows,
 } from "./experiment-probe-rows";
 import type {
+  KnownVersionsInput,
   ResultsProbeAnalysisInput,
   ResultsProbeIntervalInput,
 } from "./experiment-probes";
@@ -59,22 +62,6 @@ const VULNERABILITY_EXPORT_RUNS_PER_CHUNK = 20;
 
 /** Entries whose exposures are derived per exposures.csv / fixes.csv chunk */
 const EXPOSURE_EXPORT_ENTRIES_PER_CHUNK = 20;
-
-/** The instance columns results and exposures read */
-const INSTANCE_COLUMNS = [
-  "workspace",
-  "affected_dependency",
-  "affected_version",
-  "direct_dependency",
-  "vulnerability_id",
-  "severity_class",
-  "published_date",
-  "epss_score",
-  "conflict_flag",
-  "winning_source",
-  "withdrawn_date",
-  "vulnerable_versions",
-] as const;
 
 /** The rows exposures are derived from. */
 interface ExposureRows {
@@ -162,6 +149,8 @@ export interface ExperimentResultsExport {
 export class ExperimentResultsService {
   private readonly logger = CodeClarityLogger.forService("Experiments");
 
+  private readonly rawQuery: RawQuery = (sql, params) => this.probeOutcomeRepository.query(sql, params);
+
   constructor(
     private readonly membershipsRepository: MembershipsRepository,
     @InjectRepository(Experiment, "codeclarity")
@@ -177,9 +166,8 @@ export class ExperimentResultsService {
   ) {}
 
   /**
-   * The dataset-level results of an experiment, computed from its copied
-   * rows on every read (ADR 0001). Results of a running or cancelled
-   * experiment cover the runs done so far.
+   * The results of an experiment, computed from its copied rows on every
+   * read (ADR 0001), over the runs done so far.
    * @throws {NotAuthorized} If the user is not a member of the org
    * @throws {EntityNotFound} If the org has no such experiment
    */
@@ -277,18 +265,11 @@ export class ExperimentResultsService {
       });
     }
 
-    const query: RawQuery = (sql, params) => this.probeOutcomeRepository.query(sql, params);
+    const query = this.rawQuery;
     const budget = experiment.analysis_budget ?? null;
     const [vulnerabilities, probes, probeRows, submitted] = await Promise.all([
       instances.getRawMany<ResultsVulnerabilityInput>(),
-      entryIds
-        ? this.probeOutcomeRepository.query<ResultsProbeInput[]>(
-            `${PROBE_OUTCOME_SELECT} AND probe."datasetEntryId" = ANY($2)`,
-            [experimentId, entryIds],
-          )
-        : this.probeOutcomeRepository.query<ResultsProbeInput[]>(PROBE_OUTCOME_SELECT, [
-            experimentId,
-          ]),
+      readProbeOutcomes(query, experimentId, entryIds),
       readProbeRows(query, experimentId, entryIds),
       budget === null ? null : readAnalysesSubmitted(query, experimentId),
     ]);
@@ -359,6 +340,8 @@ export class ExperimentResultsService {
       MemberRole.USER,
     );
     const experiment = await findExperimentInOrg(this.experimentRepository, orgId, experimentId);
+    // Read once over every entry, so each chunk dates fixes as the results page does
+    let knownVersions: Promise<KnownVersionsInput[]> | null = null;
 
     const nextChunk = async (after: CsvRow | null): Promise<CsvRow[]> => {
       let afterRank = after ? Number(after["rank"]) : null;
@@ -387,9 +370,10 @@ export class ExperimentResultsService {
         if (entries.length === 0) return [];
 
         const byId = new Map(entries.map((entry) => [entry.id, entry]));
-        const exposures = deriveExposures(
-          await this.exposureRows(experiment, [...byId.keys()]),
-        );
+        const exposures = deriveExposures({
+          ...(await this.exposureRows(experiment, [...byId.keys()])),
+          known_versions: await (knownVersions ??= readKnownVersions(this.rawQuery, experiment.id)),
+        });
         const rows = exposures
           .map((exposure) => {
             const entry = byId.get(exposure.dataset_entry_id);

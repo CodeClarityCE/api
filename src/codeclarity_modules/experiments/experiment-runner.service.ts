@@ -70,11 +70,18 @@ const DEFAULT_RUN_CEILING_HOURS = 24;
 /** Lockfile-touching commits listed per interval: 10 pages of 100 */
 const COMMITS_PER_PAGE = 100;
 const MAX_COMMIT_PAGES = 10;
+const TOO_MANY_COMMITS_REASON = "too many commits";
 
 /** A repository that can be pinned: it exists where expected, with a branch. */
 interface PinnableRepo {
   branch: string;
   description: string | null;
+}
+
+/** Who submits an experiment's analyses, and through which integration. */
+interface Submitter {
+  integrationId: string;
+  creator: AuthenticatedUser;
 }
 
 /** Repository lookups of one pass, by dataset entry id */
@@ -486,8 +493,8 @@ export class ExperimentRunnerService
     );
     if (runs.length === 0) return slots;
 
-    const { integrationId, creator } = this.submitter(experiment);
-    const client = await this.githubClient(integrationId);
+    const submitter = this.submitter(experiment);
+    const client = await this.githubClient(submitter.integrationId);
     const repos: RepoLookups = new Map();
 
     let submitted = 0;
@@ -495,10 +502,7 @@ export class ExperimentRunnerService
       if (submitted >= slots) break;
       await this.store.renewLease(experiment.id, this.instanceId);
       if (
-        await this.submitRun(experiment, run, client, repos, {
-          integrationId,
-          creator,
-        })
+        await this.submitRun(experiment, run, client, repos, submitter)
       ) {
         submitted++;
       }
@@ -510,10 +514,7 @@ export class ExperimentRunnerService
    * Who submits analyses for the experiment.
    * @throws {ExperimentFatal} If the integration or the creator was removed
    */
-  private submitter(experiment: Experiment): {
-    integrationId: string;
-    creator: AuthenticatedUser;
-  } {
+  private submitter(experiment: Experiment): Submitter {
     const integrationId = experiment.dataset.integration?.id;
     if (!integrationId) {
       throw new ExperimentFatal(
@@ -530,9 +531,7 @@ export class ExperimentRunnerService
   }
 
   /**
-   * Fix probes (ADR 0005), once an entry's snapshots have all ended: list
-   * the intervals that need dating, then submit the next probe of each
-   * search, fixes first, while `slots` allow.
+   * List the intervals to date, then submit the next probes, fixes first.
    * @returns whether probe work remains (to list, submit or finish)
    */
   private async probe(experiment: Experiment, slots: number): Promise<boolean> {
@@ -547,8 +546,8 @@ export class ExperimentRunnerService
     if (plan.intervals.length === 0 && plan.probes.length === 0) {
       return plan.waiting > 0;
     }
-    const { integrationId, creator } = this.submitter(experiment);
-    const client = await this.githubClient(integrationId);
+    const submitter = this.submitter(experiment);
+    const client = await this.githubClient(submitter.integrationId);
     if (plan.intervals.length > 0) {
       for (const interval of plan.intervals) {
         await this.store.renewLease(experiment.id, this.instanceId);
@@ -573,7 +572,7 @@ export class ExperimentRunnerService
         const branch = branches.get(request.entry);
         if (!entry || !branch) continue;
         await this.store.renewLease(experiment.id, this.instanceId);
-        await this.submitProbe(experiment, entry, branch, request, { integrationId, creator });
+        await this.submitProbe(experiment, entry, branch, request, submitter);
       }
     }
     // Probes a spent budget will never submit keep nothing open
@@ -615,7 +614,7 @@ export class ExperimentRunnerService
     };
     const lockfilePath = await this.lockfilePath(from, to);
     const [owner, repo] = await this.ownerAndRepo(entry);
-    if (!lockfilePath || !owner || !repo || !to.branch) {
+    if (!lockfilePath || !owner || !repo) {
       await this.store.saveProbeInterval({
         ...interval,
         lockfilePath,
@@ -625,16 +624,17 @@ export class ExperimentRunnerService
       return;
     }
     const candidates: ProbeCandidate[] = [];
+    let truncated = false;
     try {
       for (let page = 1; page <= MAX_COMMIT_PAGES; page++) {
         const commits = (
           (await client.rest.repos.listCommits({
             owner,
             repo,
-            sha: to.branch,
+            // From the later snapshot's commit, so only its ancestors are listed
+            sha: interval.toCommit,
             path: lockfilePath,
             ...(from.committed_at ? { since: new Date(from.committed_at).toISOString() } : {}),
-            ...(to.committed_at ? { until: new Date(to.committed_at).toISOString() } : {}),
             per_page: COMMITS_PER_PAGE,
             page,
           })) as { data: GithubCommitItem[] }
@@ -645,11 +645,21 @@ export class ExperimentRunnerService
           candidates.push({ sha: commit.sha, committed_at: new Date(date).toISOString() });
         }
         if (commits.length < COMMITS_PER_PAGE) break;
+        truncated = page === MAX_COMMIT_PAGES;
       }
     } catch (err) {
       const classified = this.classifyGithubError(err);
       if (!(classified instanceof RunSkipped)) throw classified;
       await this.store.saveProbeInterval({ ...interval, lockfilePath, candidates: [], error: classified.reason });
+      return;
+    }
+    if (truncated) {
+      // A cut list could locate the wrong commit
+      await this.store.saveProbeInterval({ ...interval, lockfilePath, candidates: [], error: TOO_MANY_COMMITS_REASON });
+      this.logger.warn("Experiment probe interval has too many commits", {
+        experimentId: experiment.id,
+        datasetEntryId: entry,
+      });
       return;
     }
     // GitHub lists newest first
@@ -684,7 +694,7 @@ export class ExperimentRunnerService
     entry: ExperimentRun["dataset_entry"],
     branch: string,
     request: ProbeRequest,
-    submitter: { integrationId: string; creator: AuthenticatedUser },
+    submitter: Submitter,
   ): Promise<void> {
     const committedAt = new Date(request.commit.committed_at);
     const probeId = await this.store.reserveProbe({
@@ -716,7 +726,7 @@ export class ExperimentRunnerService
         );
       }
       const reason = `submission failed: ${describeBuildError(err)}`;
-      await this.store.endProbe(probeId, "failed", reason);
+      await this.store.failProbeSubmission(probeId, reason);
       this.logger.warn("Experiment probe submission failed", { ...logContext, reason });
       return;
     }
@@ -732,7 +742,7 @@ export class ExperimentRunnerService
       const status = probe.analysis?.status;
       const outcome = status ? analysisOutcome(status) : "running";
       if (!probe.analysis) {
-        await this.store.endProbe(probe.id, "failed", "analysis deleted");
+        await this.failProbe(experiment, probe, "analysis deleted");
         continue;
       }
       const sbom =
@@ -745,18 +755,26 @@ export class ExperimentRunnerService
         // A commit without a lockfile resolves nothing
         await this.endProbeWith(experiment, probe, []);
       } else if (outcome === "succeeded") {
-        await this.store.endProbe(probe.id, "failed", `missing result: ${SBOM_PLUGIN}`);
+        await this.failProbe(experiment, probe, `missing result: ${SBOM_PLUGIN}`);
       } else if (outcome === "failed") {
-        await this.store.endProbe(
-          probe.id,
-          "failed",
-          probe.analysis.failure_reason ?? `analysis ${status}`,
-        );
+        await this.failProbe(experiment, probe, probe.analysis.failure_reason ?? `analysis ${status}`);
       } else if (probe.submitted_on && now - probe.submitted_on.getTime() > this.ceilingMs) {
-        await this.store.endProbe(probe.id, "failed", "ceiling");
+        await this.failProbe(experiment, probe, "ceiling");
         await this.submission.abandon(probe.analysis.id);
       }
     }
+  }
+
+  /** End a probe failed and say why. */
+  private async failProbe(experiment: Experiment, probe: ExperimentProbe, reason: string): Promise<void> {
+    await this.store.endProbe(probe.id, "failed", reason);
+    this.logger.warn("Experiment probe failed", {
+      experimentId: experiment.id,
+      probeId: probe.id,
+      ...(probe.analysis ? { analysisId: probe.analysis.id } : {}),
+      commitHash: probe.commit_hash,
+      reason,
+    });
   }
 
   /** Write the probed commit's packages, then mark the probe done. */
@@ -787,7 +805,7 @@ export class ExperimentRunnerService
     run: ExperimentRun,
     client: GithubRestClient,
     repos: RepoLookups,
-    submitter: { integrationId: string; creator: AuthenticatedUser },
+    submitter: Submitter,
   ): Promise<boolean> {
     const { integrationId, creator } = submitter;
     const entry = run.dataset_entry;
@@ -999,6 +1017,7 @@ export class ExperimentRunnerService
           owner: entry.owner,
           repo: entry.repo,
           sha: repo.branch,
+          // No commit to start from at a grid date, so branch plus until is the best GitHub offers
           ...(gridDate ? { until: endOfGridDay(gridDate).toISOString() } : {}),
           per_page: 1,
         })) as { data: GithubCommitItem[] }

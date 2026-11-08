@@ -330,6 +330,38 @@ describe("exposures", () => {
     });
   });
 
+  it("treats a lockfile gone after one was seen as a gap, never a fix", () => {
+    const rows = world("e1", happyCommits());
+    // The lockfile disappears from 2025-04-01 on, HEAD included
+    rows.runs = rows.runs.map((run) =>
+      run.grid_index! >= 3 ? { ...run, status: "done", error: NO_LOCKFILE_YET } : run,
+    );
+    const exposures = deriveExposures(input(rows));
+    expect(exposures).toEqual([
+      expect.objectContaining({ last_present: "2025-03-01", gaps: 4, open: true, fix: null }),
+    ]);
+  });
+
+  it("treats a HEAD sharing a lockfile-less dated snapshot as a gap once a lockfile was seen", () => {
+    const minimist: Vuln = { id: "DEMO-minimist-1", pkg: "minimist", fixed: "1.2.6", published: "2025-05-20", severity: "CRITICAL" };
+    const rows = world(
+      "e1",
+      [
+        C("a1f", "2024-11-05", ch("express", "4.18.0")),
+        C("c3d", "2025-02-06", ch("mkdirp", "0.5.5"), ch("minimist", "1.2.5", "mkdirp")),
+        C("f6a", "2025-05-11", ch("vitest", "1.0.0")),
+      ],
+      [minimist],
+    );
+    // 2025-06-01 lost its lockfile and HEAD pins the same commit
+    rows.runs = rows.runs.map((run) =>
+      run.grid_index! >= 5 ? { ...run, status: "done", error: NO_LOCKFILE_YET, rows_run_id: "e1-5" } : run,
+    );
+    expect(deriveExposures(input(rows))).toEqual([
+      expect.objectContaining({ first_present: "2025-03-01", last_present: "2025-05-01", gaps: 2, open: true, fix: null }),
+    ]);
+  });
+
   it("tells a direct removal from a transitive one", () => {
     const toughCookie: Vuln = { id: "DEMO-tough-cookie-1", pkg: "tough-cookie", fixed: "4.1.3", published: "2025-01-25", severity: "MEDIUM" };
     const moment: Vuln = { id: "DEMO-moment-1", pkg: "moment", fixed: "2.29.4", published: "2024-12-01", severity: "HIGH" };
@@ -423,5 +455,48 @@ describe("fix lag and exposure counts in the results", () => {
       by_kind: [],
       points: [],
     });
+  });
+});
+
+describe("published dates with a UTC offset", () => {
+  it("reads one UTC day for residence, fix lag and the as-of view", () => {
+    // 2024-03-01T23:30-05:00 is 2024-03-02 in UTC
+    const at = (day: string): Date => new Date(`${day}T12:00:00Z`);
+    const snapshot = (i: number, grid: string | null, commit: string, day: string): ResultsRunInput => ({
+      status: "done",
+      error: null,
+      dataset_entry_id: "e1",
+      grid_index: i,
+      grid_date: grid ? new Date(`${grid}T00:00:00Z`) : null,
+      rows_run_id: grid ? `r${i}` : "r2",
+      commit_hash: commit,
+      committed_at: at(day),
+    });
+    const present = (runId: string): ResultsVulnerabilityInput => ({
+      run_id: runId,
+      vulnerability_id: "CVE-2024-0001",
+      affected_dependency: "lodash",
+      severity_class: "HIGH",
+      published_date: "2024-03-01T23:30-05:00",
+      epss_score: null,
+      conflict_flag: "MATCH_CORRECT",
+      winning_source: "OSV",
+      withdrawn_date: null,
+    });
+    const results = aggregateExperimentResults({
+      ...input(),
+      runs: [
+        snapshot(0, "2024-02-01", "ca", "2024-01-10"),
+        snapshot(1, "2024-03-01", "c0", "2024-02-20"),
+        snapshot(2, "2024-04-01", "c2", "2024-03-25"),
+        snapshot(3, null, "c2", "2024-03-25"),
+      ],
+      vulnerabilities: [present("r1")],
+      probes: [{ dataset_entry_id: "e1", commit_hash: "c2", packages: [] }],
+    });
+
+    expect(results.residence.points.map((p) => p.residence_days)).toEqual([11]);
+    expect(results.fix_lag.points.map((p) => p.lag_days)).toEqual([23]);
+    expect(results.load_over_time.find((r) => r.grid_date === "2024-03-01")).toMatchObject({ hindsight: 1, as_of: 0 });
   });
 });

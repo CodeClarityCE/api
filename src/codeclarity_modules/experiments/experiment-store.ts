@@ -180,11 +180,8 @@ export abstract class ExperimentStore {
   ): Promise<unknown>;
 
   /**
-   * In one transaction, replace the run's copied rows with these and mark it
-   * done, with `reason` (e.g. no_lockfile_yet) when it is done but empty,
-   * and the `knowledge` the rows were matched against. Copying a done run
-   * again replaces its rows. False, with nothing written, if the run is
-   * failed or skipped.
+   * Replace the run's copied rows and mark it done, with `reason` when empty.
+   * False, with nothing written, if the run is failed or skipped.
    */
   abstract copyRunRows(
     experimentId: string,
@@ -223,8 +220,11 @@ export abstract class ExperimentStore {
     analysisId: string,
   ): Promise<boolean>;
 
-  /** Analyses the experiment submitted: every snapshot attempt and every probe. */
+  /** Analyses the experiment submitted: every snapshot attempt and every submitted probe. */
   abstract countSubmittedAnalyses(experimentId: string): Promise<number>;
+
+  /** End a pending probe whose analysis was never submitted, so the budget skips it. */
+  abstract failProbeSubmission(probeId: string, error: string): Promise<void>;
 
   /** Pending probes of the experiment, with their analysis and dataset entry. */
   abstract getInFlightProbes(experimentId: string): Promise<ExperimentProbe[]>;
@@ -728,6 +728,20 @@ export class TypeOrmExperimentStore extends ExperimentStore {
   async countSubmittedAnalyses(experimentId: string): Promise<number> {
     const query: RawQuery = (sql, params) => this.runRepository.query(sql, params);
     return readAnalysesSubmitted(query, experimentId);
+  }
+
+  async failProbeSubmission(probeId: string, error: string): Promise<void> {
+    await this.probeRepository
+      .createQueryBuilder()
+      .update(ExperimentProbe)
+      .set({
+        status: "failed",
+        error: error.slice(0, ERROR_MAX_LENGTH),
+        submitted_on: null,
+        ended_on: new Date(),
+      })
+      .where("id = :id AND status = 'pending'", { id: probeId })
+      .execute();
   }
 
   async getInFlightProbes(experimentId: string): Promise<ExperimentProbe[]> {

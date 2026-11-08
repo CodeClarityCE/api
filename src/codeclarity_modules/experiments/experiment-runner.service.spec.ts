@@ -5,6 +5,7 @@ import type {
   KnowledgeProvenance,
   ProvenanceService,
 } from "src/codeclarity_modules/knowledge/provenance/provenance.service";
+import { CodeClarityLogger } from "src/services/logger.service";
 import { NotAuthorized } from "src/types/error.types";
 
 import type { DatasetEntry } from "../datasets/dataset-entry.entity";
@@ -112,7 +113,7 @@ class FakeStore extends ExperimentStore {
     id: string;
     status: "pending" | "done" | "failed";
     error: string | null;
-    submitted_on: Date;
+    submitted_on: Date | null;
     analysis: { id: string } | null;
   })[] = [];
   intervals: ProbeInterval[] = [];
@@ -221,9 +222,15 @@ class FakeStore extends ExperimentStore {
     return true;
   }
 
+  async failProbeSubmission(probeId: string, error: string): Promise<void> {
+    const probe = this.probes.find((p) => p.id === probeId);
+    if (probe?.status !== "pending") return;
+    Object.assign(probe, { status: "failed", error, submitted_on: null });
+  }
+
   async countSubmittedAnalyses(experimentId: string): Promise<number> {
     const attempts = this.runsOf(experimentId).reduce((sum, r) => sum + r.attempts, 0);
-    return attempts + this.probes.filter((p) => p.experimentId === experimentId).length;
+    return attempts + this.probes.filter((p) => p.experimentId === experimentId && p.submitted_on).length;
   }
 
   probeOf(commit: string): FakeStore["probes"][number] | undefined {
@@ -589,15 +596,15 @@ class FakeGithub {
             if (this.commitsError) throw this.commitsError;
             const key = `${owner}/${repo}`.toLowerCase();
             const found = this.repos.get(key);
-            if (found?.default_branch !== sha) {
-              throw githubError(404, "Not Found");
-            }
+            if (!found) throw githubError(404, "Not Found");
+            const all = [...(this.history.get(key) ?? []), { sha: found.sha, date: found.date }];
+            // A branch lists from its tip, a commit from itself
+            const tip = sha === found.default_branch ? all.length - 1 : all.findIndex((c) => c.sha === sha);
+            if (tip === -1) throw githubError(404, "Not Found");
             // Commits touch package-lock.json unless told otherwise
             const at = (date: string): number => Date.parse(date);
-            const commits = [
-              ...(this.history.get(key) ?? []),
-              { sha: found.sha, date: found.date },
-            ]
+            const commits = all
+              .slice(0, tip + 1)
               .filter((c) => !until || at(c.date) <= at(until))
               .filter((c) => !since || at(c.date) >= at(since))
               .filter((c) => !path || ("paths" in c ? c.paths : ["package-lock.json"]).includes(path))
@@ -1869,13 +1876,9 @@ describe("ExperimentRunnerService", () => {
         }),
       );
       expect(github.listed).toEqual([
-        expect.objectContaining({
-          path: "package-lock.json",
-          sha: "main",
-          since: "2025-02-25T12:00:00.000Z",
-          until: "2025-03-28T12:00:00.000Z",
-        }),
+        expect.objectContaining({ path: "package-lock.json", sha: "f6a", since: "2025-02-25T12:00:00.000Z" }),
       ]);
+      expect(github.listed[0]).not.toHaveProperty("until");
       expect(await fixes()).toEqual([
         ["CVE-A", expect.objectContaining({ commit_hash: "e5f", precision: "commit", probe_outcome: "found", interval_to: "2025-04-01" })],
         ["CVE-B", expect.objectContaining({ commit_hash: "d4e", precision: "commit", probe_outcome: "found" })],
@@ -1903,6 +1906,52 @@ describe("ExperimentRunnerService", () => {
         ["CVE-A", expect.objectContaining({ precision: "snapshot", probe_outcome: "not_found", probe_reason: "probe of d4e failed: clone failed" })],
         ["CVE-B", expect.objectContaining({ precision: "snapshot", probe_outcome: "not_found" })],
       ]);
+    });
+
+    it("ends a search not_found when the interval has more lockfile commits than it lists", async () => {
+      const many = Array.from({ length: 1000 }, (_, i): [string, string] => [
+        `m${i}`,
+        new Date(Date.parse("2025-03-02T00:00:00Z") + i * 60_000).toISOString(),
+      ]);
+      github.addHistory("octo/app", [["c3d", "2025-02-25T12:00:00Z"], ...many, ["f6a", "2025-03-28T12:00:00Z"]]);
+      await runToEnd();
+
+      expect(submitProbe).not.toHaveBeenCalled();
+      expect(await fixes()).toEqual([
+        ["CVE-A", expect.objectContaining({ precision: "snapshot", probe_outcome: "not_found", probe_reason: "too many commits" })],
+        ["CVE-B", expect.objectContaining({ precision: "snapshot", probe_outcome: "not_found", probe_reason: "too many commits" })],
+      ]);
+    });
+
+    it("logs each probe that ends failed at warn, with its experiment, probe and analysis", async () => {
+      const warn = jest.spyOn(CodeClarityLogger.prototype, "warn");
+      await runToEnd({ d4e: "clone failed" });
+
+      const probe = store.probeOf("d4e")!;
+      expect(warn).toHaveBeenCalledWith(
+        "Experiment probe failed",
+        expect.objectContaining({ experimentId: "exp-1", probeId: probe.id, analysisId: probe.analysis!.id, reason: "clone failed" }),
+      );
+      warn.mockRestore();
+    });
+
+    it("logs a probe whose analysis was deleted at warn", async () => {
+      const service = runner();
+      for (let pass = 0; pass < 6 && submitProbe.mock.calls.length === 0; pass++) {
+        await service.tick();
+        settle();
+      }
+      const probe = store.probes[0]!;
+      store.analyses.delete(probe.analysis!.id);
+      const warn = jest.spyOn(CodeClarityLogger.prototype, "warn");
+      await service.tick();
+
+      expect(probe).toMatchObject({ status: "failed", error: "analysis deleted" });
+      expect(warn).toHaveBeenCalledWith(
+        "Experiment probe failed",
+        expect.objectContaining({ experimentId: "exp-1", probeId: probe.id, reason: "analysis deleted" }),
+      );
+      warn.mockRestore();
     });
 
     it("counts probes in flight against the global cap", async () => {
@@ -1969,6 +2018,26 @@ describe("ExperimentRunnerService", () => {
 
         expect(submit).toHaveBeenCalledTimes(4);
         expect(submitProbe).not.toHaveBeenCalled();
+      });
+
+      it("does not count a probe whose submission failed against the budget", async () => {
+        Object.assign(LODASH, { w1a: "4.17.21", w2b: "4.17.15", w3c: "4.17.15", "sha-octo/web": "4.17.15" });
+        github.addHistory("octo/web", [
+          ["w1a", "2025-02-20T12:00:00Z"],
+          ["w2b", "2025-03-10T12:00:00Z"],
+          ["w3c", "2025-03-25T12:00:00Z"],
+        ]);
+        store.experiments.delete("exp-1");
+        store.runs = [];
+        addExperiment("exp-1", ["octo/web", "octo/app"], {}, GRID);
+        // Six snapshot analyses and one probe
+        budgeted(7);
+        submitProbe.mockRejectedValueOnce(new Error("ECONNREFUSED"));
+        await runToEnd();
+
+        expect(store.probeOf("d4e")).toMatchObject({ status: "failed" });
+        expect(submitProbe.mock.calls.map(([request]) => request.head.commitHash)).toEqual(["d4e", "w2b"]);
+        expect(await store.countSubmittedAnalyses("exp-1")).toBe(7);
       });
 
       it("probes fixes before introductions", async () => {

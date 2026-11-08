@@ -1,10 +1,6 @@
-/**
- * Exposure survival (spec #30): a Kaplan-Meier curve of how long exposures
- * last, from introduction (or the first grid date seen) to fix. Open
- * exposures are censored at HEAD. Pure: no Nest or TypeORM imports.
- */
+/** Kaplan-Meier survival of exposures, open ones censored at HEAD. Pure. */
 import type { Exposure } from "./experiment-exposures";
-import { gridDay } from "./experiment-grid";
+import { DAY_MS, gridDay } from "./experiment-grid";
 import { SEVERITY_ORDER } from "./experiment-severity";
 import { kaplanMeier, kmMedian, type KmStep } from "./experiment-stats";
 
@@ -30,8 +26,6 @@ export interface ExposureSurvivalBlock {
   /** Severity order, classes without exposures left out */
   by_severity: SurvivalGroup[];
 }
-
-const DAY_MS = 86_400_000;
 
 interface Duration {
   severity: string;

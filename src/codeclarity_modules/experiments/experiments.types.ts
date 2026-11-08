@@ -116,6 +116,13 @@ export interface ExperimentSummary {
   ended_on: Date | null;
   run_count: number;
   run_counts: ExperimentRunCounts;
+  /** Snapshots plus the fix probe estimate */
+  estimated_analyses: number;
+}
+
+/** What the create form needs to estimate an experiment's analyses. */
+export interface ExperimentEstimateBasis {
+  probes_per_entry_interval: number;
 }
 
 export interface ExperimentRunSummary {

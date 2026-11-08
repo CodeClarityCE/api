@@ -1,7 +1,4 @@
-/**
- * Pre-disclosure residence (spec #30, #36): days from an introduction to
- * its advisory's publication, computed on read from exposures. Pure.
- */
+/** Pre-disclosure residence: days from an introduction to its advisory's publication. Pure. */
 import type { DatingPrecision, Exposure } from "./experiment-exposures";
 import { SEVERITY_ORDER, type SeverityCounts } from "./experiment-severity";
 import { median, quantile } from "./experiment-stats";
