@@ -26,3 +26,14 @@ export function analysesLeft(usage: AnalysisBudgetUsage | null | undefined): num
 export function isBudgetSpent(usage: AnalysisBudgetUsage | null | undefined): boolean {
   return analysesLeft(usage) === 0;
 }
+
+/**
+ * Fix probes estimated per entry per grid interval. The archived top100
+ * study took about 1.7 (6715 probes, 100 repos x 40 intervals), rounded up.
+ */
+export const PROBES_PER_ENTRY_INTERVAL = 2;
+
+/** Every snapshot (grid dates plus HEAD) of every entry, plus the probe estimate. */
+export function estimateAnalyses(entries: number, gridCount: number): number {
+  return entries * (gridCount + 1) + entries * gridCount * PROBES_PER_ENTRY_INTERVAL;
+}

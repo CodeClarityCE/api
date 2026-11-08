@@ -140,3 +140,11 @@ describe("ExperimentsController exports", () => {
     expect(headers).toEqual({});
   });
 });
+
+describe("ExperimentsController estimate", () => {
+  it("serves the fix probes estimated per entry per grid interval, for the create form", () => {
+    const controller = new ExperimentsController({} as ExperimentsService, {} as ExperimentResultsService);
+
+    expect(controller.getEstimate()).toEqual({ data: { probes_per_entry_interval: 2 } });
+  });
+});

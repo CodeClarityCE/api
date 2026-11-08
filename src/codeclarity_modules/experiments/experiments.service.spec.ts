@@ -394,6 +394,18 @@ describe("ExperimentsService", () => {
       expect(summary.grid_dates).toEqual(["2026-10-23", "2026-10-30"]);
     });
 
+    it("get estimates the analyses: every snapshot plus about two fix probes per entry per grid interval", async () => {
+      experimentRepository["findOne"]!.mockResolvedValue({ ...experiment, grid_interval: "week", grid_count: 2 });
+      // Three entries, each with two grid dates and HEAD
+      runRepository["createQueryBuilder"]!().getRawMany.mockResolvedValue([
+        { experiment_id: "exp-1", status: "pending", count: "9" },
+      ]);
+
+      const summary = await service.get("org-1", "exp-1", user);
+
+      expect(summary.estimated_analyses).toBe(21);
+    });
+
     it("get reports the analysis budget", async () => {
       experimentRepository["findOne"]!.mockResolvedValue({ ...experiment, analysis_budget: 500 });
 

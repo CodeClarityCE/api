@@ -29,11 +29,13 @@ import {
   TypedResponse,
 } from "src/types/apiResponses.types";
 
+import { PROBES_PER_ENTRY_INTERVAL } from "./experiment-budget";
 import type { ExperimentResults } from "./experiment-results";
 import { ExperimentResultsService } from "./experiment-results.service";
 import { ExperimentsService } from "./experiments.service";
 import {
   CreateExperimentBody,
+  ExperimentEstimateBasis,
   ExperimentRunSummary,
   ExperimentSummary,
 } from "./experiments.types";
@@ -93,6 +95,13 @@ export class ExperimentsController {
       { currentPage: page, entriesPerPage: entries_per_page },
       user,
     );
+  }
+
+  @Get("estimate")
+  @ApiOperation({ summary: "What the create form estimates an experiment's analyses from" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  getEstimate(): TypedResponse<ExperimentEstimateBasis> {
+    return { data: { probes_per_entry_interval: PROBES_PER_ENTRY_INTERVAL } };
   }
 
   @Get(":experiment_id")

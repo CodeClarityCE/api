@@ -19,6 +19,7 @@ import { DatasetEntry } from "../datasets/dataset-entry.entity";
 import { paginated, resolvePagination } from "../datasets/datasets.service";
 
 import { Experiment, ExperimentStatus } from "./experiment.entity";
+import { estimateAnalyses } from "./experiment-budget";
 import {
   DEFAULT_GRID_COUNT,
   DEFAULT_GRID_INTERVAL,
@@ -381,6 +382,7 @@ export class ExperimentsService {
     experiment: Experiment,
     runCounts: ExperimentRunCounts = emptyRunCounts(),
   ): ExperimentSummary {
+    const runCount = Object.values(runCounts).reduce((a, b) => a + b, 0);
     return {
       id: experiment.id,
       name: experiment.name,
@@ -406,8 +408,10 @@ export class ExperimentsService {
       created_on: experiment.created_on,
       started_on: experiment.started_on ?? null,
       ended_on: experiment.ended_on ?? null,
-      run_count: Object.values(runCounts).reduce((a, b) => a + b, 0),
+      run_count: runCount,
       run_counts: runCounts,
+      // One run per entry per snapshot
+      estimated_analyses: estimateAnalyses(Math.round(runCount / (experiment.grid_count + 1)), experiment.grid_count),
     };
   }
 }
