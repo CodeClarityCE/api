@@ -365,5 +365,31 @@ describe("ExperimentResultsService", () => {
       const { results } = await service.exportResults("org-1", "exp-1", user);
       expect(results.probes.fixes).toEqual({ found: 1, ambiguous: 0, not_found: 0, not_probed: 0 });
     });
+
+    it("reports a fix its spent budget left unprobed as budget spent, at snapshot precision", async () => {
+      experimentRepository["findOne"]!.mockResolvedValue({ id: "exp-1", name: "x", created_on: new Date(), analysis_budget: 2 });
+      fixedLodash();
+      probedLodash();
+      const listed = probeRows.getMockImplementation()!;
+      // d4e was never probed: the two snapshots spent the budget
+      probeRows.mockImplementation(async (sql: string, params: unknown[]) => {
+        if (sql.includes("SUM(attempts)")) return [{ submitted: "2" }];
+        if (sql.includes("FROM experiment_probe\n") || sql.includes("FROM experiment_probe\r")) return [];
+        const rows = (await listed(sql, params)) as { commit_hash?: string }[];
+        return sql.includes("experiment_probe_outcome") ? rows.filter((r) => r.commit_hash !== "d4e") : rows;
+      });
+      const entries = jest
+        .fn()
+        .mockResolvedValue([])
+        .mockResolvedValueOnce([{ id: "e1", rank: 0, full_name: "octo/app" }]);
+      runRepository["createQueryBuilder"]!.mockImplementation(() => rowsBuilder(entries));
+
+      const fixes = await read((await service.exportFixesCsv("org-1", "exp-1", user)).stream);
+      expect(fixes.split("\r\n")[1]).toBe(
+        "0,octo/app,CVE-2021-23337,lodash,HIGH,2025-02-10,2025-03-28,e5f,upgraded,snapshot,not_found,budget spent,2025-03-01,HEAD,46",
+      );
+      const { results } = await service.exportResults("org-1", "exp-1", user);
+      expect(results.probes.budget).toEqual({ analysis_budget: 2, analyses_submitted: 2, spent: true });
+    });
   });
 });

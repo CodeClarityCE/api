@@ -12,6 +12,7 @@ import {
 } from "class-validator";
 
 import { AnalyzerStepSnapshot, ExperimentStatus } from "./experiment.entity";
+import { MAX_ANALYSIS_BUDGET } from "./experiment-budget";
 import {
   DEFAULT_GRID_COUNT,
   DEFAULT_GRID_INTERVAL,
@@ -74,6 +75,19 @@ export class CreateExperimentBody {
   @Min(0)
   @Max(MAX_GRID_COUNT)
   grid_count?: number;
+
+  @ApiPropertyOptional({
+    description:
+      "Most analyses the experiment may submit, snapshots and fix probes alike; once spent no further probe runs, snapshots are never cut. Frozen at creation; none by default",
+    minimum: 1,
+    maximum: MAX_ANALYSIS_BUDGET,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(MAX_ANALYSIS_BUDGET)
+  analysis_budget?: number | null;
 }
 
 export type ExperimentRunCounts = Record<ExperimentRunStatus, number>;
@@ -88,6 +102,8 @@ export interface ExperimentSummary {
   grid_count: number;
   /** Calendar days of the grid, oldest first, HEAD excluded */
   grid_dates: string[];
+  /** Most analyses it may submit, null for no budget */
+  analysis_budget: number | null;
   error: string | null;
   dataset_id: string | null;
   dataset_name: string | null;

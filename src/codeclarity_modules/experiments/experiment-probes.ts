@@ -4,6 +4,7 @@
  * snapshots. The same search runs on read (dating from stored outcomes) and
  * in the runner (which commit to probe next). Pure: no Nest or TypeORM.
  */
+import { type AnalysisBudgetUsage, BUDGET_SPENT_REASON, isBudgetSpent } from "./experiment-budget";
 import type { ResultsRunInput, ResultsVulnerabilityInput } from "./experiment-results";
 import type { ProbePackage } from "./experiment-row-copy";
 import { isVulnerableVersion } from "./experiment-vulnerable-versions";
@@ -46,6 +47,8 @@ export interface ProbeRows {
   probes?: readonly { dataset_entry_id: string; commit_hash: string; packages: ProbePackage[] }[];
   probe_intervals?: readonly ResultsProbeIntervalInput[];
   probe_analyses?: readonly ResultsProbeAnalysisInput[];
+  /** Once spent, a search that needs another probe ends as budget spent */
+  budget?: AnalysisBudgetUsage | null;
 }
 
 /** One event to date: the change of one (vulnerability, package) between two snapshots. */
@@ -114,8 +117,10 @@ export class ProbeSearch {
   readonly probeRequests: { task: DatingTask; commit: ProbeCandidate }[] = [];
   readonly intervalRequests: { task: DatingTask }[] = [];
   waiting = 0;
+  private readonly budgetSpent: boolean;
 
   constructor(rows: ProbeRows) {
+    this.budgetSpent = isBudgetSpent(rows.budget);
     for (const probe of rows.probes ?? []) {
       this.packagesAt.set(`${probe.dataset_entry_id}${SEP}${probe.commit_hash}`, probe.packages);
     }
@@ -146,6 +151,9 @@ export class ProbeSearch {
   date(task: DatingTask): ProbeDating | null {
     const step = this.search(task);
     if (step.step === "done") return step.dating;
+    if (step.step === "probe" && this.budgetSpent) {
+      return { outcome: "not_found", reason: BUDGET_SPENT_REASON, commit: null, packages_before: null, packages_after: null };
+    }
     if (step.step === "probe") this.probeRequests.push({ task, commit: step.commit });
     else if (step.step === "list") this.intervalRequests.push({ task });
     else this.waiting++;

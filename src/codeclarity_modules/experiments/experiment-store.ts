@@ -11,7 +11,7 @@ import { Experiment, ExperimentStatus } from "./experiment.entity";
 import type { ExposuresInput } from "./experiment-exposures";
 import { ExperimentProbe } from "./experiment-probe.entity";
 import { ExperimentProbeOutcome } from "./experiment-probe-outcome.entity";
-import { type RawQuery, readPlanningRows } from "./experiment-probe-rows";
+import { type RawQuery, readAnalysesSubmitted, readPlanningRows } from "./experiment-probe-rows";
 import type { ProbeCandidate } from "./experiment-probes";
 import type { ResultsRunInput } from "./experiment-results";
 import type { ProbePackage, RunRows } from "./experiment-row-copy";
@@ -222,6 +222,9 @@ export abstract class ExperimentStore {
     probeId: string,
     analysisId: string,
   ): Promise<boolean>;
+
+  /** Analyses the experiment submitted: every snapshot attempt and every probe. */
+  abstract countSubmittedAnalyses(experimentId: string): Promise<number>;
 
   /** Pending probes of the experiment, with their analysis and dataset entry. */
   abstract getInFlightProbes(experimentId: string): Promise<ExperimentProbe[]>;
@@ -720,6 +723,11 @@ export class TypeOrmExperimentStore extends ExperimentStore {
       .where("id = :id AND status = 'pending'", { id: probeId })
       .execute();
     return Boolean(result.affected);
+  }
+
+  async countSubmittedAnalyses(experimentId: string): Promise<number> {
+    const query: RawQuery = (sql, params) => this.runRepository.query(sql, params);
+    return readAnalysesSubmitted(query, experimentId);
   }
 
   async getInFlightProbes(experimentId: string): Promise<ExperimentProbe[]> {

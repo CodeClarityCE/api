@@ -29,6 +29,7 @@ import { describeBuildError } from "../datasets/dataset-build.service";
 import { GithubRateLimited, rateLimitedAt } from "../datasets/dataset-builder";
 
 import { Experiment, ExperimentStatus } from "./experiment.entity";
+import { analysesLeft } from "./experiment-budget";
 import { planProbes } from "./experiment-exposures";
 import { endOfGridDay } from "./experiment-grid";
 import type { ExperimentProbe } from "./experiment-probe.entity";
@@ -557,7 +558,8 @@ export class ExperimentRunnerService
       plan = planProbes(rows);
     }
 
-    const probes = plan.probes.slice(0, this.probeAllowance(experiment, plan.probes.length, slots));
+    const left = await this.analysesLeft(experiment);
+    const probes = plan.probes.slice(0, this.probeAllowance(plan.probes.length, slots, left));
     if (probes.length > 0) {
       const entries = new Map(
         (await this.store.getDatasetEntries([...new Set(probes.map((p) => p.entry))])).map((e) => [e.id, e]),
@@ -574,12 +576,26 @@ export class ExperimentRunnerService
         await this.submitProbe(experiment, entry, branch, request, { integrationId, creator });
       }
     }
-    return plan.intervals.length > 0 || plan.probes.length > 0 || plan.waiting > 0;
+    // Probes a spent budget will never submit keep nothing open
+    return plan.intervals.length > 0 || (plan.probes.length > 0 && left > 0) || plan.waiting > 0;
   }
 
-  /** How many of the planned probes to submit now: the one place that caps them. */
-  private probeAllowance(_experiment: Experiment, planned: number, slots: number): number {
-    return Math.max(0, Math.min(planned, slots));
+  /**
+   * How many of the planned probes to submit now: the one place that caps
+   * them. Planned probes come fixes first, so a budget runs out on introductions.
+   */
+  private probeAllowance(planned: number, slots: number, budgetLeft: number): number {
+    return Math.max(0, Math.min(planned, slots, budgetLeft));
+  }
+
+  /** Analyses the experiment's budget still allows; Infinity without one. */
+  private async analysesLeft(experiment: Experiment): Promise<number> {
+    const budget = experiment.analysis_budget ?? null;
+    if (budget === null) return analysesLeft(null);
+    return analysesLeft({
+      analysis_budget: budget,
+      analyses_submitted: await this.store.countSubmittedAnalyses(experiment.id),
+    });
   }
 
   /**
