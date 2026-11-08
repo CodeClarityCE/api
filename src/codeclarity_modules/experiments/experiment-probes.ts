@@ -1,8 +1,6 @@
 /**
- * Fix probes (ADR 0005): date a fix or an introduction to a commit by
- * halving over the lockfile-touching commits between its two bracketing
- * snapshots. The same search runs on read (dating from stored outcomes) and
- * in the runner (which commit to probe next). Pure: no Nest or TypeORM.
+ * Fix probes (ADR 0005): date a change to a commit by halving over the
+ * lockfile commits between two snapshots. Used on read and by the runner. Pure.
  */
 import { type AnalysisBudgetUsage, BUDGET_SPENT_REASON, isBudgetSpent } from "./experiment-budget";
 import type { ResultsRunInput, ResultsVulnerabilityInput } from "./experiment-results";

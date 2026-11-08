@@ -166,9 +166,8 @@ export class ExperimentResultsService {
   ) {}
 
   /**
-   * The dataset-level results of an experiment, computed from its copied
-   * rows on every read (ADR 0001). Results of a running or cancelled
-   * experiment cover the runs done so far.
+   * The results of an experiment, computed from its copied rows on every
+   * read (ADR 0001), over the runs done so far.
    * @throws {NotAuthorized} If the user is not a member of the org
    * @throws {EntityNotFound} If the org has no such experiment
    */

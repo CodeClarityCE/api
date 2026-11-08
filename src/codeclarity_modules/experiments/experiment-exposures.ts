@@ -1,7 +1,6 @@
 /**
- * Exposures, introductions and fixes of an experiment (spec #30), derived
- * on read from its snapshot runs, copied instances and probe outcome rows
- * (ADR 0001). Pure: no Nest or TypeORM imports.
+ * Exposures, introductions and fixes, derived on read from snapshot runs,
+ * instances and probe outcome rows (ADR 0001). Pure.
  */
 import { DAY_MS, gridDay, instancesByRun, publishedDay } from "./experiment-grid";
 import {
@@ -168,10 +167,8 @@ function byKey(a: string, b: string): number {
 const keyOf = (vulnerabilityId: string, pkg: string): string => `${vulnerabilityId}\u0000${pkg}`;
 
 /**
- * Every exposure of the experiment, by entry (in run order), then
- * vulnerability, package and start. "Present" at a snapshot means the
- * package resolves to a vulnerable version in any workspace; failed or
- * skipped snapshots are gaps and empty ones are absent.
+ * Every exposure, by entry, vulnerability, package and start. Failed snapshots
+ * are gaps; empty ones are absent before the first lockfile and gaps after it.
  */
 export function deriveExposures(
   input: ExposuresInput,
@@ -293,10 +290,8 @@ function resolvesAt(
 }
 
 /**
- * Upgraded if the package still resolves anywhere after the fix (at a safe
- * version, since it is no longer present), else removed directly when a
- * vulnerable hit before it was a direct dependency, else transitively.
- * Null when the state after the fix is unknown.
+ * Upgraded if the package still resolves after the fix, else removed directly
+ * or transitively by how it was depended on before. Null when unknown.
  */
 function fixKind(directBefore: boolean, resolvesAfter: boolean | null): FixKind | null {
   if (resolvesAfter === null) return null;

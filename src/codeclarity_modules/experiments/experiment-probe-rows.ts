@@ -1,7 +1,4 @@
-/**
- * Raw SQL readers for the rows fix probes are searched over, shared by the
- * results service (dating on read) and the store (planning probes).
- */
+/** Raw SQL readers for probe search rows, shared by the results service and the store. */
 import type { ExposuresInput } from "./experiment-exposures";
 import type {
   KnownVersionsInput,

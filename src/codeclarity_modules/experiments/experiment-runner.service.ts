@@ -531,9 +531,7 @@ export class ExperimentRunnerService
   }
 
   /**
-   * Fix probes (ADR 0005), once an entry's snapshots have all ended: list
-   * the intervals that need dating, then submit the next probe of each
-   * search, fixes first, while `slots` allow.
+   * List the intervals to date, then submit the next probes, fixes first.
    * @returns whether probe work remains (to list, submit or finish)
    */
   private async probe(experiment: Experiment, slots: number): Promise<boolean> {

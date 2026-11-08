@@ -1,7 +1,6 @@
 /**
- * Analysis budget (spec #30): an optional cap on the analyses one
- * experiment submits, snapshots and fix probes alike. Once spent no further
- * probe runs; snapshots are never cut. Pure: no Nest or TypeORM.
+ * Analysis budget: an optional cap on what one experiment submits.
+ * Once spent, fix probes stop; snapshots always run.
  */
 
 export const BUDGET_SPENT_REASON = "budget spent";

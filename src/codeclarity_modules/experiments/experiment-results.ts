@@ -1,14 +1,6 @@
 /**
- * Experiment results (spec #23, "Data and results"): the dataset-level
- * aggregates of an experiment, computed on read from its tidy rows. Block
- * names and semantics follow the archived js-vuln-study harness
- * (numbers.py, stats.py) so the payload is shaped like its
- * results_numbers.json, minus the blocks v1 drops.
- *
- * Pure and free of Nest and TypeORM imports: the results endpoint, the
- * results.json export and the parity test all call
- * aggregateExperimentResults with plain rows. Where the harness produced
- * NaN the payload carries null.
+ * Experiment results computed on read from tidy rows, shaped like the archived
+ * harness's results_numbers.json. Pure; null where the harness had NaN.
  */
 import { type AnalysisBudgetUsage, isBudgetSpent } from "./experiment-budget";
 import {
@@ -743,10 +735,8 @@ function gridOnlyRunIds(runs: readonly ResultsRunInput[]): Set<string> {
 }
 
 /**
- * Every aggregate of an experiment, from its runs and tidy rows, over the
- * HEAD snapshot. Its done runs (one summary each) are the project
- * universe: a done run without instances counts with load 0, instances of
- * other runs are ignored.
+ * Every aggregate of an experiment. HEAD blocks use HEAD's done runs as the
+ * project universe (load 0 without instances); grid blocks use every run.
  */
 export function aggregateExperimentResults(
   input: ExperimentResultsInput,

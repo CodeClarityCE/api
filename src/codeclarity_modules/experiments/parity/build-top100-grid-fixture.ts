@@ -1,27 +1,8 @@
 /**
- * Builds the grid parity fixture (spec #30, ticket #41) from the archived
- * js-vuln-study top100 study: every snapshot of its 40-date grid plus HEAD,
- * copied through the same row copy as the runner, with the probe outcome
- * rows the archive's lockfile mining left behind.
- *
- * Per dataset entry (one JSON line each):
- * - runs: one per grid date and HEAD. Done manifest rows carry their copied
- *   instances and run summary; failed rows are failed runs; grid dates the
- *   manifest has no row for (before the repo existed) are done and empty
- *   with reason no_lockfile_yet, as the runner records them.
- * - snapshot probe outcome rows: mapProbePackages of each done snapshot's
- *   js-sbom result, kept to the packages some instance of the entry names.
- * - probe rows from mining_cache: the lockfile-touching commits of each
- *   mined window (probe intervals) and the root lockfiles parsed at the
- *   commits the archive fetched (probe outcome rows; a commit whose lockfile
- *   would not parse is a failed probe analysis).
- * The last line holds what the test compares with: the grid blocks of
- * results_numbers.json and the mining results (remediation_events).
- *
- * The raw results are about 60 GB, so they are parsed one file at a time
- * (hours, mostly disk reads). The output is 3.8 MB of Brotli, under the
- * 5 MB commit limit. --recompact rewrites an existing fixture after a trim
- * change without rereading the raw results.
+ * Builds the grid parity fixture from the archived top100 study: every grid
+ * snapshot copied through the runner's row copy, plus probe rows from the
+ * archive's lockfile mining. Reads ~60 GB one file at a time; --recompact
+ * rewrites an existing fixture without the raw results.
  *
  * Usage, from api/:
  *   node --max-old-space-size=8192 -r ts-node/register/transpile-only \

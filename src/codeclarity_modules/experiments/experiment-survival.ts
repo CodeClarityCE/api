@@ -1,8 +1,4 @@
-/**
- * Exposure survival (spec #30): a Kaplan-Meier curve of how long exposures
- * last, from introduction (or the first grid date seen) to fix. Open
- * exposures are censored at HEAD. Pure: no Nest or TypeORM imports.
- */
+/** Kaplan-Meier survival of exposures, open ones censored at HEAD. Pure. */
 import type { Exposure } from "./experiment-exposures";
 import { DAY_MS, gridDay } from "./experiment-grid";
 import { SEVERITY_ORDER } from "./experiment-severity";

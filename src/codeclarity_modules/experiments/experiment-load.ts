@@ -1,8 +1,4 @@
-/**
- * Load over time (spec #30): vulnerability instances per grid date in the
- * hindsight view and the as-of view (ADR 0004), derived on read. Pure: no
- * Nest or TypeORM imports.
- */
+/** Instances per grid date in the hindsight and as-of views (ADR 0004). Pure. */
 import { gridDay, groupByGridDate, instancesByRun, publishedDay } from "./experiment-grid";
 import type { ResultsRunInput, ResultsVulnerabilityInput } from "./experiment-results";
 import { NO_LOCKFILE_YET } from "./experiment-row-copy";

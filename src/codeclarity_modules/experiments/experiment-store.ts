@@ -180,11 +180,8 @@ export abstract class ExperimentStore {
   ): Promise<unknown>;
 
   /**
-   * In one transaction, replace the run's copied rows with these and mark it
-   * done, with `reason` (e.g. no_lockfile_yet) when it is done but empty,
-   * and the `knowledge` the rows were matched against. Copying a done run
-   * again replaces its rows. False, with nothing written, if the run is
-   * failed or skipped.
+   * Replace the run's copied rows and mark it done, with `reason` when empty.
+   * False, with nothing written, if the run is failed or skipped.
    */
   abstract copyRunRows(
     experimentId: string,

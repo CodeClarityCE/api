@@ -1,8 +1,6 @@
 /**
- * Upstream leverage over time (spec #30): per grid date, how many packages
- * clear half and most of the instances, and per grid interval, how much of
- * the remediation came from upstream (removed_transitive fixes). Hindsight
- * view, pure: no Nest or TypeORM imports.
+ * Packages to clear per grid date and the removed_transitive share per
+ * interval, in the hindsight view. Pure.
  */
 import type { Exposure, FixKind } from "./experiment-exposures";
 import { type GridGroup, groupByGridDate, instancesByRun } from "./experiment-grid";
@@ -97,10 +95,8 @@ function kindCounts(fixes: readonly NonNullable<Exposure["fix"]>[]): FixKindCoun
 }
 
 /**
- * Packages to clear per grid date, over the done snapshots at that date,
- * and fix kinds per grid interval. A fix belongs to the interval ending at
- * its later bracketing snapshot, so one spanning a failed snapshot lands
- * in the interval it was seen fixed.
+ * Packages to clear per grid date and fix kinds per interval. A fix counts in
+ * the interval ending at its later bracketing snapshot.
  */
 export function upstreamLeverage(
   runs: readonly ResultsRunInput[],

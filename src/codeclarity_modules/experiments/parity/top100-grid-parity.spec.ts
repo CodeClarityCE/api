@@ -1,47 +1,24 @@
 /**
- * Grid parity with the archived js-vuln-study top100 study (spec #30,
- * ticket #41). The fixture (build-top100-grid-fixture.ts) holds every grid
- * snapshot of the study copied through the runner's row copy, plus probe
- * rows built from the archive's lockfile mining cache. At 3.8 MB it is
- * under the 5 MB commit limit, so it sits next to this file; the suite
- * skips when it is absent, and EXPERIMENTS_GRID_FIXTURE points elsewhere.
+ * Grid parity with the archived top100 study. The fixture (see
+ * build-top100-grid-fixture.ts) sits next to this file; the suite skips
+ * without it, and EXPERIMENTS_GRID_FIXTURE points elsewhere.
  *
- * Two kinds of checks:
- * 1. Fixture fidelity, exact: the archive's own interval rules, rerun here
- *    over the fixture, reproduce its results_numbers.json grid blocks
- *    (coverage, survival_residence, survival_disclosed,
- *    survival_day_resolution, trajectory_balanced), with our Kaplan-Meier.
- * 2. v2 against the archive, within the tolerance below. Every difference
- *    must fall in a named class; the classes are rule changes made on
- *    purpose (spec #30):
- *    - Gaps: a grid date without a done snapshot censors the archive's
- *      interval; v2 skips it, so one exposure can join several archive
- *      intervals, and a fix after a gap is a fix, not a censoring.
- *    - HEAD order: the archive dates HEAD by its commit, so for a quiet
- *      repo HEAD sorts before the last grid dates; v2 always puts it last.
- *    - Single observation: the archive skips projects with fewer than two
- *      done snapshots; v2 still reports their (open) exposures.
- *    - Fix dating: the archive mined root lockfiles and called a fix where
- *      the versions seen vulnerable left; v2 tests every version against
- *      the advisory ranges, so a bump that stays vulnerable is no fix.
- *      Its halving also visits other commits than the archive's (lo -1
- *      against 0), and those the archive never fetched leave the fix
- *      undated here (snapshot precision), which is a fixture limit only.
- *      v2 calls a window ambiguous when any known commit contradicts the
- *      boundary; the archive only checked short windows.
+ * 1. Fixture fidelity, exact: the archive's interval rules rerun over the
+ *    fixture reproduce its results_numbers.json grid blocks.
+ * 2. v2 against the archive: every difference falls in a deliberate rule
+ *    change. Gaps are skipped, not censored; HEAD is always last; single
+ *    observations still report exposures; a bump that stays vulnerable is
+ *    no fix; v2's halving can visit commits the archive never fetched
+ *    (snapshot precision here); any contradicting commit makes a window
+ *    ambiguous.
  *
- * Tolerance: of fixes both date to a commit, at least 90% land on the
- * archive's commit (observed 93.3%), and at least 98% once the deliberate
- * stays-vulnerable rule is set aside (observed 98.5%). The rest are windows
- * that do not change state once, where the two halving paths differ.
- * Upgraded vs removed agrees on at least 99% of the shared commits
- * (observed 100%). Everything else below is exact.
+ * Tolerance: of fixes both date to a commit, at least 90% match the
+ * archive's commit (observed 93.3%), 98% without the stays-vulnerable rule
+ * (observed 98.5%); the rest are windows that change state more than once.
+ * Fix kind agrees on at least 99% (observed 100%). The rest is exact.
  *
- * Archive quirk reproduced on purpose: survival_disclosed and
- * trajectory_balanced parse publication dates with one pandas call, which
- * infers the format from the first value (NVD's "2021-02-08T22:15:12.450")
- * and drops every other format as unparseable. Those two blocks therefore
- * only count NVD-dated instances; v2 reads every format.
+ * Archive quirk kept on purpose: survival_disclosed and trajectory_balanced
+ * only count NVD-dated instances, since pandas dropped other date formats.
  */
 /* eslint-disable security/detect-non-literal-fs-filename -- reads the fixture path, overridable by env */
 import { existsSync, readFileSync } from "node:fs";
