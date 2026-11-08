@@ -1,18 +1,31 @@
+import { ClassSerializerInterceptor, ValidationPipe } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { Reflector } from "@nestjs/core";
 import {
   FastifyAdapter,
   type NestFastifyApplication,
 } from "@nestjs/platform-fastify";
 import { Test, type TestingModule } from "@nestjs/testing";
+import { getDataSourceToken } from "@nestjs/typeorm";
 import * as bcrypt from "bcrypt";
 import { DataSource } from "typeorm";
 
 import { AppModule } from "../../src/app.module";
+import {
+  AnalysisPublisher,
+  InMemoryAnalysisPublisher,
+} from "../../src/base_modules/analyses/analysis-publisher";
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import { Organization } from "../../src/base_modules/organizations/organization.entity";
-import { OrganizationsRepository } from "../../src/base_modules/organizations/organizations.repository";
+import {
+  MembershipsRepository,
+  OrganizationsRepository,
+  UsersRepository,
+} from "../../src/base_modules/shared/repositories";
 import { User } from "../../src/base_modules/users/users.entity";
-import { UsersRepository } from "../../src/base_modules/users/users.repository";
+import { ErrorFilter } from "../../src/filters/ExceptionFilter";
+import { ResponseBodyInterceptor } from "../../src/interceptors/ResponseBodyInterceptor";
+import { ValidationFailed } from "../../src/types/error.types";
 import { validate } from "../../src/utils/validate-env";
 
 export interface TestUser {
@@ -27,6 +40,7 @@ export class IntegrationTestHelper {
   private dataSource!: DataSource;
   private usersRepository!: UsersRepository;
   private organizationsRepository!: OrganizationsRepository;
+  private membershipsRepository!: MembershipsRepository;
 
   async setupTestApp(): Promise<NestFastifyApplication> {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -39,23 +53,61 @@ export class IntegrationTestHelper {
         }),
         AppModule,
       ],
-    }).compile();
+    })
+      // Keep test analyses off the real queue.
+      .overrideProvider(AnalysisPublisher)
+      .useClass(InMemoryAnalysisPublisher)
+      .compile();
 
     this.app = moduleFixture.createNestApplication<NestFastifyApplication>(
       new FastifyAdapter(),
     );
 
+    // Same global setup as main.ts, so responses match the real API.
+    this.app.useGlobalPipes(
+      new ValidationPipe({
+        exceptionFactory: (errors) => new ValidationFailed(errors),
+        stopAtFirstError: true,
+      }),
+    );
+    this.app.useGlobalFilters(new ErrorFilter());
+    this.app.useGlobalInterceptors(new ResponseBodyInterceptor());
+    this.app.useGlobalInterceptors(
+      new ClassSerializerInterceptor(this.app.get(Reflector), {
+        excludeExtraneousValues: true,
+      }),
+    );
+
     // Get services for test data creation
-    this.dataSource = moduleFixture.get<DataSource>(DataSource);
+    this.dataSource = moduleFixture.get<DataSource>(
+      getDataSourceToken("codeclarity"),
+    );
     this.usersRepository = moduleFixture.get<UsersRepository>(UsersRepository);
     this.organizationsRepository = moduleFixture.get<OrganizationsRepository>(
       OrganizationsRepository,
+    );
+    this.membershipsRepository = moduleFixture.get<MembershipsRepository>(
+      MembershipsRepository,
     );
 
     await this.app.init();
     await this.app.getHttpAdapter().getInstance().ready();
 
+    // The test database is restored from an old dump, so rebuild it from the entities.
+    this.assertTestDatabase();
+    await this.dataSource.synchronize(true);
+
     return this.app;
+  }
+
+  // Refuses to wipe a database that is not a test one, such as dev's.
+  private assertTestDatabase(): void {
+    const database = this.dataSource.options.database ?? "";
+    if (typeof database !== "string" || !database.endsWith("_test")) {
+      throw new Error(
+        `Refusing to truncate "${String(database)}": not a test database`,
+      );
+    }
   }
 
   async teardownTestApp(): Promise<void> {
@@ -67,13 +119,7 @@ export class IntegrationTestHelper {
   async cleanDatabase(): Promise<void> {
     if (!this.dataSource) return;
 
-    // Refuse to truncate a database that is not a test one, such as dev's
-    const database = this.dataSource.options.database ?? "";
-    if (typeof database !== "string" || !database.endsWith("_test")) {
-      throw new Error(
-        `Refusing to truncate "${String(database)}": not a test database`,
-      );
-    }
+    this.assertTestDatabase();
 
     // Get all entity metadata
     const entities = this.dataSource.entityMetadatas;
@@ -103,6 +149,8 @@ export class IntegrationTestHelper {
       orgName: string;
       orgDescription: string;
       role: MemberRole;
+      // Join this organization instead of creating a new one.
+      organization: Organization;
     }> = {},
   ): Promise<TestUser> {
     const userData = {
@@ -134,36 +182,46 @@ export class IntegrationTestHelper {
 
     const savedUser = await this.usersRepository.saveUser(user);
 
-    // Create organization
-    const organization = new Organization();
-    organization.name = userData.orgName;
-    organization.description = userData.orgDescription;
-    organization.color_scheme = "#1f2937";
-    organization.personal = false;
-    organization.created_on = new Date();
-    organization.created_by = savedUser;
+    // Create organization unless the test joins an existing one
+    let savedOrganization = overrides.organization;
+    if (!savedOrganization) {
+      const organization = new Organization();
+      organization.name = userData.orgName;
+      organization.description = userData.orgDescription;
+      organization.color_scheme = "1";
+      organization.personal = false;
+      organization.created_on = new Date();
+      organization.created_by = savedUser;
 
-    const savedOrganization =
-      await this.organizationsRepository.saveOrganization(organization);
+      savedOrganization =
+        await this.organizationsRepository.saveOrganization(organization);
+    }
 
     // Create membership
-    await this.organizationsRepository.saveMembership({
+    await this.membershipsRepository.saveMembership({
       user: savedUser,
       organization: savedOrganization,
       role: userData.role,
       joined_on: new Date(),
     } as any);
 
-    // Generate tokens (mock since generateTokens doesn't exist)
-    const tokens = {
-      access_token: `mock-access-token-${savedUser.id}`,
-      refresh_token: `mock-refresh-token-${savedUser.id}`,
+    // Log in through the real endpoint so the tokens pass real auth.
+    const login = await this.makeRequest("POST", "/auth/authenticate", {
+      email: userData.email,
+      password: userData.password,
+    });
+    if (login.statusCode !== 201) {
+      throw new Error(`Test user login failed: ${login.payload}`);
+    }
+    const tokens = JSON.parse(login.payload).data as {
+      token: string;
+      refresh_token: string;
     };
 
     return {
       user: savedUser,
       organization: savedOrganization,
-      accessToken: tokens.access_token,
+      accessToken: tokens.token,
       refreshToken: tokens.refresh_token,
     };
   }
@@ -179,11 +237,12 @@ export class IntegrationTestHelper {
       url,
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
       },
     };
 
     if (body) {
+      // Fastify rejects a JSON content type with an empty body.
+      requestOptions.headers["Content-Type"] = "application/json";
       requestOptions.payload = JSON.stringify(body);
     }
 
@@ -200,12 +259,12 @@ export class IntegrationTestHelper {
     const requestOptions: any = {
       method,
       url,
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: {},
     };
 
     if (body) {
+      // Fastify rejects a JSON content type with an empty body.
+      requestOptions.headers["Content-Type"] = "application/json";
       requestOptions.payload = JSON.stringify(body);
     }
 

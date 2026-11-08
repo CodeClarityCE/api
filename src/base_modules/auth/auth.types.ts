@@ -5,12 +5,14 @@ import { IsEmail, IsNotEmpty } from "class-validator";
 export interface JwtPayload {
   userId: string;
   roles: ROLE[];
+  activated?: boolean | undefined;
 }
 
 /** User object returned from JWT validation */
 export interface JwtValidationResult {
   userId: string;
   roles: ROLE[];
+  activated?: boolean | undefined;
 }
 
 export class AuthenticatedUser {

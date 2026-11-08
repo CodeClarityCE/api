@@ -68,6 +68,7 @@ import { VulnerabilitySearchService } from "./vulnerability/vulnerability.servic
       imports: [ConfigModule],
       name: "config",
       useFactory: () => ({
+        name: "config",
         ...defaultOptions,
         synchronize: false,
         database: "config",
