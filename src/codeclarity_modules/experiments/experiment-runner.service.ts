@@ -78,6 +78,12 @@ interface PinnableRepo {
   description: string | null;
 }
 
+/** Who submits an experiment's analyses, and through which integration. */
+interface Submitter {
+  integrationId: string;
+  creator: AuthenticatedUser;
+}
+
 /** Repository lookups of one pass, by dataset entry id */
 type RepoLookups = Map<string, Promise<PinnableRepo>>;
 
@@ -487,8 +493,8 @@ export class ExperimentRunnerService
     );
     if (runs.length === 0) return slots;
 
-    const { integrationId, creator } = this.submitter(experiment);
-    const client = await this.githubClient(integrationId);
+    const submitter = this.submitter(experiment);
+    const client = await this.githubClient(submitter.integrationId);
     const repos: RepoLookups = new Map();
 
     let submitted = 0;
@@ -496,10 +502,7 @@ export class ExperimentRunnerService
       if (submitted >= slots) break;
       await this.store.renewLease(experiment.id, this.instanceId);
       if (
-        await this.submitRun(experiment, run, client, repos, {
-          integrationId,
-          creator,
-        })
+        await this.submitRun(experiment, run, client, repos, submitter)
       ) {
         submitted++;
       }
@@ -511,10 +514,7 @@ export class ExperimentRunnerService
    * Who submits analyses for the experiment.
    * @throws {ExperimentFatal} If the integration or the creator was removed
    */
-  private submitter(experiment: Experiment): {
-    integrationId: string;
-    creator: AuthenticatedUser;
-  } {
+  private submitter(experiment: Experiment): Submitter {
     const integrationId = experiment.dataset.integration?.id;
     if (!integrationId) {
       throw new ExperimentFatal(
@@ -548,8 +548,8 @@ export class ExperimentRunnerService
     if (plan.intervals.length === 0 && plan.probes.length === 0) {
       return plan.waiting > 0;
     }
-    const { integrationId, creator } = this.submitter(experiment);
-    const client = await this.githubClient(integrationId);
+    const submitter = this.submitter(experiment);
+    const client = await this.githubClient(submitter.integrationId);
     if (plan.intervals.length > 0) {
       for (const interval of plan.intervals) {
         await this.store.renewLease(experiment.id, this.instanceId);
@@ -574,7 +574,7 @@ export class ExperimentRunnerService
         const branch = branches.get(request.entry);
         if (!entry || !branch) continue;
         await this.store.renewLease(experiment.id, this.instanceId);
-        await this.submitProbe(experiment, entry, branch, request, { integrationId, creator });
+        await this.submitProbe(experiment, entry, branch, request, submitter);
       }
     }
     // Probes a spent budget will never submit keep nothing open
@@ -696,7 +696,7 @@ export class ExperimentRunnerService
     entry: ExperimentRun["dataset_entry"],
     branch: string,
     request: ProbeRequest,
-    submitter: { integrationId: string; creator: AuthenticatedUser },
+    submitter: Submitter,
   ): Promise<void> {
     const committedAt = new Date(request.commit.committed_at);
     const probeId = await this.store.reserveProbe({
@@ -807,7 +807,7 @@ export class ExperimentRunnerService
     run: ExperimentRun,
     client: GithubRestClient,
     repos: RepoLookups,
-    submitter: { integrationId: string; creator: AuthenticatedUser },
+    submitter: Submitter,
   ): Promise<boolean> {
     const { integrationId, creator } = submitter;
     const entry = run.dataset_entry;
