@@ -4,6 +4,7 @@
  */
 import type { ExposuresInput } from "./experiment-exposures";
 import type {
+  KnownVersionsInput,
   ResultsProbeAnalysisInput,
   ResultsProbeIntervalInput,
 } from "./experiment-probes";
@@ -52,7 +53,7 @@ export async function readProbeRows(
  * Probe outcome rows with only the packages some instance of the
  * experiment names: dating and fix kinds need nothing else.
  */
-export const PROBE_OUTCOME_SELECT = `SELECT probe."datasetEntryId" AS dataset_entry_id,
+const PROBE_OUTCOME_SELECT = `SELECT probe."datasetEntryId" AS dataset_entry_id,
          probe.commit_hash AS commit_hash,
          COALESCE((SELECT jsonb_agg(p) FROM jsonb_array_elements(probe.packages) AS p
                     WHERE p->>'name' IN (SELECT instance.affected_dependency
@@ -61,6 +62,43 @@ export const PROBE_OUTCOME_SELECT = `SELECT probe."datasetEntryId" AS dataset_en
                   '[]'::jsonb) AS packages
     FROM experiment_probe_outcome AS probe
    WHERE probe."experimentId" = $1`;
+
+/** The instance columns results, exposures and probe planning read */
+export const INSTANCE_COLUMNS = [
+  "workspace",
+  "affected_dependency",
+  "affected_version",
+  "direct_dependency",
+  "vulnerability_id",
+  "severity_class",
+  "published_date",
+  "epss_score",
+  "conflict_flag",
+  "winning_source",
+  "withdrawn_date",
+  "vulnerable_versions",
+] as const;
+
+/** Probe outcome rows of the experiment, or of some of its entries only. */
+export function readProbeOutcomes(
+  query: RawQuery,
+  experimentId: string,
+  entryIds: string[] | null,
+): Promise<ResultsProbeInput[]> {
+  return entryIds
+    ? query<ResultsProbeInput>(`${PROBE_OUTCOME_SELECT} AND probe."datasetEntryId" = ANY($2)`, [experimentId, entryIds])
+    : query<ResultsProbeInput>(PROBE_OUTCOME_SELECT, [experimentId]);
+}
+
+/** The distinct vulnerable versions the instances of every entry name. */
+export function readKnownVersions(query: RawQuery, experimentId: string): Promise<KnownVersionsInput[]> {
+  return query<KnownVersionsInput>(
+    `SELECT DISTINCT vulnerability_id, affected_dependency, affected_version, vulnerable_versions
+       FROM experiment_vulnerability_instance
+      WHERE "experimentId" = $1`,
+    [experimentId],
+  );
+}
 
 /** Entries of the experiment whose snapshot runs have all ended */
 const ENDED_ENTRIES = `SELECT DISTINCT run."datasetEntryId" FROM experiment_run AS run
@@ -85,7 +123,7 @@ export async function readPlanningRows(
   if (entryIds.length === 0) {
     return { runs: [], vulnerabilities: [], probes: [], probe_intervals: [], probe_analyses: [] };
   }
-  const [runs, vulnerabilities, probes, probeRows] = await Promise.all([
+  const [runs, vulnerabilities, probes, probeRows, known_versions] = await Promise.all([
     query<ResultsRunInput>(
       `SELECT run.status, run.error, run.grid_index, run.grid_date, run.commit_hash,
               run.committed_at, run.branch, run."analysisId" AS analysis_id,
@@ -96,23 +134,17 @@ export async function readPlanningRows(
       [experimentId, entryIds],
     ),
     query<ResultsVulnerabilityInput>(
-      `SELECT instance."runId" AS run_id, instance.workspace, instance.affected_dependency,
-              instance.affected_version, instance.direct_dependency, instance.vulnerability_id,
-              instance.severity_class, instance.published_date, instance.epss_score,
-              instance.conflict_flag, instance.winning_source, instance.withdrawn_date,
-              instance.vulnerable_versions
+      `SELECT instance."runId" AS run_id, ${INSTANCE_COLUMNS.map((c) => `instance.${c}`).join(", ")}
          FROM experiment_vulnerability_instance AS instance
          JOIN experiment_run AS run ON run.id = instance."runId"
         WHERE instance."experimentId" = $1 AND run."datasetEntryId" = ANY($2)`,
       [experimentId, entryIds],
     ),
-    query<ResultsProbeInput>(
-      `${PROBE_OUTCOME_SELECT} AND probe."datasetEntryId" = ANY($2)`,
-      [experimentId, entryIds],
-    ),
+    readProbeOutcomes(query, experimentId, entryIds),
     readProbeRows(query, experimentId, entryIds),
+    readKnownVersions(query, experimentId),
   ]);
-  return { runs, vulnerabilities, probes, ...probeRows };
+  return { runs, vulnerabilities, probes, ...probeRows, known_versions };
 }
 
 /** Snapshot attempts plus submitted fix probes: what the analysis budget counts. */

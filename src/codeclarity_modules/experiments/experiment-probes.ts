@@ -40,10 +40,18 @@ export interface ResultsProbeAnalysisInput {
   error: string | null;
 }
 
+/** What an instance says about which versions of a package are vulnerable. */
+export type KnownVersionsInput = Pick<
+  ResultsVulnerabilityInput,
+  "vulnerability_id" | "affected_dependency" | "affected_version" | "vulnerable_versions"
+>;
+
 /** Rows the probe search reads, besides the snapshot runs and instances. */
 export interface ProbeRows {
   runs: readonly ResultsRunInput[];
   vulnerabilities: readonly ResultsVulnerabilityInput[];
+  /** Vulnerable versions across every entry; defaults to `vulnerabilities` */
+  known_versions?: readonly KnownVersionsInput[];
   probes?: readonly { dataset_entry_id: string; commit_hash: string; packages: ProbePackage[] }[];
   probe_intervals?: readonly ResultsProbeIntervalInput[];
   probe_analyses?: readonly ResultsProbeAnalysisInput[];
@@ -137,7 +145,7 @@ export class ProbeSearch {
     for (const interval of rows.probe_intervals ?? []) {
       this.intervals.set(intervalKey(interval.dataset_entry_id, interval.from_commit, interval.to_commit), interval);
     }
-    for (const v of rows.vulnerabilities) {
+    for (const v of rows.known_versions ?? rows.vulnerabilities) {
       if (!v.vulnerability_id || !v.affected_dependency) continue;
       const key = `${v.vulnerability_id}${SEP}${v.affected_dependency}`;
       const known = this.versions.get(key) ?? { ranges: null, seen: new Set<string>() };
