@@ -22,6 +22,7 @@ import {
   VULNERABILITY_CSV_COLUMNS,
 } from "./experiment-csv";
 import { deriveExposures, type Exposure } from "./experiment-exposures";
+import type { FigureRows } from "./experiment-figure-data";
 import type { ResultIntervals } from "./experiment-intervals";
 import { ExperimentProbeOutcome } from "./experiment-probe-outcome.entity";
 import {
@@ -42,6 +43,7 @@ import {
   computeResultIntervals,
   type ExperimentResults,
   type ExperimentResultsInput,
+  headCutoff,
   type KnowledgeSnapshot,
   type ResultsProbeInput,
   type ResultsProvenanceInput,
@@ -236,8 +238,16 @@ export class ExperimentResultsService {
       experiment_name: experiment.name,
       results: aggregateExperimentResults({
         ...input,
-        intervals: this.intervalsOf(experiment, input),
+        bootstrap_intervals: this.intervalsOf(experiment, input),
       }),
+    };
+  }
+
+  /** The tidy rows a Figure is computed from. */
+  async figureRows(experiment: Experiment): Promise<FigureRows> {
+    return {
+      ...(await this.exposureRows(experiment, null)),
+      head_cutoff: headCutoff(experiment.ended_on ?? null, new Date()),
     };
   }
 

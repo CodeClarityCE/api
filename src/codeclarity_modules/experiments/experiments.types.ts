@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
+  IsDefined,
   IsEnum,
   IsInt,
   IsOptional,
@@ -149,4 +150,31 @@ export interface ExperimentRunSummary {
     git_url: string;
     stars: number;
   };
+}
+
+export class FigureDataBody {
+  @ApiProperty({ description: "A combination the Figure catalog allows" })
+  @IsDefined()
+  definition!: unknown;
+}
+
+export class CreateFigureBody extends FigureDataBody {
+  @ApiProperty({ maxLength: 100 })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  name!: string;
+}
+
+export class UpdateFigureBody {
+  @ApiPropertyOptional({ maxLength: 100 })
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  name?: string;
+
+  @ApiPropertyOptional({ description: "A combination the catalog allows" })
+  @IsOptional()
+  definition?: unknown;
 }

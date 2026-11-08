@@ -4,8 +4,10 @@ import {
   DefaultValuePipe,
   Delete,
   Get,
+  HttpCode,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
   Res,
@@ -30,14 +32,23 @@ import {
 } from "src/types/apiResponses.types";
 
 import { PROBES_PER_ENTRY_INTERVAL } from "./experiment-budget";
+import type { FigureCatalog } from "./experiment-figure-catalog";
+import type { FigureData } from "./experiment-figure-data";
+import {
+  ExperimentFiguresService,
+  type FigureSummary,
+} from "./experiment-figures.service";
 import type { ExperimentResults } from "./experiment-results";
 import { ExperimentResultsService } from "./experiment-results.service";
 import { ExperimentsService } from "./experiments.service";
 import {
   CreateExperimentBody,
+  CreateFigureBody,
   ExperimentEstimateBasis,
   ExperimentRunSummary,
   ExperimentSummary,
+  FigureDataBody,
+  UpdateFigureBody,
 } from "./experiments.types";
 
 const CSV_CONTENT_TYPE = "text/csv; charset=utf-8";
@@ -55,6 +66,7 @@ export class ExperimentsController {
   constructor(
     private readonly experimentsService: ExperimentsService,
     private readonly resultsService: ExperimentResultsService,
+    private readonly figuresService: ExperimentFiguresService,
   ) {}
 
   @Post("")
@@ -285,6 +297,135 @@ export class ExperimentsController {
         attachment(experiment_name, "results.json"),
       )
       .send(JSON.stringify(results, null, 2));
+  }
+
+  @Get(":experiment_id/figure-catalog")
+  @ApiOperation({ summary: "What the Figure composer may offer" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  async getFigureCatalog(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+  ): Promise<TypedResponse<FigureCatalog>> {
+    return {
+      data: await this.figuresService.catalog(org_id, experiment_id, user),
+    };
+  }
+
+  @Post(":experiment_id/figure-data")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Compute the data of a Figure definition" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiResponse({ status: 400, description: "Definition outside the catalog" })
+  async computeFigureData(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Body() body: FigureDataBody,
+  ): Promise<TypedResponse<FigureData>> {
+    return {
+      data: await this.figuresService.computeData(
+        org_id,
+        experiment_id,
+        body.definition,
+        user,
+      ),
+    };
+  }
+
+  @Post(":experiment_id/figures")
+  @ApiOperation({ summary: "Save a Figure" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiResponse({ status: 400, description: "Definition outside the catalog" })
+  async createFigure(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Body() body: CreateFigureBody,
+  ): Promise<CreatedResponse> {
+    const id = await this.figuresService.create(
+      org_id,
+      experiment_id,
+      body,
+      user,
+    );
+    return { id };
+  }
+
+  @Get(":experiment_id/figures")
+  @ApiOperation({ summary: "List the Figures of an experiment" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  async getFigures(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+  ): Promise<TypedResponse<FigureSummary[]>> {
+    return {
+      data: await this.figuresService.list(org_id, experiment_id, user),
+    };
+  }
+
+  @Get(":experiment_id/figures/:figure_id")
+  @ApiOperation({ summary: "Get a saved Figure" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiParam({ name: "figure_id", description: "Figure ID" })
+  async getFigure(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Param("figure_id") figure_id: string,
+  ): Promise<TypedResponse<FigureSummary>> {
+    return {
+      data: await this.figuresService.get(
+        org_id,
+        experiment_id,
+        figure_id,
+        user,
+      ),
+    };
+  }
+
+  @Patch(":experiment_id/figures/:figure_id")
+  @ApiOperation({ summary: "Rename a Figure or change its definition" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiParam({ name: "figure_id", description: "Figure ID" })
+  @ApiResponse({ status: 400, description: "Definition outside the catalog" })
+  async updateFigure(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Param("figure_id") figure_id: string,
+    @Body() body: UpdateFigureBody,
+  ): Promise<NoDataResponse> {
+    await this.figuresService.update(
+      org_id,
+      experiment_id,
+      figure_id,
+      body,
+      user,
+    );
+    return {};
+  }
+
+  @Delete(":experiment_id/figures/:figure_id")
+  @ApiOperation({ summary: "Delete a Figure" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiParam({ name: "figure_id", description: "Figure ID" })
+  async deleteFigure(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Param("figure_id") figure_id: string,
+  ): Promise<NoDataResponse> {
+    await this.figuresService.delete(org_id, experiment_id, figure_id, user);
+    return {};
   }
 
   @Post(":experiment_id/cancel")

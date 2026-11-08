@@ -387,7 +387,7 @@ describe("ExperimentResultsService", () => {
       it("computes them once for an ended experiment", async () => {
         experimentRepository["findOne"]!.mockResolvedValue(experiment);
         const first = await service.getResults("org-1", "exp-1", user);
-        expect(first.intervals?.headline.load_median).toEqual({
+        expect(first.bootstrap_intervals?.headline.load_median).toEqual({
           low: 0,
           high: 1,
         });
@@ -401,7 +401,7 @@ describe("ExperimentResultsService", () => {
         expect(second.headline.load_median).not.toBe(
           first.headline.load_median,
         );
-        expect(second.intervals).toEqual(first.intervals);
+        expect(second.bootstrap_intervals).toEqual(first.bootstrap_intervals);
       });
 
       it("computes them again when the experiment ended at another time", async () => {
@@ -417,7 +417,9 @@ describe("ExperimentResultsService", () => {
           ended_on: new Date("2026-11-07T02:00:00Z"),
         });
         const second = await service.getResults("org-1", "exp-1", user);
-        expect(second.intervals).not.toEqual(first.intervals);
+        expect(second.bootstrap_intervals).not.toEqual(
+          first.bootstrap_intervals,
+        );
       });
 
       it("leaves them out while the experiment has not ended", async () => {
@@ -426,7 +428,7 @@ describe("ExperimentResultsService", () => {
           ended_on: null,
         });
         const results = await service.getResults("org-1", "exp-1", user);
-        expect(results.intervals).toBeNull();
+        expect(results.bootstrap_intervals).toBeNull();
       });
     });
 

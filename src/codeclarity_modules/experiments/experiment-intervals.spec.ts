@@ -66,7 +66,7 @@ describe("bootstrap intervals on experiment results", () => {
         ],
       }),
     );
-    expect(results.intervals?.headline.load_median).toEqual({
+    expect(results.bootstrap_intervals?.headline.load_median).toEqual({
       low: 1,
       high: 3,
     });
@@ -87,13 +87,17 @@ describe("bootstrap intervals on experiment results", () => {
 
   it("bootstraps the Gini of project loads", () => {
     // Loads 1 and 3: resamples give Gini 0 (same project twice) or 0.25
-    const { intervals } = aggregateExperimentResults(input(twoProjects()));
+    const { bootstrap_intervals: intervals } = aggregateExperimentResults(
+      input(twoProjects()),
+    );
     expect(intervals?.headline.gini_proj).toEqual({ low: 0, high: 0.25 });
   });
 
   it("bootstraps the Gini of package counts over the drawn projects", () => {
     // Drawing a and b gives counts 2, 1, 1 (Gini 1/6); a or b twice gives 0
-    const { intervals } = aggregateExperimentResults(input(twoProjects()));
+    const { bootstrap_intervals: intervals } = aggregateExperimentResults(
+      input(twoProjects()),
+    );
     expect(intervals?.headline.gini_pkg?.low).toBe(0);
     expect(intervals?.headline.gini_pkg?.high).toBeCloseTo(1 / 6, 12);
   });
@@ -101,7 +105,9 @@ describe("bootstrap intervals on experiment results", () => {
   it("gives each sweep subset its own intervals", () => {
     const fields = twoProjects();
     fields.vulnerabilities![3]!.conflict_flag = "MATCH_INCORRECT";
-    const { intervals } = aggregateExperimentResults(input(fields));
+    const { bootstrap_intervals: intervals } = aggregateExperimentResults(
+      input(fields),
+    );
     // Without z the loads are 1 and 2, so the median tops out at 2
     expect(intervals?.sweep.match_correct_only.load_median?.high).toBe(2);
     expect(intervals?.sweep.all.load_median?.high).toBe(3);
@@ -122,8 +128,8 @@ describe("bootstrap intervals on experiment results", () => {
         vulnerabilities: [...vulnerabilities].reverse(),
       }),
     );
-    expect(first.intervals).not.toBeNull();
-    expect(second.intervals).toEqual(first.intervals);
+    expect(first.bootstrap_intervals).not.toBeNull();
+    expect(second.bootstrap_intervals).toEqual(first.bootstrap_intervals);
   });
 
   it("states the seed and method in the provenance", () => {
@@ -141,7 +147,7 @@ describe("bootstrap intervals on experiment results", () => {
       ...vuln(run, "x"),
       epss_score: score,
     });
-    const { intervals } = aggregateExperimentResults(
+    const { bootstrap_intervals: intervals } = aggregateExperimentResults(
       input({
         summaries: [summary("a", 0), summary("b", 1)],
         vulnerabilities: [scored("a", 0.1), scored("b", 0.3)],
@@ -152,7 +158,7 @@ describe("bootstrap intervals on experiment results", () => {
   });
 
   it("bootstraps per package manager medians", () => {
-    const { intervals } = aggregateExperimentResults(
+    const { bootstrap_intervals: intervals } = aggregateExperimentResults(
       input({
         summaries: [
           { ...summary("a", 0), total_dependencies: 10 },
@@ -206,12 +212,12 @@ describe("bootstrap intervals on experiment results", () => {
       );
       const median = results.fix_lag.overall.median!;
       expect(results.fix_lag.overall.n).toBe(3);
-      expect(results.intervals?.fix_lag.overall).toEqual({
+      expect(results.bootstrap_intervals?.fix_lag.overall).toEqual({
         low: median,
         high: median,
       });
       const residence = results.residence.overall.median!;
-      expect(results.intervals?.residence.overall).toEqual({
+      expect(results.bootstrap_intervals?.residence.overall).toEqual({
         low: residence,
         high: residence,
       });
@@ -222,17 +228,19 @@ describe("bootstrap intervals on experiment results", () => {
         merge(project("e1", ["2025-04-01"]), project("e2", ["2025-08-01"])),
       );
       const lags = results.fix_lag.points.map((p) => p.lag_days);
-      expect(results.intervals?.fix_lag.overall).toEqual({
+      expect(results.bootstrap_intervals?.fix_lag.overall).toEqual({
         low: Math.min(...lags),
         high: Math.max(...lags),
       });
-      expect(results.intervals?.fix_lag.by_severity["MEDIUM"]).toEqual(
-        results.intervals?.fix_lag.overall,
-      );
-      expect(results.intervals?.fix_lag.by_kind["unknown"]).toBeDefined();
-      expect(results.intervals?.residence.by_severity["MEDIUM"]).toEqual(
-        results.intervals?.residence.overall,
-      );
+      expect(
+        results.bootstrap_intervals?.fix_lag.by_severity["MEDIUM"],
+      ).toEqual(results.bootstrap_intervals?.fix_lag.overall);
+      expect(
+        results.bootstrap_intervals?.fix_lag.by_kind["unknown"],
+      ).toBeDefined();
+      expect(
+        results.bootstrap_intervals?.residence.by_severity["MEDIUM"],
+      ).toEqual(results.bootstrap_intervals?.residence.overall);
     });
 
     it("bootstraps residence after disclosure on its own", () => {
@@ -241,7 +249,7 @@ describe("bootstrap intervals on experiment results", () => {
         merge(project("e1", ["2024-01-01"]), project("e2", ["2024-06-01"])),
       );
       const days = results.residence.after_disclosure;
-      expect(results.intervals?.residence.after_disclosure).toEqual({
+      expect(results.bootstrap_intervals?.residence.after_disclosure).toEqual({
         low: days.min,
         high: days.max,
       });
