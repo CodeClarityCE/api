@@ -20,6 +20,11 @@ export class RefreshJWTStrategy extends PassportStrategy(
   }
 
   async validate(payload: JwtPayload): Promise<JwtValidationResult> {
-    return { userId: payload.userId, roles: payload.roles };
+    // Refreshed tokens are signed from this result, so it must keep activated.
+    return {
+      userId: payload.userId,
+      roles: payload.roles,
+      activated: payload.activated,
+    };
   }
 }
