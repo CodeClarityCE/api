@@ -27,6 +27,7 @@ import {
 } from "node:zlib";
 
 import type { ProbeCandidate } from "../experiment-probes";
+import type { ExperimentResultsInput } from "../experiment-results";
 import {
   mapProbePackages,
   mapRunRows,
@@ -486,6 +487,77 @@ async function main(studyDir: string, outPath: string): Promise<void> {
     last,
   ]);
   process.stdout.write(`${entries.size} entries written to ${outPath}\n`);
+}
+
+/** The fixture as the input of the results aggregation. */
+export function resultsInput(
+  entries: GridFixtureEntry[],
+): ExperimentResultsInput {
+  const input: ExperimentResultsInput = {
+    runs: [],
+    summaries: [],
+    vulnerabilities: [],
+    probes: [],
+    probe_intervals: [],
+    probe_analyses: [],
+    provenance: {
+      api_version: null,
+      analyzer_steps: null,
+      knowledge_start: null,
+      knowledge_end: null,
+      created_by: null,
+      created_on: new Date("2026-08-29T00:00:00Z"),
+      started_on: new Date("2026-08-29T00:00:00Z"),
+      ended_on: new Date("2026-08-31T00:00:00Z"),
+    },
+  };
+  for (const entry of entries) {
+    for (const run of entry.runs) {
+      input.runs.push({
+        status: run.status,
+        error: run.error,
+        grid_date: run.grid_date
+          ? new Date(`${run.grid_date}T00:00:00Z`)
+          : null,
+        rows_run_id: run.id,
+        dataset_entry_id: entry.entry,
+        grid_index: run.grid_index,
+        commit_hash: run.commit_hash,
+        committed_at: run.committed_at ? new Date(run.committed_at) : null,
+      });
+      if (run.summary)
+        input.summaries.push({
+          ...run.summary,
+          run_id: run.id,
+          rank: entry.rank,
+        });
+      for (const [workspace, metaIndex, version, direct] of run.instances) {
+        input.vulnerabilities.push({
+          ...entry.meta[metaIndex]!,
+          run_id: run.id,
+          workspace,
+          affected_version: version,
+          direct_dependency: direct,
+        });
+      }
+    }
+    for (const probe of entry.probes)
+      input.probes!.push({ dataset_entry_id: entry.entry, ...probe });
+    for (const interval of entry.probe_intervals) {
+      input.probe_intervals!.push({
+        dataset_entry_id: entry.entry,
+        ...interval,
+        error: null,
+      });
+    }
+    for (const analysis of entry.probe_analyses) {
+      input.probe_analyses!.push({
+        dataset_entry_id: entry.entry,
+        ...analysis,
+      });
+    }
+  }
+  return input;
 }
 
 if (require.main === module) {

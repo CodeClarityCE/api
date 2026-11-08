@@ -343,6 +343,24 @@ export class ExperimentsController {
     };
   }
 
+  @Get(":experiment_id/metric-version")
+  @ApiOperation({ summary: "The metric version a publish would store now" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  async currentMetricVersion(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+  ): Promise<TypedResponse<{ metric_version: number }>> {
+    return {
+      data: await this.resultsService.currentMetricVersion(
+        org_id,
+        experiment_id,
+        user,
+      ),
+    };
+  }
+
   @Get(":experiment_id/published/:metric_version")
   @ApiOperation({ summary: "Read one stored Published results version" })
   @ApiParam({ name: "org_id", description: "Organization ID" })

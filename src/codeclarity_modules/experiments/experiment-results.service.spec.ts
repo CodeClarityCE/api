@@ -11,6 +11,14 @@ import {
   ExperimentNotPublishable,
 } from "./experiments.errors";
 
+// Tests move the metric version to publish a second one.
+let mockMetricVersion = 1;
+jest.mock("./experiment-metric-version", () => ({
+  get METRIC_VERSION(): number {
+    return mockMetricVersion;
+  },
+}));
+
 describe("ExperimentResultsService", () => {
   const user = new AuthenticatedUser("user-1", [ROLE.USER], true);
   let service: ExperimentResultsService;
@@ -42,6 +50,7 @@ describe("ExperimentResultsService", () => {
   }
 
   beforeEach(() => {
+    mockMetricVersion = 1;
     hasRequiredRole = jest.fn().mockResolvedValue(undefined);
     experimentRepository = { findOne: jest.fn() };
     runRepository = {
@@ -911,6 +920,109 @@ describe("ExperimentResultsService", () => {
 
         await expect(
           service.getPublished("org-1", "exp-1", 5, user),
+        ).rejects.toBeInstanceOf(EntityNotFound);
+      });
+    });
+
+    describe("versions side by side", () => {
+      /** Holds saved versions, as the table does, one row per metric version. */
+      function storeVersions(): void {
+        const rows: { metric_version: number; results: unknown }[] = [];
+        const matching = (where: { metric_version?: number }): typeof rows =>
+          rows
+            .filter(
+              (row) =>
+                where.metric_version === undefined ||
+                row.metric_version === where.metric_version,
+            )
+            .sort((a, b) => b.metric_version - a.metric_version);
+        publishedRepository["save"]!.mockImplementation(
+          (row: (typeof rows)[number]) => {
+            rows.push(row);
+            return Promise.resolve(row);
+          },
+        );
+        publishedRepository["exists"]!.mockImplementation(
+          ({ where }: { where: { metric_version?: number } }) =>
+            Promise.resolve(matching(where).length > 0),
+        );
+        publishedRepository["findOne"]!.mockImplementation(
+          ({ where }: { where: { metric_version?: number } }) =>
+            Promise.resolve(matching(where)[0] ?? null),
+        );
+        publishedRepository["find"]!.mockImplementation(() =>
+          Promise.resolve(
+            matching({}).map((row) => ({ ...row, published_by: null })),
+          ),
+        );
+      }
+
+      it("adds a new version after a bump and leaves the old one identical", async () => {
+        doneRun();
+        storeVersions();
+        await service.publish("org-1", "exp-1", user);
+        const before = JSON.stringify(
+          await service.getPublished("org-1", "exp-1", 1, user),
+        );
+
+        // The metric fix: same experiment, different output, new version
+        summaryRows.mockResolvedValue([
+          {
+            run_id: "r1",
+            rank: 0,
+            total_dependencies: 20,
+            total_vulnerabilities: 9,
+            package_manager: "NPM",
+          },
+        ]);
+        mockMetricVersion = 2;
+        const second = await service.publish("org-1", "exp-1", user);
+
+        expect(second).toMatchObject({ metric_version: 2 });
+        expect(
+          JSON.stringify(await service.getPublished("org-1", "exp-1", 1, user)),
+        ).toBe(before);
+        expect(
+          JSON.stringify(await service.getPublished("org-1", "exp-1", 2, user)),
+        ).not.toBe(before);
+        const versions = await service.listPublished("org-1", "exp-1", user);
+        expect(versions.map((version) => version.metric_version)).toEqual([
+          2, 1,
+        ]);
+      });
+
+      it("still refuses a repeat publish once the new version is stored", async () => {
+        doneRun();
+        storeVersions();
+        mockMetricVersion = 2;
+        await service.publish("org-1", "exp-1", user);
+
+        await expect(
+          service.publish("org-1", "exp-1", user),
+        ).rejects.toBeInstanceOf(ExperimentAlreadyPublished);
+      });
+    });
+
+    describe("the current metric version", () => {
+      it("tells a member which version a publish would store", async () => {
+        experimentRepository["findOne"]!.mockResolvedValue(completed);
+        mockMetricVersion = 4;
+
+        await expect(
+          service.currentMetricVersion("org-1", "exp-1", user),
+        ).resolves.toEqual({ metric_version: 4 });
+        expect(hasRequiredRole).toHaveBeenCalledWith(
+          "org-1",
+          "user-1",
+          MemberRole.USER,
+        );
+      });
+
+      it("answers not found for another org's experiment", async () => {
+        experimentRepository["findOne"]!.mockResolvedValue(null);
+
+        await expect(
+          service.currentMetricVersion("org-1", "exp-1", user),
         ).rejects.toBeInstanceOf(EntityNotFound);
       });
     });
