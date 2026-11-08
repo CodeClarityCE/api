@@ -1,5 +1,4 @@
 import { Test, type TestingModule } from "@nestjs/testing";
-import type { MulterFile } from "@webundsoehne/nest-fastify-file-upload";
 import { readFile } from "fs";
 
 import { InternalError } from "../../types/error.types";
@@ -7,6 +6,7 @@ import { AuthenticatedUser, ROLE } from "../auth/auth.types";
 
 import { FileController, type UploadData } from "./file.controller";
 import { FileService } from "./file.service";
+import type { UploadedFilePart } from "./single-file.interceptor";
 
 jest.mock("fs", () => ({
   ...jest.requireActual("fs"),
@@ -19,14 +19,14 @@ describe("FileController", () => {
 
   const mockUser = new AuthenticatedUser("user-123", [ROLE.USER], true);
 
-  const mockFile: MulterFile = {
+  const mockFile: UploadedFilePart = {
     fieldname: "file",
     originalname: "test.json",
     encoding: "7bit",
     mimetype: "application/json",
     buffer: Buffer.from("test content"),
     size: 12,
-  } as MulterFile;
+  };
 
   const mockUploadData: UploadData = {
     type: "application/json",
@@ -150,7 +150,7 @@ describe("FileController", () => {
         file_name: "image.png",
       };
 
-      const imageFile: MulterFile = {
+      const imageFile: UploadedFilePart = {
         ...mockFile,
         mimetype: "image/png",
         originalname: "image.png",
@@ -176,7 +176,7 @@ describe("FileController", () => {
     });
 
     it("should handle empty file buffer", async () => {
-      const emptyFile: MulterFile = {
+      const emptyFile: UploadedFilePart = {
         ...mockFile,
         buffer: Buffer.from(""),
         size: 0,
@@ -204,7 +204,7 @@ describe("FileController", () => {
     it("should handle undefined file properties gracefully", async () => {
       const partialFile = {
         buffer: Buffer.from("test"),
-      } as MulterFile;
+      } as UploadedFilePart;
 
       fileService.uploadFile.mockResolvedValue(undefined);
 
