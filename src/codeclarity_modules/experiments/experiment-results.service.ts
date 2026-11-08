@@ -42,6 +42,12 @@ import type {
 } from "./experiment-probes";
 import { ExperimentPublishedResults } from "./experiment-published-results.entity";
 import {
+  buildReplicationPackage,
+  type ManifestCommit,
+  manifestJson,
+  type PackageFile,
+} from "./experiment-replication-package";
+import {
   aggregateExperimentResults,
   computeResultIntervals,
   type ExperimentResults,
@@ -161,6 +167,13 @@ export interface PublishedResultsSummary {
   metric_version: number;
   published_on: Date;
   published_by_name: string | null;
+  package_checksum: string | null;
+}
+
+/** A replication package, for download. */
+export interface PublishedPackageExport {
+  experiment_name: string;
+  archive: Buffer;
 }
 
 /**
@@ -278,12 +291,19 @@ export class ExperimentResultsService {
     if (taken) throw new ExperimentAlreadyPublished();
 
     const results = await this.computeResults(experiment);
+    const publishedOn = new Date();
+    // Stored as bytes, so later metric or data changes cannot reach the package
+    const { archive, checksum } = await buildReplicationPackage(
+      this.packageFiles(experiment, results, publishedOn),
+    );
     const stored = await this.publishedRepository
       .save({
         experiment,
         metric_version: METRIC_VERSION,
         results,
-        published_on: new Date(),
+        package_archive: archive,
+        package_checksum: checksum,
+        published_on: publishedOn,
         published_by: { id: user.userId },
       })
       .catch((error: unknown) => {
@@ -300,7 +320,82 @@ export class ExperimentResultsService {
     return {
       metric_version: stored.metric_version,
       published_on: stored.published_on,
+      package_checksum: stored.package_checksum,
     };
+  }
+
+  /** Every file of the replication package, in archive order. */
+  private packageFiles(
+    experiment: Experiment,
+    results: ExperimentResults,
+    publishedOn: Date,
+  ): PackageFile[] {
+    return [
+      { name: "runs.csv", open: () => this.runsCsv(experiment) },
+      {
+        name: "vulnerabilities.csv",
+        open: () => this.vulnerabilitiesCsv(experiment),
+      },
+      {
+        name: "exposures.csv",
+        open: () =>
+          this.exposureCsv(
+            experiment,
+            "exposures.csv",
+            EXPOSURE_CSV_COLUMNS,
+            (entry, exposure) => exposureCsvRow(entry, exposure),
+          ),
+      },
+      {
+        name: "fixes.csv",
+        open: () =>
+          this.exposureCsv(experiment, "fixes.csv", FIX_CSV_COLUMNS, fixCsvRow),
+      },
+      { name: "results.json", open: () => JSON.stringify(results, null, 2) },
+      {
+        name: "manifest.json",
+        open: async () =>
+          manifestJson({
+            experiment_id: experiment.id,
+            experiment_name: experiment.name,
+            metric_version: METRIC_VERSION,
+            published_on: publishedOn,
+            provenance: results.provenance,
+            commits: await this.manifestCommits(experiment),
+          }),
+      },
+    ];
+  }
+
+  /** Each snapshot of the experiment and its pinned commit, by rank then date. */
+  private async manifestCommits(
+    experiment: Experiment,
+  ): Promise<ManifestCommit[]> {
+    const runs = await this.runRepository.find({
+      where: { experiment: { id: experiment.id } },
+      select: {
+        id: true,
+        status: true,
+        grid_date: true,
+        branch: true,
+        commit_hash: true,
+        committed_at: true,
+        dataset_entry: { id: true, rank: true, full_name: true },
+      },
+      relations: { dataset_entry: true },
+      order: { dataset_entry: { rank: "ASC" }, grid_index: "ASC" },
+    });
+    return runs.map((run) => ({
+      rank: run.dataset_entry.rank,
+      full_name: run.dataset_entry.full_name,
+      grid_date: run.grid_date
+        ? new Date(run.grid_date).toISOString().slice(0, 10)
+        : "HEAD",
+      status: run.status,
+      branch: run.branch ?? null,
+      commit_hash: run.commit_hash ?? null,
+      committed_at: run.committed_at ?? null,
+    }));
   }
 
   /**
@@ -329,6 +424,7 @@ export class ExperimentResultsService {
         id: true,
         metric_version: true,
         published_on: true,
+        package_checksum: true,
         published_by: { id: true, first_name: true, last_name: true },
       },
       relations: { published_by: true },
@@ -366,6 +462,41 @@ export class ExperimentResultsService {
     });
     if (!published) throw new EntityNotFound();
     return published.results;
+  }
+
+  /**
+   * The replication package frozen when a version was published.
+   * @throws {NotAuthorized} If the user is not a member of the org
+   * @throws {EntityNotFound} If the experiment, the version or its package does not exist
+   */
+  async getPublishedPackage(
+    orgId: string,
+    experimentId: string,
+    metricVersion: number,
+    user: AuthenticatedUser,
+  ): Promise<PublishedPackageExport> {
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.USER,
+    );
+    const experiment = await findExperimentInOrg(
+      this.experimentRepository,
+      orgId,
+      experimentId,
+    );
+    const published = await this.publishedRepository.findOne({
+      where: {
+        experiment: { id: experiment.id },
+        metric_version: metricVersion,
+      },
+      select: { id: true, package_archive: true },
+    });
+    if (!published?.package_archive) throw new EntityNotFound();
+    return {
+      experiment_name: experiment.name,
+      archive: published.package_archive,
+    };
   }
 
   /** The results computed from the experiment's copied rows (ADR 0001). */
@@ -575,6 +706,18 @@ export class ExperimentResultsService {
       orgId,
       experimentId,
     );
+    return {
+      experiment_name: experiment.name,
+      stream: this.exposureCsv(experiment, file, columns, toRow),
+    };
+  }
+
+  private exposureCsv(
+    experiment: Experiment,
+    file: string,
+    columns: readonly string[],
+    toRow: (entry: CsvEntry, exposure: Exposure) => CsvRow | null,
+  ): Readable {
     // Read once over every entry, so each chunk dates fixes as the results page does
     let knownVersions: Promise<KnownVersionsInput[]> | null = null;
 
@@ -624,14 +767,11 @@ export class ExperimentResultsService {
       }
     };
 
-    return {
-      experiment_name: experiment.name,
-      stream: this.logStreamErrors(
-        streamCsv(columns, nextChunk),
-        file,
-        experiment.id,
-      ),
-    };
+    return this.logStreamErrors(
+      streamCsv(columns, nextChunk),
+      file,
+      experiment.id,
+    );
   }
 
   /**
@@ -656,7 +796,13 @@ export class ExperimentResultsService {
       orgId,
       experimentId,
     );
+    return {
+      experiment_name: experiment.name,
+      stream: this.runsCsv(experiment),
+    };
+  }
 
+  private runsCsv(experiment: Experiment): Readable {
     const nextChunk = (after: CsvRow | null): Promise<CsvRow[]> => {
       const query = this.runRepository
         .createQueryBuilder("run")
@@ -685,14 +831,11 @@ export class ExperimentResultsService {
         .getRawMany<CsvRow>();
     };
 
-    return {
-      experiment_name: experiment.name,
-      stream: this.logStreamErrors(
-        streamCsv(RUN_CSV_COLUMNS, nextChunk),
-        "runs.csv",
-        experiment.id,
-      ),
-    };
+    return this.logStreamErrors(
+      streamCsv(RUN_CSV_COLUMNS, nextChunk),
+      "runs.csv",
+      experiment.id,
+    );
   }
 
   /**
@@ -717,7 +860,13 @@ export class ExperimentResultsService {
       orgId,
       experimentId,
     );
+    return {
+      experiment_name: experiment.name,
+      stream: this.vulnerabilitiesCsv(experiment),
+    };
+  }
 
+  private vulnerabilitiesCsv(experiment: Experiment): Readable {
     const nextChunk = async (after: CsvRow | null): Promise<CsvRow[]> => {
       let cursor = after;
       // Done runs without instances give empty reads: skip past them, since
@@ -765,14 +914,11 @@ export class ExperimentResultsService {
       }
     };
 
-    return {
-      experiment_name: experiment.name,
-      stream: this.logStreamErrors(
-        streamCsv(VULNERABILITY_CSV_COLUMNS, nextChunk),
-        "vulnerabilities.csv",
-        experiment.id,
-      ),
-    };
+    return this.logStreamErrors(
+      streamCsv(VULNERABILITY_CSV_COLUMNS, nextChunk),
+      "vulnerabilities.csv",
+      experiment.id,
+    );
   }
 
   /** A stream failing mid-export cuts the download short: leave a trace. */
@@ -799,6 +945,7 @@ function publishedSummary(
   return {
     metric_version: published.metric_version,
     published_on: published.published_on,
+    package_checksum: published.package_checksum ?? null,
     published_by_name: publisher
       ? `${publisher.first_name} ${publisher.last_name}`
       : null,
