@@ -25,9 +25,13 @@ export class ExperimentPublishedResults {
   @Column("jsonb")
   results!: ExperimentResults;
 
-  /** Checksum of the replication package, once one is built */
+  /** SHA-256 of the replication package */
   @Column("varchar", { length: 64, nullable: true })
   package_checksum?: string | null;
+
+  /** The replication package, built once at publish; read only for download */
+  @Column("bytea", { nullable: true, select: false })
+  package_archive?: Buffer | null;
 
   @Column("timestamptz")
   published_on!: Date;

@@ -58,6 +58,7 @@ import {
 
 const CSV_CONTENT_TYPE = "text/csv; charset=utf-8";
 const JSON_CONTENT_TYPE = "application/json; charset=utf-8";
+const ZIP_CONTENT_TYPE = "application/zip";
 
 /** An attachment header naming the file after the experiment. */
 function attachment(experimentName: string, file: string): string {
@@ -364,6 +365,37 @@ export class ExperimentsController {
         user,
       ),
     };
+  }
+
+  @Get(":experiment_id/published/:metric_version/package.zip")
+  @ApiOperation({
+    summary: "Download the replication package of a Published results version",
+  })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiParam({ name: "metric_version", description: "Metric version" })
+  @ApiProduces(ZIP_CONTENT_TYPE)
+  async downloadPublishedPackage(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Param("metric_version", ParseIntPipe) metric_version: number,
+    @Res() reply: FastifyReply,
+  ): Promise<void> {
+    const { experiment_name, archive } =
+      await this.resultsService.getPublishedPackage(
+        org_id,
+        experiment_id,
+        metric_version,
+        user,
+      );
+    await reply
+      .header("content-type", ZIP_CONTENT_TYPE)
+      .header(
+        "content-disposition",
+        attachment(experiment_name, `v${metric_version}-package.zip`),
+      )
+      .send(archive);
   }
 
   @Get(":experiment_id/figure-catalog")
