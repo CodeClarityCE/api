@@ -10,6 +10,7 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateIf,
 } from "class-validator";
 
 import { AnalyzerStepSnapshot, ExperimentStatus } from "./experiment.entity";
@@ -164,6 +165,17 @@ export class CreateFigureBody extends FigureDataBody {
   @MinLength(1)
   @MaxLength(100)
   name!: string;
+}
+
+export class MoveFigureBody {
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description: "The Published results version, or null to untie the Figure",
+  })
+  @ValidateIf((body: MoveFigureBody) => body.metric_version !== null)
+  @IsInt()
+  metric_version!: number | null;
 }
 
 export class UpdateFigureBody {

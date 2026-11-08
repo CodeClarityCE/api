@@ -9,6 +9,7 @@ import {
 
 import type { Experiment } from "./experiment.entity";
 import type { FigureDefinition } from "./experiment-figure-catalog";
+import type { ExperimentPublishedResults } from "./experiment-published-results.entity";
 
 /** A named, saved definition of one visual over one experiment's results. */
 @Entity()
@@ -28,4 +29,11 @@ export class ExperimentFigure {
   @Index()
   @ManyToOne("Experiment", { nullable: false, onDelete: "CASCADE" })
   experiment!: Relation<Experiment>;
+
+  /** The Published results version this Figure stays on; null while a draft */
+  @ManyToOne("ExperimentPublishedResults", {
+    nullable: true,
+    onDelete: "SET NULL",
+  })
+  published_results?: Relation<ExperimentPublishedResults> | null;
 }
