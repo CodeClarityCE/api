@@ -238,7 +238,7 @@ export interface KmStep {
 }
 
 /** Two-sided 95% standard normal quantile */
-const KM_BAND_Z = 1.959963984540054;
+const Z_95 = 1.959963984540054;
 
 /** The log-log band; it collapses onto survival at exactly 1 or 0. */
 function logLogBand(
@@ -249,7 +249,7 @@ function logLogBand(
     return { lower: survival, upper: survival };
   }
   const spread = Math.exp(
-    (KM_BAND_Z * Math.sqrt(greenwood)) / Math.abs(Math.log(survival)),
+    (Z_95 * Math.sqrt(greenwood)) / Math.abs(Math.log(survival)),
   );
   return { lower: survival ** spread, upper: survival ** (1 / spread) };
 }
@@ -306,9 +306,6 @@ export interface ConfidenceInterval {
   low: number;
   high: number;
 }
-
-/** The normal quantile for a two-sided 95% interval. */
-const Z_95 = 1.959963984540054;
 
 /**
  * 95% Wilson score interval of the proportion successes / trials. Null
