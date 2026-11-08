@@ -214,19 +214,7 @@ export class ExperimentResultsService {
 
     const [rows, summaries] = await Promise.all([
       this.exposureRows(experiment, null),
-      this.summaryRepository
-        .createQueryBuilder("summary")
-        .innerJoin("summary.run", "run")
-        .innerJoin("run.dataset_entry", "entry")
-        .select('summary."runId"', "run_id")
-        .addSelect("entry.rank", "rank")
-        .addSelect("summary.total_dependencies", "total_dependencies")
-        .addSelect("summary.total_vulnerabilities", "total_vulnerabilities")
-        .addSelect("summary.package_manager", "package_manager")
-        .where('summary."experimentId" = :experimentId', {
-          experimentId: experiment.id,
-        })
-        .getRawMany<ResultsSummaryInput>(),
+      this.summaryRows(experiment),
     ]);
 
     const input = {
@@ -245,10 +233,32 @@ export class ExperimentResultsService {
 
   /** The tidy rows a Figure is computed from. */
   async figureRows(experiment: Experiment): Promise<FigureRows> {
+    const [rows, summaries] = await Promise.all([
+      this.exposureRows(experiment, null),
+      this.summaryRows(experiment),
+    ]);
     return {
-      ...(await this.exposureRows(experiment, null)),
+      ...rows,
+      summaries,
       head_cutoff: headCutoff(experiment.ended_on ?? null, new Date()),
     };
+  }
+
+  /** The copied summary of each done run, with its entry's star rank. */
+  private summaryRows(experiment: Experiment): Promise<ResultsSummaryInput[]> {
+    return this.summaryRepository
+      .createQueryBuilder("summary")
+      .innerJoin("summary.run", "run")
+      .innerJoin("run.dataset_entry", "entry")
+      .select('summary."runId"', "run_id")
+      .addSelect("entry.rank", "rank")
+      .addSelect("summary.total_dependencies", "total_dependencies")
+      .addSelect("summary.total_vulnerabilities", "total_vulnerabilities")
+      .addSelect("summary.package_manager", "package_manager")
+      .where('summary."experimentId" = :experimentId', {
+        experimentId: experiment.id,
+      })
+      .getRawMany<ResultsSummaryInput>();
   }
 
   /**

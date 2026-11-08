@@ -36,6 +36,30 @@ export function gini(values: readonly number[]): number {
 }
 
 /**
+ * The Lorenz curve of non-negative values at each share of the population
+ * (0 to 1), as cumulative shares, by linear interpolation. Null when all are zero.
+ */
+export function lorenzCurve(
+  values: readonly number[],
+  shares: readonly number[],
+): (number | null)[] {
+  const x = ascending(finite(values));
+  const total = sum(x);
+  if (x.length === 0 || total === 0) return shares.map(() => null);
+  const cumulative = [0];
+  for (const value of x) cumulative.push(cumulative.at(-1)! + value / total);
+  return shares.map((share) => {
+    const position = share * x.length;
+    const below = Math.min(Math.floor(position), x.length - 1);
+    const fraction = position - below;
+    return (
+      cumulative[below]! +
+      fraction * (cumulative[below + 1]! - cumulative[below]!)
+    );
+  });
+}
+
+/**
  * The q-quantile with linear interpolation between order statistics at
  * position (n - 1) * q (pandas and numpy default). NaN values are skipped;
  * NaN for no values.
