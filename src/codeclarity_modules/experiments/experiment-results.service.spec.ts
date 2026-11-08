@@ -7,6 +7,7 @@ import { MemberRole } from "src/base_modules/organizations/memberships/orgMember
 import { type MembershipsRepository } from "src/base_modules/shared/repositories";
 import { EntityNotFound, NotAuthorized } from "src/types/error.types";
 
+import { buildReplicationPackage } from "./experiment-replication-package";
 import { ExperimentResultsService } from "./experiment-results.service";
 import {
   ExperimentAlreadyPublished,
@@ -459,6 +460,20 @@ describe("ExperimentResultsService", () => {
         expect(second.headline.load_median).not.toBe(
           first.headline.load_median,
         );
+        expect(second.bootstrap_intervals).toEqual(first.bootstrap_intervals);
+      });
+
+      it("computes them once for concurrent reads of an ended experiment", async () => {
+        experimentRepository["findOne"]!.mockResolvedValue(experiment);
+        vulnerabilityRows
+          .mockResolvedValueOnce([instanceOf("r1")])
+          .mockResolvedValueOnce([instanceOf("r1"), instanceOf("r2")]);
+
+        const [first, second] = await Promise.all([
+          service.getResults("org-1", "exp-1", user),
+          service.getResults("org-1", "exp-1", user),
+        ]);
+
         expect(second.bootstrap_intervals).toEqual(first.bootstrap_intervals);
       });
 
@@ -1364,6 +1379,75 @@ describe("ExperimentResultsService", () => {
         );
         expect(publishedRepository["findOne"]).toHaveBeenCalledWith({
           where: { experiment: { id: "exp-1" }, metric_version: 1 },
+        });
+      });
+
+      describe("exporting one version", () => {
+        const stored = (
+          metric_version: number,
+          n_projects: number,
+        ): object => ({
+          metric_version,
+          results: { headline: { n_projects } },
+        });
+
+        it("serves results.json of the requested version, not the newest", async () => {
+          experimentRepository["findOne"]!.mockResolvedValue(completed);
+          publishedRepository["findOne"]!.mockImplementation(
+            async ({ where }: { where: { metric_version?: number } }) =>
+              where.metric_version === 1 ? stored(1, 7) : stored(2, 9),
+          );
+
+          const { results } = await service.exportResults(
+            "org-1",
+            "exp-1",
+            user,
+            1,
+          );
+
+          expect(results.headline.n_projects).toBe(7);
+        });
+
+        it("answers not found for a version the experiment does not have", async () => {
+          experimentRepository["findOne"]!.mockResolvedValue(completed);
+          publishedRepository["findOne"]!.mockResolvedValue(null);
+
+          await expect(
+            service.exportResults("org-1", "exp-1", user, 5),
+          ).rejects.toBeInstanceOf(EntityNotFound);
+        });
+
+        it("serves a CSV as frozen in that version's package", async () => {
+          experimentRepository["findOne"]!.mockResolvedValue(completed);
+          const { archive } = await buildReplicationPackage([
+            { name: "results.json", open: () => "{}" },
+            { name: "runs.csv", open: () => "rank\r\n1\r\n" },
+          ]);
+          publishedRepository["findOne"]!.mockResolvedValue({
+            package_archive: archive,
+          });
+
+          const { stream } = await service.exportRunsCsv(
+            "org-1",
+            "exp-1",
+            user,
+            1,
+          );
+
+          const chunks: Buffer[] = [];
+          for await (const chunk of stream) chunks.push(chunk as Buffer);
+          expect(Buffer.concat(chunks).toString()).toBe("rank\r\n1\r\n");
+        });
+
+        it("answers not found for a CSV of a version without a package", async () => {
+          experimentRepository["findOne"]!.mockResolvedValue(completed);
+          publishedRepository["findOne"]!.mockResolvedValue({
+            package_archive: null,
+          });
+
+          await expect(
+            service.exportFixesCsv("org-1", "exp-1", user, 1),
+          ).rejects.toBeInstanceOf(EntityNotFound);
         });
       });
 

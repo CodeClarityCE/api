@@ -2,7 +2,7 @@
 import { createHash } from "node:crypto";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { crc32, createDeflateRaw } from "node:zlib";
+import { crc32, createDeflateRaw, createInflateRaw } from "node:zlib";
 
 import type { ProvenanceBlock } from "./experiment-results";
 
@@ -221,4 +221,34 @@ export async function buildReplicationPackage(
     archive,
     checksum: createHash("sha256").update(archive).digest("hex"),
   };
+}
+
+/** The contents of one file of a stored package, or null if it has no such file. */
+export function packageFileStream(
+  archive: Buffer,
+  name: string,
+): Readable | null {
+  const end = archive.length - 22;
+  const size = archive.readUInt32LE(end + 12);
+  let record = archive.readUInt32LE(end + 16);
+  const directoryEnd = record + size;
+  while (record < directoryEnd) {
+    const nameLength = archive.readUInt16LE(record + 28);
+    const entry = archive.toString(
+      "utf8",
+      record + 46,
+      record + 46 + nameLength,
+    );
+    if (entry === name) {
+      const local = archive.readUInt32LE(record + 42);
+      const start = local + 30 + archive.readUInt16LE(local + 26);
+      const deflated = archive.subarray(
+        start,
+        start + archive.readUInt32LE(record + 20),
+      );
+      return Readable.from([deflated]).pipe(createInflateRaw());
+    }
+    record += 46 + nameLength;
+  }
+  return null;
 }

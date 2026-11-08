@@ -447,20 +447,38 @@ describe("computeFigureData for severity mix", () => {
     ]);
   });
 
+  it("carries a 95% Wilson interval of each severity's share, in instances", () => {
+    const [series] = computeFigureData(rows, definition).series;
+
+    // High is 2 of 3 instances, critical 0 of 3
+    expect(series!.lower![1]).toBeCloseTo(0.2077 * 3, 2);
+    expect(series!.upper![1]).toBeCloseTo(0.9385 * 3, 2);
+    expect(series!.lower![0]).toBe(0);
+    expect(series!.upper![0]).toBeCloseTo(0.5615 * 3, 2);
+  });
+
+  it("leaves a group without instances without intervals", () => {
+    const empty: FigureRows = { ...rows, vulnerabilities: [] };
+    const [series] = computeFigureData(empty, definition).series;
+
+    expect(series!.lower).toEqual([null, null, null, null, null]);
+    expect(series!.upper).toEqual([null, null, null, null, null]);
+  });
+
   it("groups by package manager and star-rank bucket", () => {
     expect(
       computeFigureData(rows, { ...definition, group_by: "package_manager" })
         .series,
     ).toEqual([
-      { key: "npm", label: "npm", values: [0, 1, 0, 1, 0] },
-      { key: "yarn", label: "yarn", values: [0, 1, 0, 0, 0] },
+      expect.objectContaining({ key: "npm", values: [0, 1, 0, 1, 0] }),
+      expect.objectContaining({ key: "yarn", values: [0, 1, 0, 0, 0] }),
     ]);
     expect(
       computeFigureData(rows, { ...definition, group_by: "star_rank_bucket" })
         .series,
     ).toEqual([
-      { key: "top_10", label: "Top 10", values: [0, 1, 0, 1, 0] },
-      { key: "101_1000", label: "101 to 1,000", values: [0, 1, 0, 0, 0] },
+      expect.objectContaining({ key: "top_10", values: [0, 1, 0, 1, 0] }),
+      expect.objectContaining({ key: "101_1000", values: [0, 1, 0, 0, 0] }),
     ]);
   });
 

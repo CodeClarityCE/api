@@ -27,7 +27,7 @@ import {
   type SweepSubset,
 } from "./experiment-results";
 import { SEVERITY_ORDER } from "./experiment-severity";
-import { lorenzCurve } from "./experiment-stats";
+import { lorenzCurve, wilsonInterval } from "./experiment-stats";
 import {
   exposureSurvival,
   fixLagSurvival,
@@ -46,7 +46,7 @@ export interface FigureSeries {
   key: string;
   label: string;
   values: (number | null)[];
-  /** 95% band around values, on survival Figures */
+  /** 95% band around values: survival, or a severity's share scaled to instances */
   lower?: (number | null)[];
   upper?: (number | null)[];
   /** Exposures censored at each point, on survival Figures */
@@ -405,10 +405,15 @@ function severityMixFigure(
   const groups = headGroups(summaries, definition.group_by);
   const series = groups.map(({ key, label, runIds }) => {
     const counts = measureHeadline(runIds, vulnerabilities).headline.sev_counts;
+    const values = SEVERITY_ORDER.map((severity) => counts[severity]);
+    const total = sum(values);
+    const intervals = values.map((count) => wilsonInterval(count, total));
     return {
       key,
       label,
-      values: SEVERITY_ORDER.map((severity) => counts[severity]),
+      values,
+      lower: intervals.map((i) => (i ? i.low * total : null)),
+      upper: intervals.map((i) => (i ? i.high * total : null)),
     };
   });
   return {

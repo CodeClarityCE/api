@@ -8,8 +8,10 @@ import { MembershipsRepository } from "src/base_modules/shared/repositories";
 import { EntityNotFound } from "src/types/error.types";
 
 import { Experiment } from "./experiment.entity";
+import { isUniqueViolation } from "./experiment-db-errors";
 import { ExperimentFigure } from "./experiment-figure.entity";
 import {
+  definitionKey,
   FIGURE_CATALOG,
   type FigureCatalog,
   type FigureDefinition,
@@ -19,10 +21,7 @@ import { computeFigureData, type FigureData } from "./experiment-figure-data";
 import { METRIC_VERSION } from "./experiment-metric-version";
 import { ExperimentPublishedFigureData } from "./experiment-published-figure-data.entity";
 import { ExperimentPublishedResults } from "./experiment-published-results.entity";
-import {
-  ExperimentResultsService,
-  isUniqueViolation,
-} from "./experiment-results.service";
+import { ExperimentResultsService } from "./experiment-results.service";
 import { FigureVersionNotCurrent } from "./experiments.errors";
 import { findExperimentInOrg } from "./experiments.service";
 
@@ -162,7 +161,7 @@ export class ExperimentFiguresService {
     return this.figureDataRepository.findOne({
       where: {
         published_results: { id: published.id },
-        definition_key: JSON.stringify(definition),
+        definition_key: definitionKey(definition),
       },
     });
   }
@@ -184,7 +183,7 @@ export class ExperimentFiguresService {
     await this.figureDataRepository
       .save({
         published_results: published,
-        definition_key: JSON.stringify(definition),
+        definition_key: definitionKey(definition),
         data,
       })
       .catch((error: unknown) => {
@@ -200,7 +199,7 @@ export class ExperimentFiguresService {
     // Rows of a running experiment still change, so only ended ones are kept
     if (!experiment.ended_on) return this.compute(experiment, valid);
 
-    const key = JSON.stringify([experiment.id, METRIC_VERSION, valid]);
+    const key = `${experiment.id}:${METRIC_VERSION}:${definitionKey(valid)}`;
     const cached = this.dataCache.get(key);
     if (cached) return cached;
 
@@ -270,7 +269,7 @@ export class ExperimentFiguresService {
 
   /**
    * @throws {InvalidFigureDefinition} If the catalog does not allow it
-   * @throws {FigureVersionNotCurrent} If a tied Figure's new data cannot be produced
+   * @throws {FigureVersionNotCurrent} If a tied Figure's changed definition cannot be computed
    */
   async update(
     orgId: string,
@@ -283,10 +282,12 @@ export class ExperimentFiguresService {
     const figure = await this.figureIn(experiment, figureId);
     if (body.definition !== undefined) {
       const definition = parseFigureDefinition(body.definition);
-      if (figure.published_results) {
-        await this.freeze(experiment, figure.published_results, definition);
+      if (definitionKey(definition) !== definitionKey(figure.definition)) {
+        if (figure.published_results) {
+          await this.freeze(experiment, figure.published_results, definition);
+        }
+        figure.definition = definition;
       }
-      figure.definition = definition;
     }
     if (body.name !== undefined) figure.name = body.name;
     await this.figureRepository.save(figure);

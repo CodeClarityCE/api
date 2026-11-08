@@ -27,6 +27,18 @@ const DEFINITION = {
 
 const CREATED_ON = new Date("2026-11-01T10:00:00Z");
 
+/** Object keys as Postgres jsonb returns them: shortest first, then bytewise. */
+function asJsonb(value: unknown): unknown {
+  if (typeof value !== "object" || value === null) return value;
+  if (Array.isArray(value)) return value.map(asJsonb);
+  const record = value as Record<string, unknown>;
+  return Object.fromEntries(
+    Object.keys(record)
+      .sort((a, b) => a.length - b.length || (a < b ? -1 : 1))
+      .map((key) => [key, asJsonb(record[key])]),
+  );
+}
+
 const INSTANCE = {
   run_id: "aH",
   affected_dependency: "lodash",
@@ -40,6 +52,12 @@ const INSTANCE = {
 };
 
 describe("ExperimentFiguresService", () => {
+  /** Rewrites a saved definition's key order, as a real reload from jsonb does */
+  const reloadFromJsonb = (id: string): void => {
+    const figure = saved.find((candidate) => candidate["id"] === id)!;
+    figure["definition"] = asJsonb(figure["definition"]);
+  };
+
   const user = new AuthenticatedUser("user-1", [ROLE.USER], true);
   const experiment = { id: "exp-1", ended_on: CREATED_ON };
   let service: ExperimentFiguresService;
@@ -347,6 +365,21 @@ describe("ExperimentFiguresService", () => {
       expect(runFind).toHaveBeenCalledTimes(1);
     });
 
+    it("shares one computation between a preview and the reopened saved Figure", async () => {
+      await compute();
+      const id = await service.create(
+        "org-1",
+        "exp-1",
+        { name: "Load", definition: DEFINITION },
+        user,
+      );
+      reloadFromJsonb(id);
+
+      await service.getData("org-1", "exp-1", id, user);
+
+      expect(runFind).toHaveBeenCalledTimes(1);
+    });
+
     it("computes each different definition", async () => {
       await compute();
       await compute({ ...DEFINITION, filters: { view: "as_of" } });
@@ -406,6 +439,69 @@ describe("ExperimentFiguresService", () => {
       versions.push({ id: "pub-2", metric_version: 2 });
       instances = [INSTANCE, { ...INSTANCE, vulnerability_id: "GHSA-2" }];
     };
+
+    it("serves a tied Figure after its definition is reloaded from jsonb", async () => {
+      const id = await createTied();
+      reloadFromJsonb(id);
+
+      expect(await hindsight(id)).toEqual([1]);
+    });
+
+    it("keeps a tied Figure's stored data under the canonical key of an edit", async () => {
+      const id = await createTied();
+      const edited = { ...DEFINITION, filters: { view: "as_of" } };
+
+      await service.update("org-1", "exp-1", id, { definition: edited }, user);
+      reloadFromJsonb(id);
+
+      expect(
+        (await service.getData("org-1", "exp-1", id, user)).series[0]!.key,
+      ).toBe("as_of");
+    });
+
+    it("renames a tied Figure on an older version without computing anything", async () => {
+      const id = await service.create(
+        "org-1",
+        "exp-1",
+        { name: "Load", definition: DEFINITION },
+        user,
+      );
+      reloadFromJsonb(id);
+      await move(id, 1);
+      publishCorrectedMetrics();
+
+      await service.update(
+        "org-1",
+        "exp-1",
+        id,
+        { name: "Renamed", definition: DEFINITION },
+        user,
+      );
+
+      expect((await service.get("org-1", "exp-1", id, user)).name).toBe(
+        "Renamed",
+      );
+      expect(await hindsight(id)).toEqual([1]);
+    });
+
+    it("still refuses a real definition change on an older version", async () => {
+      const id = await createTied();
+      reloadFromJsonb(id);
+      publishCorrectedMetrics();
+
+      await expect(
+        service.update(
+          "org-1",
+          "exp-1",
+          id,
+          {
+            name: "Renamed",
+            definition: { ...DEFINITION, filters: { view: "as_of" } },
+          },
+          user,
+        ),
+      ).rejects.toBeInstanceOf(FigureVersionNotCurrent);
+    });
 
     it("reports the version a Figure is tied to", async () => {
       const id = await createTied();
