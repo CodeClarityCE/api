@@ -5,7 +5,7 @@
  * view, pure: no Nest or TypeORM imports.
  */
 import type { Exposure, FixKind } from "./experiment-exposures";
-import { gridDay } from "./experiment-grid";
+import { type GridGroup, groupByGridDate, instancesByRun } from "./experiment-grid";
 import type { ResultsRunInput, ResultsVulnerabilityInput } from "./experiment-results";
 import { packagesToClear } from "./experiment-stats";
 
@@ -50,31 +50,13 @@ export interface UpstreamLeverageBlock {
   overall: FixKindCounts;
 }
 
-const HEAD = "HEAD";
-
-function dateOf(run: ResultsRunInput): string {
-  return run.grid_date ? gridDay(run.grid_date) : HEAD;
-}
-
-/** Grid dates present in the runs, YYYY-MM-DD order with HEAD last. */
-function gridDates(runs: readonly ResultsRunInput[]): string[] {
-  const dates = [...new Set(runs.map(dateOf))].filter((d) => d !== HEAD).sort();
-  return runs.some((run) => !run.grid_date) ? [...dates, HEAD] : dates;
-}
-
-const label = (date: string): string | null => (date === HEAD ? null : date);
-
 function packagesToClearRows(
-  runs: readonly ResultsRunInput[],
-  dates: readonly string[],
+  groups: readonly GridGroup<ResultsRunInput>[],
   vulnerabilities: readonly ResultsVulnerabilityInput[],
 ): PackagesToClearRow[] {
-  const byRun = new Map<string, ResultsVulnerabilityInput[]>();
-  for (const v of vulnerabilities) {
-    byRun.set(v.run_id, [...(byRun.get(v.run_id) ?? []), v]);
-  }
-  return dates.map((date) => {
-    const done = runs.filter((run) => dateOf(run) === date && run.status === "done" && run.rows_run_id);
+  const byRun = instancesByRun(vulnerabilities);
+  return groups.map(({ grid_date, runs }) => {
+    const done = runs.filter((run) => run.status === "done" && run.rows_run_id);
     // Instances per package over every done snapshot at this date
     const counts = new Map<string, number>();
     for (const run of done) {
@@ -86,7 +68,7 @@ function packagesToClearRows(
     const values = [...counts.values()];
     const observed = done.length > 0;
     return {
-      grid_date: label(date),
+      grid_date,
       projects: done.length,
       instances: values.reduce((total, n) => total + n, 0),
       distinct_packages: counts.size,
@@ -125,14 +107,14 @@ export function upstreamLeverage(
   vulnerabilities: readonly ResultsVulnerabilityInput[],
   exposures: readonly Exposure[],
 ): UpstreamLeverageBlock {
-  const dates = gridDates(runs);
+  const groups = groupByGridDate(runs);
   const fixes = exposures.flatMap((e) => (e.fix ? [e.fix] : []));
   return {
-    packages_to_clear: packagesToClearRows(runs, dates, vulnerabilities),
-    fix_kinds: dates.slice(1).map((to, i) => ({
-      interval_from: label(dates[i]!),
-      interval_to: label(to),
-      ...kindCounts(fixes.filter((fix) => (fix.interval_to ?? HEAD) === to)),
+    packages_to_clear: packagesToClearRows(groups, vulnerabilities),
+    fix_kinds: groups.slice(1).map(({ grid_date: to }, i) => ({
+      interval_from: groups[i]!.grid_date,
+      interval_to: to,
+      ...kindCounts(fixes.filter((fix) => fix.interval_to === to)),
     })),
     overall: kindCounts(fixes),
   };

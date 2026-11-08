@@ -19,7 +19,7 @@ import {
   FIX_KINDS,
   type FixKind,
 } from "./experiment-exposures";
-import { gridDay } from "./experiment-grid";
+import { groupByGridDate, isHead } from "./experiment-grid";
 import { loadOverTime, type LoadRow } from "./experiment-load";
 import type {
   ResultsProbeAnalysisInput,
@@ -587,43 +587,33 @@ function coverage(runs: readonly ResultsRunInput[]): CoverageBlock {
 }
 
 function gridCoverage(runs: readonly ResultsRunInput[]): GridCoverageRow[] {
-  const rows = new Map<string, GridCoverageRow>();
-  // The first knowledge seen per grid date, to compare the others with
-  const firstKnowledge = new Map<string, KnowledgeSnapshot>();
-  for (const run of runs) {
-    const date = isHead(run) ? null : gridDay(run.grid_date!);
-    const key = date ?? "HEAD";
-    let row = rows.get(key);
-    if (!row) {
-      row = {
-        grid_date: date,
-        runs: 0,
-        done: 0,
-        empty: 0,
-        failed: 0,
-        skipped: 0,
-        pending: 0,
-        mixed_knowledge: false,
-      };
-      rows.set(key, row);
+  return groupByGridDate(runs).map(({ grid_date, runs: group }) => {
+    const row: GridCoverageRow = {
+      grid_date,
+      runs: group.length,
+      done: 0,
+      empty: 0,
+      failed: 0,
+      skipped: 0,
+      pending: 0,
+      mixed_knowledge: false,
+    };
+    // The first knowledge seen, to compare the others with
+    let first: KnowledgeSnapshot | null = null;
+    for (const run of group) {
+      if (run.knowledge) {
+        if (!first) first = run.knowledge;
+        else if (!sameKnowledge(first, run.knowledge)) row.mixed_knowledge = true;
+      }
+      if (run.status === "done") {
+        if (run.error === NO_LOCKFILE_YET) row.empty++;
+        else row.done++;
+      } else if (run.status === "failed") row.failed++;
+      else if (run.status === "skipped") row.skipped++;
+      else row.pending++;
     }
-    row.runs++;
-    if (run.knowledge) {
-      const first = firstKnowledge.get(key);
-      if (!first) firstKnowledge.set(key, run.knowledge);
-      else if (!sameKnowledge(first, run.knowledge)) row.mixed_knowledge = true;
-    }
-    if (run.status === "done") {
-      if (run.error === NO_LOCKFILE_YET) row.empty++;
-      else row.done++;
-    } else if (run.status === "failed") row.failed++;
-    else if (run.status === "skipped") row.skipped++;
-    else row.pending++;
-  }
-  // YYYY-MM-DD sorts by date; HEAD goes last.
-  return [...rows.values()].sort((a, b) =>
-    byKey(a.grid_date ?? "HEAD", b.grid_date ?? "HEAD"),
-  );
+    return row;
+  });
 }
 
 function lagSummary(lags: readonly number[]): LagSummary {
@@ -739,10 +729,6 @@ function provenance(input: ResultsProvenanceInput): ProvenanceBlock {
 /** HEAD's date: when the experiment ended, else the time the results are read. */
 export function headCutoff(ended_on: Date | null, readAt: Date): Date {
   return ended_on ?? readAt;
-}
-
-function isHead(run: ResultsRunInput): boolean {
-  return !run.grid_date;
 }
 
 /** Run ids whose rows only grid snapshots read: outside the HEAD blocks. */

@@ -96,3 +96,42 @@ export function publishedDay(value: string | null | undefined): string | null {
   const parsed = Date.parse(text);
   return Number.isNaN(parsed) ? null : gridDay(new Date(parsed));
 }
+
+/** A run is HEAD when it has no grid date. */
+export function isHead(run: { grid_date?: Date | null }): boolean {
+  return !run.grid_date;
+}
+
+/** The runs of one grid date; null for HEAD. */
+export interface GridGroup<R> {
+  grid_date: string | null;
+  runs: R[];
+}
+
+/** Runs grouped by grid date, oldest first, HEAD last. */
+export function groupByGridDate<R extends { grid_date?: Date | null }>(runs: readonly R[]): GridGroup<R>[] {
+  const groups = new Map<string, GridGroup<R>>();
+  for (const run of runs) {
+    const date = isHead(run) ? null : gridDay(run.grid_date!);
+    const key = date ?? "HEAD";
+    let group = groups.get(key);
+    if (!group) {
+      group = { grid_date: date, runs: [] };
+      groups.set(key, group);
+    }
+    group.runs.push(run);
+  }
+  // YYYY-MM-DD sorts by date and "HEAD" after any digit
+  return [...groups.entries()].sort(([a], [b]) => (a < b ? -1 : Number(a > b))).map(([, group]) => group);
+}
+
+/** Instances by the run whose rows they are (a run's rows_run_id). */
+export function instancesByRun<V extends { run_id: string }>(instances: readonly V[]): Map<string, V[]> {
+  const byRun = new Map<string, V[]>();
+  for (const v of instances) {
+    const list = byRun.get(v.run_id) ?? [];
+    list.push(v);
+    byRun.set(v.run_id, list);
+  }
+  return byRun;
+}

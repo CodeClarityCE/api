@@ -3,7 +3,7 @@
  * on read from its snapshot runs, copied instances and probe outcome rows
  * (ADR 0001). Pure: no Nest or TypeORM imports.
  */
-import { DAY_MS, gridDay, publishedDay } from "./experiment-grid";
+import { DAY_MS, gridDay, instancesByRun, publishedDay } from "./experiment-grid";
 import {
   type DatingTask,
   type ProbeDating,
@@ -177,12 +177,7 @@ export function deriveExposures(
   input: ExposuresInput,
   search: ProbeSearch = new ProbeSearch(input),
 ): Exposure[] {
-  const instancesByRun = new Map<string, ResultsVulnerabilityInput[]>();
-  for (const v of input.vulnerabilities) {
-    const list = instancesByRun.get(v.run_id) ?? [];
-    list.push(v);
-    instancesByRun.set(v.run_id, list);
-  }
+  const byRun = instancesByRun(input.vulnerabilities);
   const packagesAt = new Map<string, ProbePackage[]>();
   for (const probe of input.probes ?? []) {
     packagesAt.set(`${probe.dataset_entry_id}\u0000${probe.commit_hash}`, probe.packages);
@@ -206,7 +201,7 @@ export function deriveExposures(
     const hits = runs.map((run) => {
       const byKey = new Map<string, ResultsVulnerabilityInput[]>();
       if (run.status !== "done" || isEmpty(run)) return byKey;
-      for (const v of instancesByRun.get(run.rows_run_id!) ?? []) {
+      for (const v of byRun.get(run.rows_run_id!) ?? []) {
         if (!v.vulnerability_id || !v.affected_dependency) continue;
         const key = keyOf(v.vulnerability_id, v.affected_dependency);
         byKey.set(key, [...(byKey.get(key) ?? []), v]);
