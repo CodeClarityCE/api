@@ -132,6 +132,18 @@ describe("exposure survival in the results", () => {
     ]);
   });
 
+  it("carries the confidence band on every step, overall and per severity", () => {
+    const { overall, by_severity } = results.exposure_survival;
+    // Greenwood variance 1/12 at day 24, 1/12 + 1/6 from day 50 on
+    expect(overall.curve[0]!.lower).toBeCloseTo(0.1281, 3);
+    expect(overall.curve[0]!.upper).toBeCloseTo(0.9605, 3);
+    expect(overall.curve[1]!.lower).toBeCloseTo(0.0578, 3);
+    expect(overall.curve[1]!.upper).toBeCloseTo(0.8448, 3);
+    // A censoring step keeps the band of the last fix
+    expect(overall.curve[3]!.lower).toBeCloseTo(0.0578, 3);
+    expect(by_severity[0]!.curve[0]).toMatchObject({ lower: 0, upper: 0 });
+  });
+
   it("reports the share of fixes only dated to a snapshot interval", () => {
     expect(results.exposure_survival.snapshot_precision_share).toBe(1);
   });
