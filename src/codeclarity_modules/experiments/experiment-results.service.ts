@@ -1,14 +1,15 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Readable } from "node:stream";
-import { In, Repository } from "typeorm";
+import { In, QueryFailedError, Repository } from "typeorm";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
 import { MembershipsRepository } from "src/base_modules/shared/repositories";
 import { CodeClarityLogger } from "src/services/logger.service";
+import { EntityNotFound } from "src/types/error.types";
 
-import { Experiment } from "./experiment.entity";
+import { Experiment, ExperimentStatus } from "./experiment.entity";
 import type { AnalysisBudgetUsage } from "./experiment-budget";
 import {
   type CsvEntry,
@@ -24,6 +25,7 @@ import {
 import { deriveExposures, type Exposure } from "./experiment-exposures";
 import type { FigureRows } from "./experiment-figure-data";
 import type { ResultIntervals } from "./experiment-intervals";
+import { METRIC_VERSION } from "./experiment-metric-version";
 import { ExperimentProbeOutcome } from "./experiment-probe-outcome.entity";
 import {
   INSTANCE_COLUMNS,
@@ -38,6 +40,7 @@ import type {
   ResultsProbeAnalysisInput,
   ResultsProbeIntervalInput,
 } from "./experiment-probes";
+import { ExperimentPublishedResults } from "./experiment-published-results.entity";
 import {
   aggregateExperimentResults,
   computeResultIntervals,
@@ -54,6 +57,10 @@ import {
 import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
 import { ExperimentRunSummaryRow } from "./experiment-run-summary-row.entity";
 import { ExperimentVulnerabilityInstance } from "./experiment-vulnerability-instance.entity";
+import {
+  ExperimentAlreadyPublished,
+  ExperimentNotPublishable,
+} from "./experiments.errors";
 import { creatorName, findExperimentInOrg } from "./experiments.service";
 
 /** Runs read per runs.csv chunk */
@@ -149,6 +156,13 @@ export interface ExperimentResultsExport {
   results: ExperimentResults;
 }
 
+/** One Published results version, without its payload. */
+export interface PublishedResultsSummary {
+  metric_version: number;
+  published_on: Date;
+  published_by_name: string | null;
+}
+
 /**
  * Reads over an experiment's copied rows: the results computed on every
  * read, and the streamed CSV exports.
@@ -175,11 +189,13 @@ export class ExperimentResultsService {
     private readonly vulnerabilityRepository: Repository<ExperimentVulnerabilityInstance>,
     @InjectRepository(ExperimentProbeOutcome, "codeclarity")
     private readonly probeOutcomeRepository: Repository<ExperimentProbeOutcome>,
+    @InjectRepository(ExperimentPublishedResults, "codeclarity")
+    private readonly publishedRepository: Repository<ExperimentPublishedResults>,
   ) {}
 
   /**
-   * The results of an experiment, computed from its copied rows on every
-   * read (ADR 0001), over the runs done so far.
+   * The newest Published results of an experiment, else its results computed
+   * from its copied rows on every read (ADR 0001), over the runs done so far.
    * @throws {NotAuthorized} If the user is not a member of the org
    * @throws {EntityNotFound} If the org has no such experiment
    */
@@ -212,23 +228,163 @@ export class ExperimentResultsService {
       experimentId,
     );
 
+    const published = await this.publishedRepository.findOne({
+      where: { experiment: { id: experiment.id } },
+      order: { metric_version: "DESC" },
+    });
+    return {
+      experiment_name: experiment.name,
+      results: published?.results ?? (await this.computeResults(experiment)),
+    };
+  }
+
+  /**
+   * Freeze a finished experiment's results under the current metric version.
+   * One-way (ADR 0007). Runs the bootstrap unless it is already cached.
+   * @throws {NotAuthorized} If the user is not an admin of the org
+   * @throws {EntityNotFound} If the org has no such experiment
+   * @throws {ExperimentNotPublishable} If the experiment is not COMPLETED
+   * @throws {ExperimentAlreadyPublished} If this metric version is already stored
+   */
+  async publish(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+  ): Promise<Omit<PublishedResultsSummary, "published_by_name">> {
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.ADMIN,
+    );
+    const experiment = await findExperimentInOrg(
+      this.experimentRepository,
+      orgId,
+      experimentId,
+    );
+    // Without an end time the bootstrap intervals would be left out
+    if (
+      experiment.status !== ExperimentStatus.COMPLETED ||
+      !experiment.ended_on
+    ) {
+      throw new ExperimentNotPublishable();
+    }
+    // Checked first so a repeat request never runs the bootstrap
+    const taken = await this.publishedRepository.exists({
+      where: {
+        experiment: { id: experiment.id },
+        metric_version: METRIC_VERSION,
+      },
+    });
+    if (taken) throw new ExperimentAlreadyPublished();
+
+    const results = await this.computeResults(experiment);
+    const stored = await this.publishedRepository
+      .save({
+        experiment,
+        metric_version: METRIC_VERSION,
+        results,
+        published_on: new Date(),
+        published_by: { id: user.userId },
+      })
+      .catch((error: unknown) => {
+        throw isUniqueViolation(error)
+          ? new ExperimentAlreadyPublished(error)
+          : error;
+      });
+    this.logger.log("Experiment published", {
+      experimentId: experiment.id,
+      organizationId: orgId,
+      userId: user.userId,
+      metricVersion: METRIC_VERSION,
+    });
+    return {
+      metric_version: stored.metric_version,
+      published_on: stored.published_on,
+    };
+  }
+
+  /**
+   * The Published results versions of an experiment, newest first.
+   * @throws {NotAuthorized} If the user is not a member of the org
+   * @throws {EntityNotFound} If the org has no such experiment
+   */
+  async listPublished(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+  ): Promise<PublishedResultsSummary[]> {
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.USER,
+    );
+    const experiment = await findExperimentInOrg(
+      this.experimentRepository,
+      orgId,
+      experimentId,
+    );
+    const versions = await this.publishedRepository.find({
+      where: { experiment: { id: experiment.id } },
+      select: {
+        id: true,
+        metric_version: true,
+        published_on: true,
+        published_by: { id: true, first_name: true, last_name: true },
+      },
+      relations: { published_by: true },
+      order: { metric_version: "DESC" },
+    });
+    return versions.map(publishedSummary);
+  }
+
+  /**
+   * One stored Published results version.
+   * @throws {NotAuthorized} If the user is not a member of the org
+   * @throws {EntityNotFound} If the experiment or the version does not exist
+   */
+  async getPublished(
+    orgId: string,
+    experimentId: string,
+    metricVersion: number,
+    user: AuthenticatedUser,
+  ): Promise<ExperimentResults> {
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.USER,
+    );
+    const experiment = await findExperimentInOrg(
+      this.experimentRepository,
+      orgId,
+      experimentId,
+    );
+    const published = await this.publishedRepository.findOne({
+      where: {
+        experiment: { id: experiment.id },
+        metric_version: metricVersion,
+      },
+    });
+    if (!published) throw new EntityNotFound();
+    return published.results;
+  }
+
+  /** The results computed from the experiment's copied rows (ADR 0001). */
+  private async computeResults(
+    experiment: Experiment,
+  ): Promise<ExperimentResults> {
     const [rows, summaries] = await Promise.all([
       this.exposureRows(experiment, null),
       this.summaryRows(experiment),
     ]);
-
     const input = {
       ...rows,
       summaries,
       provenance: provenanceInput(experiment),
     };
-    return {
-      experiment_name: experiment.name,
-      results: aggregateExperimentResults({
-        ...input,
-        bootstrap_intervals: this.intervalsOf(experiment, input),
-      }),
-    };
+    return aggregateExperimentResults({
+      ...input,
+      bootstrap_intervals: this.intervalsOf(experiment, input),
+    });
   }
 
   /** The tidy rows a Figure is computed from. */
@@ -634,6 +790,27 @@ export class ExperimentResultsService {
     });
     return stream;
   }
+}
+
+function publishedSummary(
+  published: ExperimentPublishedResults,
+): PublishedResultsSummary {
+  const publisher = published.published_by;
+  return {
+    metric_version: published.metric_version,
+    published_on: published.published_on,
+    published_by_name: publisher
+      ? `${publisher.first_name} ${publisher.last_name}`
+      : null,
+  };
+}
+
+/** Postgres reports a broken unique constraint as SQLSTATE 23505. */
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    error instanceof QueryFailedError &&
+    (error as QueryFailedError & { code?: string }).code === "23505"
+  );
 }
 
 function knowledgeSnapshot(value: unknown): KnowledgeSnapshot | null {

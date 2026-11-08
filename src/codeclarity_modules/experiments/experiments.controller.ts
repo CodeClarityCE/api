@@ -39,7 +39,10 @@ import {
   type FigureSummary,
 } from "./experiment-figures.service";
 import type { ExperimentResults } from "./experiment-results";
-import { ExperimentResultsService } from "./experiment-results.service";
+import {
+  ExperimentResultsService,
+  type PublishedResultsSummary,
+} from "./experiment-results.service";
 import { ExperimentsService } from "./experiments.service";
 import {
   CreateExperimentBody,
@@ -299,6 +302,68 @@ export class ExperimentsController {
       .send(JSON.stringify(results, null, 2));
   }
 
+  @Post(":experiment_id/publish")
+  @ApiOperation({
+    summary: "Freeze a COMPLETED experiment's results; this is one-way",
+  })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiResponse({ status: 403, description: "Insufficient permissions" })
+  @ApiResponse({
+    status: 409,
+    description: "Not COMPLETED, or this metric version is already published",
+  })
+  async publish(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+  ): Promise<
+    TypedResponse<Omit<PublishedResultsSummary, "published_by_name">>
+  > {
+    return {
+      data: await this.resultsService.publish(org_id, experiment_id, user),
+    };
+  }
+
+  @Get(":experiment_id/published")
+  @ApiOperation({ summary: "List Published results versions, newest first" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  async listPublished(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+  ): Promise<TypedResponse<PublishedResultsSummary[]>> {
+    return {
+      data: await this.resultsService.listPublished(
+        org_id,
+        experiment_id,
+        user,
+      ),
+    };
+  }
+
+  @Get(":experiment_id/published/:metric_version")
+  @ApiOperation({ summary: "Read one stored Published results version" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiParam({ name: "metric_version", description: "Metric version" })
+  async getPublished(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Param("metric_version", ParseIntPipe) metric_version: number,
+  ): Promise<TypedResponse<ExperimentResults>> {
+    return {
+      data: await this.resultsService.getPublished(
+        org_id,
+        experiment_id,
+        metric_version,
+        user,
+      ),
+    };
+  }
+
   @Get(":experiment_id/figure-catalog")
   @ApiOperation({ summary: "What the Figure composer may offer" })
   @ApiParam({ name: "org_id", description: "Organization ID" })
@@ -452,6 +517,7 @@ export class ExperimentsController {
   })
   @ApiParam({ name: "org_id", description: "Organization ID" })
   @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiResponse({ status: 409, description: "Experiment has Published results" })
   async delete(
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,

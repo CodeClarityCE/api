@@ -117,6 +117,7 @@ describe("ExperimentFiguresService", () => {
         ),
       } as never,
       { query: jest.fn().mockResolvedValue([]) } as never,
+      {} as never,
     );
     service = new ExperimentFiguresService(
       { hasRequiredRole } as unknown as MembershipsRepository,
