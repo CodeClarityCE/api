@@ -23,6 +23,7 @@ import {
 } from "./experiment-csv";
 import { deriveExposures, type Exposure } from "./experiment-exposures";
 import type { FigureRows } from "./experiment-figure-data";
+import type { ResultIntervals } from "./experiment-intervals";
 import { ExperimentProbeOutcome } from "./experiment-probe-outcome.entity";
 import {
   INSTANCE_COLUMNS,
@@ -39,7 +40,9 @@ import type {
 } from "./experiment-probes";
 import {
   aggregateExperimentResults,
+  computeResultIntervals,
   type ExperimentResults,
+  type ExperimentResultsInput,
   headCutoff,
   type KnowledgeSnapshot,
   type ResultsProbeInput,
@@ -64,6 +67,9 @@ const VULNERABILITY_EXPORT_RUNS_PER_CHUNK = 20;
 
 /** Entries whose exposures are derived per exposures.csv / fixes.csv chunk */
 const EXPOSURE_EXPORT_ENTRIES_PER_CHUNK = 20;
+
+/** Ended experiments whose bootstrap intervals are kept in memory */
+const INTERVAL_CACHE_SIZE = 100;
 
 /** The rows exposures are derived from. */
 interface ExposureRows {
@@ -151,6 +157,9 @@ export interface ExperimentResultsExport {
 export class ExperimentResultsService {
   private readonly logger = CodeClarityLogger.forService("Experiments");
 
+  /** Bootstrap intervals by experiment and end time, oldest read first */
+  private readonly intervalCache = new Map<string, ResultIntervals>();
+
   private readonly rawQuery: RawQuery = (sql, params) =>
     this.probeOutcomeRepository.query(sql, params);
 
@@ -208,12 +217,16 @@ export class ExperimentResultsService {
       this.summaryRows(experiment),
     ]);
 
+    const input = {
+      ...rows,
+      summaries,
+      provenance: provenanceInput(experiment),
+    };
     return {
       experiment_name: experiment.name,
       results: aggregateExperimentResults({
-        ...rows,
-        summaries,
-        provenance: provenanceInput(experiment),
+        ...input,
+        bootstrap_intervals: this.intervalsOf(experiment, input),
       }),
     };
   }
@@ -246,6 +259,27 @@ export class ExperimentResultsService {
         experimentId: experiment.id,
       })
       .getRawMany<ResultsSummaryInput>();
+  }
+
+  /**
+   * The bootstrap intervals of an ended experiment, computed once. Null
+   * while it runs, as its rows still change on every poll.
+   */
+  private intervalsOf(
+    experiment: Experiment,
+    input: ExperimentResultsInput,
+  ): ResultIntervals | null {
+    if (!experiment.ended_on) return null;
+    const key = `${experiment.id}:${new Date(experiment.ended_on).toISOString()}`;
+    const intervals =
+      this.intervalCache.get(key) ?? computeResultIntervals(input);
+    // Re-inserting keeps the map ordered by last read
+    this.intervalCache.delete(key);
+    this.intervalCache.set(key, intervals);
+    if (this.intervalCache.size > INTERVAL_CACHE_SIZE) {
+      this.intervalCache.delete(this.intervalCache.keys().next().value!);
+    }
+    return intervals;
   }
 
   /**
