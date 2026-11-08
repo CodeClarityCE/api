@@ -92,15 +92,18 @@ export class AnalysesRepository {
     };
   }
 
-  /** Finds the latest completed analysis of the project before the given one. */
+  /** Finds the latest completed analysis before the given one, on the same branch and analyzer. */
   async getPreviousCompletedAnalysis(
     projectId: string,
     analysisId: string,
   ): Promise<Analysis | null> {
-    const current = await this.getAnalysisById(analysisId);
+    const current = await this.getAnalysisById(analysisId, { analyzer: true });
+    if (!current.analyzer) return null;
     return this.analysisRepository.findOne({
       where: {
         project: { id: projectId },
+        branch: current.branch,
+        analyzer: { id: current.analyzer.id },
         status: In([AnalysisStatus.COMPLETED, AnalysisStatus.SUCCESS]),
         created_on: LessThan(current.created_on),
       },

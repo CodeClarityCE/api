@@ -16,6 +16,8 @@ describe("AnalysesRepository", () => {
   const current = {
     id: "analysis-123",
     created_on: new Date("2024-01-02"),
+    branch: "main",
+    analyzer: { id: "analyzer-1" },
   };
 
   beforeEach(async () => {
@@ -46,11 +48,22 @@ describe("AnalysesRepository", () => {
       expect(findOne).toHaveBeenLastCalledWith({
         where: {
           project: { id: "project-123" },
+          branch: "main",
+          analyzer: { id: "analyzer-1" },
           status: In([AnalysisStatus.COMPLETED, AnalysisStatus.SUCCESS]),
           created_on: LessThan(current.created_on),
         },
         order: { created_on: "DESC" },
       });
+    });
+
+    it("has nothing to compare against when the analyzer was deleted", async () => {
+      findOne.mockResolvedValueOnce({ ...current, analyzer: null });
+
+      await expect(
+        repository.getPreviousCompletedAnalysis("project-123", "analysis-123"),
+      ).resolves.toBeNull();
+      expect(findOne).toHaveBeenCalledTimes(1);
     });
 
     it("returns null when there is no earlier analysis", async () => {
