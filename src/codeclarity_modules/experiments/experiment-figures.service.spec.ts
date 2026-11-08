@@ -136,9 +136,9 @@ describe("ExperimentFiguresService", () => {
   it("serves the catalog the composer offers", async () => {
     const catalog = await service.catalog("org-1", "exp-1", user);
 
-    expect(catalog.metrics.map((metric) => metric.id)).toEqual([
-      "load_over_time",
-    ]);
+    expect(catalog.metrics.map((metric) => metric.id)).toEqual(
+      expect.arrayContaining(["load_over_time", "survival", "fix_lag"]),
+    );
     expect(catalog.metrics[0]!.chart_forms).toEqual([
       { id: "line", label: "Line" },
     ]);

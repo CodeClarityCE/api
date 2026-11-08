@@ -31,6 +31,18 @@ const VIEW_FILTER: FigureFilter = {
   ],
 };
 
+const STEP = { id: "step", label: "Step" };
+const BY_SEVERITY = { id: "severity", label: "Severity" };
+
+const SWEEP_FILTER: FigureFilter = {
+  id: "sweep",
+  label: "Sweep subset",
+  options: [
+    { id: "match_correct_only", label: "Correct matches only" },
+    { id: "non_withdrawn", label: "Not withdrawn" },
+  ],
+};
+
 /** Add a metric here, then its builder in experiment-figure-data.ts. */
 export const FIGURE_CATALOG = {
   metrics: [
@@ -40,6 +52,20 @@ export const FIGURE_CATALOG = {
       chart_forms: [LINE],
       group_by: [],
       filters: [VIEW_FILTER],
+    },
+    {
+      id: "survival",
+      label: "Survival",
+      chart_forms: [STEP],
+      group_by: [BY_SEVERITY],
+      filters: [SWEEP_FILTER],
+    },
+    {
+      id: "fix_lag",
+      label: "Fix lag",
+      chart_forms: [STEP],
+      group_by: [BY_SEVERITY],
+      filters: [SWEEP_FILTER],
     },
   ],
 } as const satisfies FigureCatalog;
