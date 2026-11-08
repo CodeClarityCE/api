@@ -38,8 +38,10 @@ export interface ProbeSubmissionRequest
   probeId: string;
 }
 
-/** The org's SBOM-only analyzer fix probes run with (ADR 0005). */
-export const PROBE_ANALYZER_NAME = "Experiment fix probes";
+/** The SBOM-only analyzer fix probes run with (ADR 0005), one per js-sbom version. */
+export function probeAnalyzerName(sbomVersion: string): string {
+  return `Managed by experiments: fix probes (js-sbom ${sbomVersion})`;
+}
 
 /** Thrown inside the transaction to roll back an analysis whose run ended. */
 class RunEnded extends Error {}
@@ -126,35 +128,31 @@ export class ExperimentRunSubmission {
   }
 
   /**
-   * The org's SBOM-only analyzer: the experiment analyzer's js-sbom step
-   * alone, created on first use and kept in step with the experiment's.
+   * The org's SBOM-only analyzer for the experiment's js-sbom step, created
+   * on first use. Keyed by version, so one in use is never changed.
    */
   private async probeAnalyzerId(experiment: Experiment): Promise<string> {
     const step = experiment.analyzer?.steps.flat().find((s) => s.name === SBOM_PLUGIN);
     if (!step) throw new Error("The analyzer of this experiment has no js-sbom step");
     const orgId = experiment.organization.id;
-    let analyzer: Analyzer;
-    try {
-      analyzer = await this.analyzersRepository.getByNameAndOrganization(PROBE_ANALYZER_NAME, orgId);
-    } catch {
-      analyzer = Object.assign(new Analyzer(), {
-        name: PROBE_ANALYZER_NAME,
+    const name = probeAnalyzerName(step.version);
+    const found = await this.analyzersRepository.findByNameAndOrganization(name, orgId);
+    if (found) return found.id;
+    const created = await this.analyzersRepository.saveAnalyzer(
+      Object.assign(new Analyzer(), {
+        name,
         global: false,
-        description: "SBOM-only analyses that experiments run to date fixes to a commit",
+        description: "SBOM-only analyses that experiments run to date fixes to a commit. Managed by experiments.",
         created_on: new Date(),
+        steps: [[step]],
         supported_languages: ["javascript"],
         language_config: { javascript: { plugins: [SBOM_PLUGIN] } },
         logo: "js",
         organization: { id: orgId },
         ...(experiment.created_by ? { created_by: { id: experiment.created_by.id } } : {}),
-      });
-    }
-    const steps = [[step]];
-    if (!analyzer.id || JSON.stringify(analyzer.steps) !== JSON.stringify(steps)) {
-      analyzer.steps = steps;
-      analyzer = await this.analyzersRepository.saveAnalyzer(analyzer);
-    }
-    return analyzer.id;
+      }),
+    );
+    return created.id;
   }
 
   /** Stop an analysis that is still running; a finished one is left as is. */
