@@ -1615,6 +1615,24 @@ describe("ExperimentRunnerService", () => {
       ]);
     });
 
+    it("writes an empty probe outcome row for a commit with no supported manifest", async () => {
+      addExperiment("exp-1", ["octo/app"], {}, ["2025-02-01T00:00:00Z"]);
+      const service = runner();
+      await service.tick();
+
+      finishAnalysis(
+        "octo/app",
+        AnalysisStatus.FAILED,
+        "no supported manifest was found in this project",
+        0,
+      );
+      await service.tick();
+
+      expect([...store.probeOutcomes.values()]).toEqual([
+        expect.objectContaining({ commitHash: "sha-jan", packages: [] }),
+      ]);
+    });
+
     it("counts one in-flight analysis per commit against the cap, not one per snapshot", async () => {
       process.env["EXPERIMENT_MAX_IN_FLIGHT"] = "2";
       addExperiment("exp-1", ["octo/app"], {}, [
@@ -1749,6 +1767,45 @@ describe("ExperimentRunnerService", () => {
       expect(store.run("octo/app")).toMatchObject({
         status: ExperimentRunStatus.SKIPPED,
         error: "empty repository",
+      });
+    });
+
+    it("ends a snapshot whose commit has no supported manifest as done and empty", async () => {
+      addExperiment("exp-1", ["octo/app"], {}, ["2025-02-01T00:00:00Z"]);
+      const service = runner();
+      await service.tick();
+      const submitted = submit.mock.calls.length;
+
+      finishAnalysis(
+        "octo/app",
+        AnalysisStatus.FAILED,
+        "no supported manifest was found in this project",
+        0,
+      );
+      await service.tick();
+
+      expect(store.run("octo/app", 0)).toMatchObject({
+        status: ExperimentRunStatus.DONE,
+        error: "no_lockfile_yet",
+      });
+      expect(submit).toHaveBeenCalledTimes(submitted);
+    });
+
+    it("keeps a HEAD analysis with no supported manifest a failed attempt", async () => {
+      addExperiment("exp-1", ["octo/app"], { retries: 0 });
+      const service = runner();
+      await service.tick();
+
+      finishAnalysis(
+        "octo/app",
+        AnalysisStatus.FAILED,
+        "no supported manifest was found in this project",
+      );
+      await service.tick();
+
+      expect(store.run("octo/app")).toMatchObject({
+        status: ExperimentRunStatus.FAILED,
+        error: "no supported manifest was found in this project",
       });
     });
 

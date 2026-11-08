@@ -8,7 +8,7 @@ import { GCVERepository } from "src/codeclarity_modules/knowledge/gcve/gcve.repo
 import { NVDRepository } from "src/codeclarity_modules/knowledge/nvd/nvd.repository";
 import { OSVRepository } from "src/codeclarity_modules/knowledge/osv/osv.repository";
 import { VulnerabilityPolicyService } from "src/codeclarity_modules/policies/vulnerability/vulnerability.service";
-import { Output as SBOMOutput } from "src/codeclarity_modules/results/sbom/sbom.types";
+import { Dependency } from "src/codeclarity_modules/results/sbom/sbom.types";
 import { StatusResponse } from "src/codeclarity_modules/results/status.types";
 import {
   isCriticalSeverity,
@@ -28,6 +28,7 @@ import {
   VulnerabilityAnalysisStats,
   VulnerabilityMerged,
 } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
+import { CodeClarityLogger } from "src/services/logger.service";
 import { PaginatedResponse } from "src/types/apiResponses.types";
 import { UnknownWorkspace } from "src/types/error.types";
 
@@ -37,6 +38,12 @@ import { SbomUtilsService } from "../sbom/utils/utils";
 import { VulnerabilitiesFilterService } from "./utils/filter.service";
 import { VulnerabilitiesSortService } from "./utils/sort.service";
 import { VulnerabilitiesUtilsService } from "./utils/utils.service";
+
+/** SBOM dependency, where PHP SBOMs write lowercase role flags */
+interface EnhancedDependency extends Dependency {
+  direct?: boolean;
+  transitive?: boolean;
+}
 
 /** NVD vulnerability description entry */
 interface NvdDescription {
@@ -91,6 +98,8 @@ function isNoConflict(flag: ConflictFlag | string): boolean {
 
 @Injectable()
 export class VulnerabilitiesService {
+  private readonly logger = CodeClarityLogger.forService("Vulnerabilities");
+
   constructor(
     private readonly analysisResultsService: AnalysisResultsService,
     private readonly findingsUtilsService: VulnerabilitiesUtilsService,
@@ -122,18 +131,13 @@ export class VulnerabilitiesService {
       user,
     );
 
-    let findingsArrayPrevious: Vulnerability[];
-    // let dependencyMapPrevious: { [key: string]: Dependency };
+    const { mergedSbom } =
+      await this.sbomUtilsService.getMergedSbomResults(analysisId);
 
-    const sbomOutput: SBOMOutput =
-      await this.sbomUtilsService.getSbomResult(analysisId);
-
-    if (!(workspace in sbomOutput.workspaces)) {
+    if (!(workspace in mergedSbom.workspaces)) {
       throw new UnknownWorkspace();
     }
 
-    // const dependencyMap: { [key: string]: Dependency } =
-    //     sbomOutput.workspaces[workspace].dependencies;
     const findingsArray: Vulnerability[] =
       await this.findingsUtilsService.getFindingsData(
         analysisId,
@@ -141,24 +145,15 @@ export class VulnerabilitiesService {
         ecosystem_filter,
       );
 
-    try {
-      findingsArrayPrevious = []; // Initialize to empty array since we're not using previous analysis data
-      // const previousAnalysis =
-      //     await this.analysisRepo.getMostRecentAnalysisOfProject(projectId);
-
-      // const sbomOutputPrevious: SBOMOutput = await getSbomResult(previousAnalysis.id);
-
-      // if (!(workspace in sbomOutputPrevious.workspaces)) {
-      //     throw new UnknownWorkspace();
-      // }
-
-      // // dependencyMapPrevious = sbomOutputPrevious.workspaces[workspace].dependencies;
-      // findingsArrayPrevious = await getFindingsData(previousAnalysis.id, workspace, ecosystem_filter);
-    } catch (error) {
-      console.error(error);
-      // dependencyMapPrevious = {};
-      findingsArrayPrevious = [];
-    }
+    const {
+      findings: findingsArrayPrevious,
+      dependencies: dependencyMapPrevious,
+    } = await this.getPreviousScan(
+      projectId,
+      analysisId,
+      workspace,
+      ecosystem_filter,
+    );
 
     const wBeforeStats: VulnerabilityAnalysisStats =
       newVulnerabilityAnalysisStats();
@@ -179,16 +174,6 @@ export class VulnerabilitiesService {
 
     wStats.number_of_issues = findingsArray.length;
     for (const finding of findingsArray) {
-      if (!encounteredDeps.has(finding.AffectedDependency)) {
-        // let dependency: Dependency | undefined = undefined;
-        // if (finding.AffectedDependency in dependencyMap)
-        //     dependency = dependencyMap[finding.AffectedDependency];
-        // if (dependency && dependency.is_direct)
-        //     wStats.number_of_direct_vulnerabilities += 1;
-        // if (dependency && dependency.is_transitive)
-        //     wStats.number_of_transitive_vulnerabilities += 1;
-      }
-
       if (finding.Severity !== null) {
         sumConfidentiality += getContinuousFromDiscreteCIA(
           finding.Severity.ConfidentialityImpact,
@@ -228,6 +213,12 @@ export class VulnerabilitiesService {
       encounteredVulns.add(finding.VulnerabilityId);
     }
 
+    this.countDependencyRoles(
+      wStats,
+      findingsArray,
+      mergedSbom.workspaces[workspace]!.dependencies,
+    );
+
     wStats.number_of_vulnerable_dependencies = encounteredDeps.size;
     wStats.max_severity = maxSeverity;
     wStats.mean_severity = countseverity > 0 ? sumSeverity / countseverity : 0;
@@ -252,18 +243,6 @@ export class VulnerabilitiesService {
 
     wBeforeStats.number_of_issues = findingsArrayPrevious.length;
     for (const finding of findingsArrayPrevious) {
-      // let dependency: Dependency | undefined = undefined;
-
-      // if (finding.AffectedDependency in dependencyMapPrevious)
-      //     dependency = dependencyMapPrevious[finding.AffectedDependency];
-
-      // if (!encounteredDeps.has(finding.AffectedDependency)) {
-      //     if (dependency && dependency.is_direct)
-      //         wBeforeStats.number_of_direct_vulnerabilities += 1;
-      //     if (dependency && dependency.is_transitive)
-      //         wBeforeStats.number_of_transitive_vulnerabilities += 1;
-      // }
-
       if (finding.Severity !== null) {
         sumConfidentiality += getContinuousFromDiscreteCIA(
           finding.Severity.ConfidentialityImpact,
@@ -293,11 +272,20 @@ export class VulnerabilitiesService {
       }
       beforeEncounteredDeps.add(finding.AffectedDependency);
 
-      this.incrementOwaspStats(wBeforeStats, finding.Weaknesses);
-      this.incrementSeverityStats(wBeforeStats, finding.Severity);
+      // Only count unique vulnerabilities, as for the current scan
+      if (!beforeEncounteredVulns.has(finding.VulnerabilityId)) {
+        this.incrementOwaspStats(wBeforeStats, finding.Weaknesses);
+        this.incrementSeverityStats(wBeforeStats, finding.Severity);
+      }
 
       beforeEncounteredVulns.add(finding.VulnerabilityId);
     }
+
+    this.countDependencyRoles(
+      wBeforeStats,
+      findingsArrayPrevious,
+      dependencyMapPrevious,
+    );
 
     wBeforeStats.number_of_vulnerable_dependencies = beforeEncounteredDeps.size;
     wStats.number_of_vulnerable_dependencies = encounteredDeps.size;
@@ -819,6 +807,71 @@ export class VulnerabilitiesService {
     }
 
     return selectedSections.join("\n");
+  }
+
+  /** Load the previous completed scan, or nothing if it cannot be read. */
+  private async getPreviousScan(
+    projectId: string,
+    analysisId: string,
+    workspace: string,
+    ecosystem_filter?: string,
+  ): Promise<{
+    findings: Vulnerability[];
+    dependencies: Record<string, Record<string, Dependency>>;
+  }> {
+    try {
+      const previous =
+        await this.analysesRepository.getPreviousCompletedAnalysis(
+          projectId,
+          analysisId,
+        );
+      if (previous) {
+        const { mergedSbom } = await this.sbomUtilsService.getMergedSbomResults(
+          previous.id,
+        );
+        const previousWorkspace = mergedSbom.workspaces[workspace];
+        if (previousWorkspace) {
+          const findings = await this.findingsUtilsService.getFindingsData(
+            previous.id,
+            workspace,
+            ecosystem_filter,
+          );
+          return { findings, dependencies: previousWorkspace.dependencies };
+        }
+      }
+    } catch (err) {
+      this.logger.warn("Could not load the previous scan for comparison", {
+        projectId,
+        analysisId,
+        error: (err as Error).message,
+      });
+    }
+    return { findings: [], dependencies: {} };
+  }
+
+  /** Count each vulnerable dependency version by its role in the SBOM. */
+  private countDependencyRoles(
+    stats: VulnerabilityAnalysisStats,
+    findings: Vulnerability[],
+    dependencies: Record<string, Record<string, Dependency>>,
+  ): void {
+    const counted = new Set<string>();
+    for (const finding of findings) {
+      const name = finding.AffectedDependency;
+      const version = finding.AffectedVersion;
+      const key = `${name}@${version}`;
+      if (counted.has(key)) continue;
+      counted.add(key);
+
+      const dependency = dependencies[name]?.[version] as
+        EnhancedDependency | undefined;
+      if (!dependency) continue;
+      // PHP SBOMs use lowercase keys.
+      if (dependency.Direct ?? dependency.direct)
+        stats.number_of_direct_vulnerabilities += 1;
+      if (dependency.Transitive ?? dependency.transitive)
+        stats.number_of_transitive_vulnerabilities += 1;
+    }
   }
 
   /**

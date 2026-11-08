@@ -256,6 +256,15 @@ export function isNoLockfileResult(blob: unknown): boolean {
   });
 }
 
+/** What the dispatcher records when it finds no manifest it can analyze. */
+const NO_SUPPORTED_MANIFEST_REASON =
+  "no supported manifest was found in this project";
+
+/** An analysis the dispatcher failed because its commit has no manifest. */
+export function isNoManifestFailure(reason?: string | null): boolean {
+  return reason === NO_SUPPORTED_MANIFEST_REASON;
+}
+
 /**
  * The plugin payload of a Result entity as the results endpoint returns it
  * ({result, plugin, created_on}), as the archived raw JSON stores it.

@@ -42,6 +42,7 @@ import {
 import type { ResultsRunInput } from "./experiment-results";
 import {
   isNoLockfileResult,
+  isNoManifestFailure,
   isUsablePluginResult,
   mapProbePackages,
   mapRunRows,
@@ -333,9 +334,10 @@ export class ExperimentRunnerService
     });
   }
 
-  /** A dated snapshot whose js-sbom result says its commit had no lockfile yet. */
+  /** A dated snapshot whose commit had no lockfile or manifest yet. */
   private async lacksLockfile(run: ExperimentRun): Promise<boolean> {
     if (!run.analysis || !run.grid_date) return false;
+    if (isNoManifestFailure(run.analysis.failure_reason)) return true;
     return isNoLockfileResult(
       await this.store.getPluginResult(run.analysis.id, SBOM_PLUGIN),
     );
@@ -808,7 +810,11 @@ export class ExperimentRunnerService
           : await this.store.getPluginResult(probe.analysis.id, SBOM_PLUGIN);
       if (outcome === "succeeded" && isUsablePluginResult(sbom)) {
         await this.endProbeWith(experiment, probe, mapProbePackages(sbom));
-      } else if (outcome !== "running" && isNoLockfileResult(sbom)) {
+      } else if (
+        outcome !== "running" &&
+        (isNoLockfileResult(sbom) ||
+          isNoManifestFailure(probe.analysis.failure_reason))
+      ) {
         // A commit without a lockfile resolves nothing
         await this.endProbeWith(experiment, probe, []);
       } else if (outcome === "succeeded") {

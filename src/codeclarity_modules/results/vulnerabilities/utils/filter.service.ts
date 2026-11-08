@@ -79,7 +79,7 @@ export class VulnerabilitiesFilterService {
     function filterBySearchKey(
       vulnerabilities: VulnerabilityMerged[],
     ): VulnerabilityMerged[] {
-      if (searchKey === "") {
+      if (searchkeySafe === "") {
         return vulnerabilities;
       }
 
@@ -87,23 +87,17 @@ export class VulnerabilitiesFilterService {
       const searchKeyLower = searchkeySafe.toLocaleLowerCase();
 
       for (const vulnerability of vulnerabilities) {
-        for (const affected of vulnerability.Affected) {
-          if (
-            affected.AffectedDependency?.toLocaleLowerCase().includes(
-              searchKeyLower,
-            )
-          ) {
-            toReturn.push(vulnerability);
-            continue;
-          }
-        }
-        if (
+        const matchesDependency = vulnerability.Affected.some((affected) =>
+          affected.AffectedDependency?.toLocaleLowerCase().includes(
+            searchKeyLower,
+          ),
+        );
+        const matchesId =
           vulnerability.Vulnerability?.toLocaleLowerCase().includes(
             searchKeyLower,
-          )
-        ) {
+          );
+        if (matchesDependency || matchesId) {
           toReturn.push(vulnerability);
-          continue;
         }
       }
 

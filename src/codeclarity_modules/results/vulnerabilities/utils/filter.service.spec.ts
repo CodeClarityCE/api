@@ -94,6 +94,31 @@ describe("VulnerabilitiesFilterService", () => {
       expect(counts).toBeDefined();
     });
 
+    it("should list each vulnerability once when no search key is given", () => {
+      const [filtered] = service.filter(
+        [createMockVulnerability()],
+        undefined,
+        undefined,
+      );
+
+      expect(filtered).toHaveLength(1);
+    });
+
+    it("should list a vulnerability once when several fields match", () => {
+      const base = createMockVulnerability();
+      const vulnerability = createMockVulnerability({
+        Vulnerability: "lodash-advisory",
+        Affected: [
+          { ...base.Affected[0], AffectedDependency: "lodash" } as any,
+          { ...base.Affected[0], AffectedDependency: "lodash-es" } as any,
+        ],
+      });
+
+      const [filtered] = service.filter([vulnerability], "lodash", undefined);
+
+      expect(filtered).toHaveLength(1);
+    });
+
     it("should filter by search key in vulnerability ID", () => {
       const vulnerabilities = [
         createMockVulnerability({ Vulnerability: "CVE-2023-1234" }),
