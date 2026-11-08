@@ -1,9 +1,15 @@
+import { QueryFailedError } from "typeorm";
+
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
 import { type MembershipsRepository } from "src/base_modules/shared/repositories";
-import { EntityNotFound } from "src/types/error.types";
+import { EntityNotFound, NotAuthorized } from "src/types/error.types";
 
 import { ExperimentResultsService } from "./experiment-results.service";
+import {
+  ExperimentAlreadyPublished,
+  ExperimentNotPublishable,
+} from "./experiments.errors";
 
 describe("ExperimentResultsService", () => {
   const user = new AuthenticatedUser("user-1", [ROLE.USER], true);
@@ -14,6 +20,7 @@ describe("ExperimentResultsService", () => {
   let summaryRows: jest.Mock;
   let vulnerabilityRows: jest.Mock;
   let probeRows: jest.Mock;
+  let publishedRepository: Record<string, jest.Mock>;
 
   /** A query builder whose chained calls return itself, ending in rows. */
   function rowsBuilder(getRawMany: jest.Mock): Record<string, jest.Mock> {
@@ -44,6 +51,12 @@ describe("ExperimentResultsService", () => {
     summaryRows = jest.fn().mockResolvedValue([]);
     vulnerabilityRows = jest.fn().mockResolvedValue([]);
     probeRows = jest.fn().mockResolvedValue([]);
+    publishedRepository = {
+      exists: jest.fn().mockResolvedValue(false),
+      find: jest.fn().mockResolvedValue([]),
+      findOne: jest.fn().mockResolvedValue(null),
+      save: jest.fn((value: object) => Promise.resolve(value)),
+    };
     service = new ExperimentResultsService(
       { hasRequiredRole } as unknown as MembershipsRepository,
       experimentRepository as never,
@@ -55,6 +68,7 @@ describe("ExperimentResultsService", () => {
         createQueryBuilder: jest.fn(() => rowsBuilder(vulnerabilityRows)),
       } as never,
       { query: probeRows } as never,
+      publishedRepository as never,
     );
   });
 
@@ -793,6 +807,249 @@ describe("ExperimentResultsService", () => {
         analyses_submitted: 2,
         spent: true,
       });
+    });
+  });
+
+  describe("publish", () => {
+    const completed = {
+      id: "exp-1",
+      status: "COMPLETED",
+      created_on: new Date("2026-11-06T00:00:00Z"),
+      started_on: new Date("2026-11-06T00:01:00Z"),
+      ended_on: new Date("2026-11-06T02:00:00Z"),
+      analyzer_steps: [[{ name: "js-sbom", version: "1.0.0" }]],
+      provenance: { api_version: "0.0.49-alpha" },
+      created_by: { first_name: "John", last_name: "Doe" },
+    };
+
+    /** A done HEAD run with one summary row and five vulnerabilities. */
+    function doneRun(): void {
+      experimentRepository["findOne"]!.mockResolvedValue(completed);
+      runRepository["find"]!.mockResolvedValue([
+        { id: "r1", status: "done", error: null, grid_date: null },
+      ]);
+      summaryRows.mockResolvedValue([
+        {
+          run_id: "r1",
+          rank: 0,
+          total_dependencies: 10,
+          total_vulnerabilities: 5,
+          package_manager: "NPM",
+        },
+      ]);
+    }
+
+    it("stores the complete results, intervals included, under the metric version", async () => {
+      doneRun();
+
+      const published = await service.publish("org-1", "exp-1", user);
+
+      const stored = publishedRepository["save"]!.mock.calls[0]![0];
+      expect(stored).toMatchObject({
+        metric_version: 1,
+        experiment: { id: "exp-1" },
+        published_by: { id: "user-1" },
+      });
+      expect(stored.results.headline).toMatchObject({ n_projects: 1 });
+      expect(stored.results.share_intervals).toBeDefined();
+      expect(stored.results.bootstrap_intervals).not.toBeNull();
+      expect(stored.results.bootstrap_intervals.headline).toBeDefined();
+      expect(published).toMatchObject({ metric_version: 1 });
+    });
+
+    describe("versions", () => {
+      it("lists versions newest first without loading their payloads", async () => {
+        experimentRepository["findOne"]!.mockResolvedValue(completed);
+        const on = new Date("2026-11-07T00:00:00Z");
+        publishedRepository["find"]!.mockResolvedValue([
+          {
+            metric_version: 2,
+            published_on: on,
+            published_by: { first_name: "Jane", last_name: "Roe" },
+          },
+          { metric_version: 1, published_on: on, published_by: null },
+        ]);
+
+        const versions = await service.listPublished("org-1", "exp-1", user);
+
+        expect(versions).toEqual([
+          {
+            metric_version: 2,
+            published_on: on,
+            published_by_name: "Jane Roe",
+          },
+          { metric_version: 1, published_on: on, published_by_name: null },
+        ]);
+        const query = publishedRepository["find"]!.mock.calls[0]![0];
+        expect(query.select.results).toBeUndefined();
+        expect(query.order).toEqual({ metric_version: "DESC" });
+        expect(hasRequiredRole).toHaveBeenCalledWith(
+          "org-1",
+          "user-1",
+          MemberRole.USER,
+        );
+      });
+
+      it("reads one stored version", async () => {
+        experimentRepository["findOne"]!.mockResolvedValue(completed);
+        const frozen = { headline: { n_projects: 7 } };
+        publishedRepository["findOne"]!.mockResolvedValue({
+          metric_version: 1,
+          results: frozen,
+        });
+
+        expect(await service.getPublished("org-1", "exp-1", 1, user)).toEqual(
+          frozen,
+        );
+        expect(publishedRepository["findOne"]).toHaveBeenCalledWith({
+          where: { experiment: { id: "exp-1" }, metric_version: 1 },
+        });
+      });
+
+      it("answers not found for a version never published", async () => {
+        experimentRepository["findOne"]!.mockResolvedValue(completed);
+
+        await expect(
+          service.getPublished("org-1", "exp-1", 5, user),
+        ).rejects.toBeInstanceOf(EntityNotFound);
+      });
+    });
+
+    it("stores the mixed knowledge warning and still publishes", async () => {
+      doneRun();
+      const knowledge = (nvd: string): object => ({
+        knowledge_sources: { nvd },
+        epss_rows: 5,
+      });
+      experimentRepository["findOne"]!.mockResolvedValue({
+        ...completed,
+        provenance: {
+          knowledge_start: knowledge("2026-11-05T00:00:00Z"),
+          knowledge_end: knowledge("2026-11-06T01:00:00Z"),
+        },
+      });
+
+      await service.publish("org-1", "exp-1", user);
+
+      const stored = publishedRepository["save"]!.mock.calls[0]![0];
+      expect(stored.results.provenance.knowledge_changed).toBe(true);
+    });
+
+    describe("once published", () => {
+      /** Stored numbers no computation over the mocked rows could produce. */
+      const frozen = { headline: { n_projects: 999 } };
+
+      it("serves results and results.json from storage, even though metric output would now differ", async () => {
+        doneRun();
+        publishedRepository["findOne"]!.mockResolvedValue({
+          metric_version: 1,
+          results: frozen,
+        });
+
+        expect(await service.getResults("org-1", "exp-1", user)).toEqual(
+          frozen,
+        );
+        const exported = await service.exportResults("org-1", "exp-1", user);
+
+        expect(exported.results).toEqual(frozen);
+        expect(publishedRepository["findOne"]).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { experiment: { id: "exp-1" } },
+            order: { metric_version: "DESC" },
+          }),
+        );
+        expect(runRepository["find"]).not.toHaveBeenCalled();
+      });
+
+      it("keeps computing on read while nothing is published", async () => {
+        doneRun();
+
+        const results = await service.getResults("org-1", "exp-1", user);
+
+        expect(results.headline.n_projects).toBe(1);
+      });
+    });
+
+    it("refuses a second publish under the same metric version without running the bootstrap", async () => {
+      doneRun();
+      publishedRepository["exists"]!.mockResolvedValue(true);
+
+      await expect(
+        service.publish("org-1", "exp-1", user),
+      ).rejects.toBeInstanceOf(ExperimentAlreadyPublished);
+
+      expect(publishedRepository["exists"]).toHaveBeenCalledWith({
+        where: { experiment: { id: "exp-1" }, metric_version: 1 },
+      });
+      expect(runRepository["find"]).not.toHaveBeenCalled();
+      expect(publishedRepository["save"]).not.toHaveBeenCalled();
+    });
+
+    it("reports a concurrent publish that lost the unique constraint as already published", async () => {
+      doneRun();
+      publishedRepository["save"]!.mockRejectedValue(
+        Object.assign(new QueryFailedError("INSERT", [], new Error("dup")), {
+          code: "23505",
+        }),
+      );
+
+      await expect(
+        service.publish("org-1", "exp-1", user),
+      ).rejects.toBeInstanceOf(ExperimentAlreadyPublished);
+    });
+
+    it("does not hide other storage failures", async () => {
+      doneRun();
+      publishedRepository["save"]!.mockRejectedValue(new Error("disk full"));
+
+      await expect(service.publish("org-1", "exp-1", user)).rejects.toThrow(
+        "disk full",
+      );
+    });
+
+    it.each(["PENDING", "RUNNING", "CANCELLED", "FAILED"])(
+      "refuses a %s experiment",
+      async (status) => {
+        doneRun();
+        experimentRepository["findOne"]!.mockResolvedValue({
+          ...completed,
+          status,
+        });
+
+        await expect(
+          service.publish("org-1", "exp-1", user),
+        ).rejects.toBeInstanceOf(ExperimentNotPublishable);
+
+        expect(publishedRepository["save"]).not.toHaveBeenCalled();
+      },
+    );
+
+    it("refuses a COMPLETED experiment with no end time, as its intervals would be missing", async () => {
+      doneRun();
+      experimentRepository["findOne"]!.mockResolvedValue({
+        ...completed,
+        ended_on: null,
+      });
+
+      await expect(
+        service.publish("org-1", "exp-1", user),
+      ).rejects.toBeInstanceOf(ExperimentNotPublishable);
+    });
+
+    it("refuses a non-admin before computing anything", async () => {
+      doneRun();
+      hasRequiredRole.mockRejectedValue(new NotAuthorized());
+
+      await expect(
+        service.publish("org-1", "exp-1", user),
+      ).rejects.toBeInstanceOf(NotAuthorized);
+
+      expect(hasRequiredRole).toHaveBeenCalledWith(
+        "org-1",
+        "user-1",
+        MemberRole.ADMIN,
+      );
+      expect(publishedRepository["save"]).not.toHaveBeenCalled();
     });
   });
 });

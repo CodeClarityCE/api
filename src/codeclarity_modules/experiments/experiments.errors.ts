@@ -6,6 +6,9 @@ export const errorMessages: Record<string, string> = {
     "The analyzer of an experiment must run js-sbom and vuln-finder.",
   ExperimentNotCancellable:
     "Only a PENDING or RUNNING experiment can be cancelled.",
+  ExperimentNotPublishable: "Only a COMPLETED experiment can be published.",
+  ExperimentAlreadyPublished:
+    "This experiment is already published under the current metric version.",
   InvalidFigureDefinition: "The catalog does not allow this Figure definition.",
 };
 
@@ -61,6 +64,34 @@ export class InvalidFigureDefinition extends PublicAPIError {
       InvalidFigureDefinition.errorCode,
       InvalidFigureDefinition.errorMessage,
       InvalidFigureDefinition.statusCode,
+      cause,
+    );
+  }
+}
+
+export class ExperimentNotPublishable extends PublicAPIError {
+  static errorCode = "ExperimentNotPublishable";
+  static errorMessage = errorMessages[ExperimentNotPublishable.errorCode]!;
+  static statusCode = 409;
+  constructor(cause?: unknown) {
+    super(
+      ExperimentNotPublishable.errorCode,
+      ExperimentNotPublishable.errorMessage,
+      ExperimentNotPublishable.statusCode,
+      cause,
+    );
+  }
+}
+
+export class ExperimentAlreadyPublished extends PublicAPIError {
+  static errorCode = "ExperimentAlreadyPublished";
+  static errorMessage = errorMessages[ExperimentAlreadyPublished.errorCode]!;
+  static statusCode = 409;
+  constructor(cause?: unknown) {
+    super(
+      ExperimentAlreadyPublished.errorCode,
+      ExperimentAlreadyPublished.errorMessage,
+      ExperimentAlreadyPublished.statusCode,
       cause,
     );
   }

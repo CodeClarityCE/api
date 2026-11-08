@@ -17,6 +17,7 @@ import { ExperimentFiguresService } from "./experiment-figures.service";
 import { ExperimentProbe } from "./experiment-probe.entity";
 import { ExperimentProbeInterval } from "./experiment-probe-interval.entity";
 import { ExperimentProbeOutcome } from "./experiment-probe-outcome.entity";
+import { ExperimentPublishedResults } from "./experiment-published-results.entity";
 import { ExperimentResultsService } from "./experiment-results.service";
 import { ExperimentRun } from "./experiment-run.entity";
 import { ExperimentRunSubmission } from "./experiment-run-submission";
@@ -39,6 +40,7 @@ import { ExperimentsService } from "./experiments.service";
         ExperimentProbe,
         ExperimentProbeInterval,
         ExperimentFigure,
+        ExperimentPublishedResults,
         Dataset,
         DatasetEntry,
         Result,
