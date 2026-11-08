@@ -529,7 +529,7 @@ function measureHeadline(
   };
 }
 
-const SWEEP_FILTERS: Record<
+export const SWEEP_FILTERS: Record<
   SweepSubset,
   (v: ResultsVulnerabilityInput) => boolean
 > = {
