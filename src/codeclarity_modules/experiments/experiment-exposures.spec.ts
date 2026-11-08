@@ -330,6 +330,38 @@ describe("exposures", () => {
     });
   });
 
+  it("treats a lockfile gone after one was seen as a gap, never a fix", () => {
+    const rows = world("e1", happyCommits());
+    // The lockfile disappears from 2025-04-01 on, HEAD included
+    rows.runs = rows.runs.map((run) =>
+      run.grid_index! >= 3 ? { ...run, status: "done", error: NO_LOCKFILE_YET } : run,
+    );
+    const exposures = deriveExposures(input(rows));
+    expect(exposures).toEqual([
+      expect.objectContaining({ last_present: "2025-03-01", gaps: 4, open: true, fix: null }),
+    ]);
+  });
+
+  it("treats a HEAD sharing a lockfile-less dated snapshot as a gap once a lockfile was seen", () => {
+    const minimist: Vuln = { id: "DEMO-minimist-1", pkg: "minimist", fixed: "1.2.6", published: "2025-05-20", severity: "CRITICAL" };
+    const rows = world(
+      "e1",
+      [
+        C("a1f", "2024-11-05", ch("express", "4.18.0")),
+        C("c3d", "2025-02-06", ch("mkdirp", "0.5.5"), ch("minimist", "1.2.5", "mkdirp")),
+        C("f6a", "2025-05-11", ch("vitest", "1.0.0")),
+      ],
+      [minimist],
+    );
+    // 2025-06-01 lost its lockfile and HEAD pins the same commit
+    rows.runs = rows.runs.map((run) =>
+      run.grid_index! >= 5 ? { ...run, status: "done", error: NO_LOCKFILE_YET, rows_run_id: "e1-5" } : run,
+    );
+    expect(deriveExposures(input(rows))).toEqual([
+      expect.objectContaining({ first_present: "2025-03-01", last_present: "2025-05-01", gaps: 2, open: true, fix: null }),
+    ]);
+  });
+
   it("tells a direct removal from a transitive one", () => {
     const toughCookie: Vuln = { id: "DEMO-tough-cookie-1", pkg: "tough-cookie", fixed: "4.1.3", published: "2025-01-25", severity: "MEDIUM" };
     const moment: Vuln = { id: "DEMO-moment-1", pkg: "moment", fixed: "2.29.4", published: "2024-12-01", severity: "HIGH" };

@@ -209,6 +209,10 @@ export function deriveExposures(
   const exposures: Exposure[] = [];
   for (const [entry, unsorted] of runsByEntry) {
     const runs = [...unsorted].sort((a, b) => a.grid_index! - b.grid_index!);
+    // Only empty snapshots before the first lockfile count as absent; later ones are gaps
+    const firstLockfile = runs.findIndex((run) => run.status === "done" && !isEmpty(run));
+    const lostLockfile = (i: number): boolean =>
+      isEmpty(runs[i]!) && firstLockfile !== -1 && i > firstLockfile;
     // Instances of a done snapshot by (vulnerability, package)
     const hits = runs.map((run) => {
       const byKey = new Map<string, ResultsVulnerabilityInput[]>();
@@ -231,7 +235,7 @@ export function deriveExposures(
 
     for (const [key, [vulnerabilityId, pkg]] of sortedKeys) {
       const observations = runs.map((run, i): Observation => {
-        if (run.status !== "done") return "gap";
+        if (run.status !== "done" || lostLockfile(i)) return "gap";
         return hits[i]!.has(key) ? "present" : "absent";
       });
       for (const span of walk(observations)) {
