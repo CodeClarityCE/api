@@ -84,9 +84,7 @@ describe("Authentication Integration (e2e)", () => {
       expect(response.statusCode).toBe(400);
       expect(response.json().error_code).toBe("PasswordsDoNotMatch");
     });
-
-    // Bug: a duplicate email hits the unique index and returns 500, not 409.
-    it.failing("should reject signup with duplicate email", async () => {
+    it("should reject signup with duplicate email", async () => {
       const body = registrationBody(
         "duplicate@example.com",
         "duplicate",
@@ -127,9 +125,7 @@ describe("Authentication Integration (e2e)", () => {
         }),
       );
     });
-
-    // Bug: an unknown email returns UserDoesNotExist, which reveals who has an account.
-    it.failing("should reject login with invalid email", async () => {
+    it("should reject login with invalid email", async () => {
       const response = await testHelper.makeRequest(
         "POST",
         "/auth/authenticate",
@@ -197,9 +193,20 @@ describe("Authentication Integration (e2e)", () => {
       expect(response.statusCode).toBe(401);
       expect(response.json().error_code).toBe("NotAuthenticated");
     });
+    it("should never return a password hash", async () => {
+      for (const url of ["/auth/user", "/org?page=0&entries_per_page=5"]) {
+        const response = await testHelper.makeAuthenticatedRequest(
+          "GET",
+          url,
+          testUser.accessToken,
+        );
 
-    // Bug: the guard checks "activated" before validity, so this returns 400.
-    it.failing("should reject request with invalid token", async () => {
+        expect(response.statusCode).toBe(200);
+        expect(response.payload).not.toContain('"password"');
+      }
+    });
+
+    it("should reject request with invalid token", async () => {
       const response = await testHelper.makeAuthenticatedRequest(
         "GET",
         "/auth/user",
@@ -209,9 +216,7 @@ describe("Authentication Integration (e2e)", () => {
       expect(response.statusCode).toBe(401);
       expect(response.json().error_code).toBe("NotAuthenticated");
     });
-
-    // Bug: same guard order as the invalid token case.
-    it.failing("should reject request with expired token", async () => {
+    it("should reject request with expired token", async () => {
       // A malformed token whose payload is already expired.
       const expiredToken =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyMzkwMjJ9.invalid";

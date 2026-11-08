@@ -96,9 +96,7 @@ describe("Projects Integration (e2e)", () => {
       expect(response.statusCode).toBe(403);
       expect(response.json().error_code).toBe("NotAuthorized");
     });
-
-    // Bug: a missing description reaches the database and returns 500.
-    it.failing("should validate required fields", async () => {
+    it("should validate required fields", async () => {
       // Act
       const response = await testHelper.makeAuthenticatedRequest(
         "POST",

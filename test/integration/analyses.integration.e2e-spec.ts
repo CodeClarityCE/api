@@ -319,9 +319,7 @@ describe("Analyses Integration (e2e)", () => {
         }),
       );
     });
-
-    // Bug: the tag is stored, but the entity column has no @Expose, so it is never returned.
-    it.failing("should return the analysis tag", async () => {
+    it("should return the analysis tag", async () => {
       const response = await testHelper.makeAuthenticatedRequest(
         "GET",
         `/org/${adminUser.organization.id}/projects/${projectId}/analyses/${analysisId}`,
