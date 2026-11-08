@@ -8,7 +8,7 @@
   },
   "setupFilesAfterEnv": ["<rootDir>/setup-e2e.ts"],
   "transformIgnorePatterns": [
-    "^(?!.*@nestjs\\+(?:typeorm|config)).*/node_modules/"
+    "^(?!.*@nestjs\\+).*/node_modules/"
   ],
   "transform": {
     "^.+\\.(t|j)s$": [
