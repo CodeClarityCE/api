@@ -49,7 +49,9 @@ function isClose(actual: number, expected: number): boolean {
 /** Paths where `actual` differs from `expected`, numbers within tolerance. */
 function differences(actual: unknown, expected: unknown, path = "$"): string[] {
   if (typeof expected === "number" && typeof actual === "number") {
-    return isClose(actual, expected) ? [] : [`${path}: ${actual} != ${expected}`];
+    return isClose(actual, expected)
+      ? []
+      : [`${path}: ${actual} != ${expected}`];
   }
   if (Array.isArray(expected) && Array.isArray(actual)) {
     if (actual.length !== expected.length) {

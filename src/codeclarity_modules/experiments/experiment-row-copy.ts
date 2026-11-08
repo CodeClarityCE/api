@@ -9,6 +9,7 @@
  * read back from jsonb and are only as well-formed as the plugin that wrote
  * them, so every field is checked rather than trusted.
  */
+import type { VulnerableVersions } from "./experiment-vulnerable-versions";
 
 /** The run summary columns (analyses.parquet). */
 export interface RunSummaryRow {
@@ -61,6 +62,16 @@ export interface VulnerabilityInstanceRow {
   published_date: string | null;
   modified_date: string | null;
   withdrawn_date: string | null;
+  /** Affected versions of every source that matched, null when none did */
+  vulnerable_versions: VulnerableVersions | null;
+}
+
+/** One package resolved in one workspace at a commit. */
+export interface ProbePackage {
+  workspace: string;
+  name: string;
+  version: string;
+  direct: boolean;
 }
 
 export interface RunRows {
@@ -100,7 +111,10 @@ function firstString(...values: unknown[]): string | null {
   return null;
 }
 
-function instanceRow(workspace: string, instance: JsonObject): VulnerabilityInstanceRow {
+function instanceRow(
+  workspace: string,
+  instance: JsonObject,
+): VulnerabilityInstanceRow {
   const severity = objectOrEmpty(instance["Severity"]);
   const epss = objectOrEmpty(instance["EPSS"]);
   const conflict = objectOrEmpty(instance["Conflict"]);
@@ -136,7 +150,63 @@ function instanceRow(workspace: string, instance: JsonObject): VulnerabilityInst
       gcve["dateUpdated"],
     ),
     withdrawn_date: stringOrNull(osv["withdrawn"]),
+    vulnerable_versions: vulnerableVersions(instance),
   };
+}
+
+/** A vuln-finder Semver as a version string, null for the zero (unset) one. */
+function semverString(value: unknown): string | null {
+  if (!isObject(value)) return null;
+  const [major, minor, patch] = ["Major", "Minor", "Patch"].map(
+    (key) => numberOrNull(value[key]) ?? 0,
+  );
+  const pre = stringOrNull(value["PreReleaseTag"]);
+  if (!major && !minor && !patch && pre === null) return null;
+  return `${major}.${minor}.${patch}${pre === null ? "" : `-${pre}`}`;
+}
+
+/** Any non-empty string or true flag inside: Go's non-zero struct. */
+function hasContent(value: unknown): boolean {
+  if (typeof value === "string") return value !== "";
+  if (value === true) return true;
+  if (Array.isArray(value)) return value.some(hasContent);
+  return isObject(value) && Object.values(value).some(hasContent);
+}
+
+/** The union of the affected versions of every source match flagged vulnerable. */
+function vulnerableVersions(instance: JsonObject): VulnerableVersions | null {
+  const matches = ["OSVMatch", "NVDMatch", "GCVEMatch"]
+    .map((key) => objectOrEmpty(instance[key]))
+    .filter((match) => match["Vulnerable"] === true);
+  if (matches.length === 0) return null;
+  const versions: VulnerableVersions = {
+    ranges: [],
+    exact: [],
+    universal: false,
+  };
+  for (const match of matches) {
+    const affected = Array.isArray(match["AffectedInfo"])
+      ? match["AffectedInfo"]
+      : [];
+    for (const info of affected.filter(isObject)) {
+      for (const range of Array.isArray(info["Ranges"])
+        ? info["Ranges"].filter(isObject)
+        : []) {
+        versions.ranges.push({
+          introduced: semverString(range["IntroducedSemver"]),
+          fixed: semverString(range["FixedSemver"]),
+        });
+      }
+      for (const exact of Array.isArray(info["Exact"])
+        ? info["Exact"].filter(isObject)
+        : []) {
+        const version = stringOrNull(exact["VersionString"]);
+        if (version !== null) versions.exact.push(version);
+      }
+      if (hasContent(info["Universal"])) versions.universal = true;
+    }
+  }
+  return versions;
 }
 
 /** [workspace name, workspace payload] for every well-formed workspace. */
@@ -157,16 +227,21 @@ export function isUsablePluginResult(blob: unknown): boolean {
   return objectOrEmpty(blob["analysis_info"])["status"] !== "failure";
 }
 
-/** What js-sbom reports when a commit has no package.json and lockfile pair. */
+/** Why a done run is empty: its snapshot predates the repo or its lockfile */
+export const NO_LOCKFILE_YET = "no_lockfile_yet";
+
+/** What js-sbom reports when a commit has no JavaScript project or lockfile. */
 const NO_LOCKFILE_ERRORS = [
   "no lock file found",
   "no package.json and lock file pair found",
+  "cannot be analyzed by JavaScript analyzer",
 ];
 
 /** A failed js-sbom result whose commit had no lockfile yet. */
 export function isNoLockfileResult(blob: unknown): boolean {
   if (!isObject(blob)) return false;
-  const info = objectOrEmpty(blob["analysis_info"]);
+  // js-sbom's early failures use the camelCase key
+  const info = objectOrEmpty(blob["analysis_info"] ?? blob["analysisInfo"]);
   if (info["status"] !== "failure" || !Array.isArray(info["errors"])) {
     return false;
   }
@@ -259,4 +334,25 @@ export function mapRunRows(sbom: unknown, vulns: unknown): RunRows {
   summary.vulnerable_dependencies = affected.size;
 
   return { summary, vulnerabilities };
+}
+
+/** Every (workspace, package, version) a js-sbom result resolves, with its direct flag. */
+export function mapProbePackages(sbom: unknown): ProbePackage[] {
+  const packages: ProbePackage[] = [];
+  for (const [workspace, ws] of workspaces(sbom)) {
+    for (const [name, versions] of Object.entries(
+      objectOrEmpty(ws["dependencies"]),
+    )) {
+      for (const [version, flags] of Object.entries(objectOrEmpty(versions))) {
+        if (!isObject(flags)) continue;
+        packages.push({
+          workspace,
+          name,
+          version,
+          direct: flags["Direct"] === true,
+        });
+      }
+    }
+  }
+  return packages;
 }

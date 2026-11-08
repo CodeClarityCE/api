@@ -79,7 +79,7 @@ export function packagesToClear(
 
 /** Ranks from 1 in input order; tied values share the mean of their ranks. */
 export function averageRanks(values: readonly number[]): number[] {
-  const order = values.map((_, i) => i).sort((a, b) => (values[a]!) - (values[b]!));
+  const order = values.map((_, i) => i).sort((a, b) => values[a]! - values[b]!);
   const ranks = new Array<number>(values.length);
   let start = 0;
   while (start < order.length) {
@@ -105,8 +105,8 @@ function pearson(x: readonly number[], y: readonly number[]): number {
   let sxx = 0;
   let syy = 0;
   for (let i = 0; i < n; i++) {
-    const dx = (x[i]!) - meanX;
-    const dy = (y[i]!) - meanY;
+    const dx = x[i]! - meanX;
+    const dy = y[i]! - meanY;
     sxy += dx * dy;
     sxx += dx * dx;
     syy += dy * dy;
@@ -129,7 +129,7 @@ function lnGamma(z: number): number {
   const shifted = z - 1;
   let series = LANCZOS[0]!;
   for (let i = 1; i < LANCZOS.length; i++) {
-    series += (LANCZOS[i]!) / (shifted + i);
+    series += LANCZOS[i]! / (shifted + i);
   }
   const t = shifted + 7.5;
   return (
@@ -221,4 +221,57 @@ export function spearman(
   if (Math.abs(rho) === 1) return { rho, p: 0 };
   const t = rho * Math.sqrt(df / ((1 - rho) * (1 + rho)));
   return { rho, p: studentTwoSidedP(t, df) };
+}
+
+/** One step of a Kaplan-Meier curve; survival is 1 before the first step. */
+export interface KmStep {
+  time: number;
+  /** Survival just after `time` */
+  survival: number;
+  /** Observations with a duration of at least `time` */
+  at_risk: number;
+  events: number;
+  censored: number;
+}
+
+/**
+ * Kaplan-Meier estimate for right-censored durations (archive km_curve),
+ * with a step at every distinct time, events or censoring. `events[i]` is
+ * false when observation i is censored at durations[i].
+ */
+export function kaplanMeier(
+  durations: readonly number[],
+  events: readonly boolean[],
+): KmStep[] {
+  const observations = durations
+    .map((time, i) => ({ time, event: events[i] === true }))
+    .filter((o) => !Number.isNaN(o.time))
+    .sort((a, b) => a.time - b.time);
+  const steps: KmStep[] = [];
+  let survival = 1;
+  let i = 0;
+  while (i < observations.length) {
+    const time = observations[i]!.time;
+    const atRisk = observations.length - i;
+    let eventCount = 0;
+    let censored = 0;
+    for (; i < observations.length && observations[i]!.time === time; i++) {
+      if (observations[i]!.event) eventCount++;
+      else censored++;
+    }
+    survival *= 1 - eventCount / atRisk;
+    steps.push({
+      time,
+      survival,
+      at_risk: atRisk,
+      events: eventCount,
+      censored,
+    });
+  }
+  return steps;
+}
+
+/** The first time survival drops to one half or below, NaN if it never does. */
+export function kmMedian(curve: readonly KmStep[]): number {
+  return curve.find((step) => step.survival <= 0.5)?.time ?? NaN;
 }

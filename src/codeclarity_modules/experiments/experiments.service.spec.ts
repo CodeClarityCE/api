@@ -222,6 +222,22 @@ describe("ExperimentsService", () => {
       );
     });
 
+    it("freezes the analysis budget given at creation", async () => {
+      await service.create("org-1", { ...body, analysis_budget: 500 }, user);
+
+      expect(experimentRepository["save"]).toHaveBeenCalledWith(
+        expect.objectContaining({ analysis_budget: 500 }),
+      );
+    });
+
+    it("creates an experiment without a budget by default", async () => {
+      await service.create("org-1", body, user);
+
+      expect(experimentRepository["save"]).toHaveBeenCalledWith(
+        expect.objectContaining({ analysis_budget: null }),
+      );
+    });
+
     it("looks the dataset up within the organization", async () => {
       datasetRepository["findOne"]!.mockResolvedValue(null);
 
@@ -362,6 +378,7 @@ describe("ExperimentsService", () => {
         grid_interval: "month",
         grid_count: 0,
         grid_dates: [],
+        analysis_budget: null,
       });
     });
 
@@ -375,6 +392,33 @@ describe("ExperimentsService", () => {
       const summary = await service.get("org-1", "exp-1", user);
 
       expect(summary.grid_dates).toEqual(["2026-10-23", "2026-10-30"]);
+    });
+
+    it("get estimates the analyses: every snapshot plus about two fix probes per entry per grid interval", async () => {
+      experimentRepository["findOne"]!.mockResolvedValue({
+        ...experiment,
+        grid_interval: "week",
+        grid_count: 2,
+      });
+      // Three entries, each with two grid dates and HEAD
+      runRepository["createQueryBuilder"]!().getRawMany.mockResolvedValue([
+        { experiment_id: "exp-1", status: "pending", count: "9" },
+      ]);
+
+      const summary = await service.get("org-1", "exp-1", user);
+
+      expect(summary.estimated_analyses).toBe(21);
+    });
+
+    it("get reports the analysis budget", async () => {
+      experimentRepository["findOne"]!.mockResolvedValue({
+        ...experiment,
+        analysis_budget: 500,
+      });
+
+      const summary = await service.get("org-1", "exp-1", user);
+
+      expect(summary.analysis_budget).toBe(500);
     });
 
     it("get hides experiments of other organizations", async () => {

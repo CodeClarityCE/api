@@ -1,16 +1,34 @@
 /**
- * Experiment results (spec #23, "Data and results"): the dataset-level
- * aggregates of an experiment, computed on read from its tidy rows. Block
- * names and semantics follow the archived js-vuln-study harness
- * (numbers.py, stats.py) so the payload is shaped like its
- * results_numbers.json, minus the blocks v1 drops.
- *
- * Pure and free of Nest and TypeORM imports: the results endpoint, the
- * results.json export and the parity test all call
- * aggregateExperimentResults with plain rows. Where the harness produced
- * NaN the payload carries null.
+ * Experiment results computed on read from tidy rows, shaped like the archived
+ * harness's results_numbers.json. Pure; null where the harness had NaN.
  */
-import type { RunSummaryRow, VulnerabilityInstanceRow } from "./experiment-row-copy";
+import { type AnalysisBudgetUsage, isBudgetSpent } from "./experiment-budget";
+import {
+  type DatingPrecision,
+  deriveExposures,
+  type Exposure,
+  type ExposureEvent,
+  FIX_KINDS,
+  type FixKind,
+} from "./experiment-exposures";
+import { groupByGridDate, isHead } from "./experiment-grid";
+import { loadOverTime, type LoadRow } from "./experiment-load";
+import type {
+  ResultsProbeAnalysisInput,
+  ResultsProbeIntervalInput,
+} from "./experiment-probes";
+import { type ResidenceBlock, residenceBlock } from "./experiment-residence";
+import {
+  NO_LOCKFILE_YET,
+  type ProbePackage,
+  type RunSummaryRow,
+  type VulnerabilityInstanceRow,
+} from "./experiment-row-copy";
+import {
+  SEVERITY_ORDER,
+  type SeverityCounts,
+  severityOf,
+} from "./experiment-severity";
 import {
   gini,
   median,
@@ -18,6 +36,14 @@ import {
   quantile,
   spearman,
 } from "./experiment-stats";
+import {
+  exposureSurvival,
+  type ExposureSurvivalBlock,
+} from "./experiment-survival";
+import {
+  upstreamLeverage,
+  type UpstreamLeverageBlock,
+} from "./experiment-upstream-leverage";
 
 /** A done run's summary row with the rank of its dataset entry. */
 export type ResultsSummaryInput = Pick<
@@ -39,7 +65,17 @@ export type ResultsVulnerabilityInput = Pick<
   | "conflict_flag"
   | "winning_source"
   | "withdrawn_date"
-> & { run_id: string };
+> &
+  Partial<
+    Pick<
+      VulnerabilityInstanceRow,
+      | "workspace"
+      | "affected_version"
+      | "direct_dependency"
+      | "published_date"
+      | "vulnerable_versions"
+    >
+  > & { run_id: string };
 
 /** Any run of the experiment, done or not. No grid date means HEAD. */
 export interface ResultsRunInput {
@@ -49,6 +85,30 @@ export interface ResultsRunInput {
   grid_date?: Date | null;
   /** The run whose copied rows this snapshot reads (itself unless shared) */
   rows_run_id?: string;
+  /** Exposures follow runs that have an entry and a grid index */
+  dataset_entry_id?: string;
+  grid_index?: number;
+  /** The pinned commit, null when the snapshot has none yet */
+  commit_hash?: string | null;
+  committed_at?: Date | null;
+  /** The knowledge its rows were matched against, null if none was recorded */
+  knowledge?: KnowledgeSnapshot | null;
+  /** The analysis it reads and its branch, for probe planning */
+  analysis_id?: string | null;
+  branch?: string | null;
+}
+
+/**
+ * A probe outcome row: the packages one entry resolves at one commit.
+ * Readers may pass only the packages they care about.
+ */
+export type { ProbePackage };
+export type { ResultsProbeAnalysisInput, ResultsProbeIntervalInput };
+
+export interface ResultsProbeInput {
+  dataset_entry_id: string;
+  commit_hash: string;
+  packages: ProbePackage[];
 }
 
 export interface KnowledgeSnapshot {
@@ -72,17 +132,20 @@ export interface ExperimentResultsInput {
   /** One per done run: the project universe of every aggregate */
   summaries: ResultsSummaryInput[];
   vulnerabilities: ResultsVulnerabilityInput[];
+  /** Probe outcome rows of snapshot and fix probe commits */
+  probes?: ResultsProbeInput[];
+  /** The lockfile-touching commits listed between snapshot commits */
+  probe_intervals?: ResultsProbeIntervalInput[];
+  /** Fix probe analyses, pending, done or failed */
+  probe_analyses?: ResultsProbeAnalysisInput[];
+  /** The analysis budget and what was submitted, absent without one */
+  budget?: AnalysisBudgetUsage | null;
   provenance: ResultsProvenanceInput;
+  /** When the results are read: HEAD's date while the experiment runs; now by default */
+  read_at?: Date;
 }
 
-export const SEVERITY_ORDER = [
-  "CRITICAL",
-  "HIGH",
-  "MEDIUM",
-  "LOW",
-  "NONE",
-] as const;
-export type SeverityCounts = Record<(typeof SEVERITY_ORDER)[number], number>;
+export { SEVERITY_ORDER, type SeverityCounts } from "./experiment-severity";
 
 /** The scalar headline metrics, one sweep row per vulnerability subset. */
 export interface HeadlineScalars {
@@ -166,6 +229,94 @@ export interface CoverageBlock {
   skip_reasons: Record<string, number>;
 }
 
+/** Run states of one snapshot of the grid. */
+export interface GridCoverageRow {
+  /** YYYY-MM-DD, null for HEAD */
+  grid_date: string | null;
+  runs: number;
+  /** Done with rows */
+  done: number;
+  /** Done but empty: no lockfile yet at that date */
+  empty: number;
+  failed: number;
+  skipped: number;
+  pending: number;
+  /** Its runs were matched against different knowledge */
+  mixed_knowledge: boolean;
+}
+
+/** A lag distribution in days. */
+export interface LagSummary {
+  n: number;
+  median: number | null;
+  p25: number | null;
+  p75: number | null;
+  min: number | null;
+  max: number | null;
+  /** Lags below zero: fixed before the advisory was published */
+  before_disclosure: number;
+}
+
+/** One group of a lag block: a severity class or a fix kind. */
+export interface LagGroup extends LagSummary {
+  key: string;
+}
+
+export interface FixLagPoint {
+  severity: keyof SeverityCounts;
+  kind: FixKind | null;
+  lag_days: number;
+  precision: DatingPrecision;
+}
+
+/** Disclosure to fix, over fixes whose advisory has a publication date. */
+export interface FixLagBlock {
+  /** Every fix, with or without a lag */
+  fixes: number;
+  /** Share of fixes only dated to a snapshot interval */
+  snapshot_precision_share: number | null;
+  overall: LagSummary;
+  /** Severity order, groups without fixes left out */
+  by_severity: LagGroup[];
+  /** Fix kind order, then "unknown" for fixes whose kind is not known */
+  by_kind: LagGroup[];
+  points: FixLagPoint[];
+}
+
+export interface ExposuresBlock {
+  exposures: number;
+  open: number;
+  fixed: number;
+  introductions: number;
+  /** Present at the first observation: no introduction */
+  present_at_first_observation: number;
+  fix_precision: Record<DatingPrecision, number>;
+  introduction_precision: Record<DatingPrecision, number>;
+}
+
+/** Events by how fix probes ended; not_probed while they have not. */
+export interface ProbeOutcomeCounts {
+  found: number;
+  ambiguous: number;
+  not_found: number;
+  not_probed: number;
+}
+
+export interface ProbesBlock {
+  fixes: ProbeOutcomeCounts;
+  introductions: ProbeOutcomeCounts;
+  /** Not-found events per reason, most frequent first */
+  not_found_reasons: Record<string, number>;
+  budget: ProbeBudget;
+}
+
+/** The analysis budget, what was submitted against it and whether it is spent. */
+export interface ProbeBudget {
+  analysis_budget: number | null;
+  analyses_submitted: number | null;
+  spent: boolean;
+}
+
 export interface ProvenanceBlock extends ResultsProvenanceInput {
   /** Knowledge sources differ between the start and end snapshots */
   knowledge_changed: boolean;
@@ -177,6 +328,8 @@ export interface ProvenanceBlock extends ResultsProvenanceInput {
  */
 export interface ExperimentResults {
   coverage: CoverageBlock;
+  /** Coverage per grid date, oldest first, HEAD last */
+  grid_coverage: GridCoverageRow[];
   headline: Headline;
   sweep: SweepRow[];
   epss: EpssBlock;
@@ -186,8 +339,23 @@ export interface ExperimentResults {
   winning_source_head: Record<string, number>;
   rqc: RqcBlock;
   rqd: RqdRow[];
+  /** Exposures and fixes over the whole grid (hindsight view) */
+  exposures: ExposuresBlock;
+  fix_lag: FixLagBlock;
+  /** How fix probes dated the fixes and introductions */
+  probes: ProbesBlock;
+  /** Instances per grid date in the hindsight and as-of views, HEAD last */
+  load_over_time: LoadRow[];
+  /** Introduction to disclosure, introductions after it apart */
+  residence: ResidenceBlock;
+  /** Kaplan-Meier survival of exposures, open ones censored at HEAD */
+  exposure_survival: ExposureSurvivalBlock;
+  /** Packages to clear per grid date, removed_transitive share per interval */
+  upstream_leverage: UpstreamLeverageBlock;
   provenance: ProvenanceBlock;
 }
+
+export type { LoadRow } from "./experiment-load";
 
 function nullIfNaN(value: number): number | null {
   return Number.isNaN(value) ? null : value;
@@ -197,7 +365,10 @@ function ratio(numerator: number, denominator: number): number | null {
   return denominator ? numerator / denominator : null;
 }
 
-function countBy<T>(items: readonly T[], key: (item: T) => string | null): Map<string, number> {
+function countBy<T>(
+  items: readonly T[],
+  key: (item: T) => string | null,
+): Map<string, number> {
   const counts = new Map<string, number>();
   for (const item of items) {
     const k = key(item);
@@ -217,13 +388,6 @@ function rankedEntries(counts: Map<string, number>): [string, number][] {
   return [...counts.entries()].sort(
     ([ka, a], [kb, b]) => b - a || byKey(ka, kb),
   );
-}
-
-function severityOf(severityClass: string | null): keyof SeverityCounts {
-  const upper = (severityClass ?? "").toUpperCase();
-  return (SEVERITY_ORDER as readonly string[]).includes(upper)
-    ? (upper as keyof SeverityCounts)
-    : "NONE";
 }
 
 function sumOf(values: readonly number[]): number {
@@ -288,7 +452,10 @@ export function headline(
     load_max: nProjects ? Math.max(...loads) : null,
     sev_counts: sevCounts,
     high_critical_share: ratio(critHigh, instances),
-    top10_pkg_share: ratio(sumOf(largestFirst(packageCounts).slice(0, 10)), instances),
+    top10_pkg_share: ratio(
+      sumOf(largestFirst(packageCounts).slice(0, 10)),
+      instances,
+    ),
     top10_proj_share: ratio(sumOf(largestFirst(loads).slice(0, 10)), total),
     gini_pkg: nullIfNaN(gini(packageCounts)),
     gini_proj: nullIfNaN(gini(loads)),
@@ -296,10 +463,7 @@ export function headline(
     pkgs_clear_80: packagesToClear(packageCounts, 0.8),
     pkgs_clear_90: packagesToClear(packageCounts, 0.9),
     top_packages: rankedEntries(spread).slice(0, 10),
-    high_critical_share_of_classed: ratio(
-      critHigh,
-      instances - sevCounts.NONE,
-    ),
+    high_critical_share_of_classed: ratio(critHigh, instances - sevCounts.NONE),
   };
 }
 
@@ -416,6 +580,148 @@ function coverage(runs: readonly ResultsRunInput[]): CoverageBlock {
   };
 }
 
+function gridCoverage(runs: readonly ResultsRunInput[]): GridCoverageRow[] {
+  return groupByGridDate(runs).map(({ grid_date, runs: group }) => {
+    const row: GridCoverageRow = {
+      grid_date,
+      runs: group.length,
+      done: 0,
+      empty: 0,
+      failed: 0,
+      skipped: 0,
+      pending: 0,
+      mixed_knowledge: false,
+    };
+    // The first knowledge seen, to compare the others with
+    let first: KnowledgeSnapshot | null = null;
+    for (const run of group) {
+      if (run.knowledge) {
+        if (!first) first = run.knowledge;
+        else if (!sameKnowledge(first, run.knowledge))
+          row.mixed_knowledge = true;
+      }
+      if (run.status === "done") {
+        if (run.error === NO_LOCKFILE_YET) row.empty++;
+        else row.done++;
+      } else if (run.status === "failed") row.failed++;
+      else if (run.status === "skipped") row.skipped++;
+      else row.pending++;
+    }
+    return row;
+  });
+}
+
+function lagSummary(lags: readonly number[]): LagSummary {
+  const stat = (value: number): number | null => nullIfNaN(value);
+  return {
+    n: lags.length,
+    median: stat(median(lags)),
+    p25: stat(quantile(lags, 0.25)),
+    p75: stat(quantile(lags, 0.75)),
+    min: lags.length ? Math.min(...lags) : null,
+    max: lags.length ? Math.max(...lags) : null,
+    before_disclosure: lags.filter((lag) => lag < 0).length,
+  };
+}
+
+function lagGroups(
+  points: readonly FixLagPoint[],
+  keys: readonly string[],
+  keyOf: (point: FixLagPoint) => string,
+): LagGroup[] {
+  return keys
+    .map((key) => ({
+      key,
+      ...lagSummary(
+        points.filter((p) => keyOf(p) === key).map((p) => p.lag_days),
+      ),
+    }))
+    .filter((group) => group.n > 0);
+}
+
+function fixLag(exposures: readonly Exposure[]): FixLagBlock {
+  const fixes = exposures.flatMap((e) =>
+    e.fix ? [{ ...e.fix, severity: e.severity }] : [],
+  );
+  const points: FixLagPoint[] = fixes.flatMap((fix) =>
+    fix.lag_days === null
+      ? []
+      : [
+          {
+            severity: fix.severity,
+            kind: fix.kind,
+            lag_days: fix.lag_days,
+            precision: fix.precision,
+          },
+        ],
+  );
+  return {
+    fixes: fixes.length,
+    snapshot_precision_share: ratio(
+      fixes.filter((fix) => fix.precision === "snapshot").length,
+      fixes.length,
+    ),
+    overall: lagSummary(points.map((p) => p.lag_days)),
+    by_severity: lagGroups(points, SEVERITY_ORDER, (p) => p.severity),
+    by_kind: lagGroups(
+      points,
+      [...FIX_KINDS, "unknown"],
+      (p) => p.kind ?? "unknown",
+    ),
+    points,
+  };
+}
+
+function exposuresBlock(exposures: readonly Exposure[]): ExposuresBlock {
+  const precision = (
+    events: readonly ({ precision: DatingPrecision } | null)[],
+  ): Record<DatingPrecision, number> => ({
+    commit: events.filter((e) => e?.precision === "commit").length,
+    snapshot: events.filter((e) => e?.precision === "snapshot").length,
+  });
+  return {
+    exposures: exposures.length,
+    open: exposures.filter((e) => e.open).length,
+    fixed: exposures.filter((e) => e.fix).length,
+    introductions: exposures.filter((e) => e.introduction).length,
+    present_at_first_observation: exposures.filter((e) => !e.introduction)
+      .length,
+    fix_precision: precision(exposures.map((e) => e.fix)),
+    introduction_precision: precision(exposures.map((e) => e.introduction)),
+  };
+}
+
+function probesBlock(
+  exposures: readonly Exposure[],
+  budget: AnalysisBudgetUsage | null | undefined,
+): ProbesBlock {
+  const counts = (events: readonly ExposureEvent[]): ProbeOutcomeCounts => ({
+    found: events.filter((e) => e.probe_outcome === "found").length,
+    ambiguous: events.filter((e) => e.probe_outcome === "ambiguous").length,
+    not_found: events.filter((e) => e.probe_outcome === "not_found").length,
+    not_probed: events.filter((e) => e.probe_outcome === null).length,
+  });
+  const fixes = exposures.flatMap((e) => (e.fix ? [e.fix] : []));
+  const introductions = exposures.flatMap((e) =>
+    e.introduction ? [e.introduction] : [],
+  );
+  const notFound = [...fixes, ...introductions].filter(
+    (e) => e.probe_outcome === "not_found",
+  );
+  return {
+    fixes: counts(fixes),
+    introductions: counts(introductions),
+    not_found_reasons: Object.fromEntries(
+      rankedEntries(countBy(notFound, (e) => e.probe_reason)),
+    ),
+    budget: {
+      analysis_budget: budget?.analysis_budget ?? null,
+      analyses_submitted: budget?.analyses_submitted ?? null,
+      spent: isBudgetSpent(budget),
+    },
+  };
+}
+
 /** The same source timestamps and the same number of EPSS rows. */
 function sameKnowledge(a: KnowledgeSnapshot, b: KnowledgeSnapshot): boolean {
   if (a.epss_rows !== b.epss_rows) return false;
@@ -433,12 +739,14 @@ function provenance(input: ResultsProvenanceInput): ProvenanceBlock {
   const { knowledge_start: start, knowledge_end: end } = input;
   return {
     ...input,
-    knowledge_changed: start !== null && end !== null && !sameKnowledge(start, end),
+    knowledge_changed:
+      start !== null && end !== null && !sameKnowledge(start, end),
   };
 }
 
-function isHead(run: ResultsRunInput): boolean {
-  return !run.grid_date;
+/** HEAD's date: when the experiment ended, else the time the results are read. */
+export function headCutoff(ended_on: Date | null, readAt: Date): Date {
+  return ended_on ?? readAt;
 }
 
 /** Run ids whose rows only grid snapshots read: outside the HEAD blocks. */
@@ -453,14 +761,17 @@ function gridOnlyRunIds(runs: readonly ResultsRunInput[]): Set<string> {
 }
 
 /**
- * Every aggregate of an experiment, from its runs and tidy rows, over the
- * HEAD snapshot. Its done runs (one summary each) are the project
- * universe: a done run without instances counts with load 0, instances of
- * other runs are ignored.
+ * Every aggregate of an experiment. HEAD blocks use HEAD's done runs as the
+ * project universe (load 0 without instances); grid blocks use every run.
  */
 export function aggregateExperimentResults(
   input: ExperimentResultsInput,
 ): ExperimentResults {
+  const exposures = deriveExposures(input);
+  const head = headCutoff(
+    input.provenance.ended_on,
+    input.read_at ?? new Date(),
+  );
   const gridOnly = gridOnlyRunIds(input.runs);
   const summaries = input.summaries.filter((s) => !gridOnly.has(s.run_id));
   const universe = summaries.map((s) => s.run_id);
@@ -470,6 +781,7 @@ export function aggregateExperimentResults(
   );
   return {
     coverage: coverage(input.runs.filter(isHead)),
+    grid_coverage: gridCoverage(input.runs),
     headline: headline(universe, vulnerabilities),
     sweep: sweep(universe, vulnerabilities),
     epss: epss(vulnerabilities),
@@ -477,6 +789,21 @@ export function aggregateExperimentResults(
     winning_source_head: mix(vulnerabilities, (v) => v.winning_source),
     rqc: rqc(summaries),
     rqd: rqd(summaries),
+    exposures: exposuresBlock(exposures),
+    fix_lag: fixLag(exposures),
+    probes: probesBlock(exposures, input.budget),
+    load_over_time: loadOverTime({
+      runs: input.runs,
+      vulnerabilities: input.vulnerabilities,
+      head_cutoff: head,
+    }),
+    residence: residenceBlock(exposures),
+    exposure_survival: exposureSurvival(exposures, head),
+    upstream_leverage: upstreamLeverage(
+      input.runs,
+      input.vulnerabilities,
+      exposures,
+    ),
     provenance: provenance(input.provenance),
   };
 }

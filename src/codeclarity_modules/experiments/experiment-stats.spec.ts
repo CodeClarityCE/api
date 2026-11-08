@@ -1,6 +1,8 @@
 import {
   averageRanks,
   gini,
+  kaplanMeier,
+  kmMedian,
   median,
   packagesToClear,
   quantile,
@@ -102,6 +104,44 @@ describe("experiment stats", () => {
       expect(constant.rho).toBeNaN();
       expect(constant.p).toBeNaN();
       expect(spearman([1, 2], [1, 2]).p).toBeNaN();
+    });
+  });
+
+  describe("kaplanMeier", () => {
+    // Worked by hand: durations 1, 2, 2+, 3, 4+, 5 (+ = censored)
+    const durations = [3, 1, 2, 5, 2, 4];
+    const events = [true, true, false, true, true, false];
+
+    it("steps down at each event time, keeping censored ones at risk until they leave", () => {
+      const curve = kaplanMeier(durations, events);
+      expect(curve.map((s) => s.time)).toEqual([1, 2, 3, 4, 5]);
+      expect(curve.map((s) => s.at_risk)).toEqual([6, 5, 3, 2, 1]);
+      expect(curve.map((s) => s.events)).toEqual([1, 1, 1, 0, 1]);
+      expect(curve.map((s) => s.censored)).toEqual([0, 1, 0, 1, 0]);
+      const survival = curve.map((s) => s.survival);
+      expect(survival[0]).toBeCloseTo(5 / 6, 12);
+      expect(survival[1]).toBeCloseTo(4 / 6, 12);
+      expect(survival[2]).toBeCloseTo(8 / 18, 12);
+      expect(survival[3]).toBeCloseTo(8 / 18, 12);
+      expect(survival[4]).toBe(0);
+    });
+
+    it("has no steps for no observations and stays at 1 when all are censored", () => {
+      expect(kaplanMeier([], [])).toEqual([]);
+      expect(
+        kaplanMeier([4, 9], [false, false]).map((s) => s.survival),
+      ).toEqual([1, 1]);
+    });
+
+    it("gives the median as the first time survival reaches one half, else NaN", () => {
+      expect(kmMedian(kaplanMeier(durations, events))).toBe(3);
+      // Two of four fixed by day 10: S(10) = 0.5 exactly
+      expect(
+        kmMedian(kaplanMeier([10, 10, 20, 30], [true, true, false, false])),
+      ).toBe(10);
+      // One of three fixed: S never falls below 2/3
+      expect(kmMedian(kaplanMeier([4, 9, 9], [true, false, false]))).toBeNaN();
+      expect(kmMedian([])).toBeNaN();
     });
   });
 });

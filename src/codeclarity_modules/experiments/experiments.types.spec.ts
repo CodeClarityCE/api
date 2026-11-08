@@ -33,7 +33,19 @@ describe("CreateExperimentBody", () => {
     ).resolves.toEqual([]);
   });
 
+  it("accepts an optional analysis budget of at least one analysis", async () => {
+    await expect(errorsOf({ ...valid, analysis_budget: 1 })).resolves.toEqual(
+      [],
+    );
+    await expect(
+      errorsOf({ ...valid, analysis_budget: null }),
+    ).resolves.toEqual([]);
+  });
+
   it.each([
+    [{ analysis_budget: 0 }, "analysis_budget"],
+    [{ analysis_budget: 2.5 }, "analysis_budget"],
+    [{ analysis_budget: 1_000_001 }, "analysis_budget"],
     [{ grid_interval: "year" }, "grid_interval"],
     [{ grid_count: -1 }, "grid_count"],
     [{ grid_count: 121 }, "grid_count"],

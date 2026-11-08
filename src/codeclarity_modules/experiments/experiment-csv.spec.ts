@@ -154,9 +154,7 @@ describe("experiment CSV encoding", () => {
     it("writes the header then every row of every chunk", async () => {
       const source = syntheticSource(3, 2);
       const text = await readAll(streamCsv(["rank", "name"], source));
-      expect(text).toBe(
-        "rank,name\r\n0,repo-0\r\n1,repo-1\r\n2,repo-2\r\n",
-      );
+      expect(text).toBe("rank,name\r\n0,repo-0\r\n1,repo-1\r\n2,repo-2\r\n");
     });
 
     it("writes only the header when there are no rows", async () => {

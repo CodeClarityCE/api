@@ -19,6 +19,7 @@ import { DatasetEntry } from "../datasets/dataset-entry.entity";
 import { paginated, resolvePagination } from "../datasets/datasets.service";
 
 import { Experiment, ExperimentStatus } from "./experiment.entity";
+import { estimateAnalyses } from "./experiment-budget";
 import {
   DEFAULT_GRID_COUNT,
   DEFAULT_GRID_INTERVAL,
@@ -140,6 +141,7 @@ export class ExperimentsService {
       retries: body.retries ?? EXPERIMENT_DEFAULT_RETRIES,
       grid_interval: gridInterval,
       grid_count: gridCount,
+      analysis_budget: body.analysis_budget ?? null,
       created_on: createdOn,
       organization: { id: orgId },
       created_by: { id: user.userId },
@@ -380,6 +382,7 @@ export class ExperimentsService {
     experiment: Experiment,
     runCounts: ExperimentRunCounts = emptyRunCounts(),
   ): ExperimentSummary {
+    const runCount = Object.values(runCounts).reduce((a, b) => a + b, 0);
     return {
       id: experiment.id,
       name: experiment.name,
@@ -394,6 +397,7 @@ export class ExperimentsService {
       ).flatMap((snapshot) =>
         snapshot.grid_date ? [gridDay(snapshot.grid_date)] : [],
       ),
+      analysis_budget: experiment.analysis_budget ?? null,
       error: experiment.error ?? null,
       dataset_id: experiment.dataset?.id ?? null,
       dataset_name: experiment.dataset?.name ?? null,
@@ -404,8 +408,13 @@ export class ExperimentsService {
       created_on: experiment.created_on,
       started_on: experiment.started_on ?? null,
       ended_on: experiment.ended_on ?? null,
-      run_count: Object.values(runCounts).reduce((a, b) => a + b, 0),
+      run_count: runCount,
       run_counts: runCounts,
+      // One run per entry per snapshot
+      estimated_analyses: estimateAnalyses(
+        Math.round(runCount / (experiment.grid_count + 1)),
+        experiment.grid_count,
+      ),
     };
   }
 }
