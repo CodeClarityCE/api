@@ -8,7 +8,11 @@ import { MemberRole } from "src/base_modules/organizations/memberships/orgMember
 import { MembershipsRepository } from "src/base_modules/shared/repositories";
 import { CodeClarityLogger } from "src/services/logger.service";
 import { TypedPaginatedResponse } from "src/types/apiResponses.types";
-import { AlreadyExists, EntityNotFound } from "src/types/error.types";
+import {
+  AlreadyExists,
+  EntityInUse,
+  EntityNotFound,
+} from "src/types/error.types";
 import {
   PaginationConfig,
   PaginationUserSuppliedConf,
@@ -26,6 +30,7 @@ import {
   gridDay,
   snapshotGrid,
 } from "./experiment-grid";
+import { ExperimentPublishedResults } from "./experiment-published-results.entity";
 import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
 import { ExperimentRunnerService } from "./experiment-runner.service";
 import {
@@ -74,6 +79,8 @@ export class ExperimentsService {
     @InjectRepository(DatasetEntry, "codeclarity")
     private readonly entryRepository: Repository<DatasetEntry>,
     private readonly runner: ExperimentRunnerService,
+    @InjectRepository(ExperimentPublishedResults, "codeclarity")
+    private readonly publishedRepository: Repository<ExperimentPublishedResults>,
   ) {}
 
   /**
@@ -325,6 +332,7 @@ export class ExperimentsService {
    * analyses and clones it produced are left alone.
    * @throws {NotAuthorized} If the user is not an admin of the org
    * @throws {EntityNotFound} If the org has no such experiment
+   * @throws {EntityInUse} If the experiment has Published results
    */
   async delete(
     orgId: string,
@@ -337,6 +345,10 @@ export class ExperimentsService {
       MemberRole.ADMIN,
     );
     const experiment = await this.findInOrg(orgId, experimentId);
+    const published = await this.publishedRepository.exists({
+      where: { experiment: { id: experiment.id } },
+    });
+    if (published) throw new EntityInUse();
     await this.experimentRepository.delete({ id: experiment.id });
     this.logger.log("Experiment deleted", {
       experimentId: experiment.id,

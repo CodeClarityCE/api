@@ -155,6 +155,92 @@ describe("aggregateExperimentResults", () => {
     });
   });
 
+  describe("share intervals", () => {
+    function expectInterval(
+      interval: { low: number; high: number } | null | undefined,
+      low: number,
+      high: number,
+    ): void {
+      expect(interval?.low).toBeCloseTo(low, 4);
+      expect(interval?.high).toBeCloseTo(high, 4);
+    }
+
+    it("gives the headline shares a 95% Wilson interval on their own counts", () => {
+      const { headline } =
+        aggregateExperimentResults(threeRuns).share_intervals;
+      expectInterval(headline.affected_share, 0.2077, 0.9385);
+      expectInterval(headline.high_critical_share, 0.2307, 0.8824);
+      expectInterval(headline.top10_pkg_share, 0.5655, 1);
+      expectInterval(headline.top10_proj_share, 0.6097, 1);
+      expectInterval(headline.high_critical_share_of_classed, 0.3006, 0.9544);
+    });
+
+    it("gives every severity of the mix an interval over all instances", () => {
+      const { severity } =
+        aggregateExperimentResults(threeRuns).share_intervals;
+      expectInterval(severity.CRITICAL, 0.0301, 0.5635);
+      expectInterval(severity.HIGH, 0.0968, 0.7);
+      expectInterval(severity.NONE, 0.0301, 0.5635);
+    });
+
+    it("gives each sweep subset intervals on that subset's counts", () => {
+      const { sweep } = aggregateExperimentResults(
+        input({
+          summaries: [summary("r1", 0), summary("r2", 1)],
+          vulnerabilities: [
+            vuln("r1", "a", { severity_class: "HIGH" }),
+            vuln("r2", "a", { conflict_flag: "MATCH_INCORRECT" }),
+          ],
+        }),
+      ).share_intervals;
+      expect(sweep.map((row) => row.subset)).toEqual([
+        "all",
+        "match_correct_only",
+        "non_withdrawn",
+      ]);
+      // 2 of 2 projects affected over all, 1 of 2 over correct matches
+      expectInterval(sweep[0]?.affected_share, 0.3424, 1);
+      expectInterval(sweep[1]?.affected_share, 0.0945, 0.9055);
+      // the single correct match is high: 1 of 1
+      expectInterval(sweep[1]?.high_critical_share, 0.2065, 1);
+    });
+
+    it("gives the share of instances with an EPSS score an interval", () => {
+      const { share_intervals: intervals, epss } = aggregateExperimentResults(
+        input({
+          summaries: [summary("r1", 0)],
+          vulnerabilities: [
+            vuln("r1", "a", { epss_score: 0.1 }),
+            vuln("r1", "b", { epss_score: 0.2 }),
+            vuln("r1", "c"),
+          ],
+        }),
+      );
+      expect(epss.nonnull_share).toBeCloseTo(2 / 3, 12);
+      expectInterval(intervals.epss_nonnull, 0.2077, 0.9385);
+    });
+
+    it("has no EPSS interval without instances", () => {
+      expect(
+        aggregateExperimentResults(input()).share_intervals.epss_nonnull,
+      ).toBeNull();
+    });
+
+    it("has no intervals without done runs", () => {
+      const { headline, severity, sweep } =
+        aggregateExperimentResults(input()).share_intervals;
+      expect(headline.affected_share).toBeNull();
+      expect(severity.HIGH).toBeNull();
+      expect(sweep[0]?.top10_pkg_share).toBeNull();
+    });
+
+    it("leaves the point estimates untouched", () => {
+      const { headline, sweep } = aggregateExperimentResults(threeRuns);
+      expect(headline).not.toHaveProperty("share_intervals");
+      expect(sweep[0]).not.toHaveProperty("share_intervals");
+    });
+  });
+
   describe("sweep", () => {
     it("recomputes the headline scalars per subset over the same runs", () => {
       const { sweep } = aggregateExperimentResults(

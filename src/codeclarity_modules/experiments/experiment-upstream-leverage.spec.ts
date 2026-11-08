@@ -235,6 +235,43 @@ describe("upstream leverage over time", () => {
     });
   });
 
+  it("gives the removed_transitive and snapshot dating shares 95% Wilson intervals", () => {
+    const { share_intervals: intervals } = aggregateExperimentResults(
+      input({
+        runs: [...runs("e1"), ...runs("e2"), ...runs("e3"), ...runs("e4")],
+        vulnerabilities: [
+          ...hits("e1-0", "t"),
+          ...hits("e1-0", "u"),
+          ...hits("e2-0", "t"),
+          ...hits("e2-1", "t"),
+          ...hits("e3-0", "t"),
+          ...hits("e3-1", "t"),
+          ...hits("e4-0", "t"),
+          ...hits("e4-1", "t"),
+          ...hits("e4-2", "t"),
+        ],
+        probes: [probe("e1", 1, ["u", "express"]), probe("e2", 2, ["express"])],
+      }),
+    );
+
+    const close = (
+      interval: { low: number; high: number } | null | undefined,
+      low: number,
+      high: number,
+    ): void => {
+      expect(interval?.low).toBeCloseTo(low, 4);
+      expect(interval?.high).toBeCloseTo(high, 4);
+    };
+    // 2 of 3 fixes of known kind were transitive
+    close(intervals.removed_transitive.overall, 0.2077, 0.9385);
+    // 1 of 2, 1 of 1, then an interval of unknown kinds only
+    close(intervals.removed_transitive.by_interval[0], 0.0945, 0.9055);
+    close(intervals.removed_transitive.by_interval[1], 0.2065, 1);
+    expect(intervals.removed_transitive.by_interval[2]).toBeNull();
+    // All 5 fixes are dated only to a snapshot interval
+    close(intervals.fix_snapshot_precision, 0.5655, 1);
+  });
+
   it("counts a direct removal as known but not transitive", () => {
     const results = aggregateExperimentResults(
       input({

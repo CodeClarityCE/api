@@ -3,6 +3,7 @@ import { Readable } from "node:stream";
 
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
 
+import type { ExperimentFiguresService } from "./experiment-figures.service";
 import type { ExperimentResultsService } from "./experiment-results.service";
 import { ExperimentsController } from "./experiments.controller";
 import type { ExperimentsService } from "./experiments.service";
@@ -26,6 +27,7 @@ describe("ExperimentsController exports", () => {
     controller = new ExperimentsController(
       {} as ExperimentsService,
       service as unknown as ExperimentResultsService,
+      {} as ExperimentFiguresService,
     );
     headers = {};
     sent = undefined;
@@ -59,6 +61,7 @@ describe("ExperimentsController exports", () => {
       "org-1",
       "exp-1",
       user,
+      undefined,
     );
     expect(headers).toEqual({
       "content-type": "text/csv; charset=utf-8",
@@ -96,7 +99,12 @@ describe("ExperimentsController exports", () => {
 
     await controller[method](user, "org-1", "exp-1", reply);
 
-    expect(service[method]).toHaveBeenCalledWith("org-1", "exp-1", user);
+    expect(service[method]).toHaveBeenCalledWith(
+      "org-1",
+      "exp-1",
+      user,
+      undefined,
+    );
     expect(headers).toEqual({
       "content-type": "text/csv; charset=utf-8",
       "content-disposition": `attachment; filename="top100-head-${file}"`,
@@ -118,6 +126,22 @@ describe("ExperimentsController exports", () => {
       "content-disposition": 'attachment; filename="top100-head-results.json"',
     });
     expect(JSON.parse(sent as string)).toEqual(results);
+  });
+
+  it("exports the requested Published results version", async () => {
+    service["exportResults"]!.mockResolvedValue({
+      experiment_name: "top100-head",
+      results: {},
+    });
+
+    await controller.exportResults(user, "org-1", "exp-1", reply, 2);
+
+    expect(service["exportResults"]).toHaveBeenCalledWith(
+      "org-1",
+      "exp-1",
+      user,
+      2,
+    );
   });
 
   it("keeps only filename-safe characters of the experiment name", async () => {
@@ -149,6 +173,7 @@ describe("ExperimentsController estimate", () => {
     const controller = new ExperimentsController(
       {} as ExperimentsService,
       {} as ExperimentResultsService,
+      {} as ExperimentFiguresService,
     );
 
     expect(controller.getEstimate()).toEqual({

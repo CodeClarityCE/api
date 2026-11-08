@@ -4,6 +4,7 @@ import { MemberRole } from "src/base_modules/organizations/memberships/orgMember
 import { type MembershipsRepository } from "src/base_modules/shared/repositories";
 import {
   AlreadyExists,
+  EntityInUse,
   EntityNotFound,
   NotAuthorized,
 } from "src/types/error.types";
@@ -40,6 +41,7 @@ describe("ExperimentsService", () => {
   let datasetRepository: Record<string, jest.Mock>;
   let entryRepository: Record<string, jest.Mock>;
   let runner: { kick: jest.Mock; cancel: jest.Mock };
+  let publishedRepository: Record<string, jest.Mock>;
 
   beforeEach(() => {
     jest.useFakeTimers({ now: new Date("2026-11-07T15:00:00Z") });
@@ -88,6 +90,7 @@ describe("ExperimentsService", () => {
     };
 
     runner = { kick: jest.fn(), cancel: jest.fn().mockResolvedValue(true) };
+    publishedRepository = { exists: jest.fn().mockResolvedValue(false) };
     service = new ExperimentsService(
       { hasRequiredRole } as unknown as MembershipsRepository,
       analyzersRepository as unknown as AnalyzersRepository,
@@ -96,6 +99,7 @@ describe("ExperimentsService", () => {
       datasetRepository as never,
       entryRepository as never,
       runner as unknown as ExperimentRunnerService,
+      publishedRepository as never,
     );
   });
 
@@ -564,6 +568,20 @@ describe("ExperimentsService", () => {
       expect(experimentRepository["delete"]).toHaveBeenCalledWith({
         id: "exp-1",
       });
+    });
+
+    it("refuses an experiment that has Published results", async () => {
+      experimentRepository["findOne"]!.mockResolvedValue({ id: "exp-1" });
+      publishedRepository["exists"]!.mockResolvedValue(true);
+
+      await expect(
+        service.delete("org-1", "exp-1", user),
+      ).rejects.toBeInstanceOf(EntityInUse);
+
+      expect(publishedRepository["exists"]).toHaveBeenCalledWith({
+        where: { experiment: { id: "exp-1" } },
+      });
+      expect(experimentRepository["delete"]).not.toHaveBeenCalled();
     });
 
     it("refuses an experiment of another organization", async () => {

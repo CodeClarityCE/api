@@ -4,9 +4,12 @@ import {
   DefaultValuePipe,
   Delete,
   Get,
+  HttpCode,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
+  Put,
   Query,
   Res,
 } from "@nestjs/common";
@@ -30,18 +33,32 @@ import {
 } from "src/types/apiResponses.types";
 
 import { PROBES_PER_ENTRY_INTERVAL } from "./experiment-budget";
+import type { FigureCatalog } from "./experiment-figure-catalog";
+import type { FigureData } from "./experiment-figure-data";
+import {
+  ExperimentFiguresService,
+  type FigureSummary,
+} from "./experiment-figures.service";
 import type { ExperimentResults } from "./experiment-results";
-import { ExperimentResultsService } from "./experiment-results.service";
+import {
+  ExperimentResultsService,
+  type PublishedResultsSummary,
+} from "./experiment-results.service";
 import { ExperimentsService } from "./experiments.service";
 import {
   CreateExperimentBody,
+  CreateFigureBody,
   ExperimentEstimateBasis,
   ExperimentRunSummary,
   ExperimentSummary,
+  FigureDataBody,
+  MoveFigureBody,
+  UpdateFigureBody,
 } from "./experiments.types";
 
 const CSV_CONTENT_TYPE = "text/csv; charset=utf-8";
 const JSON_CONTENT_TYPE = "application/json; charset=utf-8";
+const ZIP_CONTENT_TYPE = "application/zip";
 
 /** An attachment header naming the file after the experiment. */
 function attachment(experimentName: string, file: string): string {
@@ -55,6 +72,7 @@ export class ExperimentsController {
   constructor(
     private readonly experimentsService: ExperimentsService,
     private readonly resultsService: ExperimentResultsService,
+    private readonly figuresService: ExperimentFiguresService,
   ) {}
 
   @Post("")
@@ -172,17 +190,25 @@ export class ExperimentsController {
   })
   @ApiParam({ name: "org_id", description: "Organization ID" })
   @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiQuery({
+    name: "metric_version",
+    required: false,
+    description: "The Published results version to export",
+  })
   @ApiProduces("text/csv")
   async exportRunsCsv(
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("experiment_id") experiment_id: string,
     @Res() reply: FastifyReply,
+    @Query("metric_version", new ParseIntPipe({ optional: true }))
+    metricVersion?: number,
   ): Promise<void> {
     const { experiment_name, stream } = await this.resultsService.exportRunsCsv(
       org_id,
       experiment_id,
       user,
+      metricVersion,
     );
     await reply
       .header("content-type", CSV_CONTENT_TYPE)
@@ -196,18 +222,26 @@ export class ExperimentsController {
   })
   @ApiParam({ name: "org_id", description: "Organization ID" })
   @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiQuery({
+    name: "metric_version",
+    required: false,
+    description: "The Published results version to export",
+  })
   @ApiProduces("text/csv")
   async exportVulnerabilitiesCsv(
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("experiment_id") experiment_id: string,
     @Res() reply: FastifyReply,
+    @Query("metric_version", new ParseIntPipe({ optional: true }))
+    metricVersion?: number,
   ): Promise<void> {
     const { experiment_name, stream } =
       await this.resultsService.exportVulnerabilitiesCsv(
         org_id,
         experiment_id,
         user,
+        metricVersion,
       );
     await reply
       .header("content-type", CSV_CONTENT_TYPE)
@@ -224,15 +258,27 @@ export class ExperimentsController {
   })
   @ApiParam({ name: "org_id", description: "Organization ID" })
   @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiQuery({
+    name: "metric_version",
+    required: false,
+    description: "The Published results version to export",
+  })
   @ApiProduces("text/csv")
   async exportExposuresCsv(
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("experiment_id") experiment_id: string,
     @Res() reply: FastifyReply,
+    @Query("metric_version", new ParseIntPipe({ optional: true }))
+    metricVersion?: number,
   ): Promise<void> {
     const { experiment_name, stream } =
-      await this.resultsService.exportExposuresCsv(org_id, experiment_id, user);
+      await this.resultsService.exportExposuresCsv(
+        org_id,
+        experiment_id,
+        user,
+        metricVersion,
+      );
     await reply
       .header("content-type", CSV_CONTENT_TYPE)
       .header(
@@ -248,15 +294,27 @@ export class ExperimentsController {
   })
   @ApiParam({ name: "org_id", description: "Organization ID" })
   @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiQuery({
+    name: "metric_version",
+    required: false,
+    description: "The Published results version to export",
+  })
   @ApiProduces("text/csv")
   async exportFixesCsv(
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("experiment_id") experiment_id: string,
     @Res() reply: FastifyReply,
+    @Query("metric_version", new ParseIntPipe({ optional: true }))
+    metricVersion?: number,
   ): Promise<void> {
     const { experiment_name, stream } =
-      await this.resultsService.exportFixesCsv(org_id, experiment_id, user);
+      await this.resultsService.exportFixesCsv(
+        org_id,
+        experiment_id,
+        user,
+        metricVersion,
+      );
     await reply
       .header("content-type", CSV_CONTENT_TYPE)
       .header("content-disposition", attachment(experiment_name, "fixes.csv"))
@@ -269,15 +327,27 @@ export class ExperimentsController {
   })
   @ApiParam({ name: "org_id", description: "Organization ID" })
   @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiQuery({
+    name: "metric_version",
+    required: false,
+    description: "The Published results version to export",
+  })
   @ApiProduces("application/json")
   async exportResults(
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("experiment_id") experiment_id: string,
     @Res() reply: FastifyReply,
+    @Query("metric_version", new ParseIntPipe({ optional: true }))
+    metricVersion?: number,
   ): Promise<void> {
     const { experiment_name, results } =
-      await this.resultsService.exportResults(org_id, experiment_id, user);
+      await this.resultsService.exportResults(
+        org_id,
+        experiment_id,
+        user,
+        metricVersion,
+      );
     await reply
       .header("content-type", JSON_CONTENT_TYPE)
       .header(
@@ -285,6 +355,295 @@ export class ExperimentsController {
         attachment(experiment_name, "results.json"),
       )
       .send(JSON.stringify(results, null, 2));
+  }
+
+  @Post(":experiment_id/publish")
+  @ApiOperation({
+    summary: "Freeze a COMPLETED experiment's results; this is one-way",
+  })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiResponse({ status: 403, description: "Insufficient permissions" })
+  @ApiResponse({
+    status: 409,
+    description: "Not COMPLETED, or this metric version is already published",
+  })
+  async publish(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+  ): Promise<
+    TypedResponse<Omit<PublishedResultsSummary, "published_by_name">>
+  > {
+    return {
+      data: await this.resultsService.publish(org_id, experiment_id, user),
+    };
+  }
+
+  @Get(":experiment_id/published")
+  @ApiOperation({ summary: "List Published results versions, newest first" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  async listPublished(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+  ): Promise<TypedResponse<PublishedResultsSummary[]>> {
+    return {
+      data: await this.resultsService.listPublished(
+        org_id,
+        experiment_id,
+        user,
+      ),
+    };
+  }
+
+  @Get(":experiment_id/metric-version")
+  @ApiOperation({ summary: "The metric version a publish would store now" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  async currentMetricVersion(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+  ): Promise<TypedResponse<{ metric_version: number }>> {
+    return {
+      data: await this.resultsService.currentMetricVersion(
+        org_id,
+        experiment_id,
+        user,
+      ),
+    };
+  }
+
+  @Get(":experiment_id/published/:metric_version")
+  @ApiOperation({ summary: "Read one stored Published results version" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiParam({ name: "metric_version", description: "Metric version" })
+  async getPublished(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Param("metric_version", ParseIntPipe) metric_version: number,
+  ): Promise<TypedResponse<ExperimentResults>> {
+    return {
+      data: await this.resultsService.getPublished(
+        org_id,
+        experiment_id,
+        metric_version,
+        user,
+      ),
+    };
+  }
+
+  @Get(":experiment_id/published/:metric_version/package.zip")
+  @ApiOperation({
+    summary: "Download the replication package of a Published results version",
+  })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiParam({ name: "metric_version", description: "Metric version" })
+  @ApiProduces(ZIP_CONTENT_TYPE)
+  async downloadPublishedPackage(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Param("metric_version", ParseIntPipe) metric_version: number,
+    @Res() reply: FastifyReply,
+  ): Promise<void> {
+    const { experiment_name, archive } =
+      await this.resultsService.getPublishedPackage(
+        org_id,
+        experiment_id,
+        metric_version,
+        user,
+      );
+    await reply
+      .header("content-type", ZIP_CONTENT_TYPE)
+      .header(
+        "content-disposition",
+        attachment(experiment_name, `v${metric_version}-package.zip`),
+      )
+      .send(archive);
+  }
+
+  @Get(":experiment_id/figure-catalog")
+  @ApiOperation({ summary: "What the Figure composer may offer" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  async getFigureCatalog(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+  ): Promise<TypedResponse<FigureCatalog>> {
+    return {
+      data: await this.figuresService.catalog(org_id, experiment_id, user),
+    };
+  }
+
+  @Post(":experiment_id/figure-data")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Compute the data of a Figure definition" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiResponse({ status: 400, description: "Definition outside the catalog" })
+  async computeFigureData(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Body() body: FigureDataBody,
+  ): Promise<TypedResponse<FigureData>> {
+    return {
+      data: await this.figuresService.computeData(
+        org_id,
+        experiment_id,
+        body.definition,
+        user,
+      ),
+    };
+  }
+
+  @Post(":experiment_id/figures")
+  @ApiOperation({ summary: "Save a Figure" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiResponse({ status: 400, description: "Definition outside the catalog" })
+  async createFigure(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Body() body: CreateFigureBody,
+  ): Promise<CreatedResponse> {
+    const id = await this.figuresService.create(
+      org_id,
+      experiment_id,
+      body,
+      user,
+    );
+    return { id };
+  }
+
+  @Get(":experiment_id/figures")
+  @ApiOperation({ summary: "List the Figures of an experiment" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  async getFigures(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+  ): Promise<TypedResponse<FigureSummary[]>> {
+    return {
+      data: await this.figuresService.list(org_id, experiment_id, user),
+    };
+  }
+
+  @Get(":experiment_id/figures/:figure_id")
+  @ApiOperation({ summary: "Get a saved Figure" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiParam({ name: "figure_id", description: "Figure ID" })
+  async getFigure(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Param("figure_id") figure_id: string,
+  ): Promise<TypedResponse<FigureSummary>> {
+    return {
+      data: await this.figuresService.get(
+        org_id,
+        experiment_id,
+        figure_id,
+        user,
+      ),
+    };
+  }
+
+  @Get(":experiment_id/figures/:figure_id/data")
+  @ApiOperation({
+    summary: "The data of a saved Figure, stored if it is tied to a version",
+  })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiParam({ name: "figure_id", description: "Figure ID" })
+  async getFigureData(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Param("figure_id") figure_id: string,
+  ): Promise<TypedResponse<FigureData>> {
+    return {
+      data: await this.figuresService.getData(
+        org_id,
+        experiment_id,
+        figure_id,
+        user,
+      ),
+    };
+  }
+
+  @Put(":experiment_id/figures/:figure_id/published-version")
+  @ApiOperation({ summary: "Tie a Figure to a Published results version" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiParam({ name: "figure_id", description: "Figure ID" })
+  @ApiResponse({
+    status: 409,
+    description: "The version came from older metric code",
+  })
+  async moveFigureToVersion(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Param("figure_id") figure_id: string,
+    @Body() body: MoveFigureBody,
+  ): Promise<NoDataResponse> {
+    await this.figuresService.moveToVersion(
+      org_id,
+      experiment_id,
+      figure_id,
+      body.metric_version,
+      user,
+    );
+    return {};
+  }
+
+  @Patch(":experiment_id/figures/:figure_id")
+  @ApiOperation({ summary: "Rename a Figure or change its definition" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiParam({ name: "figure_id", description: "Figure ID" })
+  @ApiResponse({ status: 400, description: "Definition outside the catalog" })
+  async updateFigure(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Param("figure_id") figure_id: string,
+    @Body() body: UpdateFigureBody,
+  ): Promise<NoDataResponse> {
+    await this.figuresService.update(
+      org_id,
+      experiment_id,
+      figure_id,
+      body,
+      user,
+    );
+    return {};
+  }
+
+  @Delete(":experiment_id/figures/:figure_id")
+  @ApiOperation({ summary: "Delete a Figure" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiParam({ name: "figure_id", description: "Figure ID" })
+  async deleteFigure(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Param("figure_id") figure_id: string,
+  ): Promise<NoDataResponse> {
+    await this.figuresService.delete(org_id, experiment_id, figure_id, user);
+    return {};
   }
 
   @Post(":experiment_id/cancel")
@@ -311,6 +670,7 @@ export class ExperimentsController {
   })
   @ApiParam({ name: "org_id", description: "Organization ID" })
   @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiResponse({ status: 409, description: "Experiment has Published results" })
   async delete(
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,

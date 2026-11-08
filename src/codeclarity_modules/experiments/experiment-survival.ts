@@ -33,6 +33,21 @@ interface Duration {
   fixed: boolean;
 }
 
+/** Curves of every duration and of each severity present. */
+function curves(
+  durations: readonly Duration[],
+): Pick<ExposureSurvivalBlock, "overall" | "by_severity"> {
+  return {
+    overall: group("all", durations),
+    by_severity: SEVERITY_ORDER.map((severity) =>
+      group(
+        severity,
+        durations.filter((d) => d.severity === severity),
+      ),
+    ).filter((g) => g.n > 0),
+  };
+}
+
 function group(key: string, durations: readonly Duration[]): SurvivalGroup {
   const curve = kaplanMeier(
     durations.map((d) => d.days),
@@ -77,12 +92,29 @@ export function exposureSurvival(
       ? fixes.filter((e) => e.fix!.precision === "snapshot").length /
         fixes.length
       : null,
-    overall: group("all", durations),
-    by_severity: SEVERITY_ORDER.map((severity) =>
-      group(
-        severity,
-        durations.filter((d) => d.severity === severity),
-      ),
-    ).filter((g) => g.n > 0),
+    ...curves(durations),
   };
+}
+
+export type FixLagSurvivalBlock = Omit<
+  ExposureSurvivalBlock,
+  "snapshot_precision_share"
+>;
+
+/** Survival in days since disclosure; open exposures are censored at `head`. */
+export function fixLagSurvival(
+  exposures: readonly Exposure[],
+  head: Date,
+): FixLagSurvivalBlock {
+  const headDay = gridDay(head);
+  const durations = exposures.flatMap((e): Duration[] => {
+    if (e.published_date === null) return [];
+    if (e.fix) {
+      if (e.fix.lag_days === null) return [];
+      return [{ severity: e.severity, days: e.fix.lag_days, fixed: true }];
+    }
+    const days = (Date.parse(headDay) - Date.parse(e.published_date)) / DAY_MS;
+    return [{ severity: e.severity, days: Math.round(days), fixed: false }];
+  });
+  return { censored_at: headDay, ...curves(durations) };
 }

@@ -12,6 +12,12 @@ import {
   type FixKind,
 } from "./experiment-exposures";
 import { groupByGridDate, isHead } from "./experiment-grid";
+import {
+  BOOTSTRAP_SETTINGS,
+  type ResultIntervals,
+  resultIntervalsSteps,
+  runYielding,
+} from "./experiment-intervals";
 import { loadOverTime, type LoadRow } from "./experiment-load";
 import type {
   ResultsProbeAnalysisInput,
@@ -30,17 +36,22 @@ import {
   severityOf,
 } from "./experiment-severity";
 import {
+  type ConfidenceInterval,
   gini,
   median,
   packagesToClear,
   quantile,
+  runSteps,
   spearman,
+  type Steps,
+  wilsonInterval,
 } from "./experiment-stats";
 import {
   exposureSurvival,
   type ExposureSurvivalBlock,
 } from "./experiment-survival";
 import {
+  type FixKindCounts,
   upstreamLeverage,
   type UpstreamLeverageBlock,
 } from "./experiment-upstream-leverage";
@@ -141,6 +152,8 @@ export interface ExperimentResultsInput {
   /** The analysis budget and what was submitted, absent without one */
   budget?: AnalysisBudgetUsage | null;
   provenance: ResultsProvenanceInput;
+  /** Already computed intervals; null leaves them out, absent computes them */
+  bootstrap_intervals?: ResultIntervals | null;
   /** When the results are read: HEAD's date while the experiment runs; now by default */
   read_at?: Date;
 }
@@ -185,6 +198,41 @@ export type SweepSubset = (typeof SWEEP_SUBSETS)[number];
 
 export interface SweepRow extends HeadlineScalars {
   subset: SweepSubset;
+}
+
+/** 95% Wilson intervals of the shares in a sweep row. */
+export interface ScalarShareIntervals {
+  affected_share: ConfidenceInterval | null;
+  high_critical_share: ConfidenceInterval | null;
+  top10_pkg_share: ConfidenceInterval | null;
+  top10_proj_share: ConfidenceInterval | null;
+}
+
+export interface HeadlineShareIntervals extends ScalarShareIntervals {
+  high_critical_share_of_classed: ConfidenceInterval | null;
+}
+
+export interface SweepShareIntervals extends ScalarShareIntervals {
+  subset: SweepSubset;
+}
+
+/** Intervals sit apart from the point estimates, which stay as they were. */
+export interface ShareIntervals {
+  headline: HeadlineShareIntervals;
+  sweep: SweepShareIntervals[];
+  /** Each severity's share of all instances */
+  severity: Record<keyof SeverityCounts, ConfidenceInterval | null>;
+  /** Share of instances that have an EPSS score */
+  epss_nonnull: ConfidenceInterval | null;
+  /** Share of fixes only dated to a snapshot interval */
+  fix_snapshot_precision: ConfidenceInterval | null;
+  /** Share of introductions only dated to a snapshot interval */
+  introduction_snapshot_precision: ConfidenceInterval | null;
+  /** The removed_transitive share, overall and per interval of fix_kinds */
+  removed_transitive: {
+    overall: ConfidenceInterval | null;
+    by_interval: (ConfidenceInterval | null)[];
+  };
 }
 
 export interface EpssBlock {
@@ -320,6 +368,8 @@ export interface ProbeBudget {
 export interface ProvenanceBlock extends ResultsProvenanceInput {
   /** Knowledge sources differ between the start and end snapshots */
   knowledge_changed: boolean;
+  /** How the bootstrap intervals are computed */
+  bootstrap: typeof BOOTSTRAP_SETTINGS;
 }
 
 /**
@@ -332,6 +382,8 @@ export interface ExperimentResults {
   grid_coverage: GridCoverageRow[];
   headline: Headline;
   sweep: SweepRow[];
+  /** 95% Wilson intervals of every share in the results */
+  share_intervals: ShareIntervals;
   epss: EpssBlock;
   /** Instances per conflict flag, most frequent first */
   match_flags: Record<string, number>;
@@ -352,6 +404,8 @@ export interface ExperimentResults {
   exposure_survival: ExposureSurvivalBlock;
   /** Packages to clear per grid date, removed_transitive share per interval */
   upstream_leverage: UpstreamLeverageBlock;
+  /** Bootstrap intervals; null while the experiment has not ended */
+  bootstrap_intervals: ResultIntervals | null;
   provenance: ProvenanceBlock;
 }
 
@@ -394,27 +448,52 @@ function sumOf(values: readonly number[]): number {
   return values.reduce((total, value) => total + value, 0);
 }
 
-/**
- * The headline over a fixed universe of runs: loads are zero-filled over
- * the universe, instances outside it are ignored.
- */
-export function headline(
+/** Instances per project (zero-filled over the universe) and per package. */
+export function instanceCounts(
   universe: readonly string[],
   vulnerabilities: readonly ResultsVulnerabilityInput[],
-): Headline {
+): {
+  loadByRun: Map<string, number>;
+  packageCounts: number[];
+  inUniverse: ResultsVulnerabilityInput[];
+} {
   const loadByRun = new Map<string, number>(universe.map((id) => [id, 0]));
   const inUniverse = vulnerabilities.filter((v) => loadByRun.has(v.run_id));
   for (const v of inUniverse) {
     loadByRun.set(v.run_id, (loadByRun.get(v.run_id) ?? 0) + 1);
   }
+  return {
+    loadByRun,
+    packageCounts: [
+      ...countBy(inUniverse, (v) => v.affected_dependency).values(),
+    ],
+    inUniverse,
+  };
+}
+
+interface HeadlineMeasure {
+  headline: Headline;
+  intervals: HeadlineShareIntervals;
+  severity: ShareIntervals["severity"];
+}
+
+/**
+ * The headline and its share intervals over a fixed universe of runs: loads are zero-filled over
+ * the universe, instances outside it are ignored.
+ */
+export function measureHeadline(
+  universe: readonly string[],
+  vulnerabilities: readonly ResultsVulnerabilityInput[],
+): HeadlineMeasure {
+  const { loadByRun, packageCounts, inUniverse } = instanceCounts(
+    universe,
+    vulnerabilities,
+  );
   const loads = [...loadByRun.values()];
   const nProjects = loads.length;
   const total = sumOf(loads);
   const nAffected = loads.filter((load) => load > 0).length;
 
-  const packageCounts = [
-    ...countBy(inUniverse, (v) => v.affected_dependency).values(),
-  ];
   const instances = sumOf(packageCounts);
 
   const sevCounts: SeverityCounts = {
@@ -441,7 +520,7 @@ export function headline(
   const largestFirst = (values: number[]): number[] =>
     [...values].sort((a, b) => b - a);
 
-  return {
+  const result: Headline = {
     n_projects: nProjects,
     n_affected: nAffected,
     affected_share: ratio(nAffected, nProjects),
@@ -465,9 +544,37 @@ export function headline(
     top_packages: rankedEntries(spread).slice(0, 10),
     high_critical_share_of_classed: ratio(critHigh, instances - sevCounts.NONE),
   };
+
+  const classified = sumOf(Object.values(sevCounts));
+  return {
+    headline: result,
+    intervals: {
+      affected_share: wilsonInterval(nAffected, nProjects),
+      high_critical_share: wilsonInterval(critHigh, instances),
+      top10_pkg_share: wilsonInterval(
+        sumOf(largestFirst(packageCounts).slice(0, 10)),
+        instances,
+      ),
+      top10_proj_share: wilsonInterval(
+        sumOf(largestFirst(loads).slice(0, 10)),
+        total,
+      ),
+      high_critical_share_of_classed: wilsonInterval(
+        critHigh,
+        instances - sevCounts.NONE,
+      ),
+    },
+    severity: {
+      CRITICAL: wilsonInterval(sevCounts.CRITICAL, classified),
+      HIGH: wilsonInterval(sevCounts.HIGH, classified),
+      MEDIUM: wilsonInterval(sevCounts.MEDIUM, classified),
+      LOW: wilsonInterval(sevCounts.LOW, classified),
+      NONE: wilsonInterval(sevCounts.NONE, classified),
+    },
+  };
 }
 
-const SWEEP_FILTERS: Record<
+export const SWEEP_FILTERS: Record<
   SweepSubset,
   (v: ResultsVulnerabilityInput) => boolean
 > = {
@@ -486,16 +593,23 @@ function scalars(h: Headline): HeadlineScalars {
   return rest;
 }
 
-function sweep(
+function measureSweep(
   universe: readonly string[],
   vulnerabilities: readonly ResultsVulnerabilityInput[],
-): SweepRow[] {
+): (HeadlineMeasure & { subset: SweepSubset })[] {
   return SWEEP_SUBSETS.map((subset) => ({
     subset,
-    ...scalars(
-      headline(universe, vulnerabilities.filter(SWEEP_FILTERS[subset])),
-    ),
+    ...measureHeadline(universe, vulnerabilities.filter(SWEEP_FILTERS[subset])),
   }));
+}
+
+/** A sweep row's intervals: the headline's without the of-classed share. */
+function sweepIntervals(
+  subset: SweepSubset,
+  intervals: HeadlineShareIntervals,
+): SweepShareIntervals {
+  const { high_critical_share_of_classed: _classed, ...rest } = intervals;
+  return { subset, ...rest };
 }
 
 function epss(
@@ -741,12 +855,22 @@ function provenance(input: ResultsProvenanceInput): ProvenanceBlock {
     ...input,
     knowledge_changed:
       start !== null && end !== null && !sameKnowledge(start, end),
+    bootstrap: BOOTSTRAP_SETTINGS,
   };
 }
 
 /** HEAD's date: when the experiment ended, else the time the results are read. */
 export function headCutoff(ended_on: Date | null, readAt: Date): Date {
   return ended_on ?? readAt;
+}
+
+/** The summaries HEAD reads: each project once, even when rows are shared. */
+export function headSummaries(
+  runs: readonly ResultsRunInput[],
+  summaries: readonly ResultsSummaryInput[],
+): ResultsSummaryInput[] {
+  const gridOnly = gridOnlyRunIds(runs);
+  return summaries.filter((s) => !gridOnly.has(s.run_id));
 }
 
 /** Run ids whose rows only grid snapshots read: outside the HEAD blocks. */
@@ -772,24 +896,55 @@ export function aggregateExperimentResults(
     input.provenance.ended_on,
     input.read_at ?? new Date(),
   );
-  const gridOnly = gridOnlyRunIds(input.runs);
-  const summaries = input.summaries.filter((s) => !gridOnly.has(s.run_id));
+  const summaries = headSummaries(input.runs, input.summaries);
   const universe = summaries.map((s) => s.run_id);
   const inUniverse = new Set(universe);
   const vulnerabilities = input.vulnerabilities.filter((v) =>
     inUniverse.has(v.run_id),
   );
+  const headMeasure = measureHeadline(universe, vulnerabilities);
+  const sweepMeasures = measureSweep(universe, vulnerabilities);
+  const exposuresSummary = exposuresBlock(exposures);
+  const leverage = upstreamLeverage(
+    input.runs,
+    input.vulnerabilities,
+    exposures,
+  );
   return {
     coverage: coverage(input.runs.filter(isHead)),
     grid_coverage: gridCoverage(input.runs),
-    headline: headline(universe, vulnerabilities),
-    sweep: sweep(universe, vulnerabilities),
+    headline: headMeasure.headline,
+    sweep: sweepMeasures.map((m) => ({
+      subset: m.subset,
+      ...scalars(m.headline),
+    })),
+    share_intervals: {
+      headline: headMeasure.intervals,
+      sweep: sweepMeasures.map((m) => sweepIntervals(m.subset, m.intervals)),
+      severity: headMeasure.severity,
+      epss_nonnull: wilsonInterval(
+        vulnerabilities.filter((v) => v.epss_score !== null).length,
+        vulnerabilities.length,
+      ),
+      fix_snapshot_precision: wilsonInterval(
+        exposuresSummary.fix_precision.snapshot,
+        exposuresSummary.fixed,
+      ),
+      introduction_snapshot_precision: wilsonInterval(
+        exposuresSummary.introduction_precision.snapshot,
+        exposuresSummary.introductions,
+      ),
+      removed_transitive: {
+        overall: transitiveInterval(leverage.overall),
+        by_interval: leverage.fix_kinds.map(transitiveInterval),
+      },
+    },
     epss: epss(vulnerabilities),
     match_flags: mix(vulnerabilities, (v) => v.conflict_flag),
     winning_source_head: mix(vulnerabilities, (v) => v.winning_source),
     rqc: rqc(summaries),
     rqd: rqd(summaries),
-    exposures: exposuresBlock(exposures),
+    exposures: exposuresSummary,
     fix_lag: fixLag(exposures),
     probes: probesBlock(exposures, input.budget),
     load_over_time: loadOverTime({
@@ -799,11 +954,47 @@ export function aggregateExperimentResults(
     }),
     residence: residenceBlock(exposures),
     exposure_survival: exposureSurvival(exposures, head),
-    upstream_leverage: upstreamLeverage(
-      input.runs,
-      input.vulnerabilities,
-      exposures,
-    ),
+    upstream_leverage: leverage,
+    bootstrap_intervals:
+      input.bootstrap_intervals === undefined
+        ? computeResultIntervals(input)
+        : input.bootstrap_intervals,
     provenance: provenance(input.provenance),
   };
+}
+
+/** The removed_transitive share's interval: transitive over fixes of known kind. */
+function transitiveInterval(counts: FixKindCounts): ConfidenceInterval | null {
+  return wilsonInterval(
+    counts.removed_transitive,
+    counts.fixes - counts.unknown,
+  );
+}
+
+/** The bootstrap intervals of the results, for the HEAD universe of projects. */
+function intervalSteps(input: ExperimentResultsInput): Steps<ResultIntervals> {
+  const gridOnly = gridOnlyRunIds(input.runs);
+  const summaries = input.summaries.filter((s) => !gridOnly.has(s.run_id));
+  const inUniverse = new Set(summaries.map((s) => s.run_id));
+  return resultIntervalsSteps({
+    summaries,
+    vulnerabilities: input.vulnerabilities.filter((v) =>
+      inUniverse.has(v.run_id),
+    ),
+    exposures: deriveExposures(input),
+    sweep_filters: SWEEP_FILTERS,
+  });
+}
+
+export function computeResultIntervals(
+  input: ExperimentResultsInput,
+): ResultIntervals {
+  return runSteps(intervalSteps(input));
+}
+
+/** The same intervals as computeResultIntervals, computed without blocking other requests. */
+export function computeResultIntervalsYielding(
+  input: ExperimentResultsInput,
+): Promise<ResultIntervals> {
+  return runYielding(intervalSteps(input));
 }

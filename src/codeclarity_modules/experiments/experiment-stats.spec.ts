@@ -8,6 +8,7 @@ import {
   quantile,
   spearman,
   studentTwoSidedP,
+  wilsonInterval,
 } from "./experiment-stats";
 
 describe("experiment stats", () => {
@@ -133,6 +134,57 @@ describe("experiment stats", () => {
       ).toEqual([1, 1]);
     });
 
+    it("gives each step the 95% log-log Greenwood band of the published 6-MP table", () => {
+      // Freireich 6-MP arm, 21 patients (+ = censored)
+      const remission = [
+        6, 6, 6, 6, 7, 9, 10, 10, 11, 13, 16, 17, 19, 20, 22, 23, 25, 32, 32,
+        34, 35,
+      ];
+      const censoredAt = [3, 5, 7, 8, 11, 12, 13, 16, 17, 18, 19, 20];
+      const curve = kaplanMeier(
+        remission,
+        remission.map((_, i) => !censoredAt.includes(i)),
+      );
+      const reference: [number, number, number][] = [
+        [6, 0.6197, 0.9516],
+        [7, 0.5631, 0.9228],
+        [10, 0.5032, 0.8894],
+        [13, 0.4316, 0.8491],
+        [16, 0.3675, 0.8049],
+        [22, 0.2678, 0.7468],
+        [23, 0.188, 0.6801],
+      ];
+      for (const [time, lower, upper] of reference) {
+        const step = curve.find((s) => s.time === time)!;
+        expect(step.lower).toBeCloseTo(lower, 3);
+        expect(step.upper).toBeCloseTo(upper, 3);
+      }
+    });
+
+    it("collapses the band onto survival where survival is exactly 1 or 0", () => {
+      const censoredFirst = kaplanMeier([1, 2], [false, true]);
+      expect(censoredFirst[0]).toMatchObject({
+        survival: 1,
+        lower: 1,
+        upper: 1,
+      });
+      expect(censoredFirst[1]).toMatchObject({
+        survival: 0,
+        lower: 0,
+        upper: 0,
+      });
+    });
+
+    it("keeps every bound between 0 and 1, around the survival", () => {
+      const curve = kaplanMeier(durations, events);
+      for (const step of curve) {
+        expect(step.lower).toBeGreaterThanOrEqual(0);
+        expect(step.lower).toBeLessThanOrEqual(step.survival);
+        expect(step.upper).toBeGreaterThanOrEqual(step.survival);
+        expect(step.upper).toBeLessThanOrEqual(1);
+      }
+    });
+
     it("gives the median as the first time survival reaches one half, else NaN", () => {
       expect(kmMedian(kaplanMeier(durations, events))).toBe(3);
       // Two of four fixed by day 10: S(10) = 0.5 exactly
@@ -142,6 +194,33 @@ describe("experiment stats", () => {
       // One of three fixed: S never falls below 2/3
       expect(kmMedian(kaplanMeier([4, 9, 9], [true, false, false]))).toBeNaN();
       expect(kmMedian([])).toBeNaN();
+    });
+  });
+
+  describe("wilsonInterval", () => {
+    // Reference values: Newcombe 1998, Statist. Med. 17, table I, method 3
+    it.each([
+      [81, 263, 0.2553, 0.3662],
+      [15, 148, 0.0624, 0.1605],
+      [1, 29, 0.0061, 0.1718],
+    ])("matches the published interval for %i of %i", (x, n, low, high) => {
+      const interval = wilsonInterval(x, n);
+      expect(interval?.low).toBeCloseTo(low, 4);
+      expect(interval?.high).toBeCloseTo(high, 4);
+    });
+
+    it("stays within 0 and 1 at the boundaries", () => {
+      const none = wilsonInterval(0, 20);
+      expect(none?.low).toBe(0);
+      expect(none?.high).toBeCloseTo(0.1611, 4);
+      const all = wilsonInterval(20, 20);
+      expect(all?.low).toBeCloseTo(1 - 0.1611, 4);
+      expect(all?.high).toBe(1);
+    });
+
+    it("has no interval without trials or when the count is not a proportion", () => {
+      expect(wilsonInterval(0, 0)).toBeNull();
+      expect(wilsonInterval(5, 4)).toBeNull();
     });
   });
 });

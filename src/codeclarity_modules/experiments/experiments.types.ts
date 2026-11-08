@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
+  IsDefined,
   IsEnum,
   IsInt,
   IsOptional,
@@ -9,6 +10,7 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateIf,
 } from "class-validator";
 
 import { AnalyzerStepSnapshot, ExperimentStatus } from "./experiment.entity";
@@ -149,4 +151,42 @@ export interface ExperimentRunSummary {
     git_url: string;
     stars: number;
   };
+}
+
+export class FigureDataBody {
+  @ApiProperty({ description: "A combination the Figure catalog allows" })
+  @IsDefined()
+  definition!: unknown;
+}
+
+export class CreateFigureBody extends FigureDataBody {
+  @ApiProperty({ maxLength: 100 })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  name!: string;
+}
+
+export class MoveFigureBody {
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    description: "The Published results version, or null to untie the Figure",
+  })
+  @ValidateIf((body: MoveFigureBody) => body.metric_version !== null)
+  @IsInt()
+  metric_version!: number | null;
+}
+
+export class UpdateFigureBody {
+  @ApiPropertyOptional({ maxLength: 100 })
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  name?: string;
+
+  @ApiPropertyOptional({ description: "A combination the catalog allows" })
+  @IsOptional()
+  definition?: unknown;
 }
