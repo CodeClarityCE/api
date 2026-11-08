@@ -1586,6 +1586,38 @@ describe("ExperimentRunnerService", () => {
       expect(submit).toHaveBeenCalledTimes(1);
     });
 
+    it("ends a snapshot whose commit has no JavaScript project yet as done and empty, without retrying it", async () => {
+      addExperiment("exp-1", ["octo/app"], {}, ["2025-02-01T00:00:00Z"]);
+      const service = runner();
+      await service.tick();
+      const submitted = submit.mock.calls.length;
+
+      const analysis = store.analysisOf("octo/app", 0);
+      analysis.status = AnalysisStatus.FAILED;
+      store.results.set(`${analysis.id}/js-sbom`, {
+        workspaces: [],
+        analysisInfo: {
+          status: "failure",
+          errors: [
+            {
+              public_error: { description: "Project not compatible with analyzer" },
+              private_error: {
+                description:
+                  "project at /private/org/projects/p/sha cannot be analyzed by JavaScript analyzer",
+              },
+            },
+          ],
+        },
+      });
+      await service.tick();
+
+      expect(store.run("octo/app", 0)).toMatchObject({
+        status: ExperimentRunStatus.DONE,
+        error: "no_lockfile_yet",
+      });
+      expect(submit.mock.calls.length).toBe(submitted);
+    });
+
     it("ends a snapshot whose commit has no lockfile yet as done and empty, without retrying it", async () => {
       addExperiment("exp-1", ["octo/app"], {}, ["2025-02-01T00:00:00Z"]);
       const service = runner();

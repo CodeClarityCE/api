@@ -215,16 +215,18 @@ export function isUsablePluginResult(blob: unknown): boolean {
 /** Why a done run is empty: its snapshot predates the repo or its lockfile */
 export const NO_LOCKFILE_YET = "no_lockfile_yet";
 
-/** What js-sbom reports when a commit has no package.json and lockfile pair. */
+/** What js-sbom reports when a commit has no JavaScript project or lockfile. */
 const NO_LOCKFILE_ERRORS = [
   "no lock file found",
   "no package.json and lock file pair found",
+  "cannot be analyzed by JavaScript analyzer",
 ];
 
 /** A failed js-sbom result whose commit had no lockfile yet. */
 export function isNoLockfileResult(blob: unknown): boolean {
   if (!isObject(blob)) return false;
-  const info = objectOrEmpty(blob["analysis_info"]);
+  // js-sbom's early failures use the camelCase key
+  const info = objectOrEmpty(blob["analysis_info"] ?? blob["analysisInfo"]);
   if (info["status"] !== "failure" || !Array.isArray(info["errors"])) {
     return false;
   }
