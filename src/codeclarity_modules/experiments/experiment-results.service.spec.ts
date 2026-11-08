@@ -261,6 +261,12 @@ describe("ExperimentResultsService", () => {
       ]);
       expect(results.provenance).toEqual({
         api_version: "0.0.49-alpha",
+        bootstrap: {
+          method: "percentile bootstrap, resampling by project",
+          confidence: 0.95,
+          resamples: 10_000,
+          seed: 20_260_611,
+        },
         analyzer_steps: experiment.analyzer_steps,
         knowledge_start: experiment.provenance.knowledge_start,
         knowledge_end: experiment.provenance.knowledge_end,
@@ -349,6 +355,80 @@ describe("ExperimentResultsService", () => {
         knowledge_end: null,
         knowledge_changed: false,
         created_by: null,
+      });
+    });
+
+    describe("bootstrap intervals", () => {
+      const twoProjects = [
+        { run_id: "r1", rank: 0 },
+        { run_id: "r2", rank: 1 },
+      ].map((row) => ({
+        ...row,
+        total_dependencies: 10,
+        total_vulnerabilities: 0,
+        package_manager: "NPM",
+      }));
+      const instanceOf = (run_id: string): object => ({
+        run_id,
+        affected_dependency: "lodash",
+        vulnerability_id: "CVE-2021-23337",
+        severity_class: "HIGH",
+        epss_score: null,
+        conflict_flag: "MATCH_CORRECT",
+        winning_source: "OSV",
+        withdrawn_date: null,
+      });
+
+      beforeEach(() => {
+        summaryRows.mockResolvedValue(twoProjects);
+        vulnerabilityRows.mockResolvedValue([instanceOf("r1")]);
+      });
+
+      it("computes them once for an ended experiment", async () => {
+        experimentRepository["findOne"]!.mockResolvedValue(experiment);
+        const first = await service.getResults("org-1", "exp-1", user);
+        expect(first.bootstrap_intervals?.headline.load_median).toEqual({
+          low: 0,
+          high: 1,
+        });
+
+        // Rows read differently now: the point estimate moves, the cached interval does not
+        vulnerabilityRows.mockResolvedValue([
+          instanceOf("r1"),
+          instanceOf("r2"),
+        ]);
+        const second = await service.getResults("org-1", "exp-1", user);
+        expect(second.headline.load_median).not.toBe(
+          first.headline.load_median,
+        );
+        expect(second.bootstrap_intervals).toEqual(first.bootstrap_intervals);
+      });
+
+      it("computes them again when the experiment ended at another time", async () => {
+        experimentRepository["findOne"]!.mockResolvedValue(experiment);
+        const first = await service.getResults("org-1", "exp-1", user);
+
+        vulnerabilityRows.mockResolvedValue([
+          instanceOf("r1"),
+          instanceOf("r2"),
+        ]);
+        experimentRepository["findOne"]!.mockResolvedValue({
+          ...experiment,
+          ended_on: new Date("2026-11-07T02:00:00Z"),
+        });
+        const second = await service.getResults("org-1", "exp-1", user);
+        expect(second.bootstrap_intervals).not.toEqual(
+          first.bootstrap_intervals,
+        );
+      });
+
+      it("leaves them out while the experiment has not ended", async () => {
+        experimentRepository["findOne"]!.mockResolvedValue({
+          ...experiment,
+          ended_on: null,
+        });
+        const results = await service.getResults("org-1", "exp-1", user);
+        expect(results.bootstrap_intervals).toBeNull();
       });
     });
 

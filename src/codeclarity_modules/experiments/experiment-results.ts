@@ -12,6 +12,11 @@ import {
   type FixKind,
 } from "./experiment-exposures";
 import { groupByGridDate, isHead } from "./experiment-grid";
+import {
+  BOOTSTRAP_SETTINGS,
+  type ResultIntervals,
+  resultIntervals,
+} from "./experiment-intervals";
 import { loadOverTime, type LoadRow } from "./experiment-load";
 import type {
   ResultsProbeAnalysisInput,
@@ -143,6 +148,8 @@ export interface ExperimentResultsInput {
   /** The analysis budget and what was submitted, absent without one */
   budget?: AnalysisBudgetUsage | null;
   provenance: ResultsProvenanceInput;
+  /** Already computed intervals; null leaves them out, absent computes them */
+  bootstrap_intervals?: ResultIntervals | null;
   /** When the results are read: HEAD's date while the experiment runs; now by default */
   read_at?: Date;
 }
@@ -346,6 +353,8 @@ export interface ProbeBudget {
 export interface ProvenanceBlock extends ResultsProvenanceInput {
   /** Knowledge sources differ between the start and end snapshots */
   knowledge_changed: boolean;
+  /** How the bootstrap intervals are computed */
+  bootstrap: typeof BOOTSTRAP_SETTINGS;
 }
 
 /**
@@ -380,6 +389,8 @@ export interface ExperimentResults {
   exposure_survival: ExposureSurvivalBlock;
   /** Packages to clear per grid date, removed_transitive share per interval */
   upstream_leverage: UpstreamLeverageBlock;
+  /** Bootstrap intervals; null while the experiment has not ended */
+  bootstrap_intervals: ResultIntervals | null;
   provenance: ProvenanceBlock;
 }
 
@@ -829,6 +840,7 @@ function provenance(input: ResultsProvenanceInput): ProvenanceBlock {
     ...input,
     knowledge_changed:
       start !== null && end !== null && !sameKnowledge(start, end),
+    bootstrap: BOOTSTRAP_SETTINGS,
   };
 }
 
@@ -910,6 +922,27 @@ export function aggregateExperimentResults(
       input.vulnerabilities,
       exposures,
     ),
+    bootstrap_intervals:
+      input.bootstrap_intervals === undefined
+        ? computeResultIntervals(input)
+        : input.bootstrap_intervals,
     provenance: provenance(input.provenance),
   };
+}
+
+/** The bootstrap intervals of the results, for the HEAD universe of projects. */
+export function computeResultIntervals(
+  input: ExperimentResultsInput,
+): ResultIntervals {
+  const gridOnly = gridOnlyRunIds(input.runs);
+  const summaries = input.summaries.filter((s) => !gridOnly.has(s.run_id));
+  const inUniverse = new Set(summaries.map((s) => s.run_id));
+  return resultIntervals({
+    summaries,
+    vulnerabilities: input.vulnerabilities.filter((v) =>
+      inUniverse.has(v.run_id),
+    ),
+    exposures: deriveExposures(input),
+    sweep_filters: SWEEP_FILTERS,
+  });
 }
