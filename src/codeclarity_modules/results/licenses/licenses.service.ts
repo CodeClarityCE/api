@@ -10,7 +10,6 @@ import {
 } from "src/codeclarity_modules/results/licenses/licenses.types";
 import { filter } from "src/codeclarity_modules/results/licenses/utils/filter";
 import { sort } from "src/codeclarity_modules/results/licenses/utils/sort";
-import { Output as SbomOutput } from "src/codeclarity_modules/results/sbom/sbom.types";
 import {
   StatusError,
   StatusResponse,
@@ -212,8 +211,15 @@ export class LicensesService {
 
     const licensesOutput: LicensesOutput =
       await this.licensesUtilsService.getLicensesResult(analysisId);
-    const sbomOutput: SbomOutput =
-      await this.sbomUtilsService.getSbomResult(analysisId);
+    const { mergedSbom, pluginResults } =
+      await this.sbomUtilsService.getMergedSbomResults(analysisId);
+    const packageManagerOf = (depName: string): string =>
+      pluginResults.find(({ sbom }) =>
+        Object.values(sbom.workspaces).some(
+          (ws) => depName in (ws.dependencies ?? {}),
+        ),
+      )?.sbom.analysis_info.package_manager ??
+      mergedSbom.analysis_info.package_manager;
 
     // Validate that the workspace exists
     if (!(workspace in licensesOutput.workspaces)) {
@@ -245,18 +251,19 @@ export class LicensesService {
       const depName = key.slice(0, versionIndex);
       const depVersion = key.slice(versionIndex + 1);
       const depKey = `${depName}@${depVersion}`;
+      const packageManager = packageManagerOf(depName);
       let packageManagerUrl = "";
 
-      if (sbomOutput.analysis_info.package_manager === "NPM") {
+      if (packageManager === "NPM") {
         packageManagerUrl = `https://www.npmjs.com/package/${depName}/v/${depVersion}`;
-      } else if (sbomOutput.analysis_info.package_manager === "YARN") {
+      } else if (packageManager === "YARN") {
         packageManagerUrl = `https://yarn.pm/${depName}`;
       }
 
       depShortInfoMap[depKey] = {
         name: depName,
         version: versionInfo.version,
-        package_manager: sbomOutput.analysis_info.package_manager,
+        package_manager: packageManager,
       };
 
       if (packageManagerUrl.length > 0) {
@@ -305,17 +312,6 @@ export class LicensesService {
   private async getDependencyVersions(
     versionsArray: string[],
   ): Promise<Record<string, Version>> {
-    const safeVersionsArray: string[] = [];
-
-    for (let version of versionsArray) {
-      if (version.includes("/")) {
-        version = version.replace("/", ":");
-        safeVersionsArray.push(version);
-      } else {
-        safeVersionsArray.push(version);
-      }
-    }
-
     const versions: Record<string, Version> = {};
 
     // TODO: Implement dependency version lookup from package database
@@ -326,7 +322,7 @@ export class LicensesService {
     );
 
     // Create minimal version objects for each requested package
-    for (const version of safeVersionsArray) {
+    for (const version of versionsArray) {
       const versionParts = version.split(":");
       const versionNumber =
         versionParts.length > 1
