@@ -9,6 +9,7 @@ import { MembershipsRepository } from "src/base_modules/shared/repositories";
 import { CodeClarityLogger } from "src/services/logger.service";
 
 import { Experiment } from "./experiment.entity";
+import type { AnalysisBudgetUsage } from "./experiment-budget";
 import {
   type CsvEntry,
   type CsvRow,
@@ -22,7 +23,12 @@ import {
 } from "./experiment-csv";
 import { deriveExposures, type Exposure } from "./experiment-exposures";
 import { ExperimentProbeOutcome } from "./experiment-probe-outcome.entity";
-import { PROBE_OUTCOME_SELECT, type RawQuery, readProbeRows } from "./experiment-probe-rows";
+import {
+  PROBE_OUTCOME_SELECT,
+  type RawQuery,
+  readAnalysesSubmitted,
+  readProbeRows,
+} from "./experiment-probe-rows";
 import type {
   ResultsProbeAnalysisInput,
   ResultsProbeIntervalInput,
@@ -77,6 +83,7 @@ interface ExposureRows {
   probes: ResultsProbeInput[];
   probe_intervals: ResultsProbeIntervalInput[];
   probe_analyses: ResultsProbeAnalysisInput[];
+  budget: AnalysisBudgetUsage | null;
 }
 
 /** Export columns read from the dataset entry and from the run itself */
@@ -202,7 +209,7 @@ export class ExperimentResultsService {
     const experiment = await findExperimentInOrg(this.experimentRepository, orgId, experimentId);
 
     const [rows, summaries] = await Promise.all([
-      this.exposureRows(experiment.id, null),
+      this.exposureRows(experiment, null),
       this.summaryRepository
         .createQueryBuilder("summary")
         .innerJoin("summary.run", "run")
@@ -233,9 +240,10 @@ export class ExperimentResultsService {
    * its dataset entries only.
    */
   private async exposureRows(
-    experimentId: string,
+    experiment: Experiment,
     entryIds: string[] | null,
   ): Promise<ExposureRows> {
+    const experimentId = experiment.id;
     const runs = await this.runRepository.find({
       where: {
         experiment: { id: experimentId },
@@ -270,7 +278,8 @@ export class ExperimentResultsService {
     }
 
     const query: RawQuery = (sql, params) => this.probeOutcomeRepository.query(sql, params);
-    const [vulnerabilities, probes, probeRows] = await Promise.all([
+    const budget = experiment.analysis_budget ?? null;
+    const [vulnerabilities, probes, probeRows, submitted] = await Promise.all([
       instances.getRawMany<ResultsVulnerabilityInput>(),
       entryIds
         ? this.probeOutcomeRepository.query<ResultsProbeInput[]>(
@@ -281,6 +290,7 @@ export class ExperimentResultsService {
             experimentId,
           ]),
       readProbeRows(query, experimentId, entryIds),
+      budget === null ? null : readAnalysesSubmitted(query, experimentId),
     ]);
 
     return {
@@ -298,6 +308,10 @@ export class ExperimentResultsService {
       vulnerabilities,
       probes,
       ...probeRows,
+      budget:
+        budget === null || submitted === null
+          ? null
+          : { analysis_budget: budget, analyses_submitted: submitted },
     };
   }
 
@@ -374,7 +388,7 @@ export class ExperimentResultsService {
 
         const byId = new Map(entries.map((entry) => [entry.id, entry]));
         const exposures = deriveExposures(
-          await this.exposureRows(experiment.id, [...byId.keys()]),
+          await this.exposureRows(experiment, [...byId.keys()]),
         );
         const rows = exposures
           .map((exposure) => {

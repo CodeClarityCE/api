@@ -479,6 +479,52 @@ describe("fix probes in the results", () => {
       fixes: { found: 2, ambiguous: 0, not_found: 1, not_probed: 1 },
       introductions: { found: 1, ambiguous: 0, not_found: 0, not_probed: 0 },
       not_found_reasons: { "probe of d4e failed: clone failed": 1 },
+      budget: { analysis_budget: null, analyses_submitted: null, spent: false },
     });
+  });
+});
+
+describe("fix probes under an analysis budget", () => {
+  const spent = { analysis_budget: 5, analyses_submitted: 5 };
+
+  it("reports events a spent budget left unprobed as not_found, budget spent, at snapshot precision", () => {
+    const rows = { ...input(world("e1", bumpCommits(), [LODASH, LODASH_2], { probed: ["d4e"] })), budget: spent };
+    expect(deriveExposures(rows).map((e) => [e.vulnerability_id, e.fix])).toEqual([
+      ["DEMO-lodash-1", expect.objectContaining({ commit_hash: "f6a", date: "2025-03-28", precision: "snapshot", probe_outcome: "not_found", probe_reason: "budget spent" })],
+      ["DEMO-lodash-2", expect.objectContaining({ commit_hash: "f6a", date: "2025-03-28", precision: "snapshot", probe_outcome: "not_found", probe_reason: "budget spent" })],
+    ]);
+  });
+
+  it("still dates events that need no further probe once the budget is spent", () => {
+    const rows = { ...input(world("e1", happyCommits(), [LODASH], { probed: ["d4e"] })), budget: spent };
+    const [exposure] = deriveExposures(rows);
+    expect(exposure!.fix).toMatchObject({ commit_hash: "d4e", precision: "commit", probe_outcome: "found" });
+  });
+
+  it("leaves events unfinished while the budget has analyses left", () => {
+    const rows = {
+      ...input(world("e1", bumpCommits(), [LODASH], { probed: ["d4e"] })),
+      budget: { analysis_budget: 6, analyses_submitted: 5 },
+    };
+    const [exposure] = deriveExposures(rows);
+    expect(exposure!.fix).toMatchObject({ precision: "snapshot", probe_outcome: null, probe_reason: null });
+  });
+
+  it("reports the budget and what it left unprobed in the probes block", () => {
+    const results = aggregateExperimentResults({
+      ...input(world("e1", bumpCommits(), [LODASH, LODASH_2], { probed: ["d4e"] })),
+      budget: spent,
+    });
+    expect(results.probes).toEqual({
+      fixes: { found: 0, ambiguous: 0, not_found: 2, not_probed: 0 },
+      introductions: { found: 0, ambiguous: 0, not_found: 0, not_probed: 0 },
+      not_found_reasons: { "budget spent": 2 },
+      budget: { analysis_budget: 5, analyses_submitted: 5, spent: true },
+    });
+  });
+
+  it("reports no budget for an experiment created without one", () => {
+    const results = aggregateExperimentResults(input(world("e1", happyCommits(), [LODASH], { probed: ["d4e"] })));
+    expect(results.probes.budget).toEqual({ analysis_budget: null, analyses_submitted: null, spent: false });
   });
 });
