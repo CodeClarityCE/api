@@ -1,4 +1,5 @@
-import { loadOverTime, publishedDay } from "./experiment-load";
+import { publishedDay } from "./experiment-grid";
+import { loadOverTime } from "./experiment-load";
 import type { ResultsRunInput, ResultsVulnerabilityInput } from "./experiment-results";
 import { NO_LOCKFILE_YET } from "./experiment-row-copy";
 

@@ -3,7 +3,7 @@
  * hindsight view and the as-of view (ADR 0004), derived on read. Pure: no
  * Nest or TypeORM imports.
  */
-import { gridDay } from "./experiment-grid";
+import { gridDay, publishedDay } from "./experiment-grid";
 import type { ResultsRunInput, ResultsVulnerabilityInput } from "./experiment-results";
 import { NO_LOCKFILE_YET } from "./experiment-row-copy";
 
@@ -28,40 +28,6 @@ export interface LoadInput {
   vulnerabilities: readonly ResultsVulnerabilityInput[];
   /** HEAD's as-of cutoff, from headCutoff */
   head_cutoff: Date;
-}
-
-const DAY_PREFIX = /^(\d{4})-(\d{2})-(\d{2})/;
-// A trailing UTC offset such as -05:00 or +0200
-const OFFSET_SUFFIX = /[T ][\d:.]+([+-])(\d{2}):?(\d{2})$/;
-
-/** A real calendar day, so 2025-02-30 is rejected rather than rolled over. */
-function validDay(year: number, month: number, day: number): boolean {
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return (
-    date.getUTCFullYear() === year &&
-    date.getUTCMonth() === month - 1 &&
-    date.getUTCDate() === day
-  );
-}
-
-/**
- * The UTC day (YYYY-MM-DD) an advisory was published, from its verbatim
- * timestamp. Times without a zone are read as UTC; null when unreadable.
- */
-export function publishedDay(value: string | null | undefined): string | null {
-  const text = value?.trim();
-  if (!text) return null;
-  const day = DAY_PREFIX.exec(text);
-  if (day) {
-    if (!validDay(Number(day[1]), Number(day[2]), Number(day[3]))) return null;
-    if (!OFFSET_SUFFIX.test(text)) return day[0];
-    // Shift by the offset to land on the UTC day
-    const parsed = Date.parse(text.replace(" ", "T").replace(/([+-]\d{2})(\d{2})$/, "$1:$2"));
-    return Number.isNaN(parsed) ? null : gridDay(new Date(parsed));
-  }
-  // Other formats, such as RFC 2822, as the JS date parser reads them
-  const parsed = Date.parse(text);
-  return Number.isNaN(parsed) ? null : gridDay(new Date(parsed));
 }
 
 /**

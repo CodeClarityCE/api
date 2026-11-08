@@ -457,3 +457,46 @@ describe("fix lag and exposure counts in the results", () => {
     });
   });
 });
+
+describe("published dates with a UTC offset", () => {
+  it("reads one UTC day for residence, fix lag and the as-of view", () => {
+    // 2024-03-01T23:30-05:00 is 2024-03-02 in UTC
+    const at = (day: string): Date => new Date(`${day}T12:00:00Z`);
+    const snapshot = (i: number, grid: string | null, commit: string, day: string): ResultsRunInput => ({
+      status: "done",
+      error: null,
+      dataset_entry_id: "e1",
+      grid_index: i,
+      grid_date: grid ? new Date(`${grid}T00:00:00Z`) : null,
+      rows_run_id: grid ? `r${i}` : "r2",
+      commit_hash: commit,
+      committed_at: at(day),
+    });
+    const present = (runId: string): ResultsVulnerabilityInput => ({
+      run_id: runId,
+      vulnerability_id: "CVE-2024-0001",
+      affected_dependency: "lodash",
+      severity_class: "HIGH",
+      published_date: "2024-03-01T23:30-05:00",
+      epss_score: null,
+      conflict_flag: "MATCH_CORRECT",
+      winning_source: "OSV",
+      withdrawn_date: null,
+    });
+    const results = aggregateExperimentResults({
+      ...input(),
+      runs: [
+        snapshot(0, "2024-02-01", "ca", "2024-01-10"),
+        snapshot(1, "2024-03-01", "c0", "2024-02-20"),
+        snapshot(2, "2024-04-01", "c2", "2024-03-25"),
+        snapshot(3, null, "c2", "2024-03-25"),
+      ],
+      vulnerabilities: [present("r1")],
+      probes: [{ dataset_entry_id: "e1", commit_hash: "c2", packages: [] }],
+    });
+
+    expect(results.residence.points.map((p) => p.residence_days)).toEqual([11]);
+    expect(results.fix_lag.points.map((p) => p.lag_days)).toEqual([23]);
+    expect(results.load_over_time.find((r) => r.grid_date === "2024-03-01")).toMatchObject({ hindsight: 1, as_of: 0 });
+  });
+});

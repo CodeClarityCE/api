@@ -3,7 +3,7 @@
  * on read from its snapshot runs, copied instances and probe outcome rows
  * (ADR 0001). Pure: no Nest or TypeORM imports.
  */
-import { gridDay } from "./experiment-grid";
+import { DAY_MS, gridDay, publishedDay } from "./experiment-grid";
 import {
   type DatingTask,
   type ProbeDating,
@@ -120,17 +120,6 @@ function walk(observations: readonly Observation[]): Span[] {
   return spans;
 }
 
-const DAY_MS = 86_400_000;
-
-/** The calendar day of a timestamp string, whatever its format. */
-function dayOf(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const prefix = /^\d{4}-\d{2}-\d{2}/.exec(value);
-  if (prefix) return prefix[0];
-  const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? null : gridDay(new Date(parsed));
-}
-
 function daysBetween(from: string | null, to: string | null): number | null {
   if (from === null || to === null) return null;
   return Math.round((Date.parse(to) - Date.parse(from)) / DAY_MS);
@@ -165,7 +154,7 @@ function probedEvent(event: ExposureEvent, dating: ProbeDating | null): Exposure
   if (!dating.commit) return dated;
   return {
     ...dated,
-    date: dayOf(dating.commit.committed_at),
+    date: publishedDay(dating.commit.committed_at),
     commit_hash: dating.commit.sha,
     precision: "commit",
   };
@@ -240,7 +229,7 @@ export function deriveExposures(
       });
       for (const span of walk(observations)) {
         const latest = hits[span.lastPresent]!.get(key)![0]!;
-        const published = dayOf(latest.published_date);
+        const published = publishedDay(latest.published_date);
         let introduction: Introduction | null = null;
         const task = (kind: DatingTask["kind"], before: number, after: number): DatingTask => ({
           entry,

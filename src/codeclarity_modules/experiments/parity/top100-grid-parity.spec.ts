@@ -48,7 +48,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { deriveExposures, type Exposure } from "../experiment-exposures";
-import { loadOverTime, publishedDay } from "../experiment-load";
+import { DAY_MS, publishedDay } from "../experiment-grid";
+import { loadOverTime } from "../experiment-load";
 import {
   aggregateExperimentResults,
   type ExperimentResults,
@@ -74,7 +75,6 @@ const FIXTURE =
   resolve(__dirname, "top100-grid.jsonl.br");
 
 const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
-const DAY_MS = 86_400_000;
 const SEP = "\u0000";
 const HEAD_INDEX = 40;
 
