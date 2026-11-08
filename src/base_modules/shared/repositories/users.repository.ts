@@ -57,6 +57,13 @@ export class UsersRepository {
   }
 
   /**
+   * Check if a user with the given handle exists.
+   */
+  async userExistsByHandle(handle: string): Promise<boolean> {
+    return this.userRepository.existsBy({ handle });
+  }
+
+  /**
    * Save a user entity to the database.
    */
   async saveUser(user: User): Promise<User> {

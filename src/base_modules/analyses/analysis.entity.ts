@@ -85,6 +85,8 @@ export class Analysis {
   })
   branch!: string;
 
+  @ApiProperty()
+  @Expose()
   @Column({
     type: "varchar",
     length: 25,

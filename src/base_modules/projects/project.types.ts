@@ -4,8 +4,10 @@ import {
   ArrayNotEmpty,
   IsArray,
   IsOptional,
+  IsString,
   IsUrl,
   IsUUID,
+  ValidateIf,
 } from "class-validator";
 
 import { IntegrationProvider } from "../integrations/integration.types";
@@ -60,12 +62,15 @@ export class ProjectImportBody {
   @IsOptional()
   url!: string;
 
+  // Without an integration there is no repository to read these from.
   @ApiProperty()
-  @IsOptional()
+  @ValidateIf((body: ProjectImportBody) => !body.integration_id)
+  @IsString()
   name!: string;
 
   @ApiProperty()
-  @IsOptional()
+  @ValidateIf((body: ProjectImportBody) => !body.integration_id)
+  @IsString()
   description!: string;
 }
 

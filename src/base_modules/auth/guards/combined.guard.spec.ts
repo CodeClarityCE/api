@@ -171,7 +171,7 @@ describe("CombinedAuthGuard", () => {
         jwtService.verifyAsync.mockRejectedValue(new Error("Invalid token"));
 
         await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
-          AccountNotActivated,
+          NotAuthenticated,
         );
       });
 

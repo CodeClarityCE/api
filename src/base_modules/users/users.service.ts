@@ -21,11 +21,12 @@ import {
   UserPatchBody,
 } from "src/base_modules/users/user.types";
 import { User } from "src/base_modules/users/users.entity";
-import { NotAuthorized } from "src/types/error.types";
+import { EmailAlreadyExists, NotAuthorized } from "src/types/error.types";
 import { genRandomString, hash } from "src/utils/crypto";
 
 import {
   AccountRegistrationVerificationTokenInvalidOrExpired,
+  HandleAlreadyExists,
   PasswordsDoNotMatch,
 } from "../auth/auth.errors";
 import type { AuthService } from "../auth/auth.service";
@@ -125,6 +126,13 @@ export class UsersService {
   async register(userData: UserCreateBody): Promise<string> {
     if (userData.password !== userData.password_confirmation) {
       throw new PasswordsDoNotMatch();
+    }
+
+    if (await this.usersRepository.userExistsByEmail(userData.email)) {
+      throw new EmailAlreadyExists();
+    }
+    if (await this.usersRepository.userExistsByHandle(userData.handle)) {
+      throw new HandleAlreadyExists();
     }
 
     const passwordHash = await this.authService.hashPassword(userData.password);
