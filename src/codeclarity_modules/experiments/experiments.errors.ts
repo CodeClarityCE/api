@@ -6,6 +6,7 @@ export const errorMessages: Record<string, string> = {
     "The analyzer of an experiment must run js-sbom and vuln-finder.",
   ExperimentNotCancellable:
     "Only a PENDING or RUNNING experiment can be cancelled.",
+  InvalidFigureDefinition: "The catalog does not allow this Figure definition.",
 };
 
 export class DatasetNotReady extends PublicAPIError {
@@ -46,6 +47,20 @@ export class ExperimentNotCancellable extends PublicAPIError {
       ExperimentNotCancellable.errorCode,
       ExperimentNotCancellable.errorMessage,
       ExperimentNotCancellable.statusCode,
+      cause,
+    );
+  }
+}
+
+export class InvalidFigureDefinition extends PublicAPIError {
+  static errorCode = "InvalidFigureDefinition";
+  static errorMessage = errorMessages[InvalidFigureDefinition.errorCode]!;
+  static statusCode = 400;
+  constructor(cause?: unknown) {
+    super(
+      InvalidFigureDefinition.errorCode,
+      InvalidFigureDefinition.errorMessage,
+      InvalidFigureDefinition.statusCode,
       cause,
     );
   }

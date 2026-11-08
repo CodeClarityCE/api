@@ -12,6 +12,8 @@ import { DatasetEntry } from "../datasets/dataset-entry.entity";
 import { Result } from "../results/result.entity";
 
 import { Experiment } from "./experiment.entity";
+import { ExperimentFigure } from "./experiment-figure.entity";
+import { ExperimentFiguresService } from "./experiment-figures.service";
 import { ExperimentProbe } from "./experiment-probe.entity";
 import { ExperimentProbeInterval } from "./experiment-probe-interval.entity";
 import { ExperimentProbeOutcome } from "./experiment-probe-outcome.entity";
@@ -36,6 +38,7 @@ import { ExperimentsService } from "./experiments.service";
         ExperimentProbeOutcome,
         ExperimentProbe,
         ExperimentProbeInterval,
+        ExperimentFigure,
         Dataset,
         DatasetEntry,
         Result,
@@ -52,6 +55,7 @@ import { ExperimentsService } from "./experiments.service";
   providers: [
     ExperimentsService,
     ExperimentResultsService,
+    ExperimentFiguresService,
     ExperimentRunnerService,
     ExperimentRunSubmission,
     { provide: ExperimentStore, useClass: TypeOrmExperimentStore },

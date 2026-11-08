@@ -3,6 +3,7 @@ import { Readable } from "node:stream";
 
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
 
+import type { ExperimentFiguresService } from "./experiment-figures.service";
 import type { ExperimentResultsService } from "./experiment-results.service";
 import { ExperimentsController } from "./experiments.controller";
 import type { ExperimentsService } from "./experiments.service";
@@ -26,6 +27,7 @@ describe("ExperimentsController exports", () => {
     controller = new ExperimentsController(
       {} as ExperimentsService,
       service as unknown as ExperimentResultsService,
+      {} as ExperimentFiguresService,
     );
     headers = {};
     sent = undefined;
@@ -149,6 +151,7 @@ describe("ExperimentsController estimate", () => {
     const controller = new ExperimentsController(
       {} as ExperimentsService,
       {} as ExperimentResultsService,
+      {} as ExperimentFiguresService,
     );
 
     expect(controller.getEstimate()).toEqual({

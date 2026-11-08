@@ -22,6 +22,7 @@ import {
   VULNERABILITY_CSV_COLUMNS,
 } from "./experiment-csv";
 import { deriveExposures, type Exposure } from "./experiment-exposures";
+import type { FigureRows } from "./experiment-figure-data";
 import { ExperimentProbeOutcome } from "./experiment-probe-outcome.entity";
 import {
   INSTANCE_COLUMNS,
@@ -39,6 +40,7 @@ import type {
 import {
   aggregateExperimentResults,
   type ExperimentResults,
+  headCutoff,
   type KnowledgeSnapshot,
   type ResultsProbeInput,
   type ResultsProvenanceInput,
@@ -225,6 +227,14 @@ export class ExperimentResultsService {
         summaries,
         provenance: provenanceInput(experiment),
       }),
+    };
+  }
+
+  /** The tidy rows a Figure is computed from. */
+  async figureRows(experiment: Experiment): Promise<FigureRows> {
+    return {
+      ...(await this.exposureRows(experiment, null)),
+      head_cutoff: headCutoff(experiment.ended_on ?? null, new Date()),
     };
   }
 
