@@ -5,6 +5,7 @@ import type {
   KnowledgeProvenance,
   ProvenanceService,
 } from "src/codeclarity_modules/knowledge/provenance/provenance.service";
+import { CodeClarityLogger } from "src/services/logger.service";
 import { NotAuthorized } from "src/types/error.types";
 
 import type { DatasetEntry } from "../datasets/dataset-entry.entity";
@@ -1920,6 +1921,37 @@ describe("ExperimentRunnerService", () => {
         ["CVE-A", expect.objectContaining({ precision: "snapshot", probe_outcome: "not_found", probe_reason: "too many commits" })],
         ["CVE-B", expect.objectContaining({ precision: "snapshot", probe_outcome: "not_found", probe_reason: "too many commits" })],
       ]);
+    });
+
+    it("logs each probe that ends failed at warn, with its experiment, probe and analysis", async () => {
+      const warn = jest.spyOn(CodeClarityLogger.prototype, "warn");
+      await runToEnd({ d4e: "clone failed" });
+
+      const probe = store.probeOf("d4e")!;
+      expect(warn).toHaveBeenCalledWith(
+        "Experiment probe failed",
+        expect.objectContaining({ experimentId: "exp-1", probeId: probe.id, analysisId: probe.analysis!.id, reason: "clone failed" }),
+      );
+      warn.mockRestore();
+    });
+
+    it("logs a probe whose analysis was deleted at warn", async () => {
+      const service = runner();
+      for (let pass = 0; pass < 6 && submitProbe.mock.calls.length === 0; pass++) {
+        await service.tick();
+        settle();
+      }
+      const probe = store.probes[0]!;
+      store.analyses.delete(probe.analysis!.id);
+      const warn = jest.spyOn(CodeClarityLogger.prototype, "warn");
+      await service.tick();
+
+      expect(probe).toMatchObject({ status: "failed", error: "analysis deleted" });
+      expect(warn).toHaveBeenCalledWith(
+        "Experiment probe failed",
+        expect.objectContaining({ experimentId: "exp-1", probeId: probe.id, reason: "analysis deleted" }),
+      );
+      warn.mockRestore();
     });
 
     it("counts probes in flight against the global cap", async () => {

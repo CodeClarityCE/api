@@ -744,7 +744,7 @@ export class ExperimentRunnerService
       const status = probe.analysis?.status;
       const outcome = status ? analysisOutcome(status) : "running";
       if (!probe.analysis) {
-        await this.store.endProbe(probe.id, "failed", "analysis deleted");
+        await this.failProbe(experiment, probe, "analysis deleted");
         continue;
       }
       const sbom =
@@ -757,18 +757,26 @@ export class ExperimentRunnerService
         // A commit without a lockfile resolves nothing
         await this.endProbeWith(experiment, probe, []);
       } else if (outcome === "succeeded") {
-        await this.store.endProbe(probe.id, "failed", `missing result: ${SBOM_PLUGIN}`);
+        await this.failProbe(experiment, probe, `missing result: ${SBOM_PLUGIN}`);
       } else if (outcome === "failed") {
-        await this.store.endProbe(
-          probe.id,
-          "failed",
-          probe.analysis.failure_reason ?? `analysis ${status}`,
-        );
+        await this.failProbe(experiment, probe, probe.analysis.failure_reason ?? `analysis ${status}`);
       } else if (probe.submitted_on && now - probe.submitted_on.getTime() > this.ceilingMs) {
-        await this.store.endProbe(probe.id, "failed", "ceiling");
+        await this.failProbe(experiment, probe, "ceiling");
         await this.submission.abandon(probe.analysis.id);
       }
     }
+  }
+
+  /** End a probe failed and say why. */
+  private async failProbe(experiment: Experiment, probe: ExperimentProbe, reason: string): Promise<void> {
+    await this.store.endProbe(probe.id, "failed", reason);
+    this.logger.warn("Experiment probe failed", {
+      experimentId: experiment.id,
+      probeId: probe.id,
+      ...(probe.analysis ? { analysisId: probe.analysis.id } : {}),
+      commitHash: probe.commit_hash,
+      reason,
+    });
   }
 
   /** Write the probed commit's packages, then mark the probe done. */
