@@ -101,17 +101,24 @@ export class AnalyzersRepository {
     name: string,
     orgId: string,
   ): Promise<Analyzer> {
-    const analyzer = await this.analyzerRepository
+    const analyzer = await this.findByNameAndOrganization(name, orgId);
+    if (!analyzer) {
+      throw new Error("Analyzer not found");
+    }
+    return analyzer;
+  }
+
+  /** The org's (or a global) analyzer of that name, null if there is none. */
+  async findByNameAndOrganization(
+    name: string,
+    orgId: string,
+  ): Promise<Analyzer | null> {
+    return this.analyzerRepository
       .createQueryBuilder("analyzer")
       .leftJoinAndSelect("analyzer.organization", "organization")
       .where("(organization.id = :orgId or analyzer.global = true)", { orgId })
       .andWhere("analyzer.name = :name", { name })
       .getOne();
-
-    if (!analyzer) {
-      throw new Error("Analyzer not found");
-    }
-    return analyzer;
   }
 
   /**

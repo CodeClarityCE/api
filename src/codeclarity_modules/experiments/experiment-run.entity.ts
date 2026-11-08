@@ -11,6 +11,7 @@ import {
 
 import type { Analysis } from "../../base_modules/analyses/analysis.entity";
 import type { DatasetEntry } from "../datasets/dataset-entry.entity";
+import type { KnowledgeProvenance } from "../knowledge/provenance/provenance.service";
 
 import type { Experiment } from "./experiment.entity";
 
@@ -22,11 +23,11 @@ export enum ExperimentRunStatus {
 }
 
 /**
- * The outcome of an experiment for one dataset entry. Retries replace the
- * analysis link and bump attempts; they never add rows.
+ * The outcome of an experiment for one snapshot (dataset entry, grid date).
+ * Retries replace the analysis link and bump attempts; they never add rows.
  */
 @Entity()
-@Unique(["experiment", "dataset_entry"])
+@Unique(["experiment", "dataset_entry", "grid_index"])
 export class ExperimentRun {
   @ApiProperty()
   @Expose()
@@ -42,7 +43,22 @@ export class ExperimentRun {
   })
   status!: ExperimentRunStatus;
 
-  @ApiProperty({ description: "Why the run failed or was skipped" })
+  /** Position in the experiment's grid; HEAD is the last (0 when HEAD-only) */
+  @ApiProperty({ description: "Position in the grid, HEAD last" })
+  @Expose()
+  @Column("integer", { default: 0 })
+  grid_index!: number;
+
+  /** The calendar date (UTC midnight) the snapshot is pinned at; null for HEAD */
+  @ApiProperty({ description: "Grid date, null for HEAD" })
+  @Expose()
+  @Column("timestamptz", { nullable: true })
+  grid_date?: Date | null;
+
+  @ApiProperty({
+    description:
+      "Why the run failed or was skipped, or why a done run is empty",
+  })
   @Expose()
   @Column("varchar", { length: 1000, nullable: true })
   error?: string | null;
@@ -84,11 +100,21 @@ export class ExperimentRun {
   @Column("timestamptz", { nullable: true })
   ended_on?: Date | null;
 
+  /** The knowledge its rows were matched against; null if nothing was matched */
+  @ApiProperty({ description: "Knowledge provenance the run's rows used" })
+  @Expose()
+  @Column("jsonb", { nullable: true })
+  knowledge?: KnowledgeProvenance | null;
+
   @ManyToOne("Experiment", "runs", { onDelete: "CASCADE" })
   experiment!: Relation<Experiment>;
 
   @ManyToOne("DatasetEntry", { nullable: false, onDelete: "CASCADE" })
   dataset_entry!: Relation<DatasetEntry>;
+
+  /** The run whose analysis and copied rows this one shares (same commit) */
+  @ManyToOne("ExperimentRun", { nullable: true, onDelete: "SET NULL" })
+  shared_from?: Relation<ExperimentRun> | null;
 
   /** The current analysis; deleting it never deletes the run */
   @ManyToOne("Analysis", { nullable: true, onDelete: "SET NULL" })

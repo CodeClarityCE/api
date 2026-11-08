@@ -14,18 +14,24 @@
 
 import { Readable } from "node:stream";
 
+import type { Exposure } from "./experiment-exposures";
+
 /** A row of an export, keyed by the CSV header names. */
 export type CsvRow = Record<string, unknown>;
 
 const FORMULA_TRIGGERS = new Set(["=", "+", "-", "@", "\t", "\r"]);
 const NEEDS_QUOTES = /[",\r\n]/;
 
-/** runs.csv: one row per run; summary columns blank unless the run is done. */
+/**
+ * runs.csv: one row per run (snapshot); summary columns blank unless the
+ * run is done. grid_date is the snapshot's calendar day, "HEAD" for HEAD.
+ */
 export const RUN_CSV_COLUMNS = [
   "rank",
   "full_name",
   "stars",
   "git_url",
+  "grid_date",
   "status",
   "error",
   "attempts",
@@ -50,12 +56,18 @@ export const RUN_CSV_COLUMNS = [
   "n_none",
 ] as const;
 
-/** vulnerabilities.csv: one row per copied vulnerability instance. */
+/**
+ * vulnerabilities.csv: one row per copied vulnerability instance, once per
+ * analyzed commit. grid_date and commit_hash are those of the snapshot that
+ * holds the rows; snapshots sharing its commit (see runs.csv) share them.
+ */
 export const VULNERABILITY_CSV_COLUMNS = [
   "rank",
   "full_name",
   "stars",
   "git_url",
+  "grid_date",
+  "commit_hash",
   "workspace",
   "vulnerability_id",
   "affected_dependency",
@@ -74,6 +86,113 @@ export const VULNERABILITY_CSV_COLUMNS = [
   "modified_date",
   "withdrawn_date",
 ] as const;
+
+/**
+ * exposures.csv: one row per exposure, computed on read. Grid dates are
+ * "HEAD" for HEAD; introduction columns are blank when the exposure was
+ * present at the first snapshot, fix columns blank while it is open.
+ */
+export const EXPOSURE_CSV_COLUMNS = [
+  "rank",
+  "full_name",
+  "vulnerability_id",
+  "affected_dependency",
+  "severity",
+  "published_date",
+  "first_present",
+  "last_present",
+  "gaps",
+  "status",
+  "introduction_date",
+  "introduction_commit",
+  "introduction_precision",
+  "residence_days",
+  "fix_date",
+  "fix_commit",
+  "fix_precision",
+  "fix_kind",
+  "lag_days",
+] as const;
+
+/**
+ * fixes.csv: one row per fix, computed on read. probe_outcome is blank
+ * until fix probes end, probe_reason says why one found no commit;
+ * interval_from and interval_to bracket the fix.
+ */
+export const FIX_CSV_COLUMNS = [
+  "rank",
+  "full_name",
+  "vulnerability_id",
+  "affected_dependency",
+  "severity",
+  "published_date",
+  "fix_date",
+  "fix_commit",
+  "fix_kind",
+  "precision",
+  "probe_outcome",
+  "probe_reason",
+  "interval_from",
+  "interval_to",
+  "lag_days",
+] as const;
+
+/** The entry columns every computed export starts with. */
+export interface CsvEntry {
+  rank: number;
+  full_name: string;
+}
+
+const gridCell = (gridDate: string | null): string => gridDate ?? "HEAD";
+
+/** One exposures.csv row. */
+export function exposureCsvRow(entry: CsvEntry, exposure: Exposure): CsvRow {
+  const { introduction: intro, fix } = exposure;
+  return {
+    rank: entry.rank,
+    full_name: entry.full_name,
+    vulnerability_id: exposure.vulnerability_id,
+    affected_dependency: exposure.affected_dependency,
+    severity: exposure.severity,
+    published_date: exposure.published_date,
+    first_present: gridCell(exposure.first_present),
+    last_present: gridCell(exposure.last_present),
+    gaps: exposure.gaps,
+    status: exposure.open ? "open" : "fixed",
+    introduction_date: intro?.date,
+    introduction_commit: intro?.commit_hash,
+    introduction_precision: intro?.precision,
+    residence_days: intro?.residence_days,
+    fix_date: fix?.date,
+    fix_commit: fix?.commit_hash,
+    fix_precision: fix?.precision,
+    fix_kind: fix?.kind,
+    lag_days: fix?.lag_days,
+  };
+}
+
+/** The fixes.csv row of a fixed exposure, null while it is open. */
+export function fixCsvRow(entry: CsvEntry, exposure: Exposure): CsvRow | null {
+  const { fix } = exposure;
+  if (!fix) return null;
+  return {
+    rank: entry.rank,
+    full_name: entry.full_name,
+    vulnerability_id: exposure.vulnerability_id,
+    affected_dependency: exposure.affected_dependency,
+    severity: exposure.severity,
+    published_date: exposure.published_date,
+    fix_date: fix.date,
+    fix_commit: fix.commit_hash,
+    fix_kind: fix.kind,
+    precision: fix.precision,
+    probe_outcome: fix.probe_outcome,
+    probe_reason: fix.probe_reason,
+    interval_from: gridCell(fix.interval_from),
+    interval_to: gridCell(fix.interval_to),
+    lag_days: fix.lag_days,
+  };
+}
 
 /** Encodes one cell value. Blank for null and undefined. */
 export function encodeCsvCell(value: unknown): string {

@@ -89,12 +89,13 @@ describe("experiment CSV encoding", () => {
   });
 
   describe("export columns", () => {
-    it("lists run state, entry metadata then the summary columns", () => {
+    it("lists entry metadata, the grid date, run state then the summary columns", () => {
       expect(RUN_CSV_COLUMNS).toEqual([
         "rank",
         "full_name",
         "stars",
         "git_url",
+        "grid_date",
         "status",
         "error",
         "attempts",
@@ -120,12 +121,14 @@ describe("experiment CSV encoding", () => {
       ]);
     });
 
-    it("lists entry metadata then the vulnerability instance columns", () => {
+    it("lists entry metadata, the snapshot holding the rows, then the vulnerability instance columns", () => {
       expect(VULNERABILITY_CSV_COLUMNS).toEqual([
         "rank",
         "full_name",
         "stars",
         "git_url",
+        "grid_date",
+        "commit_hash",
         "workspace",
         "vulnerability_id",
         "affected_dependency",
@@ -151,9 +154,7 @@ describe("experiment CSV encoding", () => {
     it("writes the header then every row of every chunk", async () => {
       const source = syntheticSource(3, 2);
       const text = await readAll(streamCsv(["rank", "name"], source));
-      expect(text).toBe(
-        "rank,name\r\n0,repo-0\r\n1,repo-1\r\n2,repo-2\r\n",
-      );
+      expect(text).toBe("rank,name\r\n0,repo-0\r\n1,repo-1\r\n2,repo-2\r\n");
     });
 
     it("writes only the header when there are no rows", async () => {

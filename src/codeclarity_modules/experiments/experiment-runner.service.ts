@@ -29,7 +29,26 @@ import { describeBuildError } from "../datasets/dataset-build.service";
 import { GithubRateLimited, rateLimitedAt } from "../datasets/dataset-builder";
 
 import { Experiment, ExperimentStatus } from "./experiment.entity";
-import { isUsablePluginResult, mapRunRows } from "./experiment-row-copy";
+import { analysesLeft } from "./experiment-budget";
+import { planProbes } from "./experiment-exposures";
+import { endOfGridDay } from "./experiment-grid";
+import type { ExperimentProbe } from "./experiment-probe.entity";
+import {
+  type IntervalRequest,
+  type ProbeCandidate,
+  type ProbeRequest,
+  repoLockfilePath,
+} from "./experiment-probes";
+import type { ResultsRunInput } from "./experiment-results";
+import {
+  isNoLockfileResult,
+  isUsablePluginResult,
+  mapProbePackages,
+  mapRunRows,
+  NO_LOCKFILE_YET,
+  type ProbePackage,
+  unwrapResultEnvelope,
+} from "./experiment-row-copy";
 import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
 import {
   ExperimentRunSubmission,
@@ -48,7 +67,25 @@ const TICK_MS = 15_000;
 const MAX_THROTTLE_WAIT_SECONDS = 60;
 const DEFAULT_MAX_IN_FLIGHT = 8;
 const DEFAULT_RUN_CEILING_HOURS = 24;
-/** The failed status as the Go services write it (the API writes "failed") */
+/** Lockfile-touching commits listed per interval: 10 pages of 100 */
+const COMMITS_PER_PAGE = 100;
+const MAX_COMMIT_PAGES = 10;
+const TOO_MANY_COMMITS_REASON = "too many commits";
+
+/** A repository that can be pinned: it exists where expected, with a branch. */
+interface PinnableRepo {
+  branch: string;
+  description: string | null;
+}
+
+/** Who submits an experiment's analyses, and through which integration. */
+interface Submitter {
+  integrationId: string;
+  creator: AuthenticatedUser;
+}
+
+/** Repository lookups of one pass, by dataset entry id */
+type RepoLookups = Map<string, Promise<PinnableRepo>>;
 
 /** The run cannot be done: never retried. */
 class RunSkipped extends Error {
@@ -63,6 +100,14 @@ class ExperimentFatal extends Error {
   constructor(readonly reason: string) {
     super(reason);
     this.name = "ExperimentFatal";
+  }
+}
+
+/** The snapshot's grid date has no commit on or before it. */
+class NoCommitYet extends Error {
+  constructor(readonly branch: string) {
+    super("no commit yet");
+    this.name = "NoCommitYet";
   }
 }
 
@@ -200,6 +245,14 @@ export class ExperimentRunnerService
       const result = run.analysis
         ? await this.store.getPluginResult(run.analysis.id, plugin)
         : null;
+      if (
+        plugin === SBOM_PLUGIN &&
+        run.grid_date &&
+        isNoLockfileResult(result)
+      ) {
+        await this.completeEmpty(experiment, run);
+        return;
+      }
       if (!isUsablePluginResult(result)) {
         this.logger.warn("Experiment run has no usable result", {
           ...logContext,
@@ -211,8 +264,21 @@ export class ExperimentRunnerService
       results.set(plugin, result);
     }
 
+    await this.saveProbeOutcome(
+      experiment,
+      run,
+      mapProbePackages(results.get(SBOM_PLUGIN)),
+    );
     const rows = mapRunRows(results.get(SBOM_PLUGIN), results.get(VULN_PLUGIN));
-    const copied = await this.store.copyRunRows(experiment.id, run.id, rows);
+    // The knowledge in use now, right after vuln-finder matched these rows
+    const knowledge = await this.provenanceService.get();
+    const copied = await this.store.copyRunRows(
+      experiment.id,
+      run.id,
+      rows,
+      undefined,
+      knowledge,
+    );
     if (!copied) {
       this.logger.warn(
         "Experiment run ended before its rows were copied",
@@ -225,6 +291,54 @@ export class ExperimentRunnerService
       dependencies: rows.summary.total_dependencies,
       vulnerabilities: rows.summary.total_vulnerabilities,
     });
+  }
+
+  /**
+   * Record what the run's commit resolves, before the run is marked done so
+   * a crash in between only repeats the write.
+   */
+  private async saveProbeOutcome(
+    experiment: Experiment,
+    run: ExperimentRun,
+    packages: ProbePackage[],
+  ): Promise<void> {
+    if (!run.commit_hash) return;
+    await this.store.saveProbeOutcome({
+      experimentId: experiment.id,
+      datasetEntryId: run.dataset_entry.id,
+      commitHash: run.commit_hash,
+      committedAt: run.committed_at ?? null,
+      packages,
+    });
+  }
+
+  /** Mark a run done with no rows: its snapshot had no lockfile yet. */
+  private async completeEmpty(
+    experiment: Experiment,
+    run: ExperimentRun,
+  ): Promise<void> {
+    // A commit without a lockfile resolves nothing
+    await this.saveProbeOutcome(experiment, run, []);
+    const copied = await this.store.copyRunRows(
+      experiment.id,
+      run.id,
+      mapRunRows(null, null),
+      NO_LOCKFILE_YET,
+    );
+    if (!copied) return;
+    this.logger.log("Experiment run done: no lockfile yet", {
+      experimentId: experiment.id,
+      runId: run.id,
+      ...analysisContext(run),
+    });
+  }
+
+  /** A dated snapshot whose js-sbom result says its commit had no lockfile yet. */
+  private async lacksLockfile(run: ExperimentRun): Promise<boolean> {
+    if (!run.analysis || !run.grid_date) return false;
+    return isNoLockfileResult(
+      await this.store.getPluginResult(run.analysis.id, SBOM_PLUGIN),
+    );
   }
 
   /** One pass over one claimed experiment. */
@@ -245,12 +359,20 @@ export class ExperimentRunnerService
       const status = await this.store.getStatus(experimentId);
       if (status === null) return;
       experiment.status = status;
+      let probing = false;
       if (status === ExperimentStatus.CANCELLED) {
         await this.store.skipUnsubmitted(experimentId);
       } else if (status === ExperimentStatus.RUNNING) {
-        await this.submit(experiment);
+        const slots = await this.submit(experiment);
+        await this.store.settleSharedRuns(experimentId);
+        probing = await this.probe(experiment, slots);
       }
-      if ((await this.store.countPending(experimentId)) === 0) {
+      await this.store.settleSharedRuns(experimentId);
+      if (
+        !probing &&
+        (await this.store.countPending(experimentId)) === 0 &&
+        (await this.store.getInFlightProbes(experimentId)).length === 0
+      ) {
         await this.end(experiment);
       }
     } catch (err) {
@@ -319,6 +441,7 @@ export class ExperimentRunnerService
   }
 
   private async pollInFlight(experiment: Experiment): Promise<void> {
+    await this.pollProbes(experiment);
     const now = Date.now();
     for (const run of await this.store.getInFlightRuns(experiment.id)) {
       const status = run.analysis?.status;
@@ -327,6 +450,8 @@ export class ExperimentRunnerService
         await this.attemptFailed(experiment, run, "analysis deleted");
       } else if (outcome === "succeeded") {
         await this.completeRun(experiment, run);
+      } else if (outcome === "failed" && (await this.lacksLockfile(run))) {
+        await this.completeEmpty(experiment, run);
       } else if (outcome === "failed") {
         await this.attemptFailed(
           experiment,
@@ -355,13 +480,39 @@ export class ExperimentRunnerService
     return since ? now - since.getTime() > this.ceilingMs : false;
   }
 
-  /** Submit unsubmitted runs, by entry rank, while the global cap allows. */
-  private async submit(experiment: Experiment): Promise<void> {
+  /**
+   * Submit unsubmitted runs, by entry rank then grid date, while the global
+   * cap allows. Shared or commit-less snapshots take no slot.
+   */
+  private async submit(experiment: Experiment): Promise<number> {
     const slots = this.maxInFlight - (await this.store.countInFlight());
-    if (slots <= 0) return;
-    const runs = await this.store.getUnsubmittedRuns(experiment.id, slots);
-    if (runs.length === 0) return;
+    if (slots <= 0) return 0;
+    const runs = await this.store.getUnsubmittedRuns(
+      experiment.id,
+      slots * ((experiment.grid_count ?? 0) + 1),
+    );
+    if (runs.length === 0) return slots;
 
+    const submitter = this.submitter(experiment);
+    const client = await this.githubClient(submitter.integrationId);
+    const repos: RepoLookups = new Map();
+
+    let submitted = 0;
+    for (const run of runs) {
+      if (submitted >= slots) break;
+      await this.store.renewLease(experiment.id, this.instanceId);
+      if (await this.submitRun(experiment, run, client, repos, submitter)) {
+        submitted++;
+      }
+    }
+    return slots - submitted;
+  }
+
+  /**
+   * Who submits analyses for the experiment.
+   * @throws {ExperimentFatal} If the integration or the creator was removed
+   */
+  private submitter(experiment: Experiment): Submitter {
     const integrationId = experiment.dataset.integration?.id;
     if (!integrationId) {
       throw new ExperimentFatal(
@@ -371,28 +522,370 @@ export class ExperimentRunnerService
     if (!experiment.created_by) {
       throw new ExperimentFatal("The creator of this experiment was removed");
     }
-    const creator = new AuthenticatedUser(
-      experiment.created_by.id,
-      [ROLE.USER],
-      true,
-    );
-    const client = await this.githubClient(integrationId);
+    return {
+      integrationId,
+      creator: new AuthenticatedUser(
+        experiment.created_by.id,
+        [ROLE.USER],
+        true,
+      ),
+    };
+  }
 
+  /**
+   * List the intervals to date, then submit the next probes, fixes first.
+   * @returns whether probe work remains (to list, submit or finish)
+   */
+  private async probe(experiment: Experiment, slots: number): Promise<boolean> {
+    // A HEAD-only experiment has nothing to date
+    if (!experiment.grid_count) return false;
+    // Nothing can be submitted and snapshots still run: plan on a later pass
+    if (slots <= 0 && (await this.store.countPending(experiment.id)) > 0) {
+      return true;
+    }
+    let rows = await this.store.getProbeRows(experiment.id);
+    let plan = planProbes(rows);
+    if (plan.intervals.length === 0 && plan.probes.length === 0) {
+      return plan.waiting > 0;
+    }
+    const submitter = this.submitter(experiment);
+    const client = await this.githubClient(submitter.integrationId);
+    if (plan.intervals.length > 0) {
+      for (const interval of plan.intervals) {
+        await this.store.renewLease(experiment.id, this.instanceId);
+        await this.listInterval(experiment, client, interval);
+      }
+      rows = await this.store.getProbeRows(experiment.id);
+      plan = planProbes(rows);
+    }
+
+    const left = await this.analysesLeft(experiment);
+    const probes = plan.probes.slice(
+      0,
+      this.probeAllowance(plan.probes.length, slots, left),
+    );
+    if (probes.length > 0) {
+      const entries = new Map(
+        (
+          await this.store.getDatasetEntries([
+            ...new Set(probes.map((p) => p.entry)),
+          ])
+        ).map((e) => [e.id, e]),
+      );
+      const branches = new Map<string, string>();
+      for (const run of rows.runs) {
+        if (run.dataset_entry_id && run.branch)
+          branches.set(run.dataset_entry_id, run.branch);
+      }
+      for (const request of probes) {
+        const entry = entries.get(request.entry);
+        const branch = branches.get(request.entry);
+        if (!entry || !branch) continue;
+        await this.store.renewLease(experiment.id, this.instanceId);
+        await this.submitProbe(experiment, entry, branch, request, submitter);
+      }
+    }
+    // Probes a spent budget will never submit keep nothing open
+    return (
+      plan.intervals.length > 0 ||
+      (plan.probes.length > 0 && left > 0) ||
+      plan.waiting > 0
+    );
+  }
+
+  /**
+   * How many of the planned probes to submit now: the one place that caps
+   * them. Planned probes come fixes first, so a budget runs out on introductions.
+   */
+  private probeAllowance(
+    planned: number,
+    slots: number,
+    budgetLeft: number,
+  ): number {
+    return Math.max(0, Math.min(planned, slots, budgetLeft));
+  }
+
+  /** Analyses the experiment's budget still allows; Infinity without one. */
+  private async analysesLeft(experiment: Experiment): Promise<number> {
+    const budget = experiment.analysis_budget ?? null;
+    if (budget === null) return analysesLeft(null);
+    return analysesLeft({
+      analysis_budget: budget,
+      analyses_submitted: await this.store.countSubmittedAnalyses(
+        experiment.id,
+      ),
+    });
+  }
+
+  /**
+   * List the commits that touched the lockfile after the earlier snapshot's
+   * commit, up to the later one's, oldest first.
+   */
+  private async listInterval(
+    experiment: Experiment,
+    client: GithubRestClient,
+    { entry, from, to }: IntervalRequest,
+  ): Promise<void> {
+    const interval = {
+      experimentId: experiment.id,
+      datasetEntryId: entry,
+      fromCommit: from.commit_hash ?? null,
+      toCommit: to.commit_hash!,
+    };
+    const lockfilePath = await this.lockfilePath(from, to);
+    const [owner, repo] = await this.ownerAndRepo(entry);
+    if (!lockfilePath || !owner || !repo) {
+      await this.store.saveProbeInterval({
+        ...interval,
+        lockfilePath,
+        candidates: [],
+        error: lockfilePath ? "repository unknown" : "lockfile path unknown",
+      });
+      return;
+    }
+    const candidates: ProbeCandidate[] = [];
+    let truncated = false;
+    try {
+      for (let page = 1; page <= MAX_COMMIT_PAGES; page++) {
+        const commits = (
+          (await client.rest.repos.listCommits({
+            owner,
+            repo,
+            // From the later snapshot's commit, so only its ancestors are listed
+            sha: interval.toCommit,
+            path: lockfilePath,
+            ...(from.committed_at
+              ? { since: new Date(from.committed_at).toISOString() }
+              : {}),
+            per_page: COMMITS_PER_PAGE,
+            page,
+          })) as { data: GithubCommitItem[] }
+        ).data;
+        for (const commit of commits) {
+          const date =
+            commit.commit.committer?.date ?? commit.commit.author?.date;
+          if (commit.sha === from.commit_hash || !date) continue;
+          candidates.push({
+            sha: commit.sha,
+            committed_at: new Date(date).toISOString(),
+          });
+        }
+        if (commits.length < COMMITS_PER_PAGE) break;
+        truncated = page === MAX_COMMIT_PAGES;
+      }
+    } catch (err) {
+      const classified = this.classifyGithubError(err);
+      if (!(classified instanceof RunSkipped)) throw classified;
+      await this.store.saveProbeInterval({
+        ...interval,
+        lockfilePath,
+        candidates: [],
+        error: classified.reason,
+      });
+      return;
+    }
+    if (truncated) {
+      // A cut list could locate the wrong commit
+      await this.store.saveProbeInterval({
+        ...interval,
+        lockfilePath,
+        candidates: [],
+        error: TOO_MANY_COMMITS_REASON,
+      });
+      this.logger.warn("Experiment probe interval has too many commits", {
+        experimentId: experiment.id,
+        datasetEntryId: entry,
+      });
+      return;
+    }
+    // GitHub lists newest first
+    candidates.sort((a, b) => a.committed_at.localeCompare(b.committed_at));
+    await this.store.saveProbeInterval({
+      ...interval,
+      lockfilePath,
+      candidates,
+      error: null,
+    });
+    this.logger.log("Experiment probe interval listed", {
+      experimentId: experiment.id,
+      datasetEntryId: entry,
+      candidates: candidates.length,
+    });
+  }
+
+  /** The lockfile path js-sbom found at either bracketing snapshot. */
+  private async lockfilePath(
+    ...runs: ResultsRunInput[]
+  ): Promise<string | null> {
     for (const run of runs) {
-      await this.store.renewLease(experiment.id, this.instanceId);
-      await this.submitRun(experiment, run, client, integrationId, creator);
+      if (!run.analysis_id || !run.commit_hash || run.error === NO_LOCKFILE_YET)
+        continue;
+      const sbom = unwrapResultEnvelope(
+        await this.store.getPluginResult(run.analysis_id, SBOM_PLUGIN),
+      );
+      const path = repoLockfilePath(sbom, run.commit_hash);
+      if (path) return path;
+    }
+    return null;
+  }
+
+  private async ownerAndRepo(entryId: string): Promise<[string?, string?]> {
+    const [entry] = await this.store.getDatasetEntries([entryId]);
+    return entry ? [entry.owner, entry.repo] : [];
+  }
+
+  /** Reserve and submit one probe; a failed submission ends it failed. */
+  private async submitProbe(
+    experiment: Experiment,
+    entry: ExperimentRun["dataset_entry"],
+    branch: string,
+    request: ProbeRequest,
+    submitter: Submitter,
+  ): Promise<void> {
+    const committedAt = new Date(request.commit.committed_at);
+    const probeId = await this.store.reserveProbe({
+      experimentId: experiment.id,
+      datasetEntryId: entry.id,
+      commitHash: request.commit.sha,
+      committedAt,
+    });
+    if (!probeId) return;
+    const logContext = {
+      experimentId: experiment.id,
+      probeId,
+      commitHash: request.commit.sha,
+    };
+    let analysisId: string | undefined;
+    try {
+      analysisId = await this.submission.submitProbe({
+        experiment,
+        probeId,
+        entry,
+        integrationId: submitter.integrationId,
+        head: {
+          branch,
+          commitHash: request.commit.sha,
+          committedAt,
+          description: null,
+        },
+        creator: submitter.creator,
+      });
+    } catch (err) {
+      if (err instanceof NotAuthorized) {
+        throw new ExperimentFatal(
+          "The creator of this experiment is no longer allowed to analyze projects of the organization",
+        );
+      }
+      const reason = `submission failed: ${describeBuildError(err)}`;
+      await this.store.failProbeSubmission(probeId, reason);
+      this.logger.warn("Experiment probe submission failed", {
+        ...logContext,
+        reason,
+      });
+      return;
+    }
+    if (analysisId) {
+      this.logger.log("Experiment probe submitted", {
+        ...logContext,
+        analysisId,
+      });
     }
   }
 
+  /** End probes whose analysis finished: done with their packages, or failed. */
+  private async pollProbes(experiment: Experiment): Promise<void> {
+    const now = Date.now();
+    for (const probe of await this.store.getInFlightProbes(experiment.id)) {
+      const status = probe.analysis?.status;
+      const outcome = status ? analysisOutcome(status) : "running";
+      if (!probe.analysis) {
+        await this.failProbe(experiment, probe, "analysis deleted");
+        continue;
+      }
+      const sbom =
+        outcome === "running"
+          ? null
+          : await this.store.getPluginResult(probe.analysis.id, SBOM_PLUGIN);
+      if (outcome === "succeeded" && isUsablePluginResult(sbom)) {
+        await this.endProbeWith(experiment, probe, mapProbePackages(sbom));
+      } else if (outcome !== "running" && isNoLockfileResult(sbom)) {
+        // A commit without a lockfile resolves nothing
+        await this.endProbeWith(experiment, probe, []);
+      } else if (outcome === "succeeded") {
+        await this.failProbe(
+          experiment,
+          probe,
+          `missing result: ${SBOM_PLUGIN}`,
+        );
+      } else if (outcome === "failed") {
+        await this.failProbe(
+          experiment,
+          probe,
+          probe.analysis.failure_reason ?? `analysis ${status}`,
+        );
+      } else if (
+        probe.submitted_on &&
+        now - probe.submitted_on.getTime() > this.ceilingMs
+      ) {
+        await this.failProbe(experiment, probe, "ceiling");
+        await this.submission.abandon(probe.analysis.id);
+      }
+    }
+  }
+
+  /** End a probe failed and say why. */
+  private async failProbe(
+    experiment: Experiment,
+    probe: ExperimentProbe,
+    reason: string,
+  ): Promise<void> {
+    await this.store.endProbe(probe.id, "failed", reason);
+    this.logger.warn("Experiment probe failed", {
+      experimentId: experiment.id,
+      probeId: probe.id,
+      ...(probe.analysis ? { analysisId: probe.analysis.id } : {}),
+      commitHash: probe.commit_hash,
+      reason,
+    });
+  }
+
+  /** Write the probed commit's packages, then mark the probe done. */
+  private async endProbeWith(
+    experiment: Experiment,
+    probe: ExperimentProbe,
+    packages: ProbePackage[],
+  ): Promise<void> {
+    await this.store.saveProbeOutcome({
+      experimentId: experiment.id,
+      datasetEntryId: probe.dataset_entry.id,
+      commitHash: probe.commit_hash,
+      committedAt: probe.committed_at ?? null,
+      packages,
+    });
+    await this.store.endProbe(probe.id, "done");
+    this.logger.log("Experiment probe done", {
+      experimentId: experiment.id,
+      probeId: probe.id,
+      ...(probe.analysis ? { analysisId: probe.analysis.id } : {}),
+      commitHash: probe.commit_hash,
+    });
+  }
+
+  /** @returns whether the run took an in-flight slot */
   private async submitRun(
     experiment: Experiment,
     run: ExperimentRun,
     client: GithubRestClient,
-    integrationId: string,
-    creator: AuthenticatedUser,
-  ): Promise<void> {
+    repos: RepoLookups,
+    submitter: Submitter,
+  ): Promise<boolean> {
+    const { integrationId, creator } = submitter;
     const entry = run.dataset_entry;
-    const logContext = { experimentId: experiment.id, runId: run.id };
+    const logContext = {
+      experimentId: experiment.id,
+      runId: run.id,
+      gridDate: run.grid_date?.toISOString() ?? "HEAD",
+    };
 
     let head: PinnedHead;
     if (run.commit_hash && run.branch) {
@@ -405,8 +898,13 @@ export class ExperimentRunnerService
       };
     } else {
       try {
-        head = await this.pinHead(client, entry);
+        head = await this.pin(client, repos, run);
       } catch (err) {
+        if (err instanceof NoCommitYet) {
+          await this.store.updateRun(run.id, { branch: err.branch });
+          await this.completeEmpty(experiment, run);
+          return false;
+        }
         if (!(err instanceof RunSkipped)) throw err;
         await this.store.updateRun(run.id, {
           status: ExperimentRunStatus.SKIPPED,
@@ -417,7 +915,7 @@ export class ExperimentRunnerService
           ...logContext,
           reason: err.reason,
         });
-        return;
+        return false;
       }
     }
     const pinned = {
@@ -425,6 +923,29 @@ export class ExperimentRunnerService
       commit_hash: head.commitHash,
       committed_at: head.committedAt,
     };
+
+    // Another snapshot of the entry pinned the same commit: share its analysis
+    const sharedRun = await this.store.findCommitRun(
+      experiment.id,
+      entry.id,
+      head.commitHash,
+      run.id,
+    );
+    if (sharedRun) {
+      const now = new Date();
+      await this.store.updateRun(run.id, {
+        ...pinned,
+        shared_from: { id: sharedRun.id },
+        submitted_on: now,
+        first_submitted_on: run.first_submitted_on ?? now,
+      });
+      this.logger.log("Experiment run shares an analysis", {
+        ...logContext,
+        sharedFromRunId: sharedRun.id,
+        commitHash: head.commitHash,
+      });
+      return false;
+    }
     const attempt = { ...run, attempts: run.attempts + 1 };
 
     // Reserve the run first: a cancel only skips unsubmitted runs, so once
@@ -438,7 +959,7 @@ export class ExperimentRunnerService
     });
     if (!reserved) {
       this.logger.log("Experiment run no longer pending", logContext);
-      return;
+      return false;
     }
 
     let analysisId: string | undefined;
@@ -468,7 +989,7 @@ export class ExperimentRunnerService
         ...logContext,
         reason,
       });
-      return;
+      return false;
     }
 
     if (!analysisId) {
@@ -476,13 +997,14 @@ export class ExperimentRunnerService
         "Experiment run ended before it was submitted",
         logContext,
       );
-      return;
+      return false;
     }
     this.logger.log("Experiment run submitted", {
       ...logContext,
       analysisId,
       commitHash: head.commitHash,
     });
+    return true;
   }
 
   /**
@@ -545,45 +1067,92 @@ export class ExperimentRunnerService
   }
 
   /**
-   * The repository's live default branch and its tip.
+   * The commit a snapshot analyzes: the last default-branch commit on or
+   * before the end of its grid date, or the branch tip for HEAD.
    * @throws {RunSkipped} If the repository is gone, moved or has no branch
+   * @throws {NoCommitYet} If the branch has no commit by the grid date
    * @throws {GithubRateLimited} If GitHub rate limited the request
    * @throws {ExperimentFatal} If the token is no longer accepted or allowed
    */
-  private async pinHead(
+  private async pin(
     client: GithubRestClient,
-    entry: ExperimentRun["dataset_entry"],
+    repos: RepoLookups,
+    run: ExperimentRun,
   ): Promise<PinnedHead> {
-    const params = { owner: entry.owner, repo: entry.repo };
-    let repo: GithubRepoMetadata;
+    const entry = run.dataset_entry;
+    const repo = await this.lookupRepo(client, repos, entry);
+    const gridDate = run.grid_date ?? null;
     let commits: GithubCommitItem[];
     try {
-      repo = (
-        (await client.rest.repos.get(params)) as { data: GithubRepoMetadata }
-      ).data;
-      if (repo.html_url.toLowerCase() !== entry.git_url.toLowerCase()) {
-        throw new RunSkipped(`repository moved to ${repo.html_url}`);
-      }
-      if (!repo.default_branch) throw new RunSkipped("no default branch");
       commits = (
         (await client.rest.repos.listCommits({
-          ...params,
-          sha: repo.default_branch,
+          owner: entry.owner,
+          repo: entry.repo,
+          sha: repo.branch,
+          // No commit to start from at a grid date, so branch plus until is the best GitHub offers
+          ...(gridDate ? { until: endOfGridDay(gridDate).toISOString() } : {}),
           per_page: 1,
         })) as { data: GithubCommitItem[] }
       ).data;
     } catch (err) {
-      if (err instanceof RunSkipped) throw err;
+      // An empty repository has no commit by any grid date yet
+      if (gridDate && (err as GithubApiError).status === 409) {
+        throw new NoCommitYet(repo.branch);
+      }
       throw this.classifyGithubError(err);
     }
 
     const tip = commits[0];
-    if (!tip) throw new RunSkipped(`no commits on ${repo.default_branch}`);
+    if (!tip && gridDate) throw new NoCommitYet(repo.branch);
+    if (!tip) throw new RunSkipped(`no commits on ${repo.branch}`);
     const date = tip.commit.committer?.date ?? tip.commit.author?.date;
     return {
-      branch: repo.default_branch,
+      branch: repo.branch,
       commitHash: tip.sha,
       committedAt: date ? new Date(date) : null,
+      description: repo.description,
+    };
+  }
+
+  /** The entry's repository, looked up once per pass for all its snapshots. */
+  private lookupRepo(
+    client: GithubRestClient,
+    repos: RepoLookups,
+    entry: ExperimentRun["dataset_entry"],
+  ): Promise<PinnableRepo> {
+    let lookup = repos.get(entry.id);
+    if (!lookup) {
+      lookup = this.fetchRepo(client, entry);
+      repos.set(entry.id, lookup);
+    }
+    return lookup;
+  }
+
+  /**
+   * The repository's live metadata, with its default branch.
+   * @throws {RunSkipped} If the repository is gone, moved or has no branch
+   */
+  private async fetchRepo(
+    client: GithubRestClient,
+    entry: ExperimentRun["dataset_entry"],
+  ): Promise<PinnableRepo> {
+    let repo: GithubRepoMetadata;
+    try {
+      repo = (
+        (await client.rest.repos.get({
+          owner: entry.owner,
+          repo: entry.repo,
+        })) as { data: GithubRepoMetadata }
+      ).data;
+    } catch (err) {
+      throw this.classifyGithubError(err);
+    }
+    if (repo.html_url.toLowerCase() !== entry.git_url.toLowerCase()) {
+      throw new RunSkipped(`repository moved to ${repo.html_url}`);
+    }
+    if (!repo.default_branch) throw new RunSkipped("no default branch");
+    return {
+      branch: repo.default_branch,
       description: repo.description ?? null,
     };
   }

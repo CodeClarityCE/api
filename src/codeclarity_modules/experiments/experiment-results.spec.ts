@@ -1,6 +1,7 @@
 import {
   aggregateExperimentResults,
   type ExperimentResultsInput,
+  type KnowledgeSnapshot,
   type ResultsSummaryInput,
   type ResultsVulnerabilityInput,
 } from "./experiment-results";
@@ -166,7 +167,9 @@ describe("aggregateExperimentResults", () => {
           ],
         }),
       );
-      expect(sweep.map((row) => [row.subset, row.n_projects, row.instances])).toEqual([
+      expect(
+        sweep.map((row) => [row.subset, row.n_projects, row.instances]),
+      ).toEqual([
         ["all", 2, 3],
         ["match_correct_only", 2, 2],
         ["non_withdrawn", 2, 2],
@@ -230,7 +233,11 @@ describe("aggregateExperimentResults", () => {
         summary("r1", 0, { total_dependencies: 0, package_manager: null }),
         summary("r2", 1, { total_dependencies: 10, total_vulnerabilities: 1 }),
         summary("r3", 2, { total_dependencies: 30, total_vulnerabilities: 3 }),
-        summary("r4", 3, { total_dependencies: 20, total_vulnerabilities: 4, package_manager: "YARN" }),
+        summary("r4", 3, {
+          total_dependencies: 20,
+          total_vulnerabilities: 4,
+          package_manager: "YARN",
+        }),
       ],
     });
 
@@ -284,6 +291,350 @@ describe("aggregateExperimentResults", () => {
         failure_reasons: { "missing result: js-sbom": 2, ceiling: 1 },
         skip_reasons: { "repository not found": 1 },
       });
+    });
+  });
+
+  describe("snapshot grid", () => {
+    const grid = new Date("2026-10-07T00:00:00Z");
+    /**
+     * Entry a: a grid run with its own rows and a HEAD run with its own.
+     * Entry b: a grid run whose rows HEAD shares (same commit). Entry c:
+     * a grid run that failed and a HEAD run that was skipped.
+     */
+    const gridExperiment = input({
+      runs: [
+        { status: "done", error: null, grid_date: grid, rows_run_id: "a0" },
+        { status: "done", error: null, grid_date: null, rows_run_id: "aH" },
+        { status: "done", error: null, grid_date: grid, rows_run_id: "b0" },
+        { status: "done", error: null, grid_date: null, rows_run_id: "b0" },
+        {
+          status: "failed",
+          error: "ceiling",
+          grid_date: grid,
+          rows_run_id: "c0",
+        },
+        {
+          status: "skipped",
+          error: "gone",
+          grid_date: null,
+          rows_run_id: "cH",
+        },
+      ],
+      summaries: [summary("a0", 0), summary("aH", 0), summary("b0", 1)],
+      vulnerabilities: [
+        vuln("a0", "old"),
+        vuln("a0", "old"),
+        vuln("a0", "old"),
+        vuln("aH", "new"),
+        vuln("b0", "shared"),
+      ],
+    });
+
+    it("computes the existing blocks over the HEAD snapshot only", () => {
+      const { headline } = aggregateExperimentResults(gridExperiment);
+
+      expect(headline).toMatchObject({
+        n_projects: 2,
+        instances: 2,
+        top_packages: [
+          ["new", 1],
+          ["shared", 1],
+        ],
+      });
+    });
+
+    it("counts coverage over the HEAD runs", () => {
+      const { coverage } = aggregateExperimentResults(gridExperiment);
+
+      expect(coverage).toMatchObject({
+        runs: 3,
+        done: 2,
+        failed: 0,
+        skipped: 1,
+        skip_reasons: { gone: 1 },
+      });
+    });
+
+    it("counts coverage per grid date, oldest first and HEAD last", () => {
+      const { grid_coverage } = aggregateExperimentResults(gridExperiment);
+
+      expect(grid_coverage).toEqual([
+        {
+          grid_date: "2026-10-07",
+          runs: 3,
+          done: 2,
+          empty: 0,
+          failed: 1,
+          skipped: 0,
+          pending: 0,
+          mixed_knowledge: false,
+        },
+        {
+          grid_date: null,
+          runs: 3,
+          done: 2,
+          empty: 0,
+          failed: 0,
+          skipped: 1,
+          pending: 0,
+          mixed_knowledge: false,
+        },
+      ]);
+    });
+
+    it("counts a done run with no lockfile yet as empty, and pending runs per date", () => {
+      const older = new Date("2026-09-07T00:00:00Z");
+      const { grid_coverage } = aggregateExperimentResults(
+        input({
+          runs: [
+            {
+              status: "pending",
+              error: null,
+              grid_date: null,
+              rows_run_id: "aH",
+            },
+            { status: "done", error: null, grid_date: grid, rows_run_id: "a1" },
+            {
+              status: "done",
+              error: "no_lockfile_yet",
+              grid_date: older,
+              rows_run_id: "a0",
+            },
+          ],
+        }),
+      );
+
+      expect(grid_coverage).toEqual([
+        {
+          grid_date: "2026-09-07",
+          runs: 1,
+          done: 0,
+          empty: 1,
+          failed: 0,
+          skipped: 0,
+          pending: 0,
+          mixed_knowledge: false,
+        },
+        {
+          grid_date: "2026-10-07",
+          runs: 1,
+          done: 1,
+          empty: 0,
+          failed: 0,
+          skipped: 0,
+          pending: 0,
+          mixed_knowledge: false,
+        },
+        {
+          grid_date: null,
+          runs: 1,
+          done: 0,
+          empty: 0,
+          failed: 0,
+          skipped: 0,
+          pending: 1,
+          mixed_knowledge: false,
+        },
+      ]);
+    });
+
+    it("gives a HEAD-only experiment a single HEAD coverage row", () => {
+      const { grid_coverage } = aggregateExperimentResults(
+        input({
+          runs: [
+            { status: "done", error: null },
+            { status: "failed", error: "x" },
+          ],
+        }),
+      );
+
+      expect(grid_coverage).toEqual([
+        {
+          grid_date: null,
+          runs: 2,
+          done: 1,
+          empty: 0,
+          failed: 1,
+          skipped: 0,
+          pending: 0,
+          mixed_knowledge: false,
+        },
+      ]);
+    });
+  });
+
+  describe("mixed knowledge per grid date", () => {
+    const grid = new Date("2026-10-07T00:00:00Z");
+    const knowledge = (nvd: string, epss_rows = 10): KnowledgeSnapshot => ({
+      knowledge_sources: { nvd, osv: "2026-11-01T00:00:00Z" },
+      epss_rows,
+    });
+    const flags = (
+      results: ReturnType<typeof aggregateExperimentResults>,
+    ): [string | null, boolean][] =>
+      results.grid_coverage.map((row) => [row.grid_date, row.mixed_knowledge]);
+
+    it("flags a grid date whose runs were matched against different knowledge", () => {
+      const results = aggregateExperimentResults(
+        input({
+          runs: [
+            {
+              status: "done",
+              error: null,
+              grid_date: grid,
+              knowledge: knowledge("2026-11-01T00:00:00Z"),
+            },
+            {
+              status: "done",
+              error: null,
+              grid_date: grid,
+              knowledge: knowledge("2026-11-02T00:00:00Z"),
+            },
+            {
+              status: "done",
+              error: null,
+              grid_date: null,
+              knowledge: knowledge("2026-11-02T00:00:00Z"),
+            },
+            {
+              status: "done",
+              error: null,
+              grid_date: null,
+              knowledge: knowledge("2026-11-02T00:00:00Z"),
+            },
+          ],
+        }),
+      );
+
+      expect(flags(results)).toEqual([
+        ["2026-10-07", true],
+        [null, false],
+      ]);
+    });
+
+    it("counts a change in EPSS rows as different knowledge", () => {
+      const results = aggregateExperimentResults(
+        input({
+          runs: [
+            {
+              status: "done",
+              error: null,
+              knowledge: knowledge("2026-11-01T00:00:00Z", 10),
+            },
+            {
+              status: "done",
+              error: null,
+              knowledge: knowledge("2026-11-01T00:00:00Z", 11),
+            },
+          ],
+        }),
+      );
+
+      expect(flags(results)).toEqual([[null, true]]);
+    });
+
+    it("ignores runs without recorded knowledge, such as empty, failed or v1 runs", () => {
+      const results = aggregateExperimentResults(
+        input({
+          runs: [
+            {
+              status: "done",
+              error: null,
+              grid_date: grid,
+              knowledge: knowledge("2026-11-01T00:00:00Z"),
+            },
+            {
+              status: "done",
+              error: "no_lockfile_yet",
+              grid_date: grid,
+              knowledge: null,
+            },
+            { status: "failed", error: "ceiling", grid_date: grid },
+            { status: "done", error: null, grid_date: null },
+          ],
+        }),
+      );
+
+      expect(flags(results)).toEqual([
+        ["2026-10-07", false],
+        [null, false],
+      ]);
+    });
+  });
+
+  describe("load over time", () => {
+    it("shows an advisory published mid-grid in hindsight everywhere but as-of only from the next grid date", () => {
+      const jan = new Date("2025-01-01T00:00:00Z");
+      const feb = new Date("2025-02-01T00:00:00Z");
+      const mar = new Date("2025-03-01T00:00:00Z");
+      const midGrid = { published_date: "2025-02-15T10:00:00.000Z" };
+      const results = aggregateExperimentResults(
+        input({
+          runs: [
+            { status: "done", error: null, grid_date: jan, rows_run_id: "a0" },
+            { status: "done", error: null, grid_date: feb, rows_run_id: "a1" },
+            {
+              status: "failed",
+              error: "boom",
+              grid_date: mar,
+              rows_run_id: "a2",
+            },
+            { status: "done", error: null, grid_date: null, rows_run_id: "aH" },
+            { status: "done", error: null, grid_date: jan, rows_run_id: "b0" },
+            { status: "done", error: null, grid_date: feb, rows_run_id: "b0" },
+            { status: "done", error: null, grid_date: mar, rows_run_id: "b0" },
+            { status: "done", error: null, grid_date: null, rows_run_id: "b0" },
+          ],
+          summaries: [summary("aH", 0), summary("b0", 1)],
+          vulnerabilities: [
+            vuln("a0", "lodash", midGrid),
+            vuln("a1", "lodash", midGrid),
+            vuln("aH", "lodash", midGrid),
+            vuln("b0", "minimist", {
+              published_date: "2022-04-06T17:15:08.650",
+            }),
+          ],
+          provenance: {
+            ...input().provenance,
+            ended_on: new Date("2025-04-02T09:00:00Z"),
+          },
+        }),
+      );
+
+      expect(results.load_over_time).toEqual([
+        {
+          grid_date: "2025-01-01",
+          as_of_date: "2025-01-01",
+          projects: 2,
+          hindsight: 2,
+          as_of: 1,
+          undated: 0,
+        },
+        {
+          grid_date: "2025-02-01",
+          as_of_date: "2025-02-01",
+          projects: 2,
+          hindsight: 2,
+          as_of: 1,
+          undated: 0,
+        },
+        {
+          grid_date: "2025-03-01",
+          as_of_date: "2025-03-01",
+          projects: 1,
+          hindsight: 1,
+          as_of: 1,
+          undated: 0,
+        },
+        {
+          grid_date: null,
+          as_of_date: "2025-04-02",
+          projects: 2,
+          hindsight: 2,
+          as_of: 2,
+          undated: 0,
+        },
+      ]);
     });
   });
 

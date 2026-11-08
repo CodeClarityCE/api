@@ -11,6 +11,7 @@ import {
 import { DatasetStatus } from "../datasets/dataset.entity";
 
 import { ExperimentStatus } from "./experiment.entity";
+import { GridInterval } from "./experiment-grid";
 import { ExperimentRunStatus } from "./experiment-run.entity";
 import { type ExperimentRunnerService } from "./experiment-runner.service";
 import {
@@ -41,6 +42,7 @@ describe("ExperimentsService", () => {
   let runner: { kick: jest.Mock; cancel: jest.Mock };
 
   beforeEach(() => {
+    jest.useFakeTimers({ now: new Date("2026-11-07T15:00:00Z") });
     hasRequiredRole = jest.fn().mockResolvedValue(undefined);
     analyzersRepository = {
       doesAnalyzerBelongToOrg: jest.fn().mockResolvedValue(undefined),
@@ -97,9 +99,17 @@ describe("ExperimentsService", () => {
     );
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   describe("create", () => {
-    it("requires an admin and creates a pending run per dataset entry", async () => {
-      const id = await service.create("org-1", body, user);
+    it("requires an admin and creates a pending run per snapshot of every entry, HEAD last", async () => {
+      const id = await service.create(
+        "org-1",
+        { ...body, grid_interval: GridInterval.MONTH, grid_count: 2 },
+        user,
+      );
 
       expect(id).toBe("exp-1");
       expect(hasRequiredRole).toHaveBeenCalledWith(
@@ -116,20 +126,87 @@ describe("ExperimentsService", () => {
           created_by: { id: "user-1" },
           dataset: { id: "ds-1" },
           analyzer: { id: "an-1" },
-          runs: [
-            {
+          grid_interval: "month",
+          grid_count: 2,
+          runs: ["e-0", "e-1"].flatMap((entryId) =>
+            [
+              [0, new Date("2026-09-07T00:00:00Z")],
+              [1, new Date("2026-10-07T00:00:00Z")],
+              [2, null],
+            ].map(([gridIndex, gridDate]) => ({
               status: ExperimentRunStatus.PENDING,
               attempts: 0,
-              dataset_entry: { id: "e-0" },
-            },
-            {
-              status: ExperimentRunStatus.PENDING,
-              attempts: 0,
-              dataset_entry: { id: "e-1" },
-            },
-          ],
+              grid_index: gridIndex,
+              grid_date: gridDate,
+              dataset_entry: { id: entryId },
+            })),
+          ),
         }),
       );
+    });
+
+    it("defaults the grid to monthly x 24 plus HEAD", async () => {
+      await service.create("org-1", body, user);
+
+      const saved = experimentRepository["save"]!.mock.calls[0]![0] as {
+        grid_interval: string;
+        grid_count: number;
+        runs: { grid_index: number; grid_date: Date | null }[];
+      };
+      expect(saved.grid_interval).toBe("month");
+      expect(saved.grid_count).toBe(24);
+      expect(saved.runs).toHaveLength(2 * 25);
+      expect(saved.runs[0]).toMatchObject({
+        grid_index: 0,
+        grid_date: new Date("2024-11-07T00:00:00Z"),
+      });
+      expect(saved.runs[24]).toMatchObject({ grid_index: 24, grid_date: null });
+    });
+
+    it("steps weekly grids back by seven days", async () => {
+      await service.create(
+        "org-1",
+        { ...body, grid_interval: GridInterval.WEEK, grid_count: 2 },
+        user,
+      );
+
+      const saved = experimentRepository["save"]!.mock.calls[0]![0] as {
+        runs: { grid_date: Date | null }[];
+      };
+      expect(saved.runs.slice(0, 3).map((run) => run.grid_date)).toEqual([
+        new Date("2026-10-24T00:00:00Z"),
+        new Date("2026-10-31T00:00:00Z"),
+        null,
+      ]);
+    });
+
+    it("clamps monthly grid dates to the end of shorter months", async () => {
+      jest.setSystemTime(new Date("2026-03-31T09:00:00Z"));
+      await service.create(
+        "org-1",
+        { ...body, grid_interval: GridInterval.MONTH, grid_count: 2 },
+        user,
+      );
+
+      const saved = experimentRepository["save"]!.mock.calls[0]![0] as {
+        runs: { grid_date: Date | null }[];
+      };
+      expect(saved.runs.slice(0, 2).map((run) => run.grid_date)).toEqual([
+        new Date("2026-01-31T00:00:00Z"),
+        new Date("2026-02-28T00:00:00Z"),
+      ]);
+    });
+
+    it("creates a HEAD-only grid for a count of 0", async () => {
+      await service.create("org-1", { ...body, grid_count: 0 }, user);
+
+      const saved = experimentRepository["save"]!.mock.calls[0]![0] as {
+        runs: { grid_index: number; grid_date: Date | null }[];
+      };
+      expect(saved.runs).toEqual([
+        expect.objectContaining({ grid_index: 0, grid_date: null }),
+        expect.objectContaining({ grid_index: 0, grid_date: null }),
+      ]);
     });
 
     it("wakes the runner up", async () => {
@@ -142,6 +219,22 @@ describe("ExperimentsService", () => {
 
       expect(experimentRepository["save"]).toHaveBeenCalledWith(
         expect.objectContaining({ retries: 0 }),
+      );
+    });
+
+    it("freezes the analysis budget given at creation", async () => {
+      await service.create("org-1", { ...body, analysis_budget: 500 }, user);
+
+      expect(experimentRepository["save"]).toHaveBeenCalledWith(
+        expect.objectContaining({ analysis_budget: 500 }),
+      );
+    });
+
+    it("creates an experiment without a budget by default", async () => {
+      await service.create("org-1", body, user);
+
+      expect(experimentRepository["save"]).toHaveBeenCalledWith(
+        expect.objectContaining({ analysis_budget: null }),
       );
     });
 
@@ -229,6 +322,8 @@ describe("ExperimentsService", () => {
       name: "top100-head",
       status: ExperimentStatus.RUNNING,
       retries: 2,
+      grid_interval: "month",
+      grid_count: 0,
       error: null,
       analyzer_steps: null,
       created_on: new Date("2026-11-06T00:00:00Z"),
@@ -274,6 +369,58 @@ describe("ExperimentsService", () => {
       });
     });
 
+    it("get reads a v1 experiment as a HEAD-only grid", async () => {
+      experimentRepository["findOne"]!.mockResolvedValue(experiment);
+
+      const summary = await service.get("org-1", "exp-1", user);
+
+      expect(summary).toMatchObject({
+        grid_interval: "month",
+        grid_count: 0,
+        grid_dates: [],
+        analysis_budget: null,
+      });
+    });
+
+    it("get reports the frozen grid dates, oldest first", async () => {
+      experimentRepository["findOne"]!.mockResolvedValue({
+        ...experiment,
+        grid_interval: "week",
+        grid_count: 2,
+      });
+
+      const summary = await service.get("org-1", "exp-1", user);
+
+      expect(summary.grid_dates).toEqual(["2026-10-23", "2026-10-30"]);
+    });
+
+    it("get estimates the analyses: every snapshot plus about two fix probes per entry per grid interval", async () => {
+      experimentRepository["findOne"]!.mockResolvedValue({
+        ...experiment,
+        grid_interval: "week",
+        grid_count: 2,
+      });
+      // Three entries, each with two grid dates and HEAD
+      runRepository["createQueryBuilder"]!().getRawMany.mockResolvedValue([
+        { experiment_id: "exp-1", status: "pending", count: "9" },
+      ]);
+
+      const summary = await service.get("org-1", "exp-1", user);
+
+      expect(summary.estimated_analyses).toBe(21);
+    });
+
+    it("get reports the analysis budget", async () => {
+      experimentRepository["findOne"]!.mockResolvedValue({
+        ...experiment,
+        analysis_budget: 500,
+      });
+
+      const summary = await service.get("org-1", "exp-1", user);
+
+      expect(summary.analysis_budget).toBe(500);
+    });
+
     it("get hides experiments of other organizations", async () => {
       experimentRepository["findOne"]!.mockResolvedValue(null);
 
@@ -315,7 +462,7 @@ describe("ExperimentsService", () => {
       });
     });
 
-    it("getRuns pages through the runs by entry rank", async () => {
+    it("getRuns pages through the runs by entry rank, then grid date", async () => {
       experimentRepository["findOne"]!.mockResolvedValue(experiment);
       runRepository["findAndCount"]!.mockResolvedValue([
         [
@@ -327,6 +474,9 @@ describe("ExperimentsService", () => {
             branch: "main",
             commit_hash: "abc123",
             committed_at: new Date("2026-11-01T00:00:00Z"),
+            grid_index: 1,
+            grid_date: new Date("2026-10-06T00:00:00Z"),
+            shared_from: { id: "run-0" },
             submitted_on: null,
             ended_on: null,
             dataset_entry: {
@@ -357,7 +507,7 @@ describe("ExperimentsService", () => {
       expect(runRepository["findAndCount"]).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { experiment: { id: "exp-1" } },
-          order: { dataset_entry: { rank: "ASC" } },
+          order: { dataset_entry: { rank: "ASC" }, grid_index: "ASC" },
           skip: 200,
           take: 100,
         }),
@@ -373,6 +523,9 @@ describe("ExperimentsService", () => {
             attempts: 1,
             branch: "main",
             commit_hash: "abc123",
+            grid_index: 1,
+            grid_date: new Date("2026-10-06T00:00:00Z"),
+            shared_from_run_id: "run-0",
             analysis_id: "a-1",
             project_id: "p-1",
             entry: {

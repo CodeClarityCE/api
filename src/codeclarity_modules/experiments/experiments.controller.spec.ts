@@ -19,6 +19,8 @@ describe("ExperimentsController exports", () => {
     service = {
       exportRunsCsv: jest.fn(),
       exportVulnerabilitiesCsv: jest.fn(),
+      exportExposuresCsv: jest.fn(),
+      exportFixesCsv: jest.fn(),
       exportResults: jest.fn(),
     };
     controller = new ExperimentsController(
@@ -82,6 +84,26 @@ describe("ExperimentsController exports", () => {
     expect(sent).toBe(stream);
   });
 
+  it.each([
+    ["exportExposuresCsv", "exposures.csv"],
+    ["exportFixesCsv", "fixes.csv"],
+  ] as const)("%s sends %s as a CSV attachment", async (method, file) => {
+    const stream = Readable.from(["rank\r\n"]);
+    service[method]!.mockResolvedValue({
+      experiment_name: "top100-head",
+      stream,
+    });
+
+    await controller[method](user, "org-1", "exp-1", reply);
+
+    expect(service[method]).toHaveBeenCalledWith("org-1", "exp-1", user);
+    expect(headers).toEqual({
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": `attachment; filename="top100-head-${file}"`,
+    });
+    expect(sent).toBe(stream);
+  });
+
   it("sends results.json as a JSON attachment of the bare results", async () => {
     const results = { coverage: { runs: 3 } };
     service["exportResults"]!.mockResolvedValue({
@@ -119,5 +141,18 @@ describe("ExperimentsController exports", () => {
     ).rejects.toThrow("not found");
     expect(sent).toBeUndefined();
     expect(headers).toEqual({});
+  });
+});
+
+describe("ExperimentsController estimate", () => {
+  it("serves the fix probes estimated per entry per grid interval, for the create form", () => {
+    const controller = new ExperimentsController(
+      {} as ExperimentsService,
+      {} as ExperimentResultsService,
+    );
+
+    expect(controller.getEstimate()).toEqual({
+      data: { probes_per_entry_interval: 2 },
+    });
   });
 });
