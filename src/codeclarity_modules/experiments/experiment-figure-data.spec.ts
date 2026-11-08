@@ -1,3 +1,4 @@
+import type { FigureMetricId } from "./experiment-figure-catalog";
 import { computeFigureData, type FigureRows } from "./experiment-figure-data";
 import {
   aggregateExperimentResults,
@@ -100,6 +101,31 @@ describe("computeFigureData for load over time", () => {
     expect(computeFigureData(ROWS, definition)).toEqual(
       computeFigureData(ROWS, definition),
     );
+  });
+
+  it("captions the projects behind each grid date and the empty ones", () => {
+    const data = computeFigureData(
+      {
+        ...ROWS,
+        runs: [
+          { ...run("a1", "2025-01-01"), status: "failed" },
+          run("a2", "2025-03-01"),
+          run("aH", null),
+          run("bH", null),
+        ],
+      },
+      {
+        metric: "load_over_time",
+        chart_form: "line",
+        group_by: null,
+        filters: {},
+      },
+    );
+
+    expect(data.caption).toEqual({
+      n: "n = 1 to 2 projects with a done snapshot per grid date",
+      exclusions: ["1 grid date without a done snapshot"],
+    });
   });
 });
 
@@ -591,5 +617,205 @@ describe("computeFigureData for upstream leverage", () => {
     });
 
     expect(data.labels).toEqual(["2025-03-01"]);
+  });
+});
+
+describe("computeFigureData captions after filters", () => {
+  const FILTERED: FigureRows = {
+    ...COHORT,
+    vulnerabilities: [
+      ...COHORT.vulnerabilities,
+      hit("r4", "e", { conflict_flag: "INCORRECT" }),
+      hit("r2", "f", { published_date: "2026-06-01" }),
+    ],
+  };
+  const BOTH = { sweep: "match_correct_only", view: "as_of" };
+  const DROPPED = [
+    "1 instance outside Correct matches only",
+    "1 instance published after the HEAD cutoff",
+  ];
+
+  function caption(
+    rows: FigureRows,
+    metric: FigureMetricId,
+    chart_form: string,
+    filters: Record<string, string> = {},
+  ): unknown {
+    return computeFigureData(rows, {
+      metric,
+      chart_form,
+      group_by: null,
+      filters,
+    }).caption;
+  }
+
+  it("counts a concentration Figure's whole sample without a filter", () => {
+    expect(caption(FILTERED, "concentration", "line")).toEqual({
+      n: "n = 4 projects at HEAD, 6 packages, 10 vulnerability instances",
+      exclusions: [],
+    });
+  });
+
+  it("counts what a concentration Figure's filters keep", () => {
+    expect(caption(FILTERED, "concentration", "line", BOTH)).toEqual({
+      n: "n = 4 projects at HEAD, 4 packages, 8 vulnerability instances",
+      exclusions: DROPPED,
+    });
+  });
+
+  it("counts the instances a severity mix draws", () => {
+    expect(caption(FILTERED, "severity_mix", "bar", BOTH)).toEqual({
+      n: "n = 8 vulnerability instances in 4 projects at HEAD",
+      exclusions: DROPPED,
+    });
+  });
+
+  it("counts plotted projects and filtered instances on stars vs load", () => {
+    expect(caption(FILTERED, "stars_vs_load", "scatter", BOTH)).toEqual({
+      n: "n = 4 projects with dependencies at HEAD",
+      exclusions: DROPPED,
+    });
+  });
+
+  it("names projects a stars vs load Figure cannot plot", () => {
+    const rows: FigureRows = {
+      ...COHORT,
+      runs: [...COHORT.runs, headRun("r5")],
+      summaries: [
+        ...COHORT.summaries,
+        { ...summary("r5", 4, 0), total_dependencies: 0 },
+      ],
+    };
+    expect(caption(rows, "stars_vs_load", "scatter")).toEqual({
+      n: "n = 4 projects with dependencies at HEAD",
+      exclusions: ["1 project without dependencies"],
+    });
+  });
+
+  describe("residence", () => {
+    const INTRODUCED = entry("e1", "CRITICAL", "2025-05-20", [
+      ["2024-12-01", false],
+      ["2025-02-21", true],
+      ["2025-06-01", true],
+    ]);
+    const OTHER = entry("e2", "HIGH", "2025-02-20", [
+      ["2024-12-01", false],
+      ["2025-02-20", true],
+      ["2025-06-01", true],
+    ]);
+
+    it("counts introductions on or before disclosure", () => {
+      expect(
+        caption(rowsOf([INTRODUCED, OTHER]), "residence", "histogram"),
+      ).toEqual({
+        n: "n = 2 introductions on or before disclosure",
+        exclusions: [],
+      });
+    });
+
+    it("names what precision and date range filters dropped", () => {
+      const rows = rowsOf([INTRODUCED, OTHER]);
+      expect(
+        caption(rows, "residence", "quartiles", {
+          dating_precision: "commit",
+        }),
+      ).toEqual({
+        n: "n = 0 introductions on or before disclosure",
+        exclusions: ["2 introductions outside Dated to a commit"],
+      });
+      expect(
+        caption(rows, "residence", "histogram", {
+          date_range: "2025-02-21/2025-12-31",
+        }),
+      ).toEqual({
+        n: "n = 1 introduction on or before disclosure",
+        exclusions: ["1 introduction outside the date range"],
+      });
+    });
+
+    it("names exposures and introductions the measure cannot use", () => {
+      const present = entry("e3", "LOW", "2025-05-20", [
+        ["2024-12-01", true],
+        ["2025-02-21", true],
+        ["2025-06-01", true],
+      ]);
+      const late = entry("e4", "LOW", "2025-01-01", [
+        ["2024-12-01", false],
+        ["2025-02-21", true],
+        ["2025-06-01", true],
+      ]);
+      expect(
+        caption(rowsOf([INTRODUCED, present, late]), "residence", "histogram"),
+      ).toEqual({
+        n: "n = 1 introduction on or before disclosure",
+        exclusions: [
+          "1 exposure present at the first snapshot",
+          "1 introduction after disclosure",
+        ],
+      });
+    });
+  });
+
+  describe("upstream leverage", () => {
+    const FIXED = entry("e1", "HIGH", "2024-06-01", [
+      ["2024-12-01", true],
+      ["2025-02-01", true],
+      ["2025-06-01", false],
+    ]);
+    const rows = rowsOf([FIXED]);
+
+    it("counts the projects behind the packages-to-clear lines", () => {
+      expect(caption(rows, "upstream_leverage", "line")).toEqual({
+        n: "n = 1 project with a done snapshot per grid date",
+        exclusions: [],
+      });
+    });
+
+    it("names grid dates and instances the line's filters dropped", () => {
+      const wrong = entry("e2", "HIGH", "2024-06-01", [
+        ["2024-12-01", true],
+        ["2025-02-01", false],
+        ["2025-06-01", false],
+      ]);
+      wrong.vulnerabilities[0]!.conflict_flag = "INCORRECT";
+      expect(
+        caption(rowsOf([FIXED, wrong]), "upstream_leverage", "line", {
+          sweep: "match_correct_only",
+          date_range: "2025-02-01/2025-12-31",
+        }),
+      ).toEqual({
+        n: "n = 2 projects with a done snapshot per grid date",
+        exclusions: [
+          "1 instance outside Correct matches only",
+          "2 grid dates outside the date range",
+        ],
+      });
+    });
+
+    it("counts the fixes of the shown intervals", () => {
+      expect(caption(rows, "upstream_leverage", "bar")).toEqual({
+        n: "n = 1 fix in 2 intervals",
+        exclusions: [],
+      });
+    });
+
+    it("names fixes the precision and date range filters dropped", () => {
+      expect(
+        caption(rows, "upstream_leverage", "bar", {
+          dating_precision: "commit",
+        }),
+      ).toEqual({
+        n: "n = 0 fixes in 2 intervals",
+        exclusions: ["1 fix outside Dated to a commit"],
+      });
+      expect(
+        caption(rows, "upstream_leverage", "bar", {
+          date_range: "2025-02-01/2025-12-31",
+        }),
+      ).toEqual({
+        n: "n = 0 fixes in 1 interval",
+        exclusions: ["1 fix outside the date range"],
+      });
+    });
   });
 });

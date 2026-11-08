@@ -248,3 +248,46 @@ describe("the catalog rules for survival and fix lag", () => {
     }
   });
 });
+
+describe("computeFigureData caption", () => {
+  it("counts the exposures of a survival Figure", () => {
+    expect(computeFigureData(rowsOf(COHORT), SURVIVAL).caption).toEqual({
+      n: "n = 4 exposures, 3 fixed, 1 censored at 2025-04-15",
+      exclusions: [],
+    });
+  });
+
+  it("counts only what the sweep filter keeps and names what it drops", () => {
+    const rows = rowsOf([
+      ...COHORT,
+      entry("wrong-match", ["P", "P", "P", "P"], { flag: "INCORRECT" }),
+    ]);
+
+    const { caption } = computeFigureData(rows, {
+      ...SURVIVAL,
+      filters: { sweep: "match_correct_only" },
+    });
+
+    expect(caption).toEqual({
+      n: "n = 4 exposures, 3 fixed, 1 censored at 2025-04-15",
+      exclusions: ["1 exposure outside Correct matches only"],
+    });
+  });
+
+  it("leaves exposures with no disclosure date out of fix lag and says so", () => {
+    const rows = rowsOf([
+      ...COHORT,
+      entry("undisclosed", ["P", "P", "P", "P"], { published: null }),
+    ]);
+
+    const { caption } = computeFigureData(rows, {
+      ...SURVIVAL,
+      metric: "fix_lag",
+    });
+
+    expect(caption).toEqual({
+      n: "n = 4 exposures, 3 fixed, 1 censored at 2025-04-15",
+      exclusions: ["1 exposure without a disclosure or fix date"],
+    });
+  });
+});

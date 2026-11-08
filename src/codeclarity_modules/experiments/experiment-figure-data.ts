@@ -7,9 +7,12 @@ import {
 } from "./experiment-exposures";
 import {
   type DateRange,
+  DATING_PRECISION_FILTER,
   type FigureDefinition,
+  type FigureFilter,
   type FigureMetricId,
   parseDateRange,
+  SWEEP_FILTER,
 } from "./experiment-figure-catalog";
 import { gridDay, publishedDay } from "./experiment-grid";
 import { loadOverTime, type LoadRow } from "./experiment-load";
@@ -50,6 +53,12 @@ export interface FigureSeries {
   censored?: number[];
 }
 
+/** What a Figure's caption says about its sample, after its filters. */
+export interface FigureCaptionFacts {
+  n: string;
+  exclusions: string[];
+}
+
 export interface FigureData {
   x_title: string;
   y_title: string;
@@ -58,12 +67,55 @@ export interface FigureData {
   series: FigureSeries[];
   /** YYYY-MM-DD open exposures are censored at, on survival Figures */
   censored_at?: string;
+  caption: FigureCaptionFacts;
 }
 
 const LOAD_VIEWS = [
   { key: "hindsight", label: "Hindsight" },
   { key: "as_of", label: "As-of" },
 ] as const satisfies readonly { key: keyof LoadRow; label: string }[];
+
+function counted(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+/** One exclusion phrase, or none when nothing was left out. */
+function dropped(
+  count: number,
+  one: string,
+  many: string,
+  rest: string,
+): string[] {
+  return count > 0 ? [`${counted(count, one, many)} ${rest}`] : [];
+}
+
+function optionLabel(filter: FigureFilter, id: string | undefined): string {
+  return filter.options.find((option) => option.id === id)?.label ?? `${id}`;
+}
+
+/** Projects behind each plotted grid date, and the dates with none done. */
+function gridDateCaption(
+  projects: readonly number[],
+  exclusions: string[] = [],
+): FigureCaptionFacts {
+  const done = projects.filter((count) => count > 0);
+  const low = Math.min(...done);
+  const high = Math.max(...done, 0);
+  const range =
+    done.length === 0 || low === high ? `${high}` : `${low} to ${high}`;
+  return {
+    n: `n = ${range} ${high === 1 && low === high ? "project" : "projects"} with a done snapshot per grid date`,
+    exclusions: [
+      ...exclusions,
+      ...dropped(
+        projects.length - done.length,
+        "grid date",
+        "grid dates",
+        "without a done snapshot",
+      ),
+    ],
+  };
+}
 
 function loadOverTimeFigure(
   rows: FigureRows,
@@ -82,6 +134,7 @@ function loadOverTimeFigure(
         values: load.map((row) => row[key]),
       }),
     ),
+    caption: gridDateCaption(load.map((row) => row.projects)),
   };
 }
 
@@ -123,15 +176,50 @@ function residenceFigure(
 ): FigureData {
   const precision = definition.filters["dating_precision"];
   const range = dateRangeOf(definition);
-  const block = residenceBlock(
-    filteredExposures(rows, definition).filter(
-      ({ introduction }) =>
-        introduction !== null &&
-        (!precision || introduction.precision === precision) &&
-        inRange(introduction.date, range),
-    ),
+  const exposures = filteredExposures(rows, definition);
+  const introduced = exposures.filter((e) => e.introduction !== null);
+  const precise = introduced.filter(
+    (e) => !precision || e.introduction!.precision === precision,
   );
+  const kept = precise.filter((e) => inRange(e.introduction!.date, range));
+  const block = residenceBlock(kept);
   const bySeverity = definition.group_by === "severity";
+  const caption: FigureCaptionFacts = {
+    n: `n = ${counted(block.overall.n, "introduction", "introductions")} on or before disclosure`,
+    exclusions: [
+      ...sweepExclusions(rows, definition, exposures.length),
+      ...dropped(
+        exposures.length - introduced.length,
+        "exposure",
+        "exposures",
+        "present at the first snapshot",
+      ),
+      ...dropped(
+        introduced.length - precise.length,
+        "introduction",
+        "introductions",
+        `outside ${optionLabel(DATING_PRECISION_FILTER, precision)}`,
+      ),
+      ...dropped(
+        precise.length - kept.length,
+        "introduction",
+        "introductions",
+        "outside the date range",
+      ),
+      ...dropped(
+        block.undated,
+        "introduction",
+        "introductions",
+        "without a publication date",
+      ),
+      ...dropped(
+        block.after_disclosure.n,
+        "introduction",
+        "introductions",
+        "after disclosure",
+      ),
+    ],
+  };
 
   if (definition.chart_form === "quartiles") {
     const groups = bySeverity
@@ -150,6 +238,7 @@ function residenceFigure(
         label,
         values: [days.min, days.p25, days.median, days.p75, days.max],
       })),
+      caption,
     };
   }
 
@@ -176,6 +265,7 @@ function residenceFigure(
       label,
       values: countBuckets(days.map((p) => p.residence_days)),
     })),
+    caption,
   };
 }
 
@@ -193,8 +283,38 @@ function viewedVulnerabilities(
   });
 }
 
+/** Instances of these runs that the sweep and view filters left out. */
+function instanceExclusions(
+  rows: FigureRows,
+  definition: FigureDefinition,
+  runIds: readonly string[],
+): string[] {
+  const inRuns = new Set(runIds);
+  const count = (list: readonly ResultsVulnerabilityInput[]): number =>
+    list.filter((v) => inRuns.has(v.run_id)).length;
+  const subset = count(subsetVulnerabilities(rows, definition));
+  return [
+    ...dropped(
+      count(rows.vulnerabilities) - subset,
+      "instance",
+      "instances",
+      `outside ${optionLabel(SWEEP_FILTER, definition.filters["sweep"])}`,
+    ),
+    ...dropped(
+      subset - count(viewedVulnerabilities(rows, definition)),
+      "instance",
+      "instances",
+      "published after the HEAD cutoff",
+    ),
+  ];
+}
+
 /** Share of the population at each 5% step of a Lorenz curve. */
 const LORENZ_STEPS = Array.from({ length: 21 }, (_, i) => i * 5);
+
+function sum(values: readonly number[]): number {
+  return values.reduce((total, value) => total + value, 0);
+}
 
 function concentrationFigure(
   rows: FigureRows,
@@ -224,6 +344,10 @@ function concentrationFigure(
       },
       { key: "packages", label: "Packages", values: curve(packageCounts) },
     ],
+    caption: {
+      n: `n = ${counted(universe.length, "project", "projects")} at HEAD, ${counted(packageCounts.length, "package", "packages")}, ${counted(sum([...loadByRun.values()]), "vulnerability instance", "vulnerability instances")}`,
+      exclusions: instanceExclusions(rows, definition, universe),
+    },
   };
 }
 
@@ -277,23 +401,29 @@ function severityMixFigure(
   definition: FigureDefinition,
 ): FigureData {
   const vulnerabilities = viewedVulnerabilities(rows, definition);
-  const groups = headGroups(
-    headSummaries(rows.runs, rows.summaries),
-    definition.group_by,
-  );
+  const summaries = headSummaries(rows.runs, rows.summaries);
+  const groups = headGroups(summaries, definition.group_by);
+  const series = groups.map(({ key, label, runIds }) => {
+    const counts = measureHeadline(runIds, vulnerabilities).headline.sev_counts;
+    return {
+      key,
+      label,
+      values: SEVERITY_ORDER.map((severity) => counts[severity]),
+    };
+  });
   return {
     x_title: "Severity",
     y_title: "Vulnerability instances",
     labels: SEVERITY_ORDER.map((severity) => severityLabel(severity)),
-    series: groups.map(({ key, label, runIds }) => {
-      const counts = measureHeadline(runIds, vulnerabilities).headline
-        .sev_counts;
-      return {
-        key,
-        label,
-        values: SEVERITY_ORDER.map((severity) => counts[severity]),
-      };
-    }),
+    series,
+    caption: {
+      n: `n = ${counted(sum(series.flatMap((s) => s.values)), "vulnerability instance", "vulnerability instances")} in ${counted(summaries.length, "project", "projects")} at HEAD`,
+      exclusions: instanceExclusions(
+        rows,
+        definition,
+        summaries.map((s) => s.run_id),
+      ),
+    },
   };
 }
 
@@ -301,7 +431,8 @@ function starsVsLoadFigure(
   rows: FigureRows,
   definition: FigureDefinition,
 ): FigureData {
-  const withDeps = headSummaries(rows.runs, rows.summaries)
+  const summaries = headSummaries(rows.runs, rows.summaries);
+  const withDeps = summaries
     .filter((s) => s.total_dependencies > 0)
     .sort((a, b) => a.rank - b.rank);
   const { sweep, view } = definition.filters;
@@ -334,6 +465,22 @@ function starsVsLoadFigure(
         runIds.includes(s.run_id) ? (loads.get(s.run_id) ?? 0) : null,
       ),
     })),
+    caption: {
+      n: `n = ${counted(withDeps.length, "project", "projects")} with dependencies at HEAD`,
+      exclusions: [
+        ...instanceExclusions(
+          rows,
+          definition,
+          withDeps.map((s) => s.run_id),
+        ),
+        ...dropped(
+          summaries.length - withDeps.length,
+          "project",
+          "projects",
+          "without dependencies",
+        ),
+      ],
+    },
   };
 }
 
@@ -350,12 +497,11 @@ function upstreamLeverageFigure(
   const precision = definition.filters["dating_precision"];
   const range = dateRangeOf(definition);
   const headDay = gridDay(rows.head_cutoff);
+  const exposures = filteredExposures(rows, definition);
   const block = upstreamLeverage(
     rows.runs,
     subsetVulnerabilities(rows, definition),
-    filteredExposures(rows, definition).filter(
-      ({ fix }) => !precision || fix?.precision === precision,
-    ),
+    exposures.filter(({ fix }) => !precision || fix?.precision === precision),
   );
 
   if (definition.chart_form === "line") {
@@ -378,6 +524,22 @@ function upstreamLeverageFigure(
           values: shown.map((row) => row.pkgs_clear_80),
         },
       ],
+      caption: gridDateCaption(
+        shown.map((row) => row.projects),
+        [
+          ...instanceExclusions(
+            rows,
+            definition,
+            rows.runs.flatMap((run) => run.rows_run_id ?? []),
+          ),
+          ...dropped(
+            block.packages_to_clear.length - shown.length,
+            "grid date",
+            "grid dates",
+            "outside the date range",
+          ),
+        ],
+      ),
     };
   }
 
@@ -385,7 +547,33 @@ function upstreamLeverageFigure(
     inRange(row.interval_to ?? headDay, range),
   );
   const labels = shown.map((row) => row.interval_to ?? "HEAD");
-  const axes = { x_title: "Interval ending", y_title: "Fixes", labels };
+  const shownFixes = sum(shown.map((row) => row.fixes));
+  const caption: FigureCaptionFacts = {
+    n: `n = ${counted(shownFixes, "fix", "fixes")} in ${counted(shown.length, "interval", "intervals")}`,
+    exclusions: [
+      ...sweepExclusions(rows, definition, exposures.length),
+      ...dropped(
+        exposures.filter(
+          ({ fix }) => precision && fix && fix.precision !== precision,
+        ).length,
+        "fix",
+        "fixes",
+        `outside ${optionLabel(DATING_PRECISION_FILTER, precision)}`,
+      ),
+      ...dropped(
+        sum(block.fix_kinds.map((row) => row.fixes)) - shownFixes,
+        "fix",
+        "fixes",
+        "outside the date range",
+      ),
+    ],
+  };
+  const axes = {
+    x_title: "Interval ending",
+    y_title: "Fixes",
+    labels,
+    caption,
+  };
   if (definition.group_by !== "fix_kind") {
     return {
       ...axes,
@@ -471,19 +659,50 @@ function filteredExposures(
   });
 }
 
+/** Names the chosen sweep subset and what it left out of the Figure. */
+function sweepExclusions(
+  rows: FigureRows,
+  definition: FigureDefinition,
+  kept: number,
+): string[] {
+  const subset = definition.filters["sweep"];
+  if (!subset) return [];
+  return dropped(
+    deriveExposures(rows).length - kept,
+    "exposure",
+    "exposures",
+    `outside ${optionLabel(SWEEP_FILTER, subset)}`,
+  );
+}
+
+/** The sample of a step Figure; `dropped` are exposures it could not plot. */
+function stepCaption(
+  { overall, censored_at }: { overall: SurvivalGroup; censored_at: string },
+  sweep: string[],
+  dropped: string[],
+): FigureCaptionFacts {
+  return {
+    n: `n = ${overall.n} exposures, ${overall.fixed} fixed, ${overall.censored} censored at ${censored_at}`,
+    exclusions: [...sweep, ...dropped],
+  };
+}
+
 function survivalFigure(
   rows: FigureRows,
   definition: FigureDefinition,
 ): FigureData {
-  const block = exposureSurvival(
-    filteredExposures(rows, definition),
-    rows.head_cutoff,
-  );
+  const exposures = filteredExposures(rows, definition);
+  const block = exposureSurvival(exposures, rows.head_cutoff);
   return {
     x_title: "Days exposed",
     y_title: "Share still exposed",
     ...stepSeries(survivalGroups(block, definition)),
     censored_at: block.censored_at,
+    caption: stepCaption(
+      block,
+      sweepExclusions(rows, definition, exposures.length),
+      [],
+    ),
   };
 }
 
@@ -491,15 +710,23 @@ function fixLagFigure(
   rows: FigureRows,
   definition: FigureDefinition,
 ): FigureData {
-  const block = fixLagSurvival(
-    filteredExposures(rows, definition),
-    rows.head_cutoff,
-  );
+  const exposures = filteredExposures(rows, definition);
+  const block = fixLagSurvival(exposures, rows.head_cutoff);
   return {
     x_title: "Days since disclosure",
     y_title: "Share not yet fixed",
     ...stepSeries(survivalGroups(block, definition)),
     censored_at: block.censored_at,
+    caption: stepCaption(
+      block,
+      sweepExclusions(rows, definition, exposures.length),
+      dropped(
+        exposures.length - block.overall.n,
+        "exposure",
+        "exposures",
+        "without a disclosure or fix date",
+      ),
+    ),
   };
 }
 
