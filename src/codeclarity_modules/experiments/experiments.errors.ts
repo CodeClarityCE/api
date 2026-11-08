@@ -10,6 +10,8 @@ export const errorMessages: Record<string, string> = {
   ExperimentAlreadyPublished:
     "This experiment is already published under the current metric version.",
   InvalidFigureDefinition: "The catalog does not allow this Figure definition.",
+  FigureVersionNotCurrent:
+    "This Published results version came from older metric code, so this Figure cannot be computed for it.",
 };
 
 export class DatasetNotReady extends PublicAPIError {
@@ -64,6 +66,20 @@ export class InvalidFigureDefinition extends PublicAPIError {
       InvalidFigureDefinition.errorCode,
       InvalidFigureDefinition.errorMessage,
       InvalidFigureDefinition.statusCode,
+      cause,
+    );
+  }
+}
+
+export class FigureVersionNotCurrent extends PublicAPIError {
+  static errorCode = "FigureVersionNotCurrent";
+  static errorMessage = errorMessages[FigureVersionNotCurrent.errorCode]!;
+  static statusCode = 409;
+  constructor(cause?: unknown) {
+    super(
+      FigureVersionNotCurrent.errorCode,
+      FigureVersionNotCurrent.errorMessage,
+      FigureVersionNotCurrent.statusCode,
       cause,
     );
   }

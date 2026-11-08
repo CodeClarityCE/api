@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
   Res,
 } from "@nestjs/common";
@@ -51,6 +52,7 @@ import {
   ExperimentRunSummary,
   ExperimentSummary,
   FigureDataBody,
+  MoveFigureBody,
   UpdateFigureBody,
 } from "./experiments.types";
 
@@ -485,6 +487,55 @@ export class ExperimentsController {
         user,
       ),
     };
+  }
+
+  @Get(":experiment_id/figures/:figure_id/data")
+  @ApiOperation({
+    summary: "The data of a saved Figure, stored if it is tied to a version",
+  })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiParam({ name: "figure_id", description: "Figure ID" })
+  async getFigureData(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Param("figure_id") figure_id: string,
+  ): Promise<TypedResponse<FigureData>> {
+    return {
+      data: await this.figuresService.getData(
+        org_id,
+        experiment_id,
+        figure_id,
+        user,
+      ),
+    };
+  }
+
+  @Put(":experiment_id/figures/:figure_id/published-version")
+  @ApiOperation({ summary: "Tie a Figure to a Published results version" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiParam({ name: "figure_id", description: "Figure ID" })
+  @ApiResponse({
+    status: 409,
+    description: "The version came from older metric code",
+  })
+  async moveFigureToVersion(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+    @Param("figure_id") figure_id: string,
+    @Body() body: MoveFigureBody,
+  ): Promise<NoDataResponse> {
+    await this.figuresService.moveToVersion(
+      org_id,
+      experiment_id,
+      figure_id,
+      body.metric_version,
+      user,
+    );
+    return {};
   }
 
   @Patch(":experiment_id/figures/:figure_id")
