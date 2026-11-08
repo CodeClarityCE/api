@@ -140,6 +140,7 @@ export class ExperimentsService {
       retries: body.retries ?? EXPERIMENT_DEFAULT_RETRIES,
       grid_interval: gridInterval,
       grid_count: gridCount,
+      analysis_budget: body.analysis_budget ?? null,
       created_on: createdOn,
       organization: { id: orgId },
       created_by: { id: user.userId },
@@ -394,6 +395,7 @@ export class ExperimentsService {
       ).flatMap((snapshot) =>
         snapshot.grid_date ? [gridDay(snapshot.grid_date)] : [],
       ),
+      analysis_budget: experiment.analysis_budget ?? null,
       error: experiment.error ?? null,
       dataset_id: experiment.dataset?.id ?? null,
       dataset_name: experiment.dataset?.name ?? null,

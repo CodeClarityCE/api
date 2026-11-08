@@ -221,6 +221,11 @@ class FakeStore extends ExperimentStore {
     return true;
   }
 
+  async countSubmittedAnalyses(experimentId: string): Promise<number> {
+    const attempts = this.runsOf(experimentId).reduce((sum, r) => sum + r.attempts, 0);
+    return attempts + this.probes.filter((p) => p.experimentId === experimentId).length;
+  }
+
   probeOf(commit: string): FakeStore["probes"][number] | undefined {
     return this.probes.find((p) => p.commitHash === commit);
   }
@@ -1827,8 +1832,7 @@ describe("ExperimentRunnerService", () => {
       }
     }
 
-    async function runToEnd(failing: Record<string, string> = {}): Promise<void> {
-      const service = runner();
+    async function runToEnd(failing: Record<string, string> = {}, service = runner()): Promise<void> {
       for (let pass = 0; pass < 12; pass++) {
         await service.tick();
         if (store.experiments.get("exp-1")!.status === ExperimentStatus.COMPLETED) return;
@@ -1914,6 +1918,85 @@ describe("ExperimentRunnerService", () => {
 
       expect(await store.countInFlight()).toBe(1);
       expect(store.probes).toHaveLength(1);
+    });
+
+    describe("under an analysis budget", () => {
+      function budgeted(budget: number): void {
+        store.experiments.get("exp-1")!.analysis_budget = budget;
+      }
+
+      async function budgetedFixes(): Promise<[string, unknown][]> {
+        const rows = await store.getProbeRows("exp-1");
+        const budget = {
+          analysis_budget: store.experiments.get("exp-1")!.analysis_budget ?? null,
+          analyses_submitted: await store.countSubmittedAnalyses("exp-1"),
+        };
+        return deriveExposures({ ...rows, budget }).map((e) => [e.vulnerability_id, e.fix]);
+      }
+
+      it("stops probing once snapshots and probes have spent the budget, then completes", async () => {
+        // Three snapshot analyses and one probe
+        budgeted(4);
+        await runToEnd();
+
+        expect(submit).toHaveBeenCalledTimes(3);
+        expect(submitProbe.mock.calls.map(([request]) => request.head.commitHash)).toEqual(["d4e"]);
+        expect(await budgetedFixes()).toEqual([
+          ["CVE-A", expect.objectContaining({ commit_hash: "f6a", precision: "snapshot", probe_outcome: "not_found", probe_reason: "budget spent" })],
+          ["CVE-B", expect.objectContaining({ commit_hash: "d4e", precision: "commit", probe_outcome: "found" })],
+        ]);
+      });
+
+      it("never cuts snapshots: every snapshot runs on a budget below their count, and nothing is probed", async () => {
+        budgeted(2);
+        await runToEnd();
+
+        expect(submit).toHaveBeenCalledTimes(3);
+        expect(store.runs.every((r) => r.status === ExperimentRunStatus.DONE)).toBe(true);
+        expect(submitProbe).not.toHaveBeenCalled();
+        expect((await budgetedFixes()).map(([, fix]) => fix)).toEqual([
+          expect.objectContaining({ precision: "snapshot", probe_reason: "budget spent" }),
+          expect.objectContaining({ precision: "snapshot", probe_reason: "budget spent" }),
+        ]);
+      });
+
+      it("counts every snapshot attempt against the budget, retries included", async () => {
+        budgeted(4);
+        const service = runner();
+        await service.tick();
+        finishAnalysis("octo/app", AnalysisStatus.FAILED, "clone failed", 0);
+        await runToEnd({}, service);
+
+        expect(submit).toHaveBeenCalledTimes(4);
+        expect(submitProbe).not.toHaveBeenCalled();
+      });
+
+      it("probes fixes before introductions", async () => {
+        // octo/web gains vulnerable lodash between its first two snapshots
+        Object.assign(LODASH, { w1a: "4.17.21", w2b: "4.17.15", w3c: "4.17.15", "sha-octo/web": "4.17.15" });
+        github.addHistory("octo/web", [
+          ["w1a", "2025-02-20T12:00:00Z"],
+          ["w2b", "2025-03-10T12:00:00Z"],
+          ["w3c", "2025-03-25T12:00:00Z"],
+        ]);
+        store.experiments.delete("exp-1");
+        store.runs = [];
+        addExperiment("exp-1", ["octo/web", "octo/app"], {}, GRID);
+        // Six snapshot analyses and one probe
+        budgeted(7);
+        await runToEnd();
+
+        expect(submitProbe.mock.calls.map(([request]) => request.head.commitHash)).toEqual(["d4e"]);
+        const rows = await store.getProbeRows("exp-1");
+        const intros = deriveExposures({
+          ...rows,
+          budget: { analysis_budget: 7, analyses_submitted: await store.countSubmittedAnalyses("exp-1") },
+        }).flatMap((e) => (e.introduction ? [e.introduction] : []));
+        expect(intros).toEqual([
+          expect.objectContaining({ commit_hash: "w3c", precision: "snapshot", probe_reason: "budget spent" }),
+          expect.objectContaining({ commit_hash: "w3c", precision: "snapshot", probe_reason: "budget spent" }),
+        ]);
+      });
     });
 
     it("does not probe once the experiment is cancelled, and ends when its probes finish", async () => {

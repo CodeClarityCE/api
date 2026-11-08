@@ -79,6 +79,12 @@ export class Experiment {
   @Column({ type: "integer", default: 0, update: false })
   grid_count!: number;
 
+  /** Most analyses it may submit, null for no cap; never updated once created */
+  @ApiProperty({ description: "Analysis budget (null: none)", nullable: true })
+  @Expose()
+  @Column({ type: "integer", nullable: true, update: false })
+  analysis_budget?: number | null;
+
   @ApiProperty({ description: "Why the experiment FAILED, if it did" })
   @Expose()
   @Column("varchar", { length: 1000, nullable: true })

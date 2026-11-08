@@ -10,6 +10,7 @@
  * aggregateExperimentResults with plain rows. Where the harness produced
  * NaN the payload carries null.
  */
+import { type AnalysisBudgetUsage, isBudgetSpent } from "./experiment-budget";
 import {
   type DatingPrecision,
   deriveExposures,
@@ -145,6 +146,8 @@ export interface ExperimentResultsInput {
   probe_intervals?: ResultsProbeIntervalInput[];
   /** Fix probe analyses, pending, done or failed */
   probe_analyses?: ResultsProbeAnalysisInput[];
+  /** The analysis budget and what was submitted, absent without one */
+  budget?: AnalysisBudgetUsage | null;
   provenance: ResultsProvenanceInput;
 }
 
@@ -310,6 +313,14 @@ export interface ProbesBlock {
   introductions: ProbeOutcomeCounts;
   /** Not-found events per reason, most frequent first */
   not_found_reasons: Record<string, number>;
+  budget: ProbeBudget;
+}
+
+/** The analysis budget, what was submitted against it and whether it is spent. */
+export interface ProbeBudget {
+  analysis_budget: number | null;
+  analyses_submitted: number | null;
+  spent: boolean;
 }
 
 export interface ProvenanceBlock extends ResultsProvenanceInput {
@@ -675,7 +686,10 @@ function exposuresBlock(exposures: readonly Exposure[]): ExposuresBlock {
   };
 }
 
-function probesBlock(exposures: readonly Exposure[]): ProbesBlock {
+function probesBlock(
+  exposures: readonly Exposure[],
+  budget: AnalysisBudgetUsage | null | undefined,
+): ProbesBlock {
   const counts = (events: readonly ExposureEvent[]): ProbeOutcomeCounts => ({
     found: events.filter((e) => e.probe_outcome === "found").length,
     ambiguous: events.filter((e) => e.probe_outcome === "ambiguous").length,
@@ -691,6 +705,11 @@ function probesBlock(exposures: readonly Exposure[]): ProbesBlock {
     not_found_reasons: Object.fromEntries(
       rankedEntries(countBy(notFound, (e) => e.probe_reason)),
     ),
+    budget: {
+      analysis_budget: budget?.analysis_budget ?? null,
+      analyses_submitted: budget?.analyses_submitted ?? null,
+      spent: isBudgetSpent(budget),
+    },
   };
 }
 
@@ -764,7 +783,7 @@ export function aggregateExperimentResults(
     rqd: rqd(summaries),
     exposures: exposuresBlock(exposures),
     fix_lag: fixLag(exposures),
-    probes: probesBlock(exposures),
+    probes: probesBlock(exposures, input.budget),
     load_over_time: loadOverTime({
       runs: input.runs,
       vulnerabilities: input.vulnerabilities,
