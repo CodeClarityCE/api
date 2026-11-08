@@ -30,11 +30,13 @@ import {
   severityOf,
 } from "./experiment-severity";
 import {
+  type ConfidenceInterval,
   gini,
   median,
   packagesToClear,
   quantile,
   spearman,
+  wilsonInterval,
 } from "./experiment-stats";
 import {
   exposureSurvival,
@@ -187,6 +189,30 @@ export interface SweepRow extends HeadlineScalars {
   subset: SweepSubset;
 }
 
+/** 95% Wilson intervals of the shares in a sweep row. */
+export interface ScalarShareIntervals {
+  affected_share: ConfidenceInterval | null;
+  high_critical_share: ConfidenceInterval | null;
+  top10_pkg_share: ConfidenceInterval | null;
+  top10_proj_share: ConfidenceInterval | null;
+}
+
+export interface HeadlineShareIntervals extends ScalarShareIntervals {
+  high_critical_share_of_classed: ConfidenceInterval | null;
+}
+
+export interface SweepShareIntervals extends ScalarShareIntervals {
+  subset: SweepSubset;
+}
+
+/** Intervals sit apart from the point estimates, which stay as they were. */
+export interface ShareIntervals {
+  headline: HeadlineShareIntervals;
+  sweep: SweepShareIntervals[];
+  /** Each severity's share of all instances */
+  severity: Record<keyof SeverityCounts, ConfidenceInterval | null>;
+}
+
 export interface EpssBlock {
   /** Share of instances that have an EPSS score */
   nonnull_share: number | null;
@@ -332,6 +358,8 @@ export interface ExperimentResults {
   grid_coverage: GridCoverageRow[];
   headline: Headline;
   sweep: SweepRow[];
+  /** 95% Wilson intervals of the headline, sweep and severity shares */
+  share_intervals: ShareIntervals;
   epss: EpssBlock;
   /** Instances per conflict flag, most frequent first */
   match_flags: Record<string, number>;
@@ -394,14 +422,20 @@ function sumOf(values: readonly number[]): number {
   return values.reduce((total, value) => total + value, 0);
 }
 
+interface HeadlineMeasure {
+  headline: Headline;
+  intervals: HeadlineShareIntervals;
+  severity: ShareIntervals["severity"];
+}
+
 /**
- * The headline over a fixed universe of runs: loads are zero-filled over
+ * The headline and its share intervals over a fixed universe of runs: loads are zero-filled over
  * the universe, instances outside it are ignored.
  */
-export function headline(
+function measureHeadline(
   universe: readonly string[],
   vulnerabilities: readonly ResultsVulnerabilityInput[],
-): Headline {
+): HeadlineMeasure {
   const loadByRun = new Map<string, number>(universe.map((id) => [id, 0]));
   const inUniverse = vulnerabilities.filter((v) => loadByRun.has(v.run_id));
   for (const v of inUniverse) {
@@ -441,7 +475,7 @@ export function headline(
   const largestFirst = (values: number[]): number[] =>
     [...values].sort((a, b) => b - a);
 
-  return {
+  const result: Headline = {
     n_projects: nProjects,
     n_affected: nAffected,
     affected_share: ratio(nAffected, nProjects),
@@ -465,6 +499,34 @@ export function headline(
     top_packages: rankedEntries(spread).slice(0, 10),
     high_critical_share_of_classed: ratio(critHigh, instances - sevCounts.NONE),
   };
+
+  const classified = sumOf(Object.values(sevCounts));
+  return {
+    headline: result,
+    intervals: {
+      affected_share: wilsonInterval(nAffected, nProjects),
+      high_critical_share: wilsonInterval(critHigh, instances),
+      top10_pkg_share: wilsonInterval(
+        sumOf(largestFirst(packageCounts).slice(0, 10)),
+        instances,
+      ),
+      top10_proj_share: wilsonInterval(
+        sumOf(largestFirst(loads).slice(0, 10)),
+        total,
+      ),
+      high_critical_share_of_classed: wilsonInterval(
+        critHigh,
+        instances - sevCounts.NONE,
+      ),
+    },
+    severity: {
+      CRITICAL: wilsonInterval(sevCounts.CRITICAL, classified),
+      HIGH: wilsonInterval(sevCounts.HIGH, classified),
+      MEDIUM: wilsonInterval(sevCounts.MEDIUM, classified),
+      LOW: wilsonInterval(sevCounts.LOW, classified),
+      NONE: wilsonInterval(sevCounts.NONE, classified),
+    },
+  };
 }
 
 const SWEEP_FILTERS: Record<
@@ -486,16 +548,23 @@ function scalars(h: Headline): HeadlineScalars {
   return rest;
 }
 
-function sweep(
+function measureSweep(
   universe: readonly string[],
   vulnerabilities: readonly ResultsVulnerabilityInput[],
-): SweepRow[] {
+): (HeadlineMeasure & { subset: SweepSubset })[] {
   return SWEEP_SUBSETS.map((subset) => ({
     subset,
-    ...scalars(
-      headline(universe, vulnerabilities.filter(SWEEP_FILTERS[subset])),
-    ),
+    ...measureHeadline(universe, vulnerabilities.filter(SWEEP_FILTERS[subset])),
   }));
+}
+
+/** A sweep row's intervals: the headline's without the of-classed share. */
+function sweepIntervals(
+  subset: SweepSubset,
+  intervals: HeadlineShareIntervals,
+): SweepShareIntervals {
+  const { high_critical_share_of_classed: _classed, ...rest } = intervals;
+  return { subset, ...rest };
 }
 
 function epss(
@@ -779,11 +848,21 @@ export function aggregateExperimentResults(
   const vulnerabilities = input.vulnerabilities.filter((v) =>
     inUniverse.has(v.run_id),
   );
+  const headMeasure = measureHeadline(universe, vulnerabilities);
+  const sweepMeasures = measureSweep(universe, vulnerabilities);
   return {
     coverage: coverage(input.runs.filter(isHead)),
     grid_coverage: gridCoverage(input.runs),
-    headline: headline(universe, vulnerabilities),
-    sweep: sweep(universe, vulnerabilities),
+    headline: headMeasure.headline,
+    sweep: sweepMeasures.map((m) => ({
+      subset: m.subset,
+      ...scalars(m.headline),
+    })),
+    share_intervals: {
+      headline: headMeasure.intervals,
+      sweep: sweepMeasures.map((m) => sweepIntervals(m.subset, m.intervals)),
+      severity: headMeasure.severity,
+    },
     epss: epss(vulnerabilities),
     match_flags: mix(vulnerabilities, (v) => v.conflict_flag),
     winning_source_head: mix(vulnerabilities, (v) => v.winning_source),

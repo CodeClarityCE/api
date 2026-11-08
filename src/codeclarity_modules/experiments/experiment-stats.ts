@@ -228,10 +228,30 @@ export interface KmStep {
   time: number;
   /** Survival just after `time` */
   survival: number;
+  /** 95% Greenwood log-log band around `survival` */
+  lower: number;
+  upper: number;
   /** Observations with a duration of at least `time` */
   at_risk: number;
   events: number;
   censored: number;
+}
+
+/** Two-sided 95% standard normal quantile */
+const KM_BAND_Z = 1.959963984540054;
+
+/** The log-log band; it collapses onto survival at exactly 1 or 0. */
+function logLogBand(
+  survival: number,
+  greenwood: number,
+): { lower: number; upper: number } {
+  if (survival <= 0 || survival >= 1) {
+    return { lower: survival, upper: survival };
+  }
+  const spread = Math.exp(
+    (KM_BAND_Z * Math.sqrt(greenwood)) / Math.abs(Math.log(survival)),
+  );
+  return { lower: survival ** spread, upper: survival ** (1 / spread) };
 }
 
 /**
@@ -249,6 +269,7 @@ export function kaplanMeier(
     .sort((a, b) => a.time - b.time);
   const steps: KmStep[] = [];
   let survival = 1;
+  let greenwood = 0;
   let i = 0;
   while (i < observations.length) {
     const time = observations[i]!.time;
@@ -260,9 +281,13 @@ export function kaplanMeier(
       else censored++;
     }
     survival *= 1 - eventCount / atRisk;
+    if (eventCount < atRisk) {
+      greenwood += eventCount / (atRisk * (atRisk - eventCount));
+    }
     steps.push({
       time,
       survival,
+      ...logLogBand(survival, greenwood),
       at_risk: atRisk,
       events: eventCount,
       censored,
@@ -274,4 +299,35 @@ export function kaplanMeier(
 /** The first time survival drops to one half or below, NaN if it never does. */
 export function kmMedian(curve: readonly KmStep[]): number {
   return curve.find((step) => step.survival <= 0.5)?.time ?? NaN;
+}
+
+/** A two-sided confidence interval around a point estimate. */
+export interface ConfidenceInterval {
+  low: number;
+  high: number;
+}
+
+/** The normal quantile for a two-sided 95% interval. */
+const Z_95 = 1.959963984540054;
+
+/**
+ * 95% Wilson score interval of the proportion successes / trials. Null
+ * without trials or when successes is outside 0 to trials.
+ */
+export function wilsonInterval(
+  successes: number,
+  trials: number,
+): ConfidenceInterval | null {
+  if (trials <= 0 || successes < 0 || successes > trials) return null;
+  const p = successes / trials;
+  const z2 = Z_95 * Z_95;
+  const denominator = 1 + z2 / trials;
+  const centre = (p + z2 / (2 * trials)) / denominator;
+  const margin =
+    (Z_95 * Math.sqrt((p * (1 - p)) / trials + z2 / (4 * trials * trials))) /
+    denominator;
+  return {
+    low: successes === 0 ? 0 : centre - margin,
+    high: successes === trials ? 1 : centre + margin,
+  };
 }
