@@ -23,8 +23,13 @@ import {
   SWEEP_FILTERS,
   type SweepSubset,
 } from "./experiment-results";
-import { SEVERITY_ORDER, type SeverityCounts } from "./experiment-severity";
+import { SEVERITY_ORDER } from "./experiment-severity";
 import { lorenzCurve } from "./experiment-stats";
+import {
+  exposureSurvival,
+  fixLagSurvival,
+  type SurvivalGroup,
+} from "./experiment-survival";
 import { upstreamLeverage } from "./experiment-upstream-leverage";
 
 export interface FigureRows extends ExposuresInput {
@@ -38,6 +43,11 @@ export interface FigureSeries {
   key: string;
   label: string;
   values: (number | null)[];
+  /** 95% band around values, on survival Figures */
+  lower?: (number | null)[];
+  upper?: (number | null)[];
+  /** Exposures censored at each point, on survival Figures */
+  censored?: number[];
 }
 
 export interface FigureData {
@@ -46,6 +56,8 @@ export interface FigureData {
   /** One per point along x */
   labels: string[];
   series: FigureSeries[];
+  /** YYYY-MM-DD open exposures are censored at, on survival Figures */
+  censored_at?: string;
 }
 
 const LOAD_VIEWS = [
@@ -73,14 +85,6 @@ function loadOverTimeFigure(
   };
 }
 
-const SEVERITY_LABELS: Record<keyof SeverityCounts, string> = {
-  CRITICAL: "Critical",
-  HIGH: "High",
-  MEDIUM: "Medium",
-  LOW: "Low",
-  NONE: "None",
-};
-
 function dateRangeOf(definition: FigureDefinition): DateRange | null {
   const value = definition.filters["date_range"];
   return value ? parseDateRange(value) : null;
@@ -98,20 +102,10 @@ function subsetVulnerabilities(
   rows: FigureRows,
   definition: FigureDefinition,
 ): FigureRows["vulnerabilities"] {
-  const subset = definition.filters["sweep_subset"] as SweepSubset | undefined;
+  const subset = definition.filters["sweep"] as SweepSubset | undefined;
   return subset
     ? rows.vulnerabilities.filter(SWEEP_FILTERS[subset])
     : rows.vulnerabilities;
-}
-
-function figureExposures(
-  rows: FigureRows,
-  definition: FigureDefinition,
-): Exposure[] {
-  return deriveExposures({
-    ...rows,
-    vulnerabilities: subsetVulnerabilities(rows, definition),
-  });
 }
 
 const RESIDENCE_BUCKETS = [
@@ -130,7 +124,7 @@ function residenceFigure(
   const precision = definition.filters["dating_precision"];
   const range = dateRangeOf(definition);
   const block = residenceBlock(
-    figureExposures(rows, definition).filter(
+    filteredExposures(rows, definition).filter(
       ({ introduction }) =>
         introduction !== null &&
         (!precision || introduction.precision === precision) &&
@@ -143,7 +137,7 @@ function residenceFigure(
     const groups = bySeverity
       ? block.by_severity.map((group) => ({
           key: group.key,
-          label: SEVERITY_LABELS[group.key as keyof SeverityCounts],
+          label: severityLabel(group.key),
           days: group,
         }))
       : [{ key: "residence", label: "Residence", days: block.overall }];
@@ -169,7 +163,7 @@ function residenceFigure(
   const groups = bySeverity
     ? block.by_severity.map(({ key }) => ({
         key,
-        label: SEVERITY_LABELS[key as keyof SeverityCounts],
+        label: severityLabel(key),
         days: block.points.filter((p) => p.severity === key),
       }))
     : [{ key: "residence", label: "Residence", days: block.points }];
@@ -290,7 +284,7 @@ function severityMixFigure(
   return {
     x_title: "Severity",
     y_title: "Vulnerability instances",
-    labels: SEVERITY_ORDER.map((severity) => SEVERITY_LABELS[severity]),
+    labels: SEVERITY_ORDER.map((severity) => severityLabel(severity)),
     series: groups.map(({ key, label, runIds }) => {
       const counts = measureHeadline(runIds, vulnerabilities).headline
         .sev_counts;
@@ -310,8 +304,8 @@ function starsVsLoadFigure(
   const withDeps = headSummaries(rows.runs, rows.summaries)
     .filter((s) => s.total_dependencies > 0)
     .sort((a, b) => a.rank - b.rank);
-  const { sweep_subset: subset, view } = definition.filters;
-  const filtered = (subset && subset !== "all") || view === "as_of";
+  const { sweep, view } = definition.filters;
+  const filtered = sweep !== undefined || view === "as_of";
   // The copied total matches the results; filters can only count instances
   const loads = filtered
     ? instanceCounts(
@@ -359,7 +353,7 @@ function upstreamLeverageFigure(
   const block = upstreamLeverage(
     rows.runs,
     subsetVulnerabilities(rows, definition),
-    figureExposures(rows, definition).filter(
+    filteredExposures(rows, definition).filter(
       ({ fix }) => !precision || fix?.precision === precision,
     ),
   );
@@ -417,6 +411,98 @@ function upstreamLeverageFigure(
   };
 }
 
+/** Lines stepping through every group's times; each ends at its last step. */
+function stepSeries(
+  groups: readonly { label: string; group: SurvivalGroup }[],
+): Pick<FigureData, "labels" | "series"> {
+  const times = [
+    ...new Set(groups.flatMap(({ group }) => group.curve.map((s) => s.time))),
+  ].sort((a, b) => a - b);
+  const series = groups.map(({ label, group: { key, curve } }) => {
+    const points = times.map((time) => {
+      const step = curve.findLast((s) => s.time <= time);
+      const ended = time > (curve.at(-1)?.time ?? -Infinity);
+      return {
+        value: ended ? null : (step?.survival ?? 1),
+        lower: ended ? null : (step?.lower ?? 1),
+        upper: ended ? null : (step?.upper ?? 1),
+        censored: step?.time === time ? step.censored : 0,
+      };
+    });
+    return {
+      key,
+      label,
+      values: points.map((p) => p.value),
+      lower: points.map((p) => p.lower),
+      upper: points.map((p) => p.upper),
+      censored: points.map((p) => p.censored),
+    };
+  });
+  return { labels: times.map(String), series };
+}
+
+/** "CRITICAL" as "Critical". */
+function severityLabel(severity: string): string {
+  return severity.charAt(0) + severity.slice(1).toLowerCase();
+}
+
+/** The curves a definition asks for: one per severity, or all exposures. */
+function survivalGroups(
+  block: { overall: SurvivalGroup; by_severity: SurvivalGroup[] },
+  definition: FigureDefinition,
+): { label: string; group: SurvivalGroup }[] {
+  if (definition.group_by === "severity") {
+    return block.by_severity.map((group) => ({
+      label: severityLabel(group.key),
+      group,
+    }));
+  }
+  return [{ label: "All exposures", group: block.overall }];
+}
+
+/** Exposures of the instances the sweep filter keeps, all when not applied. */
+function filteredExposures(
+  rows: FigureRows,
+  definition: FigureDefinition,
+): Exposure[] {
+  return deriveExposures({
+    ...rows,
+    vulnerabilities: subsetVulnerabilities(rows, definition),
+  });
+}
+
+function survivalFigure(
+  rows: FigureRows,
+  definition: FigureDefinition,
+): FigureData {
+  const block = exposureSurvival(
+    filteredExposures(rows, definition),
+    rows.head_cutoff,
+  );
+  return {
+    x_title: "Days exposed",
+    y_title: "Share still exposed",
+    ...stepSeries(survivalGroups(block, definition)),
+    censored_at: block.censored_at,
+  };
+}
+
+function fixLagFigure(
+  rows: FigureRows,
+  definition: FigureDefinition,
+): FigureData {
+  const block = fixLagSurvival(
+    filteredExposures(rows, definition),
+    rows.head_cutoff,
+  );
+  return {
+    x_title: "Days since disclosure",
+    y_title: "Share not yet fixed",
+    ...stepSeries(survivalGroups(block, definition)),
+    censored_at: block.censored_at,
+  };
+}
+
 /** Every catalog metric needs a builder, or this does not compile. */
 const FIGURE_BUILDERS: Record<
   FigureMetricId,
@@ -428,6 +514,8 @@ const FIGURE_BUILDERS: Record<
   severity_mix: severityMixFigure,
   stars_vs_load: starsVsLoadFigure,
   upstream_leverage: upstreamLeverageFigure,
+  survival: survivalFigure,
+  fix_lag: fixLagFigure,
 };
 
 /** The data of a Figure whose definition the catalog has already accepted. */

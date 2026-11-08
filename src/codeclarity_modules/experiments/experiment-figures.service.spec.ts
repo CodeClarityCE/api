@@ -166,6 +166,8 @@ describe("ExperimentFiguresService", () => {
     expect(catalog.metrics.map((metric) => metric.id)).toEqual(
       expect.arrayContaining([
         "load_over_time",
+        "survival",
+        "fix_lag",
         "residence",
         "concentration",
         "severity_mix",
@@ -293,11 +295,11 @@ describe("ExperimentFiguresService", () => {
 
       await compute({
         ...definition,
-        filters: { dating_precision: "commit", sweep_subset: "all" },
+        filters: { dating_precision: "commit", sweep: "non_withdrawn" },
       });
       await compute({
         ...definition,
-        filters: { sweep_subset: "all", dating_precision: "commit" },
+        filters: { sweep: "non_withdrawn", dating_precision: "commit" },
       });
 
       expect(runFind).toHaveBeenCalledTimes(1);

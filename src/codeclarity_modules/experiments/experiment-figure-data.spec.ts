@@ -358,7 +358,7 @@ describe("computeFigureData for concentration", () => {
 
     const data = computeFigureData(rows, {
       ...definition,
-      filters: { sweep_subset: "non_withdrawn" },
+      filters: { sweep: "non_withdrawn" },
     });
 
     expect(quarters(data, "projects")).toEqual([0, 0, 0, 50, 100]);
@@ -506,7 +506,7 @@ describe("computeFigureData for stars vs load", () => {
             : v,
         ),
       },
-      { ...definition, filters: { sweep_subset: "match_correct_only" } },
+      { ...definition, filters: { sweep: "match_correct_only" } },
     );
 
     expect(data.series[0]!.values).toEqual([0, 2, 2, 0]);
