@@ -848,6 +848,7 @@ describe("ExperimentResultsService", () => {
   describe("publish", () => {
     const completed = {
       id: "exp-1",
+      name: "top100",
       status: "COMPLETED",
       created_on: new Date("2026-11-06T00:00:00Z"),
       started_on: new Date("2026-11-06T00:01:00Z"),
@@ -924,11 +925,261 @@ describe("ExperimentResultsService", () => {
           "exposures.csv",
           "fixes.csv",
           "results.json",
+          "data_dictionary.md",
           "manifest.json",
+          "CITATION.cff",
+          "methods.md",
         ]);
         expect(stored.package_checksum).toBe(
           createHash("sha256").update(stored.package_archive).digest("hex"),
         );
+      });
+
+      it("describes every column of every exported CSV in the data dictionary", async () => {
+        const files = unzip((await publishedRow()).package_archive);
+        const dictionary = files.get("data_dictionary.md")!;
+
+        for (const file of [
+          "runs.csv",
+          "vulnerabilities.csv",
+          "exposures.csv",
+          "fixes.csv",
+        ]) {
+          const section = dictionary.split(`## ${file}`)[1]!.split("\n## ")[0]!;
+          const described = [
+            ...section.matchAll(/^\| `([^`]+)` \| \S.* \|$/gm),
+          ].map((row) => row[1]);
+          const columns = files.get(file)!.split("\r\n")[0]!.split(",");
+          expect(described).toEqual(expect.arrayContaining(columns));
+        }
+      });
+
+      describe("citation file", () => {
+        beforeEach(() => {
+          jest.useFakeTimers({
+            now: new Date("2026-11-07T10:00:00Z"),
+            doNotFake: ["nextTick", "setImmediate", "queueMicrotask"],
+          });
+        });
+        afterEach(() => jest.useRealTimers());
+
+        it("cites the Published results version, escaping the experiment name", async () => {
+          const stored = await publishedRow({
+            ...completed,
+            name: 'Top: "100"',
+          });
+
+          expect(unzip(stored.package_archive).get("CITATION.cff")).toBe(
+            [
+              'cff-version: "1.2.0"',
+              'message: "If you use this data, please cite it using these metadata."',
+              'type: "dataset"',
+              'title: "Top: \\"100\\" (replication package, metric version 1)"',
+              'version: "1"',
+              'date-released: "2026-11-07"',
+              "authors:",
+              '  - family-names: "Doe"',
+              '    given-names: "John"',
+              "",
+            ].join("\n"),
+          );
+        });
+
+        it("names no person when the experiment has no recorded creator", async () => {
+          const stored = await publishedRow({
+            ...completed,
+            name: "top100",
+            created_by: null,
+          });
+
+          expect(unzip(stored.package_archive).get("CITATION.cff")).toContain(
+            'authors:\n  - name: "Author not recorded"\n',
+          );
+        });
+      });
+
+      describe("methods text", () => {
+        async function methodsOf(
+          experiment: object = completed,
+        ): Promise<string> {
+          experimentRepository["findOne"]!.mockResolvedValue(experiment);
+          await service.publish("org-1", "exp-1", user);
+          const stored = publishedRepository["save"]!.mock.calls[0]![0];
+          return unzip(stored.package_archive).get("methods.md")!;
+        }
+
+        const run = (
+          id: string,
+          status: string,
+          gridDate: string | null,
+          error: string | null = null,
+          knowledge: object | null = null,
+        ): object => ({
+          id,
+          status,
+          error,
+          grid_index: gridDate ? 0 : 1,
+          grid_date: gridDate ? new Date(`${gridDate}T00:00:00Z`) : null,
+          knowledge,
+          shared_from: null,
+          dataset_entry: { id: id },
+        });
+
+        /** One done project with two instances on two packages at HEAD. */
+        function twoInstances(): void {
+          doneRun();
+          const instance = (dependency: string): object => ({
+            run_id: "r1",
+            affected_dependency: dependency,
+            vulnerability_id: "CVE-2021-23337",
+            severity_class: "HIGH",
+            epss_score: null,
+            conflict_flag: "MATCH_CORRECT",
+            winning_source: "OSV",
+            withdrawn_date: null,
+          });
+          vulnerabilityRows.mockResolvedValue([
+            instance("lodash"),
+            instance("minimist"),
+          ]);
+        }
+
+        it("describes the study from the experiment's data", async () => {
+          fixedLodash();
+
+          expect(await methodsOf()).toContain(
+            "The analyzer (js-sbom 1.0.0) ran over every snapshot of the dataset entries (n = 1): 1 grid date from 2025-03-01 to 2025-03-01, plus HEAD. There were 2 experiment runs.",
+          );
+        });
+
+        it("gives the top-10 concentration with its interval and both caveats", async () => {
+          twoInstances();
+
+          const text = await methodsOf();
+
+          // Wilson with p = 1 has low = n / (n + z^2): 2 / 5.8415
+          expect(text).toContain(
+            "At HEAD, the 10 most affected packages hold 100.0% of vulnerability instances (95% interval 34.2% to 100.0%).",
+          );
+          expect(text).toContain(
+            "These top-10 concentration intervals treat vulnerability instances as independent, and the top 10 are chosen after seeing the data.",
+          );
+        });
+
+        it("omits top-10 figures when there are no instances to rank", async () => {
+          doneRun();
+
+          expect(await methodsOf()).toContain(
+            "No vulnerability instances were observed at HEAD, so top-10 concentration does not apply.",
+          );
+        });
+
+        it("states the bootstrap method, resamples and seed", async () => {
+          doneRun();
+
+          expect(await methodsOf()).toContain(
+            "Medians and Gini coefficients use a percentile bootstrap, resampling by project, with 95% confidence, 10000 resamples and seed 20260611.",
+          );
+        });
+
+        it("states the ethics statement and nothing about venue rules", async () => {
+          doneRun();
+
+          const text = await methodsOf();
+
+          expect(text).toContain(
+            "Only already-public advisories on public repositories are reported.",
+          );
+          expect(text).not.toMatch(/venue|journal|conference/i);
+        });
+
+        it("states how many fixes are dated only to a snapshot interval", async () => {
+          fixedLodash();
+
+          expect(await methodsOf()).toContain(
+            "Of all fixes (n = 1), 1 (100.0%) are dated only to a snapshot interval.",
+          );
+        });
+
+        it("reports fix dating from the data once a probe dates the fix", async () => {
+          fixedLodash();
+          probedLodash();
+
+          expect(await methodsOf()).toContain(
+            "Of all fixes (n = 1), 0 (0.0%) are dated only to a snapshot interval.",
+          );
+        });
+
+        it("says when an experiment has no fixes to date", async () => {
+          doneRun();
+
+          expect(await methodsOf()).toContain(
+            "No fixes were observed, so fix dating does not apply.",
+          );
+        });
+
+        it("reports failed and skipped runs, with the reasons at HEAD", async () => {
+          runRepository["find"]!.mockResolvedValue([
+            run("a", "done", "2025-03-01"),
+            run("b", "skipped", "2025-03-01", "no default branch"),
+            run("c", "failed", null, "clone timed out"),
+          ]);
+
+          const text = await methodsOf();
+
+          expect(text).toContain(
+            "At HEAD, 0 of 1 experiment runs ended done, 1 failed and 0 were skipped.",
+          );
+          expect(text).toContain(
+            "Failure reasons at HEAD: clone timed out (1).",
+          );
+          expect(text).toContain(
+            "Over all 3 experiment runs of the snapshot grid, 1 failed and 1 were skipped; 0 done runs were empty because the snapshot had no lockfile yet.",
+          );
+        });
+
+        it("leaves mixed knowledge out when knowledge did not change", async () => {
+          doneRun();
+
+          expect(await methodsOf()).not.toContain("Mixed knowledge");
+        });
+
+        it("states mixed knowledge when the start and end stamps differ", async () => {
+          doneRun();
+
+          const text = await methodsOf({
+            ...completed,
+            provenance: {
+              knowledge_start: {
+                knowledge_sources: { nvd: "2026-11-01" },
+                epss_rows: 10,
+              },
+              knowledge_end: {
+                knowledge_sources: { nvd: "2026-11-02" },
+                epss_rows: 10,
+              },
+            },
+          });
+
+          expect(text).toContain(
+            "**Mixed knowledge.** The knowledge changed during the experiment, from nvd 2026-11-01 (10 EPSS rows) to nvd 2026-11-02 (10 EPSS rows).",
+          );
+        });
+
+        it("names the grid dates whose runs were matched against different knowledge", async () => {
+          const stamp = (day: string): object => ({
+            knowledge_sources: { osv: day },
+            epss_rows: 1,
+          });
+          runRepository["find"]!.mockResolvedValue([
+            run("a", "done", "2025-03-01", null, stamp("2025-03-01")),
+            run("b", "done", "2025-03-01", null, stamp("2025-03-02")),
+          ]);
+
+          expect(await methodsOf()).toContain(
+            "**Mixed knowledge.** Experiment runs were matched against different knowledge at these snapshots: 2025-03-01.",
+          );
+        });
       });
 
       it("records every provenance field in the manifest", async () => {

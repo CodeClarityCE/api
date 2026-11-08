@@ -22,9 +22,11 @@ import {
   streamCsv,
   VULNERABILITY_CSV_COLUMNS,
 } from "./experiment-csv";
+import { dataDictionary } from "./experiment-data-dictionary";
 import { deriveExposures, type Exposure } from "./experiment-exposures";
 import type { FigureRows } from "./experiment-figure-data";
 import type { ResultIntervals } from "./experiment-intervals";
+import { methodsText } from "./experiment-methods-text";
 import { METRIC_VERSION } from "./experiment-metric-version";
 import { ExperimentProbeOutcome } from "./experiment-probe-outcome.entity";
 import {
@@ -43,6 +45,7 @@ import type {
 import { ExperimentPublishedResults } from "./experiment-published-results.entity";
 import {
   buildReplicationPackage,
+  citationCff,
   type ManifestCommit,
   manifestJson,
   type PackageFile,
@@ -352,6 +355,7 @@ export class ExperimentResultsService {
           this.exposureCsv(experiment, "fixes.csv", FIX_CSV_COLUMNS, fixCsvRow),
       },
       { name: "results.json", open: () => JSON.stringify(results, null, 2) },
+      { name: "data_dictionary.md", open: () => dataDictionary() },
       {
         name: "manifest.json",
         open: async () =>
@@ -362,6 +366,26 @@ export class ExperimentResultsService {
             published_on: publishedOn,
             provenance: results.provenance,
             commits: await this.manifestCommits(experiment),
+          }),
+      },
+      {
+        name: "CITATION.cff",
+        open: () =>
+          citationCff({
+            experiment_name: experiment.name,
+            metric_version: METRIC_VERSION,
+            published_on: publishedOn,
+            author: experiment.created_by ?? null,
+          }),
+      },
+      {
+        name: "methods.md",
+        open: () =>
+          methodsText({
+            experiment_name: experiment.name,
+            metric_version: METRIC_VERSION,
+            published_on: publishedOn,
+            results,
           }),
       },
     ];

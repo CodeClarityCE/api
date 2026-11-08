@@ -54,6 +54,48 @@ export function manifestJson(input: ManifestInput): string {
   );
 }
 
+export interface CitationInput {
+  experiment_name: string;
+  metric_version: number;
+  published_on: Date;
+  /** The experiment's creator, null when no longer recorded */
+  author: { first_name: string; last_name: string } | null;
+}
+
+/** A JSON string is a valid YAML double-quoted scalar. */
+const yamlString = (value: string): string => JSON.stringify(value);
+
+function citationAuthor(author: CitationInput["author"]): string[] {
+  const fields = [
+    ["family-names", author?.last_name.trim()],
+    ["given-names", author?.first_name.trim()],
+  ].filter(([, value]) => value);
+  if (fields.length === 0) {
+    return [`  - name: ${yamlString("Author not recorded")}`];
+  }
+  return fields.map(
+    ([key, value], index) =>
+      `${index === 0 ? "  - " : "    "}${key}: ${yamlString(value!)}`,
+  );
+}
+
+/** CITATION.cff (Citation File Format 1.2.0) of a Published results version. */
+export function citationCff(input: CitationInput): string {
+  const title = `${input.experiment_name} (replication package, metric version ${input.metric_version})`;
+  const released = input.published_on.toISOString().slice(0, 10);
+  return [
+    `cff-version: ${yamlString("1.2.0")}`,
+    `message: ${yamlString("If you use this data, please cite it using these metadata.")}`,
+    `type: ${yamlString("dataset")}`,
+    `title: ${yamlString(title)}`,
+    `version: ${yamlString(String(input.metric_version))}`,
+    `date-released: ${yamlString(released)}`,
+    "authors:",
+    ...citationAuthor(input.author),
+    "",
+  ].join("\n");
+}
+
 /** A finished package: the archive bytes and their SHA-256. */
 export interface ReplicationPackage {
   archive: Buffer;
