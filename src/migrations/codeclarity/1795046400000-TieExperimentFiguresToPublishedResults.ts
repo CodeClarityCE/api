@@ -2,8 +2,8 @@ import { MigrationInterface, QueryRunner } from "typeorm";
 
 // Links a Figure to a Published results version and stores what it plots.
 // Constraint names are the ones TypeORM's default naming strategy derives.
-export class TieExperimentFiguresToPublishedResults1794960000000 implements MigrationInterface {
-  name = "TieExperimentFiguresToPublishedResults1794960000000";
+export class TieExperimentFiguresToPublishedResults1795046400000 implements MigrationInterface {
+  name = "TieExperimentFiguresToPublishedResults1795046400000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
