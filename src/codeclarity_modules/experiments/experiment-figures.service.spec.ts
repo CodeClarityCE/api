@@ -5,7 +5,10 @@ import { EntityNotFound, NotAuthorized } from "src/types/error.types";
 
 import { ExperimentFiguresService } from "./experiment-figures.service";
 import { ExperimentResultsService } from "./experiment-results.service";
-import { InvalidFigureDefinition } from "./experiments.errors";
+import {
+  FigureVersionNotCurrent,
+  InvalidFigureDefinition,
+} from "./experiments.errors";
 
 // The cache key reads the metric version; tests move it to prove that.
 let mockMetricVersion = 1;
@@ -24,6 +27,18 @@ const DEFINITION = {
 
 const CREATED_ON = new Date("2026-11-01T10:00:00Z");
 
+const INSTANCE = {
+  run_id: "aH",
+  affected_dependency: "lodash",
+  vulnerability_id: "GHSA-1",
+  severity_class: "HIGH",
+  epss_score: null,
+  conflict_flag: "MATCH_CORRECT",
+  winning_source: "OSV",
+  withdrawn_date: null,
+  published_date: "2025-02-15T10:00:00Z",
+};
+
 describe("ExperimentFiguresService", () => {
   const user = new AuthenticatedUser("user-1", [ROLE.USER], true);
   const experiment = { id: "exp-1", ended_on: CREATED_ON };
@@ -33,9 +48,18 @@ describe("ExperimentFiguresService", () => {
   let runFind: jest.Mock;
   /** The saved Figures, as the mocked repository holds them */
   let saved: Record<string, unknown>[];
+  /** The stored Published results versions */
+  let versions: { id: string; metric_version: number }[];
+  /** The Figure data stored for a version */
+  let frozen: Record<string, unknown>[];
+  /** The experiment's copied instances; a change here is a change in the rows */
+  let instances: object[];
 
   beforeEach(() => {
     saved = [];
+    versions = [{ id: "pub-1", metric_version: 1 }];
+    frozen = [];
+    instances = [INSTANCE];
     mockMetricVersion = 1;
     runFind = jest.fn().mockResolvedValue([
       {
@@ -69,7 +93,7 @@ describe("ExperimentFiguresService", () => {
     };
     const rowsBuilder = (rows: object[]): Record<string, jest.Mock> => {
       const builder: Record<string, jest.Mock> = {
-        getRawMany: jest.fn().mockResolvedValue(rows),
+        getRawMany: jest.fn(async () => rows),
       };
       for (const method of [
         "innerJoin",
@@ -100,21 +124,7 @@ describe("ExperimentFiguresService", () => {
         ),
       } as never,
       {
-        createQueryBuilder: jest.fn(() =>
-          rowsBuilder([
-            {
-              run_id: "aH",
-              affected_dependency: "lodash",
-              vulnerability_id: "GHSA-1",
-              severity_class: "HIGH",
-              epss_score: null,
-              conflict_flag: "MATCH_CORRECT",
-              winning_source: "OSV",
-              withdrawn_date: null,
-              published_date: "2025-02-15T10:00:00Z",
-            },
-          ]),
-        ),
+        createQueryBuilder: jest.fn(() => rowsBuilder(instances)),
       } as never,
       { query: jest.fn().mockResolvedValue([]) } as never,
       {} as never,
@@ -123,6 +133,36 @@ describe("ExperimentFiguresService", () => {
       { hasRequiredRole } as unknown as MembershipsRepository,
       { findOne: experimentFindOne } as never,
       figureRepository as never,
+      {
+        findOne: jest.fn(
+          async ({ where }: { where: { metric_version: number } }) =>
+            versions.find(
+              (version) => version.metric_version === where.metric_version,
+            ) ?? null,
+        ),
+      } as never,
+      {
+        findOne: jest.fn(
+          async ({
+            where,
+          }: {
+            where: {
+              published_results: { id: string };
+              definition_key: string;
+            };
+          }) =>
+            frozen.find(
+              (row) =>
+                (row["published_results"] as { id: string }).id ===
+                  where.published_results.id &&
+                row["definition_key"] === where.definition_key,
+            ) ?? null,
+        ),
+        save: jest.fn(async (row: Record<string, unknown>) => {
+          frozen.push(row);
+          return row;
+        }),
+      } as never,
       resultsService,
     );
   });
@@ -154,6 +194,7 @@ describe("ExperimentFiguresService", () => {
       name: "Load",
       definition: DEFINITION,
       created_on: expect.any(Date),
+      metric_version: null,
     });
     expect(regenerated).toEqual(preview);
     expect(regenerated.series).toEqual([
@@ -342,6 +383,146 @@ describe("ExperimentFiguresService", () => {
 
       await expect(compute()).rejects.toThrow("database down");
       await expect(compute()).resolves.toBeDefined();
+    });
+  });
+
+  describe("tying a Figure to Published results", () => {
+    const hindsight = async (id: string): Promise<unknown> =>
+      (await service.getData("org-1", "exp-1", id, user)).series[0]!.values;
+    const move = (id: string, version: number | null): Promise<unknown> =>
+      service.moveToVersion("org-1", "exp-1", id, version, user);
+    const createTied = async (): Promise<string> => {
+      const id = await service.create(
+        "org-1",
+        "exp-1",
+        { name: "Load", definition: DEFINITION },
+        user,
+      );
+      await move(id, 1);
+      return id;
+    };
+    const publishCorrectedMetrics = (): void => {
+      mockMetricVersion = 2;
+      versions.push({ id: "pub-2", metric_version: 2 });
+      instances = [INSTANCE, { ...INSTANCE, vulnerability_id: "GHSA-2" }];
+    };
+
+    it("reports the version a Figure is tied to", async () => {
+      const id = await createTied();
+
+      expect(
+        (await service.get("org-1", "exp-1", id, user)).metric_version,
+      ).toBe(1);
+    });
+
+    it("keeps a tied Figure's data when a newer version is published", async () => {
+      const id = await createTied();
+
+      publishCorrectedMetrics();
+
+      expect(await hindsight(id)).toEqual([1]);
+      expect(
+        (await service.get("org-1", "exp-1", id, user)).metric_version,
+      ).toBe(1);
+    });
+
+    it("moves a Figure to a newer version only when asked", async () => {
+      const id = await createTied();
+      publishCorrectedMetrics();
+
+      await move(id, 2);
+
+      expect(await hindsight(id)).toEqual([2]);
+    });
+
+    it("moves back to a version whose data is stored after the metric code changed", async () => {
+      const id = await createTied();
+      publishCorrectedMetrics();
+      await move(id, 2);
+
+      await move(id, 1);
+
+      expect(await hindsight(id)).toEqual([1]);
+    });
+
+    it("refuses a version it cannot compute with the current metric code", async () => {
+      const id = await service.create(
+        "org-1",
+        "exp-1",
+        { name: "Load", definition: DEFINITION },
+        user,
+      );
+      publishCorrectedMetrics();
+
+      await expect(move(id, 1)).rejects.toBeInstanceOf(FigureVersionNotCurrent);
+      expect(
+        (await service.get("org-1", "exp-1", id, user)).metric_version,
+      ).toBeNull();
+    });
+
+    it("does not find a version the experiment does not have", async () => {
+      const id = await createTied();
+
+      await expect(move(id, 9)).rejects.toBeInstanceOf(EntityNotFound);
+    });
+
+    it("computes a Figure that is not tied from the current rows", async () => {
+      const id = await service.create(
+        "org-1",
+        "exp-1",
+        { name: "Load", definition: DEFINITION },
+        user,
+      );
+
+      publishCorrectedMetrics();
+
+      expect(await hindsight(id)).toEqual([2]);
+    });
+
+    it("returns a Figure to a draft when untied", async () => {
+      const id = await createTied();
+      publishCorrectedMetrics();
+
+      await move(id, null);
+
+      expect(await hindsight(id)).toEqual([2]);
+      expect(
+        (await service.get("org-1", "exp-1", id, user)).metric_version,
+      ).toBeNull();
+    });
+
+    it("freezes the new definition when a tied Figure is edited", async () => {
+      const id = await createTied();
+
+      await service.update(
+        "org-1",
+        "exp-1",
+        id,
+        { definition: { ...DEFINITION, filters: { view: "as_of" } } },
+        user,
+      );
+
+      expect(
+        (await service.getData("org-1", "exp-1", id, user)).series[0]!.key,
+      ).toBe("as_of");
+    });
+
+    it("refuses an edit of a tied Figure the metric code can no longer compute", async () => {
+      const id = await createTied();
+      publishCorrectedMetrics();
+
+      await expect(
+        service.update(
+          "org-1",
+          "exp-1",
+          id,
+          { definition: { ...DEFINITION, filters: { view: "as_of" } } },
+          user,
+        ),
+      ).rejects.toBeInstanceOf(FigureVersionNotCurrent);
+      expect(
+        (await service.get("org-1", "exp-1", id, user)).definition,
+      ).toEqual(DEFINITION);
     });
   });
 

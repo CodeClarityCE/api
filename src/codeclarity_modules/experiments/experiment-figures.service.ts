@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { FindOptionsSelect, Repository } from "typeorm";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
@@ -17,7 +17,13 @@ import {
 } from "./experiment-figure-catalog";
 import { computeFigureData, type FigureData } from "./experiment-figure-data";
 import { METRIC_VERSION } from "./experiment-metric-version";
-import { ExperimentResultsService } from "./experiment-results.service";
+import { ExperimentPublishedFigureData } from "./experiment-published-figure-data.entity";
+import { ExperimentPublishedResults } from "./experiment-published-results.entity";
+import {
+  ExperimentResultsService,
+  isUniqueViolation,
+} from "./experiment-results.service";
+import { FigureVersionNotCurrent } from "./experiments.errors";
 import { findExperimentInOrg } from "./experiments.service";
 
 export interface FigureSummary {
@@ -25,7 +31,18 @@ export interface FigureSummary {
   name: string;
   definition: FigureDefinition;
   created_on: Date;
+  /** The Published results version it is tied to; null while a draft */
+  metric_version: number | null;
 }
+
+/** Leaves out the frozen results payload of the linked version. */
+const FIGURE_COLUMNS: FindOptionsSelect<ExperimentFigure> = {
+  id: true,
+  name: true,
+  definition: true,
+  created_on: true,
+  published_results: { id: true, metric_version: true },
+};
 
 /** Previews kept per API instance; the oldest is dropped first */
 const FIGURE_CACHE_ENTRIES = 256;
@@ -36,6 +53,7 @@ function summary(figure: ExperimentFigure): FigureSummary {
     name: figure.name,
     definition: figure.definition,
     created_on: figure.created_on,
+    metric_version: figure.published_results?.metric_version ?? null,
   };
 }
 
@@ -50,6 +68,10 @@ export class ExperimentFiguresService {
     private readonly experimentRepository: Repository<Experiment>,
     @InjectRepository(ExperimentFigure, "codeclarity")
     private readonly figureRepository: Repository<ExperimentFigure>,
+    @InjectRepository(ExperimentPublishedResults, "codeclarity")
+    private readonly publishedRepository: Repository<ExperimentPublishedResults>,
+    @InjectRepository(ExperimentPublishedFigureData, "codeclarity")
+    private readonly figureDataRepository: Repository<ExperimentPublishedFigureData>,
     private readonly resultsService: ExperimentResultsService,
   ) {}
 
@@ -74,7 +96,107 @@ export class ExperimentFiguresService {
     user: AuthenticatedUser,
   ): Promise<FigureData> {
     const experiment = await this.experimentFor(orgId, experimentId, user);
-    const valid = parseFigureDefinition(definition);
+    return this.draftData(experiment, parseFigureDefinition(definition));
+  }
+
+  /**
+   * The data of a saved Figure: stored if it is tied to a version, otherwise
+   * computed from the current rows.
+   * @throws {EntityNotFound} If the experiment has no such Figure
+   */
+  async getData(
+    orgId: string,
+    experimentId: string,
+    figureId: string,
+    user: AuthenticatedUser,
+  ): Promise<FigureData> {
+    const experiment = await this.experimentFor(orgId, experimentId, user);
+    const figure = await this.figureIn(experiment, figureId);
+    if (!figure.published_results) {
+      return this.draftData(experiment, figure.definition);
+    }
+    const stored = await this.storedData(
+      figure.published_results,
+      figure.definition,
+    );
+    if (!stored) throw new EntityNotFound();
+    return stored.data;
+  }
+
+  /**
+   * Ties a Figure to a Published results version, or unties it with null.
+   * @throws {EntityNotFound} If the experiment has no such Figure or version
+   * @throws {FigureVersionNotCurrent} If the version's data cannot be produced
+   */
+  async moveToVersion(
+    orgId: string,
+    experimentId: string,
+    figureId: string,
+    metricVersion: number | null,
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    const experiment = await this.experimentFor(orgId, experimentId, user);
+    const figure = await this.figureIn(experiment, figureId);
+    if (metricVersion === null) {
+      figure.published_results = null;
+      await this.figureRepository.save(figure);
+      return;
+    }
+    const published = await this.publishedRepository.findOne({
+      where: {
+        experiment: { id: experiment.id },
+        metric_version: metricVersion,
+      },
+      select: { id: true, metric_version: true },
+    });
+    if (!published) throw new EntityNotFound();
+    await this.freeze(experiment, published, figure.definition);
+    figure.published_results = published;
+    await this.figureRepository.save(figure);
+  }
+
+  private storedData(
+    published: Pick<ExperimentPublishedResults, "id">,
+    definition: FigureDefinition,
+  ): Promise<ExperimentPublishedFigureData | null> {
+    return this.figureDataRepository.findOne({
+      where: {
+        published_results: { id: published.id },
+        definition_key: JSON.stringify(definition),
+      },
+    });
+  }
+
+  /**
+   * Stores what a definition plots under a version. Only the metric code of
+   * that version may compute it, so older versions serve what is already stored.
+   */
+  private async freeze(
+    experiment: Experiment,
+    published: ExperimentPublishedResults,
+    definition: FigureDefinition,
+  ): Promise<void> {
+    if (await this.storedData(published, definition)) return;
+    if (published.metric_version !== METRIC_VERSION) {
+      throw new FigureVersionNotCurrent();
+    }
+    const data = await this.compute(experiment, definition);
+    await this.figureDataRepository
+      .save({
+        published_results: published,
+        definition_key: JSON.stringify(definition),
+        data,
+      })
+      .catch((error: unknown) => {
+        // A concurrent tie stored the same data first
+        if (!isUniqueViolation(error)) throw error;
+      });
+  }
+
+  private draftData(
+    experiment: Experiment,
+    valid: FigureDefinition,
+  ): Promise<FigureData> {
     // Rows of a running experiment still change, so only ended ones are kept
     if (!experiment.ended_on) return this.compute(experiment, valid);
 
@@ -129,6 +251,8 @@ export class ExperimentFiguresService {
     const experiment = await this.experimentFor(orgId, experimentId, user);
     const figures = await this.figureRepository.find({
       where: { experiment: { id: experiment.id } },
+      select: FIGURE_COLUMNS,
+      relations: { published_results: true },
       order: { created_on: "DESC" },
     });
     return figures.map(summary);
@@ -144,7 +268,10 @@ export class ExperimentFiguresService {
     return summary(await this.figureFor(orgId, experimentId, figureId, user));
   }
 
-  /** @throws {InvalidFigureDefinition} If the catalog does not allow it */
+  /**
+   * @throws {InvalidFigureDefinition} If the catalog does not allow it
+   * @throws {FigureVersionNotCurrent} If a tied Figure's new data cannot be produced
+   */
   async update(
     orgId: string,
     experimentId: string,
@@ -152,9 +279,14 @@ export class ExperimentFiguresService {
     body: { name?: string; definition?: unknown },
     user: AuthenticatedUser,
   ): Promise<void> {
-    const figure = await this.figureFor(orgId, experimentId, figureId, user);
+    const experiment = await this.experimentFor(orgId, experimentId, user);
+    const figure = await this.figureIn(experiment, figureId);
     if (body.definition !== undefined) {
-      figure.definition = parseFigureDefinition(body.definition);
+      const definition = parseFigureDefinition(body.definition);
+      if (figure.published_results) {
+        await this.freeze(experiment, figure.published_results, definition);
+      }
+      figure.definition = definition;
     }
     if (body.name !== undefined) figure.name = body.name;
     await this.figureRepository.save(figure);
@@ -191,9 +323,20 @@ export class ExperimentFiguresService {
     figureId: string,
     user: AuthenticatedUser,
   ): Promise<ExperimentFigure> {
-    const experiment = await this.experimentFor(orgId, experimentId, user);
+    return this.figureIn(
+      await this.experimentFor(orgId, experimentId, user),
+      figureId,
+    );
+  }
+
+  private async figureIn(
+    experiment: Experiment,
+    figureId: string,
+  ): Promise<ExperimentFigure> {
     const figure = await this.figureRepository.findOne({
       where: { id: figureId, experiment: { id: experiment.id } },
+      select: FIGURE_COLUMNS,
+      relations: { published_results: true },
     });
     if (!figure) throw new EntityNotFound();
     return figure;
