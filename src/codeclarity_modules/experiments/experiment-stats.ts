@@ -56,6 +56,213 @@ export function median(values: readonly number[]): number {
   return quantile(values, 0.5);
 }
 
+/** A percentile bootstrap interval around a point estimate. */
+export interface BootstrapInterval {
+  low: number;
+  high: number;
+}
+
+export interface BootstrapSettings {
+  seed: number;
+  resamples: number;
+  /** Between 0 and 1, 0.95 for a 95% interval */
+  confidence: number;
+}
+
+/** Observations grouped by the cluster that is resampled as a whole. */
+export type BootstrapClusters<T> = ReadonlyMap<string | number, T>;
+
+/** Mulberry32: a small generator giving the same draws for the same seed. */
+function seededRandom(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Clusters in key order, so draws do not depend on the order rows arrive in. */
+function clustersInKeyOrder<T>(clusters: BootstrapClusters<T>): T[] {
+  return [...clusters.entries()]
+    .map(([key, cluster]) => [String(key), cluster] as const)
+    .sort(([a], [b]) => a.localeCompare(b, "en"))
+    .map(([, cluster]) => cluster);
+}
+
+/**
+ * The percentile interval of a statistic over resamples of `clusterCount`
+ * clusters. The statistic gets how often each cluster was drawn. Resamples
+ * where it is undefined (NaN) are left out; null when none remain.
+ */
+function percentileInterval(
+  clusterCount: number,
+  statistic: (draws: Int32Array) => number,
+  { seed, resamples, confidence }: BootstrapSettings,
+): BootstrapInterval | null {
+  if (clusterCount === 0) return null;
+  const random = seededRandom(seed);
+  const draws = new Int32Array(clusterCount);
+  const estimates: number[] = [];
+  for (let r = 0; r < resamples; r++) {
+    draws.fill(0);
+    for (let i = 0; i < clusterCount; i++) {
+      draws[Math.floor(random() * clusterCount)]!++;
+    }
+    const estimate = statistic(draws);
+    if (!Number.isNaN(estimate)) estimates.push(estimate);
+  }
+  if (estimates.length === 0) return null;
+  const tail = (1 - confidence) / 2;
+  return {
+    low: quantile(estimates, tail),
+    high: quantile(estimates, 1 - tail),
+  };
+}
+
+/** The q-quantile of sorted values drawn `weights[i]` times each. */
+function weightedQuantile(
+  values: readonly number[],
+  weights: Float64Array,
+  q: number,
+): number {
+  let total = 0;
+  for (const weight of weights) total += weight;
+  if (total === 0) return NaN;
+  const position = (total - 1) * q;
+  const lower = Math.floor(position);
+  const upper = Math.min(lower + 1, total - 1);
+  let low = NaN;
+  let seen = 0;
+  for (let i = 0; i < values.length; i++) {
+    seen += weights[i]!;
+    if (Number.isNaN(low) && seen > lower) low = values[i]!;
+    if (seen > upper) return low + (values[i]! - low) * (position - lower);
+  }
+  return NaN;
+}
+
+/** Bootstraps a statistic of the pooled values of the drawn clusters. */
+function bootstrapPooledValues(
+  clusters: BootstrapClusters<readonly number[]>,
+  statistic: (values: readonly number[], weights: Float64Array) => number,
+  settings: BootstrapSettings,
+): BootstrapInterval | null {
+  const ordered = clustersInKeyOrder(clusters).map(finite);
+  const values = ascending([...new Set(ordered.flat())]);
+  const indexOf = new Map(values.map((value, i) => [value, i]));
+  // Flat arrays: cluster i holds cells[starts[i]] up to cells[starts[i + 1]]
+  const starts = new Int32Array(ordered.length + 1);
+  ordered.forEach((cluster, i) => {
+    starts[i + 1] = starts[i]! + cluster.length;
+  });
+  const cells = Int32Array.from(ordered.flat(), (value) => indexOf.get(value)!);
+  const weights = new Float64Array(values.length);
+  return percentileInterval(
+    ordered.length,
+    (draws) => {
+      weights.fill(0);
+      for (let i = 0; i < draws.length; i++) {
+        const drawn = draws[i]!;
+        if (drawn === 0) continue;
+        const end = starts[i + 1]!;
+        for (let c = starts[i]!; c < end; c++) weights[cells[c]!]! += drawn;
+      }
+      return statistic(values, weights);
+    },
+    settings,
+  );
+}
+
+/** The Gini coefficient of sorted values drawn `weights[i]` times each. */
+function weightedGini(
+  values: readonly number[],
+  weights: Float64Array,
+): number {
+  let count = 0;
+  let total = 0;
+  let weighted = 0;
+  for (let i = 0; i < values.length; i++) {
+    const weight = weights[i]!;
+    if (weight === 0) continue;
+    // The ranks count + 1 to count + weight share this value
+    weighted += values[i]! * (weight * count + (weight * (weight + 1)) / 2);
+    total += values[i]! * weight;
+    count += weight;
+  }
+  if (count === 0 || total === 0) return NaN;
+  return (2 * weighted - (count + 1) * total) / (count * total);
+}
+
+/** Percentile interval of the Gini of the values, resampling whole clusters. */
+export function bootstrapGini(
+  clusters: BootstrapClusters<readonly number[]>,
+  settings: BootstrapSettings,
+): BootstrapInterval | null {
+  return bootstrapPooledValues(clusters, weightedGini, settings);
+}
+
+/**
+ * Percentile interval of the Gini of per-item totals: each cluster holds
+ * counts per item, summed over the drawn clusters. Items left at zero by a
+ * resample are not part of its distribution.
+ */
+export function bootstrapGiniOfTotals(
+  clusters: BootstrapClusters<ReadonlyMap<string, number>>,
+  settings: BootstrapSettings,
+): BootstrapInterval | null {
+  const ordered = clustersInKeyOrder(clusters);
+  const items = new Map<string, number>();
+  for (const cluster of ordered) {
+    for (const item of cluster.keys()) {
+      if (!items.has(item)) items.set(item, items.size);
+    }
+  }
+  const cells = ordered.map((cluster) =>
+    [...cluster].map(([item, count]) => [items.get(item)!, count] as const),
+  );
+  const totals = new Float64Array(items.size);
+  const present = new Float64Array(items.size);
+  return percentileInterval(
+    cells.length,
+    (draws) => {
+      totals.fill(0);
+      for (let i = 0; i < draws.length; i++) {
+        const drawn = draws[i]!;
+        if (drawn === 0) continue;
+        for (const [item, count] of cells[i]!) totals[item]! += count * drawn;
+      }
+      let n = 0;
+      for (const itemTotal of totals) {
+        if (itemTotal > 0) present[n++] = itemTotal;
+      }
+      const sorted = present.subarray(0, n).sort();
+      let total = 0;
+      let weighted = 0;
+      for (let i = 0; i < n; i++) {
+        total += sorted[i]!;
+        weighted += (i + 1) * sorted[i]!;
+      }
+      return n === 0 ? NaN : (2 * weighted - (n + 1) * total) / (n * total);
+    },
+    settings,
+  );
+}
+
+/** Percentile interval of the median, resampling whole clusters. */
+export function bootstrapMedian(
+  clusters: BootstrapClusters<readonly number[]>,
+  settings: BootstrapSettings,
+): BootstrapInterval | null {
+  return bootstrapPooledValues(
+    clusters,
+    (values, weights) => weightedQuantile(values, weights, 0.5),
+    settings,
+  );
+}
+
 /**
  * How many packages, largest instance count first, must be cleared to
  * remove `share` of all instances: those whose cumulative share stays below
