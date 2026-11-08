@@ -8,6 +8,7 @@ import {
   quantile,
   spearman,
   studentTwoSidedP,
+  wilsonInterval,
 } from "./experiment-stats";
 
 describe("experiment stats", () => {
@@ -193,6 +194,33 @@ describe("experiment stats", () => {
       // One of three fixed: S never falls below 2/3
       expect(kmMedian(kaplanMeier([4, 9, 9], [true, false, false]))).toBeNaN();
       expect(kmMedian([])).toBeNaN();
+    });
+  });
+
+  describe("wilsonInterval", () => {
+    // Reference values: Newcombe 1998, Statist. Med. 17, table I, method 3
+    it.each([
+      [81, 263, 0.2553, 0.3662],
+      [15, 148, 0.0624, 0.1605],
+      [1, 29, 0.0061, 0.1718],
+    ])("matches the published interval for %i of %i", (x, n, low, high) => {
+      const interval = wilsonInterval(x, n);
+      expect(interval?.low).toBeCloseTo(low, 4);
+      expect(interval?.high).toBeCloseTo(high, 4);
+    });
+
+    it("stays within 0 and 1 at the boundaries", () => {
+      const none = wilsonInterval(0, 20);
+      expect(none?.low).toBe(0);
+      expect(none?.high).toBeCloseTo(0.1611, 4);
+      const all = wilsonInterval(20, 20);
+      expect(all?.low).toBeCloseTo(1 - 0.1611, 4);
+      expect(all?.high).toBe(1);
+    });
+
+    it("has no interval without trials or when the count is not a proportion", () => {
+      expect(wilsonInterval(0, 0)).toBeNull();
+      expect(wilsonInterval(5, 4)).toBeNull();
     });
   });
 });
