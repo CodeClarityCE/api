@@ -59,6 +59,7 @@ function rowsOf(entries: ReturnType<typeof entry>[]): FigureRows {
   return {
     runs: entries.flatMap((e) => e.runs),
     vulnerabilities: entries.flatMap((e) => e.vulnerabilities),
+    summaries: [],
     head_cutoff: HEAD,
   };
 }

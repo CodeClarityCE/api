@@ -422,6 +422,29 @@ function sumOf(values: readonly number[]): number {
   return values.reduce((total, value) => total + value, 0);
 }
 
+/** Instances per project (zero-filled over the universe) and per package. */
+export function instanceCounts(
+  universe: readonly string[],
+  vulnerabilities: readonly ResultsVulnerabilityInput[],
+): {
+  loadByRun: Map<string, number>;
+  packageCounts: number[];
+  inUniverse: ResultsVulnerabilityInput[];
+} {
+  const loadByRun = new Map<string, number>(universe.map((id) => [id, 0]));
+  const inUniverse = vulnerabilities.filter((v) => loadByRun.has(v.run_id));
+  for (const v of inUniverse) {
+    loadByRun.set(v.run_id, (loadByRun.get(v.run_id) ?? 0) + 1);
+  }
+  return {
+    loadByRun,
+    packageCounts: [
+      ...countBy(inUniverse, (v) => v.affected_dependency).values(),
+    ],
+    inUniverse,
+  };
+}
+
 interface HeadlineMeasure {
   headline: Headline;
   intervals: HeadlineShareIntervals;
@@ -432,23 +455,19 @@ interface HeadlineMeasure {
  * The headline and its share intervals over a fixed universe of runs: loads are zero-filled over
  * the universe, instances outside it are ignored.
  */
-function measureHeadline(
+export function measureHeadline(
   universe: readonly string[],
   vulnerabilities: readonly ResultsVulnerabilityInput[],
 ): HeadlineMeasure {
-  const loadByRun = new Map<string, number>(universe.map((id) => [id, 0]));
-  const inUniverse = vulnerabilities.filter((v) => loadByRun.has(v.run_id));
-  for (const v of inUniverse) {
-    loadByRun.set(v.run_id, (loadByRun.get(v.run_id) ?? 0) + 1);
-  }
+  const { loadByRun, packageCounts, inUniverse } = instanceCounts(
+    universe,
+    vulnerabilities,
+  );
   const loads = [...loadByRun.values()];
   const nProjects = loads.length;
   const total = sumOf(loads);
   const nAffected = loads.filter((load) => load > 0).length;
 
-  const packageCounts = [
-    ...countBy(inUniverse, (v) => v.affected_dependency).values(),
-  ];
   const instances = sumOf(packageCounts);
 
   const sevCounts: SeverityCounts = {
@@ -818,6 +837,15 @@ export function headCutoff(ended_on: Date | null, readAt: Date): Date {
   return ended_on ?? readAt;
 }
 
+/** The summaries HEAD reads: each project once, even when rows are shared. */
+export function headSummaries(
+  runs: readonly ResultsRunInput[],
+  summaries: readonly ResultsSummaryInput[],
+): ResultsSummaryInput[] {
+  const gridOnly = gridOnlyRunIds(runs);
+  return summaries.filter((s) => !gridOnly.has(s.run_id));
+}
+
 /** Run ids whose rows only grid snapshots read: outside the HEAD blocks. */
 function gridOnlyRunIds(runs: readonly ResultsRunInput[]): Set<string> {
   const headRows = new Set<string>();
@@ -841,8 +869,7 @@ export function aggregateExperimentResults(
     input.provenance.ended_on,
     input.read_at ?? new Date(),
   );
-  const gridOnly = gridOnlyRunIds(input.runs);
-  const summaries = input.summaries.filter((s) => !gridOnly.has(s.run_id));
+  const summaries = headSummaries(input.runs, input.summaries);
   const universe = summaries.map((s) => s.run_id);
   const inUniverse = new Set(universe);
   const vulnerabilities = input.vulnerabilities.filter((v) =>
