@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { createHash } from "node:crypto";
 import type { EntityManager } from "typeorm";
 
 import { AnalysesRepository } from "src/base_modules/analyses/analyses.repository";
@@ -38,9 +39,16 @@ export interface ProbeSubmissionRequest
   probeId: string;
 }
 
+/** Longest analyzer name the analyzer table allows */
+const ANALYZER_NAME_MAX = 25;
+const PROBE_ANALYZER_PREFIX = "Experiment probes";
+
 /** The SBOM-only analyzer fix probes run with (ADR 0005), one per js-sbom version. */
 export function probeAnalyzerName(sbomVersion: string): string {
-  return `Managed by experiments: fix probes (js-sbom ${sbomVersion})`;
+  const name = `${PROBE_ANALYZER_PREFIX} ${sbomVersion}`;
+  if (name.length <= ANALYZER_NAME_MAX) return name;
+  // Too long a version: a short hash keeps the name unique per version
+  return `${PROBE_ANALYZER_PREFIX} ${createHash("sha256").update(sbomVersion).digest("hex").slice(0, 7)}`;
 }
 
 /** Thrown inside the transaction to roll back an analysis whose run ended. */
@@ -142,7 +150,7 @@ export class ExperimentRunSubmission {
       Object.assign(new Analyzer(), {
         name,
         global: false,
-        description: "SBOM-only analyses that experiments run to date fixes to a commit. Managed by experiments.",
+        description: `Managed by experiments: SBOM-only analyses with js-sbom ${step.version} that date fixes to a commit`,
         created_on: new Date(),
         steps: [[step]],
         supported_languages: ["javascript"],

@@ -91,8 +91,9 @@ describe("ExperimentRunSubmission fix probes", () => {
 
     expect(analyzers.saved).toHaveLength(1);
     const [analyzer] = analyzers.saved;
-    expect(analyzer!.name).toMatch(/experiments/i);
+    expect(analyzer!.name).toMatch(/experiment/i);
     expect(analyzer!.name).toContain("v1.0.0");
+    expect(analyzer!.description).toMatch(/managed by experiments/i);
     expect(analyzer!.steps).toEqual([[{ name: "js-sbom", version: "v1.0.0", config: {} }]]);
     expect(bodies[0]!.analyzer_id).toBe(analyzer!.id);
   });
@@ -106,6 +107,16 @@ describe("ExperimentRunSubmission fix probes", () => {
     expect(analyzers.saved).toHaveLength(2);
     expect(analyzers.saved[0]!.steps).toEqual(first);
     expect(bodies.map((b) => b.analyzer_id)).toEqual(["analyzer-1", "analyzer-2", "analyzer-1"]);
+  });
+
+  it("keeps probe analyzer names within the 25 characters analyzers allow, distinct per version", async () => {
+    await probe(experiment("v1.0.0"));
+    await probe(experiment("v1.0.0-beta.10+build.2"));
+    await probe(experiment("v1.0.0-beta.10+build.3"));
+
+    const names = analyzers.saved.map((a) => a.name);
+    expect(names.every((n) => n.length <= 25)).toBe(true);
+    expect(new Set(names).size).toBe(3);
   });
 
   it("fails the submission when the analyzer lookup fails", async () => {
