@@ -16,6 +16,7 @@ import {
   parseFigureDefinition,
 } from "./experiment-figure-catalog";
 import { computeFigureData, type FigureData } from "./experiment-figure-data";
+import { METRIC_VERSION } from "./experiment-metric-version";
 import { ExperimentResultsService } from "./experiment-results.service";
 import { findExperimentInOrg } from "./experiments.service";
 
@@ -25,6 +26,9 @@ export interface FigureSummary {
   definition: FigureDefinition;
   created_on: Date;
 }
+
+/** Previews kept per API instance; the oldest is dropped first */
+const FIGURE_CACHE_ENTRIES = 256;
 
 function summary(figure: ExperimentFigure): FigureSummary {
   return {
@@ -38,6 +42,8 @@ function summary(figure: ExperimentFigure): FigureSummary {
 /** Saved Figures of an experiment, and the data they plot. */
 @Injectable()
 export class ExperimentFiguresService {
+  private readonly dataCache = new Map<string, Promise<FigureData>>();
+
   constructor(
     private readonly membershipsRepository: MembershipsRepository,
     @InjectRepository(Experiment, "codeclarity")
@@ -69,9 +75,29 @@ export class ExperimentFiguresService {
   ): Promise<FigureData> {
     const experiment = await this.experimentFor(orgId, experimentId, user);
     const valid = parseFigureDefinition(definition);
+    // Rows of a running experiment still change, so only ended ones are kept
+    if (!experiment.ended_on) return this.compute(experiment, valid);
+
+    const key = JSON.stringify([experiment.id, METRIC_VERSION, valid]);
+    const cached = this.dataCache.get(key);
+    if (cached) return cached;
+
+    const data = this.compute(experiment, valid);
+    this.dataCache.set(key, data);
+    data.catch(() => this.dataCache.delete(key));
+    if (this.dataCache.size > FIGURE_CACHE_ENTRIES) {
+      this.dataCache.delete(this.dataCache.keys().next().value!);
+    }
+    return data;
+  }
+
+  private async compute(
+    experiment: Experiment,
+    definition: FigureDefinition,
+  ): Promise<FigureData> {
     return computeFigureData(
       await this.resultsService.figureRows(experiment),
-      valid,
+      definition,
     );
   }
 

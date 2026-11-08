@@ -7,6 +7,14 @@ import { ExperimentFiguresService } from "./experiment-figures.service";
 import { ExperimentResultsService } from "./experiment-results.service";
 import { InvalidFigureDefinition } from "./experiments.errors";
 
+// The cache key reads the metric version; tests move it to prove that.
+let mockMetricVersion = 1;
+jest.mock("./experiment-metric-version", () => ({
+  get METRIC_VERSION(): number {
+    return mockMetricVersion;
+  },
+}));
+
 const DEFINITION = {
   metric: "load_over_time",
   chart_form: "line",
@@ -22,11 +30,23 @@ describe("ExperimentFiguresService", () => {
   let service: ExperimentFiguresService;
   let hasRequiredRole: jest.Mock;
   let experimentFindOne: jest.Mock;
+  let runFind: jest.Mock;
   /** The saved Figures, as the mocked repository holds them */
   let saved: Record<string, unknown>[];
 
   beforeEach(() => {
     saved = [];
+    mockMetricVersion = 1;
+    runFind = jest.fn().mockResolvedValue([
+      {
+        id: "aH",
+        status: "done",
+        error: null,
+        grid_index: 0,
+        grid_date: null,
+        shared_from: null,
+      },
+    ]);
     hasRequiredRole = jest.fn().mockResolvedValue(undefined);
     experimentFindOne = jest.fn().mockResolvedValue(experiment);
     const figureRepository = {
@@ -51,7 +71,13 @@ describe("ExperimentFiguresService", () => {
       const builder: Record<string, jest.Mock> = {
         getRawMany: jest.fn().mockResolvedValue(rows),
       };
-      for (const method of ["select", "addSelect", "where", "andWhere"]) {
+      for (const method of [
+        "innerJoin",
+        "select",
+        "addSelect",
+        "where",
+        "andWhere",
+      ]) {
         builder[method] = jest.fn().mockReturnValue(builder);
       }
       return builder;
@@ -59,19 +85,20 @@ describe("ExperimentFiguresService", () => {
     const resultsService = new ExperimentResultsService(
       { hasRequiredRole } as unknown as MembershipsRepository,
       { findOne: experimentFindOne } as never,
+      { find: runFind } as never,
       {
-        find: jest.fn().mockResolvedValue([
-          {
-            id: "aH",
-            status: "done",
-            error: null,
-            grid_index: 0,
-            grid_date: null,
-            shared_from: null,
-          },
-        ]),
+        createQueryBuilder: jest.fn(() =>
+          rowsBuilder([
+            {
+              run_id: "aH",
+              rank: 0,
+              total_dependencies: 5,
+              total_vulnerabilities: 1,
+              package_manager: "npm",
+            },
+          ]),
+        ),
       } as never,
-      {} as never,
       {
         createQueryBuilder: jest.fn(() =>
           rowsBuilder([
@@ -136,9 +163,16 @@ describe("ExperimentFiguresService", () => {
   it("serves the catalog the composer offers", async () => {
     const catalog = await service.catalog("org-1", "exp-1", user);
 
-    expect(catalog.metrics.map((metric) => metric.id)).toEqual([
-      "load_over_time",
-    ]);
+    expect(catalog.metrics.map((metric) => metric.id)).toEqual(
+      expect.arrayContaining([
+        "load_over_time",
+        "residence",
+        "concentration",
+        "severity_mix",
+        "stars_vs_load",
+        "upstream_leverage",
+      ]),
+    );
     expect(catalog.metrics[0]!.chart_forms).toEqual([
       { id: "line", label: "Line" },
     ]);
@@ -152,6 +186,60 @@ describe("ExperimentFiguresService", () => {
     ["an unknown filter option", { ...DEFINITION, filters: { view: "live" } }],
     ["an extra key", { ...DEFINITION, sql: "drop table" }],
     ["something not an object", "load_over_time"],
+    [
+      "a group-by another chart form of the metric allows",
+      {
+        metric: "upstream_leverage",
+        chart_form: "line",
+        group_by: "fix_kind",
+        filters: {},
+      },
+    ],
+    [
+      "a filter another chart form of the metric allows",
+      {
+        metric: "upstream_leverage",
+        chart_form: "line",
+        group_by: null,
+        filters: { dating_precision: "commit" },
+      },
+    ],
+    [
+      "a date range that is reversed",
+      {
+        metric: "residence",
+        chart_form: "histogram",
+        group_by: null,
+        filters: { date_range: "2025-06-01/2025-01-01" },
+      },
+    ],
+    [
+      "a date range with an impossible day",
+      {
+        metric: "residence",
+        chart_form: "histogram",
+        group_by: null,
+        filters: { date_range: "2025-02-30/" },
+      },
+    ],
+    [
+      "a date range with no ends",
+      {
+        metric: "residence",
+        chart_form: "histogram",
+        group_by: null,
+        filters: { date_range: "/" },
+      },
+    ],
+    [
+      "a view on a metric read only in hindsight",
+      {
+        metric: "residence",
+        chart_form: "histogram",
+        group_by: null,
+        filters: { view: "as_of" },
+      },
+    ],
   ])("rejects %s on save and on compute", async (_, definition) => {
     await expect(
       service.create("org-1", "exp-1", { name: "Bad", definition }, user),
@@ -182,6 +270,76 @@ describe("ExperimentFiguresService", () => {
     expect((await service.get("org-1", "exp-1", id, user)).definition).toEqual(
       DEFINITION,
     );
+  });
+
+  describe("repeated previews", () => {
+    const compute = (definition: object = DEFINITION): Promise<unknown> =>
+      service.computeData("org-1", "exp-1", definition, user);
+
+    it("does not recompute an identical definition", async () => {
+      const first = await compute();
+      const second = await compute();
+
+      expect(second).toEqual(first);
+      expect(runFind).toHaveBeenCalledTimes(1);
+    });
+
+    it("treats the same filters in another order as identical", async () => {
+      const definition = {
+        metric: "residence",
+        chart_form: "histogram",
+        group_by: null,
+      };
+
+      await compute({
+        ...definition,
+        filters: { dating_precision: "commit", sweep_subset: "all" },
+      });
+      await compute({
+        ...definition,
+        filters: { sweep_subset: "all", dating_precision: "commit" },
+      });
+
+      expect(runFind).toHaveBeenCalledTimes(1);
+    });
+
+    it("computes each different definition", async () => {
+      await compute();
+      await compute({ ...DEFINITION, filters: { view: "as_of" } });
+
+      expect(runFind).toHaveBeenCalledTimes(2);
+    });
+
+    it("recomputes after the metric version changes", async () => {
+      await compute();
+      mockMetricVersion = 2;
+      await compute();
+
+      expect(runFind).toHaveBeenCalledTimes(2);
+    });
+
+    it("keeps computing an experiment that has not ended", async () => {
+      experimentFindOne.mockResolvedValue({ id: "exp-1", ended_on: null });
+
+      await compute();
+      await compute();
+
+      expect(runFind).toHaveBeenCalledTimes(2);
+    });
+
+    it("checks access before serving a cached preview", async () => {
+      await compute();
+      hasRequiredRole.mockRejectedValue(new NotAuthorized());
+
+      await expect(compute()).rejects.toBeInstanceOf(NotAuthorized);
+    });
+
+    it("does not keep a failed computation", async () => {
+      runFind.mockRejectedValueOnce(new Error("database down"));
+
+      await expect(compute()).rejects.toThrow("database down");
+      await expect(compute()).resolves.toBeDefined();
+    });
   });
 
   it("lists, renames and deletes Figures", async () => {
