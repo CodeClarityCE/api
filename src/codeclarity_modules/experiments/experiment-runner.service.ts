@@ -70,6 +70,7 @@ const DEFAULT_RUN_CEILING_HOURS = 24;
 /** Lockfile-touching commits listed per interval: 10 pages of 100 */
 const COMMITS_PER_PAGE = 100;
 const MAX_COMMIT_PAGES = 10;
+const TOO_MANY_COMMITS_REASON = "too many commits";
 
 /** A repository that can be pinned: it exists where expected, with a branch. */
 interface PinnableRepo {
@@ -615,7 +616,7 @@ export class ExperimentRunnerService
     };
     const lockfilePath = await this.lockfilePath(from, to);
     const [owner, repo] = await this.ownerAndRepo(entry);
-    if (!lockfilePath || !owner || !repo || !to.branch) {
+    if (!lockfilePath || !owner || !repo) {
       await this.store.saveProbeInterval({
         ...interval,
         lockfilePath,
@@ -625,16 +626,17 @@ export class ExperimentRunnerService
       return;
     }
     const candidates: ProbeCandidate[] = [];
+    let truncated = false;
     try {
       for (let page = 1; page <= MAX_COMMIT_PAGES; page++) {
         const commits = (
           (await client.rest.repos.listCommits({
             owner,
             repo,
-            sha: to.branch,
+            // From the later snapshot's commit, so only its ancestors are listed
+            sha: interval.toCommit,
             path: lockfilePath,
             ...(from.committed_at ? { since: new Date(from.committed_at).toISOString() } : {}),
-            ...(to.committed_at ? { until: new Date(to.committed_at).toISOString() } : {}),
             per_page: COMMITS_PER_PAGE,
             page,
           })) as { data: GithubCommitItem[] }
@@ -645,11 +647,21 @@ export class ExperimentRunnerService
           candidates.push({ sha: commit.sha, committed_at: new Date(date).toISOString() });
         }
         if (commits.length < COMMITS_PER_PAGE) break;
+        truncated = page === MAX_COMMIT_PAGES;
       }
     } catch (err) {
       const classified = this.classifyGithubError(err);
       if (!(classified instanceof RunSkipped)) throw classified;
       await this.store.saveProbeInterval({ ...interval, lockfilePath, candidates: [], error: classified.reason });
+      return;
+    }
+    if (truncated) {
+      // A cut list could locate the wrong commit
+      await this.store.saveProbeInterval({ ...interval, lockfilePath, candidates: [], error: TOO_MANY_COMMITS_REASON });
+      this.logger.warn("Experiment probe interval has too many commits", {
+        experimentId: experiment.id,
+        datasetEntryId: entry,
+      });
       return;
     }
     // GitHub lists newest first
@@ -999,6 +1011,7 @@ export class ExperimentRunnerService
           owner: entry.owner,
           repo: entry.repo,
           sha: repo.branch,
+          // No commit to start from at a grid date, so branch plus until is the best GitHub offers
           ...(gridDate ? { until: endOfGridDay(gridDate).toISOString() } : {}),
           per_page: 1,
         })) as { data: GithubCommitItem[] }

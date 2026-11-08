@@ -589,15 +589,15 @@ class FakeGithub {
             if (this.commitsError) throw this.commitsError;
             const key = `${owner}/${repo}`.toLowerCase();
             const found = this.repos.get(key);
-            if (found?.default_branch !== sha) {
-              throw githubError(404, "Not Found");
-            }
+            if (!found) throw githubError(404, "Not Found");
+            const all = [...(this.history.get(key) ?? []), { sha: found.sha, date: found.date }];
+            // A branch lists from its tip, a commit from itself
+            const tip = sha === found.default_branch ? all.length - 1 : all.findIndex((c) => c.sha === sha);
+            if (tip === -1) throw githubError(404, "Not Found");
             // Commits touch package-lock.json unless told otherwise
             const at = (date: string): number => Date.parse(date);
-            const commits = [
-              ...(this.history.get(key) ?? []),
-              { sha: found.sha, date: found.date },
-            ]
+            const commits = all
+              .slice(0, tip + 1)
               .filter((c) => !until || at(c.date) <= at(until))
               .filter((c) => !since || at(c.date) >= at(since))
               .filter((c) => !path || ("paths" in c ? c.paths : ["package-lock.json"]).includes(path))
@@ -1869,13 +1869,9 @@ describe("ExperimentRunnerService", () => {
         }),
       );
       expect(github.listed).toEqual([
-        expect.objectContaining({
-          path: "package-lock.json",
-          sha: "main",
-          since: "2025-02-25T12:00:00.000Z",
-          until: "2025-03-28T12:00:00.000Z",
-        }),
+        expect.objectContaining({ path: "package-lock.json", sha: "f6a", since: "2025-02-25T12:00:00.000Z" }),
       ]);
+      expect(github.listed[0]).not.toHaveProperty("until");
       expect(await fixes()).toEqual([
         ["CVE-A", expect.objectContaining({ commit_hash: "e5f", precision: "commit", probe_outcome: "found", interval_to: "2025-04-01" })],
         ["CVE-B", expect.objectContaining({ commit_hash: "d4e", precision: "commit", probe_outcome: "found" })],
@@ -1902,6 +1898,21 @@ describe("ExperimentRunnerService", () => {
       expect(await fixes()).toEqual([
         ["CVE-A", expect.objectContaining({ precision: "snapshot", probe_outcome: "not_found", probe_reason: "probe of d4e failed: clone failed" })],
         ["CVE-B", expect.objectContaining({ precision: "snapshot", probe_outcome: "not_found" })],
+      ]);
+    });
+
+    it("ends a search not_found when the interval has more lockfile commits than it lists", async () => {
+      const many = Array.from({ length: 1000 }, (_, i): [string, string] => [
+        `m${i}`,
+        new Date(Date.parse("2025-03-02T00:00:00Z") + i * 60_000).toISOString(),
+      ]);
+      github.addHistory("octo/app", [["c3d", "2025-02-25T12:00:00Z"], ...many, ["f6a", "2025-03-28T12:00:00Z"]]);
+      await runToEnd();
+
+      expect(submitProbe).not.toHaveBeenCalled();
+      expect(await fixes()).toEqual([
+        ["CVE-A", expect.objectContaining({ precision: "snapshot", probe_outcome: "not_found", probe_reason: "too many commits" })],
+        ["CVE-B", expect.objectContaining({ precision: "snapshot", probe_outcome: "not_found", probe_reason: "too many commits" })],
       ]);
     });
 
