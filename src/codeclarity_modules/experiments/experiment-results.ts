@@ -149,6 +149,8 @@ export interface ExperimentResultsInput {
   /** The analysis budget and what was submitted, absent without one */
   budget?: AnalysisBudgetUsage | null;
   provenance: ResultsProvenanceInput;
+  /** When the results are read: HEAD's date while the experiment runs; now by default */
+  read_at?: Date;
 }
 
 export { SEVERITY_ORDER, type SeverityCounts } from "./experiment-severity";
@@ -734,9 +736,9 @@ function provenance(input: ResultsProvenanceInput): ProvenanceBlock {
   };
 }
 
-/** When HEAD was observed: the experiment's end, else its start or creation. */
-function headObservedOn(p: ResultsProvenanceInput): Date {
-  return p.ended_on ?? p.started_on ?? p.created_on;
+/** HEAD's date: when the experiment ended, else the time the results are read. */
+export function headCutoff(ended_on: Date | null, readAt: Date): Date {
+  return ended_on ?? readAt;
 }
 
 function isHead(run: ResultsRunInput): boolean {
@@ -764,6 +766,7 @@ export function aggregateExperimentResults(
   input: ExperimentResultsInput,
 ): ExperimentResults {
   const exposures = deriveExposures(input);
+  const head = headCutoff(input.provenance.ended_on, input.read_at ?? new Date());
   const gridOnly = gridOnlyRunIds(input.runs);
   const summaries = input.summaries.filter((s) => !gridOnly.has(s.run_id));
   const universe = summaries.map((s) => s.run_id);
@@ -787,10 +790,10 @@ export function aggregateExperimentResults(
     load_over_time: loadOverTime({
       runs: input.runs,
       vulnerabilities: input.vulnerabilities,
-      ended_on: input.provenance.ended_on,
+      head_cutoff: head,
     }),
     residence: residenceBlock(exposures),
-    exposure_survival: exposureSurvival(exposures, headObservedOn(input.provenance)),
+    exposure_survival: exposureSurvival(exposures, head),
     upstream_leverage: upstreamLeverage(input.runs, input.vulnerabilities, exposures),
     provenance: provenance(input.provenance),
   };

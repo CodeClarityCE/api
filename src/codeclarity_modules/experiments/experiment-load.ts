@@ -11,8 +11,8 @@ import { NO_LOCKFILE_YET } from "./experiment-row-copy";
 export interface LoadRow {
   /** YYYY-MM-DD, null for HEAD */
   grid_date: string | null;
-  /** The as-of cutoff day: the grid date, or the end date for HEAD (null while running) */
-  as_of_date: string | null;
+  /** The as-of cutoff day: the grid date, or HEAD's date (see headCutoff) */
+  as_of_date: string;
   /** Done snapshots, empty ones included */
   projects: number;
   /** Every instance, null without a done snapshot */
@@ -26,8 +26,8 @@ export interface LoadRow {
 export interface LoadInput {
   runs: readonly ResultsRunInput[];
   vulnerabilities: readonly ResultsVulnerabilityInput[];
-  /** When the experiment ended: HEAD's as-of cutoff */
-  ended_on: Date | null;
+  /** HEAD's as-of cutoff, from headCutoff */
+  head_cutoff: Date;
 }
 
 const DAY_PREFIX = /^(\d{4})-(\d{2})-(\d{2})/;
@@ -77,7 +77,7 @@ export function loadOverTime(input: LoadInput): LoadRow[] {
     list.push(v);
     instancesByRun.set(v.run_id, list);
   }
-  const endDay = input.ended_on ? gridDay(input.ended_on) : null;
+  const headDay = gridDay(input.head_cutoff);
 
   const rows = new Map<string, LoadRow>();
   for (const run of input.runs) {
@@ -87,7 +87,7 @@ export function loadOverTime(input: LoadInput): LoadRow[] {
     if (!row) {
       row = {
         grid_date: gridDate,
-        as_of_date: gridDate ?? endDay,
+        as_of_date: gridDate ?? headDay,
         projects: 0,
         hindsight: null,
         as_of: null,
@@ -105,7 +105,7 @@ export function loadOverTime(input: LoadInput): LoadRow[] {
       const published = publishedDay(v.published_date);
       if (published === null) row.undated++;
       // YYYY-MM-DD strings compare as dates
-      if (published === null || row.as_of_date === null || published <= row.as_of_date) {
+      if (published === null || published <= row.as_of_date) {
         row.as_of++;
       }
     }

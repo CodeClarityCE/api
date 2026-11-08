@@ -60,6 +60,8 @@ function instance(
   };
 }
 
+const NOW = new Date("2026-01-01T00:00:00Z");
+
 describe("loadOverTime", () => {
   it("drops an advisory published mid-grid from the as-of view until its grid date passes", () => {
     const rows = loadOverTime({
@@ -71,7 +73,7 @@ describe("loadOverTime", () => {
         instance("a3", MID_GRID),
         instance("a4", MID_GRID),
       ],
-      ended_on: new Date("2025-04-02T09:00:00Z"),
+      head_cutoff: new Date("2025-04-02T09:00:00Z"),
     });
 
     expect(rows).toEqual([
@@ -86,17 +88,17 @@ describe("loadOverTime", () => {
     const [row] = loadOverTime({
       runs: [run("a1", "2025-02-15")],
       vulnerabilities: [instance("a1", MID_GRID)],
-      ended_on: null,
+      head_cutoff: NOW,
     });
 
     expect(row).toMatchObject({ hindsight: 1, as_of: 1 });
   });
 
-  it("filters HEAD by the experiment's end date", () => {
+  it("filters HEAD by its cutoff day", () => {
     const [row] = loadOverTime({
       runs: [run("h", null)],
       vulnerabilities: [instance("h", "2025-05-01T00:00:00Z"), instance("h", "2025-05-03T00:00:00Z")],
-      ended_on: new Date("2025-05-02T23:59:00Z"),
+      head_cutoff: new Date("2025-05-02T23:59:00Z"),
     });
 
     expect(row).toEqual({
@@ -109,21 +111,11 @@ describe("loadOverTime", () => {
     });
   });
 
-  it("leaves HEAD unfiltered while the experiment has not ended", () => {
-    const [row] = loadOverTime({
-      runs: [run("h", null)],
-      vulnerabilities: [instance("h", "2099-01-01T00:00:00Z")],
-      ended_on: null,
-    });
-
-    expect(row).toMatchObject({ as_of_date: null, hindsight: 1, as_of: 1 });
-  });
-
   it("keeps instances with an unreadable published date in the as-of view and counts them", () => {
     const [row] = loadOverTime({
       runs: [run("a1", "2025-01-01")],
       vulnerabilities: [instance("a1", null), instance("a1", "not a date"), instance("a1", MID_GRID)],
-      ended_on: null,
+      head_cutoff: NOW,
     });
 
     expect(row).toMatchObject({ hindsight: 3, as_of: 2, undated: 2 });
@@ -144,7 +136,7 @@ describe("loadOverTime", () => {
         instance("b1", "2024-01-01"),
         instance("c1", "2024-01-01"),
       ],
-      ended_on: null,
+      head_cutoff: NOW,
     });
 
     expect(rows).toEqual([
@@ -157,7 +149,7 @@ describe("loadOverTime", () => {
     const rows = loadOverTime({
       runs: [run("a1", "2025-01-01"), run("a2", "2025-03-01", { rows_run_id: "a1" })],
       vulnerabilities: [instance("a1", MID_GRID)],
-      ended_on: null,
+      head_cutoff: NOW,
     });
 
     expect(rows.map((r) => [r.hindsight, r.as_of])).toEqual([
@@ -170,7 +162,7 @@ describe("loadOverTime", () => {
     const [row] = loadOverTime({
       runs: [run("a1", "2025-01-01")],
       vulnerabilities: [instance("a1", "2024-01-01", { affected_dependency: null })],
-      ended_on: null,
+      head_cutoff: NOW,
     });
 
     expect(row).toMatchObject({ hindsight: 0, as_of: 0 });

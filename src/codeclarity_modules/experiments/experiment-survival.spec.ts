@@ -109,14 +109,18 @@ describe("exposure survival in the results", () => {
     expect(results.exposure_survival.snapshot_precision_share).toBe(1);
   });
 
-  it("censors at the start date while the experiment has not ended yet", () => {
-    const { exposure_survival } = aggregateExperimentResults(
-      input([entry("e3", ["P", "P", "P", "P"], DATES)], null),
-    );
-    expect(exposure_survival.censored_at).toBe("2025-04-11");
-    expect(exposure_survival.overall.curve).toEqual([
-      { time: 100, survival: 1, at_risk: 1, events: 0, censored: 1 },
-    ]);
+  it("cuts HEAD off at the read time while the experiment runs, in survival and the as-of view alike", () => {
+    const running = input([entry("e3", ["P", "P", "P", "P"], DATES)], null);
+    // An advisory published after the read time
+    running.vulnerabilities.push({ ...running.vulnerabilities[3]!, vulnerability_id: "CVE-2025-0002", published_date: "2025-05-01" });
+    const { exposure_survival, load_over_time } = aggregateExperimentResults({
+      ...running,
+      read_at: new Date("2025-04-20T08:00:00Z"),
+    });
+    expect(exposure_survival.censored_at).toBe("2025-04-20");
+    // e3 runs from the first grid date to the read time
+    expect(exposure_survival.overall.curve.at(-1)).toMatchObject({ time: 109, censored: 1 });
+    expect(load_over_time.at(-1)).toMatchObject({ grid_date: null, as_of_date: "2025-04-20", hindsight: 2, as_of: 1 });
   });
 
   it("is empty without exposures", () => {

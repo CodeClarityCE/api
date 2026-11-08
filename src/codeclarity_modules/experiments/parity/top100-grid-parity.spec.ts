@@ -555,7 +555,7 @@ describeWithFixture("parity with the archived top100 grid study", () => {
       const rows = loadOverTime({
         runs: input.runs.filter((r) => ids.has(r.dataset_entry_id!)),
         vulnerabilities: input.vulnerabilities,
-        ended_on: null,
+        head_cutoff: new Date(), // HEAD is sliced off below
       }).slice(0, -1);
       const meta = expected["trajectory_balanced_meta"] as { panel_hist_rows_total: number };
       expect(rows.reduce((n, r) => n + r.hindsight!, 0)).toBe(meta.panel_hist_rows_total);
