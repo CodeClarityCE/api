@@ -238,6 +238,21 @@ function isValidFilterValue(filter: FigureFilter, value: unknown): boolean {
   return hasChoice(filter.options, value);
 }
 
+function withSortedKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(withSortedKeys);
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, withSortedKeys(value[key])]),
+  );
+}
+
+/** One string per definition, whatever order its keys are in (jsonb reorders them). */
+export function definitionKey(definition: FigureDefinition): string {
+  return JSON.stringify(withSortedKeys(definition));
+}
+
 export interface DateRange {
   from: string | null;
   to: string | null;
@@ -245,7 +260,7 @@ export interface DateRange {
 
 /** Reads "YYYY-MM-DD/YYYY-MM-DD", either end optional; null when not a range. */
 export function parseDateRange(value: string): DateRange | null {
-  const [from, to, ...rest] = value.split("/");
+  const [from = "", to, ...rest] = value.split("/");
   if (to === undefined || rest.length > 0 || (!from && !to)) return null;
   if (
     (from && publishedDay(from) !== from) ||
@@ -254,5 +269,8 @@ export function parseDateRange(value: string): DateRange | null {
     return null;
   }
   if (from && to && from > to) return null;
-  return { from: from || null, to: to || null };
+  return {
+    from: from === "" ? null : from,
+    to: to === "" ? null : to,
+  };
 }

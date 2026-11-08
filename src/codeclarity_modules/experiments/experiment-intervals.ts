@@ -6,11 +6,12 @@ import type {
   SweepSubset,
 } from "./experiment-results";
 import {
-  bootstrapGini,
-  bootstrapGiniOfTotals,
+  bootstrapGiniOfTotalsSteps,
+  bootstrapGiniSteps,
   type BootstrapInterval,
-  bootstrapMedian,
+  bootstrapMedianSteps,
   type BootstrapSettings,
+  type Steps,
 } from "./experiment-stats";
 
 /** The bootstrap method, also reported in the results provenance. */
@@ -63,10 +64,10 @@ interface IntervalRows {
   sweep_filters: Record<SweepSubset, (v: ResultsVulnerabilityInput) => boolean>;
 }
 
-function concentration(
+function* concentration(
   summaries: readonly ResultsSummaryInput[],
   vulnerabilities: readonly ResultsVulnerabilityInput[],
-): ConcentrationIntervals {
+): Steps<ConcentrationIntervals> {
   const rankByRun = new Map(summaries.map((s) => [s.run_id, s.rank]));
   const loads = new Map<number, number[]>(summaries.map((s) => [s.rank, [0]]));
   const packages = new Map<number, Map<string, number>>(
@@ -84,9 +85,9 @@ function concentration(
     );
   }
   return {
-    load_median: bootstrapMedian(loads, BOOTSTRAP_SETTINGS),
-    gini_pkg: bootstrapGiniOfTotals(packages, BOOTSTRAP_SETTINGS),
-    gini_proj: bootstrapGini(loads, BOOTSTRAP_SETTINGS),
+    load_median: yield* bootstrapMedianSteps(loads, BOOTSTRAP_SETTINGS),
+    gini_pkg: yield* bootstrapGiniOfTotalsSteps(packages, BOOTSTRAP_SETTINGS),
+    gini_proj: yield* bootstrapGiniSteps(loads, BOOTSTRAP_SETTINGS),
   };
 }
 
@@ -97,27 +98,31 @@ interface ProjectValue {
   value: number;
 }
 
-function medianOf(values: readonly ProjectValue[]): BootstrapInterval | null {
+function* medianOf(
+  values: readonly ProjectValue[],
+): Steps<BootstrapInterval | null> {
   const clusters = new Map<string, number[]>();
   for (const { project, value } of values) {
     const cluster = clusters.get(project) ?? [];
     cluster.push(value);
     clusters.set(project, cluster);
   }
-  return bootstrapMedian(clusters, BOOTSTRAP_SETTINGS);
+  return yield* bootstrapMedianSteps(clusters, BOOTSTRAP_SETTINGS);
 }
 
-function mediansByGroup(values: readonly ProjectValue[]): GroupIntervals {
-  const groups = [...new Set(values.map((v) => v.group))];
-  return Object.fromEntries(
-    groups.map((group) => [
-      group,
-      medianOf(values.filter((v) => v.group === group)),
-    ]),
-  );
+function* mediansByGroup(
+  values: readonly ProjectValue[],
+): Steps<GroupIntervals> {
+  const groups: GroupIntervals = {};
+  for (const group of new Set(values.map((v) => v.group))) {
+    groups[group] = yield* medianOf(values.filter((v) => v.group === group));
+  }
+  return groups;
 }
 
-function fixLag(exposures: readonly Exposure[]): ResultIntervals["fix_lag"] {
+function* fixLag(
+  exposures: readonly Exposure[],
+): Steps<ResultIntervals["fix_lag"]> {
   const fixes = exposures.flatMap((e) =>
     e.fix?.lag_days === null || e.fix?.lag_days === undefined
       ? []
@@ -132,15 +137,15 @@ function fixLag(exposures: readonly Exposure[]): ResultIntervals["fix_lag"] {
       value: fix.lag,
     }));
   return {
-    overall: medianOf(lags(() => "")),
-    by_severity: mediansByGroup(lags((fix) => fix.exposure.severity)),
-    by_kind: mediansByGroup(lags((fix) => fix.kind ?? "unknown")),
+    overall: yield* medianOf(lags(() => "")),
+    by_severity: yield* mediansByGroup(lags((fix) => fix.exposure.severity)),
+    by_kind: yield* mediansByGroup(lags((fix) => fix.kind ?? "unknown")),
   };
 }
 
-function residence(
+function* residence(
   exposures: readonly Exposure[],
-): ResultIntervals["residence"] {
+): Steps<ResultIntervals["residence"]> {
   const dated = exposures.flatMap((e) => {
     const days = e.introduction?.residence_days;
     return days === null || days === undefined
@@ -152,17 +157,17 @@ function residence(
     .filter((d) => d.value < 0)
     .map((d) => ({ ...d, value: -d.value }));
   return {
-    overall: medianOf(before),
-    by_severity: mediansByGroup(before),
-    after_disclosure: medianOf(after),
-    after_disclosure_by_severity: mediansByGroup(after),
+    overall: yield* medianOf(before),
+    by_severity: yield* mediansByGroup(before),
+    after_disclosure: yield* medianOf(after),
+    after_disclosure_by_severity: yield* mediansByGroup(after),
   };
 }
 
 function epssMedian(
   summaries: readonly ResultsSummaryInput[],
   vulnerabilities: readonly ResultsVulnerabilityInput[],
-): BootstrapInterval | null {
+): Steps<BootstrapInterval | null> {
   const rankByRun = new Map(summaries.map((s) => [s.run_id, s.rank]));
   const scores = new Map<number, number[]>();
   for (const v of vulnerabilities) {
@@ -172,37 +177,36 @@ function epssMedian(
     cluster.push(v.epss_score);
     scores.set(rank, cluster);
   }
-  return bootstrapMedian(scores, BOOTSTRAP_SETTINGS);
+  return bootstrapMedianSteps(scores, BOOTSTRAP_SETTINGS);
 }
 
-function rqd(
+function* rqd(
   summaries: readonly ResultsSummaryInput[],
-): ResultIntervals["rqd"] {
+): Steps<ResultIntervals["rqd"]> {
   const managers = new Set(summaries.map((s) => s.package_manager));
   managers.delete(null);
   const median = (
     group: readonly ResultsSummaryInput[],
     value: (s: ResultsSummaryInput) => number,
-  ): BootstrapInterval | null =>
-    bootstrapMedian(
+  ): Steps<BootstrapInterval | null> =>
+    bootstrapMedianSteps(
       new Map(group.map((s) => [s.rank, [value(s)]])),
       BOOTSTRAP_SETTINGS,
     );
-  return Object.fromEntries(
-    [...managers].map((manager) => {
-      const group = summaries.filter((s) => s.package_manager === manager);
-      return [
-        manager!,
-        {
-          med_deps: median(group, (s) => s.total_dependencies),
-          med_vulns: median(group, (s) => s.total_vulnerabilities),
-        },
-      ];
-    }),
-  );
+  const result: ResultIntervals["rqd"] = {};
+  for (const manager of managers) {
+    const group = summaries.filter((s) => s.package_manager === manager);
+    result[manager!] = {
+      med_deps: yield* median(group, (s) => s.total_dependencies),
+      med_vulns: yield* median(group, (s) => s.total_vulnerabilities),
+    };
+  }
+  return result;
 }
 
-export function resultIntervals(rows: IntervalRows): ResultIntervals {
+export function* resultIntervalsSteps(
+  rows: IntervalRows,
+): Steps<ResultIntervals> {
   const {
     summaries,
     vulnerabilities,
@@ -210,12 +214,12 @@ export function resultIntervals(rows: IntervalRows): ResultIntervals {
     sweep_filters: filters,
   } = rows;
   const sweep = {
-    all: concentration(summaries, vulnerabilities.filter(filters.all)),
-    match_correct_only: concentration(
+    all: yield* concentration(summaries, vulnerabilities.filter(filters.all)),
+    match_correct_only: yield* concentration(
       summaries,
       vulnerabilities.filter(filters.match_correct_only),
     ),
-    non_withdrawn: concentration(
+    non_withdrawn: yield* concentration(
       summaries,
       vulnerabilities.filter(filters.non_withdrawn),
     ),
@@ -223,9 +227,24 @@ export function resultIntervals(rows: IntervalRows): ResultIntervals {
   return {
     headline: sweep.all,
     sweep,
-    epss_median: epssMedian(summaries, vulnerabilities),
-    rqd: rqd(summaries),
-    fix_lag: fixLag(exposures),
-    residence: residence(exposures),
+    epss_median: yield* epssMedian(summaries, vulnerabilities),
+    rqd: yield* rqd(summaries),
+    fix_lag: yield* fixLag(exposures),
+    residence: yield* residence(exposures),
   };
+}
+
+/** How long a computation may hold the event loop before letting other work run. */
+const SLICE_MS = 15;
+
+/** Runs a computation in slices, giving the event loop a turn between them. */
+export async function runYielding<T>(steps: Steps<T>): Promise<T> {
+  let sliceStart = Date.now();
+  for (;;) {
+    const step = steps.next();
+    if (step.done) return step.value;
+    if (Date.now() - sliceStart < SLICE_MS) continue;
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    sliceStart = Date.now();
+  }
 }

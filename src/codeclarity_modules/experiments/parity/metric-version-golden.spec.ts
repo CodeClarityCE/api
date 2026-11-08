@@ -1,9 +1,5 @@
-/**
- * Guards the metric version: every published output of the top100 grid
- * fixture is hashed and compared with the hashes recorded for the current
- * METRIC_VERSION. To record a new version, bump METRIC_VERSION and run this
- * spec with UPDATE_METRIC_GOLDEN=1.
- */
+// Fails when published output changes without a METRIC_VERSION bump.
+// To record a version: bump METRIC_VERSION, run with UPDATE_METRIC_GOLDEN=1.
 
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";

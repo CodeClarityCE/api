@@ -1,5 +1,7 @@
 import {
   aggregateExperimentResults,
+  computeResultIntervals,
+  computeResultIntervalsYielding,
   type ExperimentResultsInput,
   type ResultsSummaryInput,
   type ResultsVulnerabilityInput,
@@ -51,6 +53,44 @@ function input(
     ...fields,
   };
 }
+
+describe("computing bootstrap intervals without blocking", () => {
+  /** Enough projects that the 10,000 resamples outlast a slice of the event loop. */
+  function largeCohort(): ExperimentResultsInput {
+    const projects = Array.from({ length: 40 }, (_, i) => `p${i}`);
+    return input({
+      summaries: projects.map((run_id, rank) => summary(run_id, rank)),
+      vulnerabilities: projects.flatMap((run_id, i) =>
+        Array.from({ length: (i % 7) + 1 }, (_, j) =>
+          vuln(run_id, `dep-${(i + j) % 40}`),
+        ),
+      ),
+    });
+  }
+
+  it("gives exactly the seeded intervals of the synchronous computation", async () => {
+    const rows = largeCohort();
+
+    expect(await computeResultIntervalsYielding(rows)).toEqual(
+      computeResultIntervals(rows),
+    );
+  });
+
+  it("lets other work run while it computes", async () => {
+    let turns = 0;
+    let running = true;
+    const tick = (): void => {
+      turns++;
+      if (running) setImmediate(tick);
+    };
+    setImmediate(tick);
+
+    await computeResultIntervalsYielding(largeCohort());
+    running = false;
+
+    expect(turns).toBeGreaterThan(1);
+  });
+});
 
 describe("bootstrap intervals on experiment results", () => {
   it("gives the 95% percentile interval of the median load", () => {

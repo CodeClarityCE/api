@@ -116,16 +116,23 @@ function clustersInKeyOrder<T>(clusters: BootstrapClusters<T>): T[] {
     .map(([, cluster]) => cluster);
 }
 
-/**
- * The percentile interval of a statistic over resamples of `clusterCount`
- * clusters. The statistic gets how often each cluster was drawn. Resamples
- * where it is undefined (NaN) are left out; null when none remain.
- */
-function percentileInterval(
+/** A computation that pauses after each resample; its result is the return value. */
+export type Steps<T> = Generator<void, T, void>;
+
+/** Runs a computation straight through, without pausing. */
+export function runSteps<T>(steps: Steps<T>): T {
+  for (;;) {
+    const step = steps.next();
+    if (step.done) return step.value;
+  }
+}
+
+/** Each resample's estimate of a statistic of how often each cluster was drawn. */
+function* percentileSteps(
   clusterCount: number,
   statistic: (draws: Int32Array) => number,
   { seed, resamples, confidence }: BootstrapSettings,
-): BootstrapInterval | null {
+): Steps<BootstrapInterval | null> {
   if (clusterCount === 0) return null;
   const random = seededRandom(seed);
   const draws = new Int32Array(clusterCount);
@@ -137,6 +144,7 @@ function percentileInterval(
     }
     const estimate = statistic(draws);
     if (!Number.isNaN(estimate)) estimates.push(estimate);
+    yield;
   }
   if (estimates.length === 0) return null;
   const tail = (1 - confidence) / 2;
@@ -169,11 +177,11 @@ function weightedQuantile(
 }
 
 /** Bootstraps a statistic of the pooled values of the drawn clusters. */
-function bootstrapPooledValues(
+function* pooledValuesSteps(
   clusters: BootstrapClusters<readonly number[]>,
   statistic: (values: readonly number[], weights: Float64Array) => number,
   settings: BootstrapSettings,
-): BootstrapInterval | null {
+): Steps<BootstrapInterval | null> {
   const ordered = clustersInKeyOrder(clusters).map(finite);
   const values = ascending([...new Set(ordered.flat())]);
   const indexOf = new Map(values.map((value, i) => [value, i]));
@@ -184,7 +192,7 @@ function bootstrapPooledValues(
   });
   const cells = Int32Array.from(ordered.flat(), (value) => indexOf.get(value)!);
   const weights = new Float64Array(values.length);
-  return percentileInterval(
+  return yield* percentileSteps(
     ordered.length,
     (draws) => {
       weights.fill(0);
@@ -221,22 +229,25 @@ function weightedGini(
 }
 
 /** Percentile interval of the Gini of the values, resampling whole clusters. */
+export function bootstrapGiniSteps(
+  clusters: BootstrapClusters<readonly number[]>,
+  settings: BootstrapSettings,
+): Steps<BootstrapInterval | null> {
+  return pooledValuesSteps(clusters, weightedGini, settings);
+}
+
 export function bootstrapGini(
   clusters: BootstrapClusters<readonly number[]>,
   settings: BootstrapSettings,
 ): BootstrapInterval | null {
-  return bootstrapPooledValues(clusters, weightedGini, settings);
+  return runSteps(bootstrapGiniSteps(clusters, settings));
 }
 
-/**
- * Percentile interval of the Gini of per-item totals: each cluster holds
- * counts per item, summed over the drawn clusters. Items left at zero by a
- * resample are not part of its distribution.
- */
-export function bootstrapGiniOfTotals(
+/** Percentile interval of the Gini of per-item totals over the drawn clusters; zero totals are left out. */
+export function* bootstrapGiniOfTotalsSteps(
   clusters: BootstrapClusters<ReadonlyMap<string, number>>,
   settings: BootstrapSettings,
-): BootstrapInterval | null {
+): Steps<BootstrapInterval | null> {
   const ordered = clustersInKeyOrder(clusters);
   const items = new Map<string, number>();
   for (const cluster of ordered) {
@@ -249,7 +260,7 @@ export function bootstrapGiniOfTotals(
   );
   const totals = new Float64Array(items.size);
   const present = new Float64Array(items.size);
-  return percentileInterval(
+  return yield* percentileSteps(
     cells.length,
     (draws) => {
       totals.fill(0);
@@ -275,16 +286,30 @@ export function bootstrapGiniOfTotals(
   );
 }
 
-/** Percentile interval of the median, resampling whole clusters. */
-export function bootstrapMedian(
-  clusters: BootstrapClusters<readonly number[]>,
+export function bootstrapGiniOfTotals(
+  clusters: BootstrapClusters<ReadonlyMap<string, number>>,
   settings: BootstrapSettings,
 ): BootstrapInterval | null {
-  return bootstrapPooledValues(
+  return runSteps(bootstrapGiniOfTotalsSteps(clusters, settings));
+}
+
+/** Percentile interval of the median, resampling whole clusters. */
+export function bootstrapMedianSteps(
+  clusters: BootstrapClusters<readonly number[]>,
+  settings: BootstrapSettings,
+): Steps<BootstrapInterval | null> {
+  return pooledValuesSteps(
     clusters,
     (values, weights) => weightedQuantile(values, weights, 0.5),
     settings,
   );
+}
+
+export function bootstrapMedian(
+  clusters: BootstrapClusters<readonly number[]>,
+  settings: BootstrapSettings,
+): BootstrapInterval | null {
+  return runSteps(bootstrapMedianSteps(clusters, settings));
 }
 
 /**

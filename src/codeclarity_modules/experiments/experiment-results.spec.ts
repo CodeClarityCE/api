@@ -205,6 +205,27 @@ describe("aggregateExperimentResults", () => {
       expectInterval(sweep[1]?.high_critical_share, 0.2065, 1);
     });
 
+    it("gives the share of instances with an EPSS score an interval", () => {
+      const { share_intervals: intervals, epss } = aggregateExperimentResults(
+        input({
+          summaries: [summary("r1", 0)],
+          vulnerabilities: [
+            vuln("r1", "a", { epss_score: 0.1 }),
+            vuln("r1", "b", { epss_score: 0.2 }),
+            vuln("r1", "c"),
+          ],
+        }),
+      );
+      expect(epss.nonnull_share).toBeCloseTo(2 / 3, 12);
+      expectInterval(intervals.epss_nonnull, 0.2077, 0.9385);
+    });
+
+    it("has no EPSS interval without instances", () => {
+      expect(
+        aggregateExperimentResults(input()).share_intervals.epss_nonnull,
+      ).toBeNull();
+    });
+
     it("has no intervals without done runs", () => {
       const { headline, severity, sweep } =
         aggregateExperimentResults(input()).share_intervals;

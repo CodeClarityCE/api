@@ -101,11 +101,7 @@ export type FixLagSurvivalBlock = Omit<
   "snapshot_precision_share"
 >;
 
-/**
- * Survival of exposures in days since disclosure: a fix ends one at its lag,
- * negative when fixed before disclosure, otherwise it is censored at `head`.
- * Exposures without a known disclosure or fix date are left out.
- */
+/** Survival in days since disclosure; open exposures are censored at `head`. */
 export function fixLagSurvival(
   exposures: readonly Exposure[],
   head: Date,

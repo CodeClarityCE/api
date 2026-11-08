@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import type { Readable } from "node:stream";
-import { In, QueryFailedError, Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
@@ -23,6 +23,7 @@ import {
   VULNERABILITY_CSV_COLUMNS,
 } from "./experiment-csv";
 import { dataDictionary } from "./experiment-data-dictionary";
+import { isUniqueViolation } from "./experiment-db-errors";
 import { deriveExposures, type Exposure } from "./experiment-exposures";
 import type { FigureRows } from "./experiment-figure-data";
 import type { ResultIntervals } from "./experiment-intervals";
@@ -49,10 +50,11 @@ import {
   type ManifestCommit,
   manifestJson,
   type PackageFile,
+  packageFileStream,
 } from "./experiment-replication-package";
 import {
   aggregateExperimentResults,
-  computeResultIntervals,
+  computeResultIntervalsYielding,
   type ExperimentResults,
   type ExperimentResultsInput,
   headCutoff,
@@ -188,7 +190,7 @@ export class ExperimentResultsService {
   private readonly logger = CodeClarityLogger.forService("Experiments");
 
   /** Bootstrap intervals by experiment and end time, oldest read first */
-  private readonly intervalCache = new Map<string, ResultIntervals>();
+  private readonly intervalCache = new Map<string, Promise<ResultIntervals>>();
 
   private readonly rawQuery: RawQuery = (sql, params) =>
     this.probeOutcomeRepository.query(sql, params);
@@ -209,6 +211,17 @@ export class ExperimentResultsService {
     private readonly publishedRepository: Repository<ExperimentPublishedResults>,
   ) {}
 
+  /** @throws {NotAuthorized} @throws {EntityNotFound} */
+  private async experimentFor(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+    role: MemberRole = MemberRole.USER,
+  ): Promise<Experiment> {
+    await this.membershipsRepository.hasRequiredRole(orgId, user.userId, role);
+    return findExperimentInOrg(this.experimentRepository, orgId, experimentId);
+  }
+
   /**
    * The newest Published results of an experiment, else its results computed
    * from its copied rows on every read (ADR 0001), over the runs done so far.
@@ -224,7 +237,8 @@ export class ExperimentResultsService {
   }
 
   /**
-   * The results payload with the experiment's name, for results.json.
+   * The results payload with the experiment's name, for results.json: the
+   * given Published results version, else what the page shows by default.
    * @throws {NotAuthorized} If the user is not a member of the org
    * @throws {EntityNotFound} If the org has no such experiment
    */
@@ -232,22 +246,20 @@ export class ExperimentResultsService {
     orgId: string,
     experimentId: string,
     user: AuthenticatedUser,
+    metricVersion?: number,
   ): Promise<ExperimentResultsExport> {
-    await this.membershipsRepository.hasRequiredRole(
-      orgId,
-      user.userId,
-      MemberRole.USER,
-    );
-    const experiment = await findExperimentInOrg(
-      this.experimentRepository,
-      orgId,
-      experimentId,
-    );
+    const experiment = await this.experimentFor(orgId, experimentId, user);
 
     const published = await this.publishedRepository.findOne({
-      where: { experiment: { id: experiment.id } },
+      where: {
+        experiment: { id: experiment.id },
+        ...(metricVersion === undefined
+          ? {}
+          : { metric_version: metricVersion }),
+      },
       order: { metric_version: "DESC" },
     });
+    if (metricVersion !== undefined && !published) throw new EntityNotFound();
     return {
       experiment_name: experiment.name,
       results: published?.results ?? (await this.computeResults(experiment)),
@@ -267,15 +279,11 @@ export class ExperimentResultsService {
     experimentId: string,
     user: AuthenticatedUser,
   ): Promise<Omit<PublishedResultsSummary, "published_by_name">> {
-    await this.membershipsRepository.hasRequiredRole(
-      orgId,
-      user.userId,
-      MemberRole.ADMIN,
-    );
-    const experiment = await findExperimentInOrg(
-      this.experimentRepository,
+    const experiment = await this.experimentFor(
       orgId,
       experimentId,
+      user,
+      MemberRole.ADMIN,
     );
     // Without an end time the bootstrap intervals would be left out
     if (
@@ -432,12 +440,7 @@ export class ExperimentResultsService {
     experimentId: string,
     user: AuthenticatedUser,
   ): Promise<{ metric_version: number }> {
-    await this.membershipsRepository.hasRequiredRole(
-      orgId,
-      user.userId,
-      MemberRole.USER,
-    );
-    await findExperimentInOrg(this.experimentRepository, orgId, experimentId);
+    await this.experimentFor(orgId, experimentId, user);
     return { metric_version: METRIC_VERSION };
   }
 
@@ -451,16 +454,7 @@ export class ExperimentResultsService {
     experimentId: string,
     user: AuthenticatedUser,
   ): Promise<PublishedResultsSummary[]> {
-    await this.membershipsRepository.hasRequiredRole(
-      orgId,
-      user.userId,
-      MemberRole.USER,
-    );
-    const experiment = await findExperimentInOrg(
-      this.experimentRepository,
-      orgId,
-      experimentId,
-    );
+    const experiment = await this.experimentFor(orgId, experimentId, user);
     const versions = await this.publishedRepository.find({
       where: { experiment: { id: experiment.id } },
       select: {
@@ -487,16 +481,7 @@ export class ExperimentResultsService {
     metricVersion: number,
     user: AuthenticatedUser,
   ): Promise<ExperimentResults> {
-    await this.membershipsRepository.hasRequiredRole(
-      orgId,
-      user.userId,
-      MemberRole.USER,
-    );
-    const experiment = await findExperimentInOrg(
-      this.experimentRepository,
-      orgId,
-      experimentId,
-    );
+    const experiment = await this.experimentFor(orgId, experimentId, user);
     const published = await this.publishedRepository.findOne({
       where: {
         experiment: { id: experiment.id },
@@ -518,16 +503,7 @@ export class ExperimentResultsService {
     metricVersion: number,
     user: AuthenticatedUser,
   ): Promise<PublishedPackageExport> {
-    await this.membershipsRepository.hasRequiredRole(
-      orgId,
-      user.userId,
-      MemberRole.USER,
-    );
-    const experiment = await findExperimentInOrg(
-      this.experimentRepository,
-      orgId,
-      experimentId,
-    );
+    const experiment = await this.experimentFor(orgId, experimentId, user);
     const published = await this.publishedRepository.findOne({
       where: {
         experiment: { id: experiment.id },
@@ -557,7 +533,7 @@ export class ExperimentResultsService {
     };
     return aggregateExperimentResults({
       ...input,
-      bootstrap_intervals: this.intervalsOf(experiment, input),
+      bootstrap_intervals: await this.intervalsOf(experiment, input),
     });
   }
 
@@ -598,17 +574,27 @@ export class ExperimentResultsService {
   private intervalsOf(
     experiment: Experiment,
     input: ExperimentResultsInput,
-  ): ResultIntervals | null {
+  ): Promise<ResultIntervals> | null {
     if (!experiment.ended_on) return null;
     const key = `${experiment.id}:${new Date(experiment.ended_on).toISOString()}`;
     const intervals =
-      this.intervalCache.get(key) ?? computeResultIntervals(input);
+      this.intervalCache.get(key) ?? this.startIntervals(key, input);
     // Re-inserting keeps the map ordered by last read
     this.intervalCache.delete(key);
     this.intervalCache.set(key, intervals);
     if (this.intervalCache.size > INTERVAL_CACHE_SIZE) {
       this.intervalCache.delete(this.intervalCache.keys().next().value!);
     }
+    return intervals;
+  }
+
+  /** Starts computing intervals; a failure is not kept, so the next read retries. */
+  private startIntervals(
+    key: string,
+    input: ExperimentResultsInput,
+  ): Promise<ResultIntervals> {
+    const intervals = computeResultIntervalsYielding(input);
+    intervals.catch(() => this.intervalCache.delete(key));
     return intervals;
   }
 
@@ -699,6 +685,7 @@ export class ExperimentResultsService {
     orgId: string,
     experimentId: string,
     user: AuthenticatedUser,
+    metricVersion?: number,
   ): Promise<ExperimentCsvExport> {
     return this.exportExposureCsv(
       orgId,
@@ -707,6 +694,7 @@ export class ExperimentResultsService {
       "exposures.csv",
       EXPOSURE_CSV_COLUMNS,
       (entry, exposure) => exposureCsvRow(entry, exposure),
+      metricVersion,
     );
   }
 
@@ -720,6 +708,7 @@ export class ExperimentResultsService {
     orgId: string,
     experimentId: string,
     user: AuthenticatedUser,
+    metricVersion?: number,
   ): Promise<ExperimentCsvExport> {
     return this.exportExposureCsv(
       orgId,
@@ -728,6 +717,7 @@ export class ExperimentResultsService {
       "fixes.csv",
       FIX_CSV_COLUMNS,
       fixCsvRow,
+      metricVersion,
     );
   }
 
@@ -738,20 +728,15 @@ export class ExperimentResultsService {
     file: string,
     columns: readonly string[],
     toRow: (entry: CsvEntry, exposure: Exposure) => CsvRow | null,
+    metricVersion?: number,
   ): Promise<ExperimentCsvExport> {
-    await this.membershipsRepository.hasRequiredRole(
-      orgId,
-      user.userId,
-      MemberRole.USER,
-    );
-    const experiment = await findExperimentInOrg(
-      this.experimentRepository,
-      orgId,
-      experimentId,
-    );
+    const experiment = await this.experimentFor(orgId, experimentId, user);
     return {
       experiment_name: experiment.name,
-      stream: this.exposureCsv(experiment, file, columns, toRow),
+      stream:
+        metricVersion === undefined
+          ? this.exposureCsv(experiment, file, columns, toRow)
+          : await this.frozenCsv(experiment, metricVersion, file),
     };
   }
 
@@ -828,20 +813,15 @@ export class ExperimentResultsService {
     orgId: string,
     experimentId: string,
     user: AuthenticatedUser,
+    metricVersion?: number,
   ): Promise<ExperimentCsvExport> {
-    await this.membershipsRepository.hasRequiredRole(
-      orgId,
-      user.userId,
-      MemberRole.USER,
-    );
-    const experiment = await findExperimentInOrg(
-      this.experimentRepository,
-      orgId,
-      experimentId,
-    );
+    const experiment = await this.experimentFor(orgId, experimentId, user);
     return {
       experiment_name: experiment.name,
-      stream: this.runsCsv(experiment),
+      stream:
+        metricVersion === undefined
+          ? this.runsCsv(experiment)
+          : await this.frozenCsv(experiment, metricVersion, "runs.csv"),
     };
   }
 
@@ -892,20 +872,19 @@ export class ExperimentResultsService {
     orgId: string,
     experimentId: string,
     user: AuthenticatedUser,
+    metricVersion?: number,
   ): Promise<ExperimentCsvExport> {
-    await this.membershipsRepository.hasRequiredRole(
-      orgId,
-      user.userId,
-      MemberRole.USER,
-    );
-    const experiment = await findExperimentInOrg(
-      this.experimentRepository,
-      orgId,
-      experimentId,
-    );
+    const experiment = await this.experimentFor(orgId, experimentId, user);
     return {
       experiment_name: experiment.name,
-      stream: this.vulnerabilitiesCsv(experiment),
+      stream:
+        metricVersion === undefined
+          ? this.vulnerabilitiesCsv(experiment)
+          : await this.frozenCsv(
+              experiment,
+              metricVersion,
+              "vulnerabilities.csv",
+            ),
     };
   }
 
@@ -964,6 +943,29 @@ export class ExperimentResultsService {
     );
   }
 
+  /**
+   * A CSV as stored in a version's replication package.
+   * @throws {EntityNotFound} If the version or its package does not exist
+   */
+  private async frozenCsv(
+    experiment: Experiment,
+    metricVersion: number,
+    file: string,
+  ): Promise<Readable> {
+    const published = await this.publishedRepository.findOne({
+      where: {
+        experiment: { id: experiment.id },
+        metric_version: metricVersion,
+      },
+      select: { id: true, package_archive: true },
+    });
+    const stream = published?.package_archive
+      ? packageFileStream(published.package_archive, file)
+      : null;
+    if (!stream) throw new EntityNotFound();
+    return stream;
+  }
+
   /** A stream failing mid-export cuts the download short: leave a trace. */
   private logStreamErrors(
     stream: Readable,
@@ -993,14 +995,6 @@ function publishedSummary(
       ? `${publisher.first_name} ${publisher.last_name}`
       : null,
   };
-}
-
-/** Postgres reports a broken unique constraint as SQLSTATE 23505. */
-export function isUniqueViolation(error: unknown): boolean {
-  return (
-    error instanceof QueryFailedError &&
-    (error as QueryFailedError & { code?: string }).code === "23505"
-  );
 }
 
 function knowledgeSnapshot(value: unknown): KnowledgeSnapshot | null {

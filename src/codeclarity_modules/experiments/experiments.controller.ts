@@ -190,17 +190,25 @@ export class ExperimentsController {
   })
   @ApiParam({ name: "org_id", description: "Organization ID" })
   @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiQuery({
+    name: "metric_version",
+    required: false,
+    description: "The Published results version to export",
+  })
   @ApiProduces("text/csv")
   async exportRunsCsv(
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("experiment_id") experiment_id: string,
     @Res() reply: FastifyReply,
+    @Query("metric_version", new ParseIntPipe({ optional: true }))
+    metricVersion?: number,
   ): Promise<void> {
     const { experiment_name, stream } = await this.resultsService.exportRunsCsv(
       org_id,
       experiment_id,
       user,
+      metricVersion,
     );
     await reply
       .header("content-type", CSV_CONTENT_TYPE)
@@ -214,18 +222,26 @@ export class ExperimentsController {
   })
   @ApiParam({ name: "org_id", description: "Organization ID" })
   @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiQuery({
+    name: "metric_version",
+    required: false,
+    description: "The Published results version to export",
+  })
   @ApiProduces("text/csv")
   async exportVulnerabilitiesCsv(
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("experiment_id") experiment_id: string,
     @Res() reply: FastifyReply,
+    @Query("metric_version", new ParseIntPipe({ optional: true }))
+    metricVersion?: number,
   ): Promise<void> {
     const { experiment_name, stream } =
       await this.resultsService.exportVulnerabilitiesCsv(
         org_id,
         experiment_id,
         user,
+        metricVersion,
       );
     await reply
       .header("content-type", CSV_CONTENT_TYPE)
@@ -242,15 +258,27 @@ export class ExperimentsController {
   })
   @ApiParam({ name: "org_id", description: "Organization ID" })
   @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiQuery({
+    name: "metric_version",
+    required: false,
+    description: "The Published results version to export",
+  })
   @ApiProduces("text/csv")
   async exportExposuresCsv(
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("experiment_id") experiment_id: string,
     @Res() reply: FastifyReply,
+    @Query("metric_version", new ParseIntPipe({ optional: true }))
+    metricVersion?: number,
   ): Promise<void> {
     const { experiment_name, stream } =
-      await this.resultsService.exportExposuresCsv(org_id, experiment_id, user);
+      await this.resultsService.exportExposuresCsv(
+        org_id,
+        experiment_id,
+        user,
+        metricVersion,
+      );
     await reply
       .header("content-type", CSV_CONTENT_TYPE)
       .header(
@@ -266,15 +294,27 @@ export class ExperimentsController {
   })
   @ApiParam({ name: "org_id", description: "Organization ID" })
   @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiQuery({
+    name: "metric_version",
+    required: false,
+    description: "The Published results version to export",
+  })
   @ApiProduces("text/csv")
   async exportFixesCsv(
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("experiment_id") experiment_id: string,
     @Res() reply: FastifyReply,
+    @Query("metric_version", new ParseIntPipe({ optional: true }))
+    metricVersion?: number,
   ): Promise<void> {
     const { experiment_name, stream } =
-      await this.resultsService.exportFixesCsv(org_id, experiment_id, user);
+      await this.resultsService.exportFixesCsv(
+        org_id,
+        experiment_id,
+        user,
+        metricVersion,
+      );
     await reply
       .header("content-type", CSV_CONTENT_TYPE)
       .header("content-disposition", attachment(experiment_name, "fixes.csv"))
@@ -287,15 +327,27 @@ export class ExperimentsController {
   })
   @ApiParam({ name: "org_id", description: "Organization ID" })
   @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  @ApiQuery({
+    name: "metric_version",
+    required: false,
+    description: "The Published results version to export",
+  })
   @ApiProduces("application/json")
   async exportResults(
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("experiment_id") experiment_id: string,
     @Res() reply: FastifyReply,
+    @Query("metric_version", new ParseIntPipe({ optional: true }))
+    metricVersion?: number,
   ): Promise<void> {
     const { experiment_name, results } =
-      await this.resultsService.exportResults(org_id, experiment_id, user);
+      await this.resultsService.exportResults(
+        org_id,
+        experiment_id,
+        user,
+        metricVersion,
+      );
     await reply
       .header("content-type", JSON_CONTENT_TYPE)
       .header(
