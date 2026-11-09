@@ -5,6 +5,7 @@ import { Repository } from "typeorm";
 import { Result } from "src/codeclarity_modules/results/result.entity";
 import { Dependency } from "src/codeclarity_modules/results/sbom/sbom.types";
 import {
+  MaliciousPackageAdvisory,
   Output as VulnsOutput,
   Status,
   Vulnerability,
@@ -122,6 +123,19 @@ export class VulnerabilitiesUtilsService {
     // }
 
     return vulnerabilities;
+  }
+
+  async getMaliciousPackageAdvisories(
+    analysis_id: string,
+    workspace: string,
+  ): Promise<MaliciousPackageAdvisory[]> {
+    const findings: VulnsOutput = await this.getVulnsResult(analysis_id);
+
+    if (!(workspace in findings.workspaces)) {
+      throw new UnknownWorkspace();
+    }
+
+    return findings.workspaces[workspace]!.MaliciousPackageAdvisories ?? [];
   }
 
   async getImportPaths(

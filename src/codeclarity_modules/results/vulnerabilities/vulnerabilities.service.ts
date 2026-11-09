@@ -21,6 +21,7 @@ import {
 import {
   AffectedVuln,
   ConflictFlag,
+  MaliciousPackageAdvisory,
   newVulnerabilityAnalysisStats,
   Output as VulnsOutput,
   Source,
@@ -365,6 +366,26 @@ export class VulnerabilitiesService {
       wBeforeStats.mean_confidentiality_impact;
 
     return wStats;
+  }
+
+  async getMaliciousPackageAdvisories(
+    orgId: string,
+    projectId: string,
+    analysisId: string,
+    user: AuthenticatedUser,
+    workspace: string,
+  ): Promise<MaliciousPackageAdvisory[]> {
+    await this.analysisResultsService.checkAccess(
+      orgId,
+      projectId,
+      analysisId,
+      user,
+    );
+
+    return await this.findingsUtilsService.getMaliciousPackageAdvisories(
+      analysisId,
+      workspace,
+    );
   }
 
   // eslint-disable-next-line max-params, complexity

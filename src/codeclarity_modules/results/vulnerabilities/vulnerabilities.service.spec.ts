@@ -53,6 +53,7 @@ describe("VulnerabilitiesService", () => {
 
   const mockFindingsUtilsService = {
     getVulnsResult: jest.fn(),
+    getMaliciousPackageAdvisories: jest.fn(),
     getFindingsData: jest.fn().mockResolvedValue([
       {
         vulnerability_id: "CVE-2024-1234",
@@ -1858,6 +1859,54 @@ describe("VulnerabilitiesService", () => {
       await expect(
         service.getStatus("org-123", "project-123", "analysis-123", mockUser),
       ).rejects.toThrow("Access denied");
+    });
+  });
+
+  describe("getMaliciousPackageAdvisories", () => {
+    const advisory = {
+      AdvisoryId: "MAL-2024-1",
+      AffectedDependency: "evil-pkg",
+      AffectedVersion: "1.2.3",
+      DirectDependency: false,
+    };
+
+    it("returns the advisories of an analysis the user can access", async () => {
+      mockFindingsUtilsService.getMaliciousPackageAdvisories.mockResolvedValue([
+        advisory,
+      ]);
+
+      const result = await service.getMaliciousPackageAdvisories(
+        "org-1",
+        "project-1",
+        "analysis-1",
+        mockUser,
+        ".",
+      );
+
+      expect(result).toEqual([advisory]);
+      expect(
+        mockFindingsUtilsService.getMaliciousPackageAdvisories,
+      ).toHaveBeenCalledWith("analysis-1", ".");
+    });
+
+    it("does not read advisories when access is denied", async () => {
+      mockFindingsUtilsService.getMaliciousPackageAdvisories.mockClear();
+      mockAnalysisResultsService.checkAccess.mockRejectedValueOnce(
+        new Error("denied"),
+      );
+
+      await expect(
+        service.getMaliciousPackageAdvisories(
+          "org-1",
+          "project-1",
+          "analysis-1",
+          mockUser,
+          ".",
+        ),
+      ).rejects.toThrow("denied");
+      expect(
+        mockFindingsUtilsService.getMaliciousPackageAdvisories,
+      ).not.toHaveBeenCalled();
     });
   });
 });

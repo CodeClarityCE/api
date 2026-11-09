@@ -125,8 +125,24 @@ export interface SeverityDist {
   none: number;
 }
 
+/** A package version flagged as malicious, reported apart from vulnerabilities */
+export interface MaliciousPackageAdvisory {
+  AdvisoryId: string;
+  AffectedDependency: string;
+  AffectedVersion: string;
+  DirectDependency: boolean;
+  Summary?: string;
+  Details?: string;
+  Published?: string;
+  Modified?: string;
+  Aliases?: string[];
+  References?: string[];
+}
+
 export interface WorkSpaceData {
   Vulnerabilities: Vulnerability[];
+  // Absent on analyses made before malicious packages were reported separately
+  MaliciousPackageAdvisories?: MaliciousPackageAdvisory[];
   // DependencyInfo: { [key: string]: DependencyInfo };
 }
 
