@@ -2,6 +2,8 @@ import { ApiProperty } from "@nestjs/swagger";
 import { Expose } from "class-transformer";
 import { Column, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
 
+import { timestampAsIso } from "../timestamp-column";
+
 @Entity("nvd")
 export class NVD {
   @PrimaryGeneratedColumn("uuid")
@@ -20,12 +22,12 @@ export class NVD {
   @Expose()
   sourceIdentifier!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: "timestamptz", nullable: true, transformer: timestampAsIso })
   @ApiProperty()
   @Expose()
   published!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: "timestamptz", nullable: true, transformer: timestampAsIso })
   @ApiProperty()
   @Expose()
   lastModified!: string;
@@ -79,4 +81,14 @@ export class NVD {
   @ApiProperty()
   @Expose()
   references!: unknown;
+
+  @Column({ type: "varchar", nullable: true })
+  @ApiProperty()
+  @Expose()
+  retired_reason?: string | null;
+
+  @Column({ type: "timestamptz", nullable: true, transformer: timestampAsIso })
+  @ApiProperty()
+  @Expose()
+  retired_at?: string | null;
 }

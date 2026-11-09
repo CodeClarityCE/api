@@ -2,6 +2,8 @@ import { ApiProperty } from "@nestjs/swagger";
 import { Expose } from "class-transformer";
 import { Column, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
 
+import { timestampAsIso } from "../timestamp-column";
+
 @Entity("osv")
 export class OSV {
   @PrimaryGeneratedColumn("uuid")
@@ -30,17 +32,17 @@ export class OSV {
   @Expose()
   vlai_confidence!: number;
 
-  @Column({ nullable: true })
+  @Column({ type: "timestamptz", nullable: true, transformer: timestampAsIso })
   @ApiProperty()
   @Expose()
   modified!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: "timestamptz", nullable: true, transformer: timestampAsIso })
   @ApiProperty()
   @Expose()
   published!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: "timestamptz", nullable: true, transformer: timestampAsIso })
   @ApiProperty()
   @Expose()
   withdrawn!: string;
@@ -99,4 +101,24 @@ export class OSV {
   @ApiProperty()
   @Expose()
   cwes!: unknown;
+
+  @Column({ type: "varchar", default: "vulnerability" })
+  @ApiProperty()
+  @Expose()
+  kind?: string;
+
+  @Column({ type: "jsonb", insert: false, update: false, nullable: true })
+  @ApiProperty()
+  @Expose()
+  cve_aliases?: string[];
+
+  @Column({ type: "varchar", nullable: true })
+  @ApiProperty()
+  @Expose()
+  retired_reason?: string | null;
+
+  @Column({ type: "timestamptz", nullable: true, transformer: timestampAsIso })
+  @ApiProperty()
+  @Expose()
+  retired_at?: string | null;
 }
