@@ -451,16 +451,77 @@ describe("ExperimentResultsService", () => {
           high: 1,
         });
 
-        // Rows read differently now: the point estimate moves, the cached interval does not
+        const second = await service.getResults("org-1", "exp-1", user);
+        expect(second.bootstrap_intervals).toEqual(first.bootstrap_intervals);
+      });
+
+      it("reads an ended experiment's rows once", async () => {
+        experimentRepository["findOne"]!.mockResolvedValue(experiment);
+        const first = await service.getResults("org-1", "exp-1", user);
+
         vulnerabilityRows.mockResolvedValue([
           instanceOf("r1"),
           instanceOf("r2"),
         ]);
         const second = await service.getResults("org-1", "exp-1", user);
-        expect(second.headline.load_median).not.toBe(
-          first.headline.load_median,
-        );
-        expect(second.bootstrap_intervals).toEqual(first.bootstrap_intervals);
+
+        expect(vulnerabilityRows).toHaveBeenCalledTimes(1);
+        expect(second.headline).toEqual(first.headline);
+      });
+
+      it("shares the rows between results and Figures", async () => {
+        experimentRepository["findOne"]!.mockResolvedValue(experiment);
+        await service.getResults("org-1", "exp-1", user);
+        await service.figureRows(experiment as never);
+
+        expect(vulnerabilityRows).toHaveBeenCalledTimes(1);
+      });
+
+      it("reports how far the stored rows have been read", async () => {
+        experimentRepository["findOne"]!.mockResolvedValue(experiment);
+        const seen: unknown[] = [];
+        probeRows.mockImplementation(async (sql: string) => {
+          if (sql.startsWith("SELECT id")) {
+            return Array.from({ length: 25 }, (_, i) => ({ id: `p${i}` }));
+          }
+          if (sql.includes("vulnerable AS")) {
+            seen.push(await service.loadProgress("org-1", "exp-1", user));
+          }
+          return [];
+        });
+
+        await service.getResults("org-1", "exp-1", user);
+
+        expect(seen).toEqual([
+          { done: 0, total: 25 },
+          { done: 20, total: 25 },
+        ]);
+        await expect(
+          service.loadProgress("org-1", "exp-1", user),
+        ).resolves.toEqual({ done: 0, total: 0 });
+      });
+
+      it("reads the rows again after a failed read", async () => {
+        experimentRepository["findOne"]!.mockResolvedValue(experiment);
+        vulnerabilityRows.mockRejectedValueOnce(new Error("connection lost"));
+        await expect(
+          service.getResults("org-1", "exp-1", user),
+        ).rejects.toThrow("connection lost");
+
+        await service.getResults("org-1", "exp-1", user);
+
+        expect(vulnerabilityRows).toHaveBeenCalledTimes(2);
+      });
+
+      it("reads the rows on every read while the experiment has not ended", async () => {
+        experimentRepository["findOne"]!.mockResolvedValue({
+          ...experiment,
+          ended_on: null,
+        });
+        await service.getResults("org-1", "exp-1", user);
+        await service.getResults("org-1", "exp-1", user);
+
+        expect(vulnerabilityRows).toHaveBeenCalledTimes(2);
       });
 
       it("computes them once for concurrent reads of an ended experiment", async () => {

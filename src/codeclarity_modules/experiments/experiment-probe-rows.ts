@@ -47,15 +47,20 @@ export async function readProbeRows(
 }
 
 /**
- * Probe outcome rows with only the packages some instance of the
- * experiment names: dating and fix kinds need nothing else.
+ * Probe outcome rows with only the packages some instance of the experiment
+ * names, once each: a monorepo repeats every package per workspace.
  */
-const PROBE_OUTCOME_SELECT = `SELECT probe."datasetEntryId" AS dataset_entry_id,
+const PROBE_OUTCOME_SELECT = `WITH vulnerable AS MATERIALIZED (
+    SELECT DISTINCT affected_dependency AS name
+      FROM experiment_vulnerability_instance
+     WHERE "experimentId" = $1
+  )
+  SELECT probe."datasetEntryId" AS dataset_entry_id,
          probe.commit_hash AS commit_hash,
-         COALESCE((SELECT jsonb_agg(p) FROM jsonb_array_elements(probe.packages) AS p
-                    WHERE p->>'name' IN (SELECT instance.affected_dependency
-                                           FROM experiment_vulnerability_instance AS instance
-                                          WHERE instance."experimentId" = $1)),
+         COALESCE((SELECT jsonb_agg(DISTINCT jsonb_build_object(
+                            'name', p->>'name', 'version', p->>'version', 'direct', p->'direct'))
+                     FROM jsonb_array_elements(probe.packages) AS p
+                    WHERE p->>'name' IN (SELECT name FROM vulnerable)),
                   '[]'::jsonb) AS packages
     FROM experiment_probe_outcome AS probe
    WHERE probe."experimentId" = $1`;
@@ -88,6 +93,35 @@ export function readProbeOutcomes(
         [experimentId, entryIds],
       )
     : query<ResultsProbeInput>(PROBE_OUTCOME_SELECT, [experimentId]);
+}
+
+/** Probe outcome rows read per query when reading a whole experiment */
+const PROBE_OUTCOME_BATCH = 20;
+
+/** Every probe outcome row of the experiment, reporting rows read so far. */
+export async function readProbeOutcomesInBatches(
+  query: RawQuery,
+  experimentId: string,
+  onProgress: (done: number, total: number) => void,
+): Promise<ResultsProbeInput[]> {
+  const ids = (
+    await query<{ id: string }>(
+      `SELECT id FROM experiment_probe_outcome WHERE "experimentId" = $1`,
+      [experimentId],
+    )
+  ).map((row) => row.id);
+  const outcomes: ResultsProbeInput[] = [];
+  for (let start = 0; start < ids.length; start += PROBE_OUTCOME_BATCH) {
+    onProgress(start, ids.length);
+    outcomes.push(
+      ...(await query<ResultsProbeInput>(
+        `${PROBE_OUTCOME_SELECT} AND probe.id = ANY($2)`,
+        [experimentId, ids.slice(start, start + PROBE_OUTCOME_BATCH)],
+      )),
+    );
+  }
+  onProgress(ids.length, ids.length);
+  return outcomes;
 }
 
 /** The distinct vulnerable versions the instances of every entry name. */

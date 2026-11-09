@@ -380,11 +380,11 @@ describe("ExperimentFiguresService", () => {
       expect(runFind).toHaveBeenCalledTimes(1);
     });
 
-    it("computes each different definition", async () => {
+    it("reads an ended experiment's rows once across different definitions", async () => {
       await compute();
       await compute({ ...DEFINITION, filters: { view: "as_of" } });
 
-      expect(runFind).toHaveBeenCalledTimes(2);
+      expect(runFind).toHaveBeenCalledTimes(1);
     });
 
     it("recomputes after the metric version changes", async () => {

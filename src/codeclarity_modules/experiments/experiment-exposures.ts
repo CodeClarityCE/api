@@ -22,7 +22,7 @@ import type {
   ResultsRunInput,
   ResultsVulnerabilityInput,
 } from "./experiment-results";
-import { NO_LOCKFILE_YET, type ProbePackage } from "./experiment-row-copy";
+import { NO_LOCKFILE_YET, type ResolvedPackage } from "./experiment-row-copy";
 import { type SeverityCounts, severityOf } from "./experiment-severity";
 
 export const FIX_KINDS = [
@@ -197,7 +197,7 @@ export function deriveExposures(
   search: ProbeSearch = new ProbeSearch(input),
 ): Exposure[] {
   const byRun = instancesByRun(input.vulnerabilities);
-  const packagesAt = new Map<string, ProbePackage[]>();
+  const packagesAt = new Map<string, ResolvedPackage[]>();
   for (const probe of input.probes ?? []) {
     packagesAt.set(
       `${probe.dataset_entry_id}\u0000${probe.commit_hash}`,
@@ -330,7 +330,7 @@ function resolvesAt(
   entry: string,
   pkg: string,
   run: ResultsRunInput,
-  packagesAt: ReadonlyMap<string, ProbePackage[]>,
+  packagesAt: ReadonlyMap<string, ResolvedPackage[]>,
 ): boolean | null {
   if (isEmpty(run)) return false;
   const packages = run.commit_hash

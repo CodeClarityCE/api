@@ -11,7 +11,7 @@ import type {
   ResultsRunInput,
   ResultsVulnerabilityInput,
 } from "./experiment-results";
-import type { ProbePackage } from "./experiment-row-copy";
+import type { ResolvedPackage } from "./experiment-row-copy";
 import { isVulnerableVersion } from "./experiment-vulnerable-versions";
 
 export const PROBE_OUTCOMES = ["found", "ambiguous", "not_found"] as const;
@@ -63,7 +63,7 @@ export interface ProbeRows {
   probes?: readonly {
     dataset_entry_id: string;
     commit_hash: string;
-    packages: ProbePackage[];
+    packages: ResolvedPackage[];
   }[];
   probe_intervals?: readonly ResultsProbeIntervalInput[];
   probe_analyses?: readonly ResultsProbeAnalysisInput[];
@@ -89,8 +89,8 @@ export interface ProbeDating {
   /** The located commit, when found */
   commit: ProbeCandidate | null;
   /** Packages either side of the located commit; null for the bracketing snapshot */
-  packages_before: ProbePackage[] | null;
-  packages_after: ProbePackage[] | null;
+  packages_before: ResolvedPackage[] | null;
+  packages_after: ResolvedPackage[] | null;
 }
 
 /** A commit the runner should analyse next, or an interval it should list. */
@@ -111,7 +111,7 @@ export const NO_CANDIDATES_REASON =
   "no lockfile-touching commit in the interval";
 
 type CommitState =
-  | { state: "present" | "absent"; packages: ProbePackage[] }
+  | { state: "present" | "absent"; packages: ResolvedPackage[] }
   | { state: "failed"; reason: string }
   | { state: "pending" | "unknown" };
 
@@ -129,7 +129,7 @@ const SEP = "\u0000";
  * listed intervals. Records what the search still needs.
  */
 export class ProbeSearch {
-  private readonly packagesAt = new Map<string, ProbePackage[]>();
+  private readonly packagesAt = new Map<string, ResolvedPackage[]>();
   private readonly failedAt = new Map<string, string>();
   private readonly pendingAt = new Set<string>();
   private readonly intervals = new Map<string, ResultsProbeIntervalInput>();
@@ -264,7 +264,7 @@ export class ProbeSearch {
         };
       }
     }
-    const packagesOf = (i: number): ProbePackage[] | null => {
+    const packagesOf = (i: number): ResolvedPackage[] | null => {
       const known = this.stateAt(task, candidates[i]!.sha);
       return "packages" in known ? known.packages : null;
     };
@@ -297,7 +297,7 @@ export class ProbeSearch {
   /** The package resolves to a vulnerable version in some workspace. */
   isPresent(
     task: Pick<DatingTask, "vulnerability_id" | "pkg">,
-    packages: readonly ProbePackage[],
+    packages: readonly ResolvedPackage[],
   ): boolean {
     const known = this.versions.get(
       `${task.vulnerability_id}${SEP}${task.pkg}`,
