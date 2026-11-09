@@ -54,6 +54,7 @@ describe("VulnerabilitiesService", () => {
   const mockFindingsUtilsService = {
     getVulnsResult: jest.fn(),
     getMaliciousPackageAdvisories: jest.fn(),
+    getKnowledgeSnapshot: jest.fn(),
     getFindingsData: jest.fn().mockResolvedValue([
       {
         vulnerability_id: "CVE-2024-1234",
@@ -1906,6 +1907,45 @@ describe("VulnerabilitiesService", () => {
       ).rejects.toThrow("denied");
       expect(
         mockFindingsUtilsService.getMaliciousPackageAdvisories,
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("getKnowledgeSnapshot", () => {
+    const snapshot = { taken_at: "2026-11-09T12:00:00Z", sources: [] };
+
+    it("returns the snapshot of an analysis the user can access", async () => {
+      mockFindingsUtilsService.getKnowledgeSnapshot.mockResolvedValue(snapshot);
+
+      await expect(
+        service.getKnowledgeSnapshot(
+          "org-1",
+          "project-1",
+          "analysis-1",
+          mockUser,
+        ),
+      ).resolves.toEqual(snapshot);
+      expect(
+        mockFindingsUtilsService.getKnowledgeSnapshot,
+      ).toHaveBeenCalledWith("analysis-1");
+    });
+
+    it("does not read the snapshot when access is denied", async () => {
+      mockFindingsUtilsService.getKnowledgeSnapshot.mockClear();
+      mockAnalysisResultsService.checkAccess.mockRejectedValueOnce(
+        new Error("denied"),
+      );
+
+      await expect(
+        service.getKnowledgeSnapshot(
+          "org-1",
+          "project-1",
+          "analysis-1",
+          mockUser,
+        ),
+      ).rejects.toThrow("denied");
+      expect(
+        mockFindingsUtilsService.getKnowledgeSnapshot,
       ).not.toHaveBeenCalled();
     });
   });
