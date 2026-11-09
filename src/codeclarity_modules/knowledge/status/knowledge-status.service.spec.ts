@@ -86,6 +86,12 @@ describe("KnowledgeStatusService", () => {
     );
   });
 
+  it("reports a source failing validation as failed", async () => {
+    expect((await statusOf("osv", { validation_failed: true })).status).toBe(
+      "failed",
+    );
+  });
+
   it("keeps showing the previous failure while a new run is going", async () => {
     const status = await statusOf("osv", {
       last_outcome: "failure",
