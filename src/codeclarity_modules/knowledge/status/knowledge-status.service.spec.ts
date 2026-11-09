@@ -14,6 +14,7 @@ interface Row {
   last_outcome: "success" | "failure" | null;
   last_error?: string | null;
   row_count: string;
+  validation_failed?: boolean;
 }
 
 function row(source: string, overrides: Partial<Row> = {}): Row {
