@@ -14,6 +14,7 @@ interface Row {
   last_outcome: "success" | "failure" | null;
   last_error?: string | null;
   row_count: string;
+  validation_failed?: boolean;
 }
 
 function row(source: string, overrides: Partial<Row> = {}): Row {
@@ -82,6 +83,12 @@ describe("KnowledgeStatusService", () => {
 
   it("reports a failed run as failed even with a fresh watermark", async () => {
     expect((await statusOf("osv", { last_outcome: "failure" })).status).toBe(
+      "failed",
+    );
+  });
+
+  it("reports a source failing validation as failed", async () => {
+    expect((await statusOf("osv", { validation_failed: true })).status).toBe(
       "failed",
     );
   });

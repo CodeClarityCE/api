@@ -34,6 +34,7 @@ interface SyncRow {
   last_run_finished_at: Date | null;
   last_outcome: KnowledgeSourceOutcome | null;
   row_count: string;
+  validation_failed: boolean;
 }
 
 const EMPTY_ROW: Omit<SyncRow, "source"> = {
@@ -42,6 +43,7 @@ const EMPTY_ROW: Omit<SyncRow, "source"> = {
   last_run_finished_at: null,
   last_outcome: null,
   row_count: "0",
+  validation_failed: false,
 };
 
 const HOUR_MS = 3_600_000;
@@ -57,7 +59,8 @@ export class KnowledgeStatusService {
   async get(): Promise<KnowledgeStatus> {
     // Lists columns explicitly so last_error never leaves the database.
     const rows = await this.knowledgeDataSource.query<SyncRow[]>(
-      `SELECT source, watermark, last_run_started_at, last_run_finished_at, last_outcome, row_count
+      `SELECT source, watermark, last_run_started_at, last_run_finished_at, last_outcome, row_count,
+              validation_error IS NOT NULL AS validation_failed
        FROM knowledge_source_sync`,
     );
     const bySource = new Map(rows.map((row) => [row.source, row]));
@@ -96,7 +99,7 @@ function health(
   staleAfter: number,
   now: number,
 ): KnowledgeSourceHealth {
-  if (row.last_outcome === "failure") {
+  if (row.last_outcome === "failure" || row.validation_failed) {
     return "failed";
   }
   if (row.last_outcome === null || row.watermark === null) {
