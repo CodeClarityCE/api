@@ -48,6 +48,7 @@ interface SyncRow {
   last_outcome: string | null;
   last_error: string | null;
   row_count: string;
+  bulk_completed_at: Date | null;
 }
 
 describe("CreateKnowledgeSourceSync migration", () => {
@@ -117,6 +118,7 @@ describe("CreateKnowledgeSourceSync migration", () => {
     expect(sync["nvd"]?.last_run_finished_at).toBeNull();
     expect(sync["nvd"]?.last_outcome).toBeNull();
     expect(sync["nvd"]?.last_error).toBeNull();
+    expect(sync["gcve"]?.bulk_completed_at).toBeNull();
   });
 
   it("replaces newer rows left behind when an older dump is restored", async () => {
