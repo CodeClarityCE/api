@@ -336,6 +336,50 @@ describe("VulnerabilitiesUtilsService", () => {
     });
   });
 
+  describe("getKnowledgeSnapshot", () => {
+    const mockAnalysisInfo = (analysisInfo: object): void => {
+      mockRepository.findOne.mockResolvedValue({
+        id: "result-id",
+        plugin: "vuln-finder",
+        result: {
+          analysis_info: { status: Status.Success, ...analysisInfo },
+          workspaces: {},
+        },
+        analysis: {} as any,
+      } as any);
+    };
+
+    it("returns the source snapshot stored with the analysis", async () => {
+      const snapshot = {
+        taken_at: "2026-11-09T12:00:00Z",
+        sources: [
+          {
+            source: "nvd",
+            status: "stale",
+            comparable: false,
+            watermark: "2026-11-01T00:00:00Z",
+            row_count: 300000,
+            last_outcome: "success",
+            stale_after_hours: 48,
+          },
+        ],
+      };
+      mockAnalysisInfo({ knowledge_snapshot: snapshot });
+
+      await expect(
+        service.getKnowledgeSnapshot("analysis-id"),
+      ).resolves.toEqual(snapshot);
+    });
+
+    it("returns null for an analysis that predates source snapshots", async () => {
+      mockAnalysisInfo({});
+
+      await expect(
+        service.getKnowledgeSnapshot("analysis-id"),
+      ).resolves.toBeNull();
+    });
+  });
+
   describe("getImportPaths", () => {
     it("should return empty array when dependency is already in parents set", async () => {
       const dependenciesMap = {

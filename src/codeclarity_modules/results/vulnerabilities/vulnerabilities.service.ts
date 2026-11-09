@@ -21,6 +21,7 @@ import {
 import {
   AffectedVuln,
   ConflictFlag,
+  KnowledgeSnapshot,
   MaliciousPackageAdvisory,
   newVulnerabilityAnalysisStats,
   Output as VulnsOutput,
@@ -386,6 +387,22 @@ export class VulnerabilitiesService {
       analysisId,
       workspace,
     );
+  }
+
+  async getKnowledgeSnapshot(
+    orgId: string,
+    projectId: string,
+    analysisId: string,
+    user: AuthenticatedUser,
+  ): Promise<KnowledgeSnapshot | null> {
+    await this.analysisResultsService.checkAccess(
+      orgId,
+      projectId,
+      analysisId,
+      user,
+    );
+
+    return await this.findingsUtilsService.getKnowledgeSnapshot(analysisId);
   }
 
   // eslint-disable-next-line max-params, complexity
