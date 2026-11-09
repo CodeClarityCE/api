@@ -17,6 +17,9 @@ import {
   OSVReportGenerator,
 } from "../results/vulnerabilities/services/reportGenerator";
 
+import { DatasetComparisonController } from "./comparison/dataset-comparison.controller";
+import { DatasetComparisonService } from "./comparison/dataset-comparison.service";
+import { SourceOriginService } from "./comparison/source-origin.service";
 import { CWERepository } from "./cwe/cwe.repository";
 import { EPSS } from "./epss/epss.entity";
 import { EPSSRepository } from "./epss/epss.repository";
@@ -81,6 +84,7 @@ import { VulnerabilitySearchService } from "./vulnerability/vulnerability.servic
     VulnerabilityCheckService,
     ProvenanceService,
     KnowledgeStatusService,
+    SourceOriginService,
   ],
   providers: [
     LicenseService,
@@ -103,6 +107,8 @@ import { VulnerabilitySearchService } from "./vulnerability/vulnerability.servic
     VulnerabilityCheckService,
     ProvenanceService,
     KnowledgeStatusService,
+    DatasetComparisonService,
+    SourceOriginService,
   ],
   controllers: [
     LicenseController,
@@ -111,6 +117,7 @@ import { VulnerabilitySearchService } from "./vulnerability/vulnerability.servic
     VulnerabilityCheckController,
     ProvenanceController,
     KnowledgeStatusController,
+    DatasetComparisonController,
   ],
 })
 export class KnowledgeModule {}
