@@ -2,7 +2,10 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 
-import { Result } from "src/codeclarity_modules/results/result.entity";
+import {
+  NEWEST_RESULT_FIRST,
+  Result,
+} from "src/codeclarity_modules/results/result.entity";
 import {
   Output as VulnsOutput,
   Status,
@@ -25,11 +28,7 @@ export class VulnerabilitiesRepository {
         },
         plugin: "js-vuln-finder",
       },
-      order: {
-        analysis: {
-          created_on: "DESC",
-        },
-      },
+      order: NEWEST_RESULT_FIRST,
       cache: true,
     });
     if (!result) {

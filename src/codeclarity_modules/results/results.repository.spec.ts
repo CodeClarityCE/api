@@ -204,6 +204,7 @@ describe("AnalysisResultsRepository", () => {
           plugin: "js-sbom",
         },
         relations: undefined,
+        order: { created_on: "DESC", id: "DESC" },
       });
     });
 
@@ -224,6 +225,7 @@ describe("AnalysisResultsRepository", () => {
           plugin: "js-sbom",
         },
         relations: relations,
+        order: { created_on: "DESC", id: "DESC" },
       });
     });
 
@@ -242,6 +244,7 @@ describe("AnalysisResultsRepository", () => {
           plugin: "non-existent-plugin",
         },
         relations: undefined,
+        order: { created_on: "DESC", id: "DESC" },
       });
     });
 
@@ -261,6 +264,7 @@ describe("AnalysisResultsRepository", () => {
           plugin: "js-vuln-finder",
         },
         relations: undefined,
+        order: { created_on: "DESC", id: "DESC" },
       });
     });
 

@@ -2,7 +2,10 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
 
-import { Result } from "src/codeclarity_modules/results/result.entity";
+import {
+  NEWEST_RESULT_FIRST,
+  Result,
+} from "src/codeclarity_modules/results/result.entity";
 import {
   Output as SBOMOutput,
   Status,
@@ -26,11 +29,7 @@ export class SBOMRepository {
         },
         plugin: In(["js-sbom", "php-sbom"]),
       },
-      order: {
-        analysis: {
-          created_on: "DESC",
-        },
-      },
+      order: NEWEST_RESULT_FIRST,
       cache: true,
     });
 

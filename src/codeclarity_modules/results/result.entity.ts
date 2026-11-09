@@ -3,6 +3,7 @@ import { Expose } from "class-transformer";
 import {
   Column,
   Entity,
+  FindOptionsOrder,
   ManyToOne,
   PrimaryGeneratedColumn,
   Relation,
@@ -34,6 +35,12 @@ export class Result {
   @Column({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
   created_on!: Date;
 }
+
+// Newest row first, with the ID settling rows stored at the same moment.
+export const NEWEST_RESULT_FIRST: FindOptionsOrder<Result> = {
+  created_on: "DESC",
+  id: "DESC",
+};
 
 export interface ResultByAnalysisId {
   id: string;

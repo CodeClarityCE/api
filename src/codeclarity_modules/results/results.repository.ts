@@ -2,7 +2,10 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 
-import { Result } from "src/codeclarity_modules/results/result.entity";
+import {
+  NEWEST_RESULT_FIRST,
+  Result,
+} from "src/codeclarity_modules/results/result.entity";
 import { EntityNotFound } from "src/types/error.types";
 
 @Injectable()
@@ -68,6 +71,7 @@ export class AnalysisResultsRepository {
         analysis: { id: analysisId },
         plugin: plugin,
       },
+      order: NEWEST_RESULT_FIRST,
       ...(relations ? { relations: relations } : {}),
     });
 

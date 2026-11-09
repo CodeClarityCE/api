@@ -3,7 +3,10 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
 
 import { PackageRepository } from "src/codeclarity_modules/knowledge/package/package.repository";
-import { Result } from "src/codeclarity_modules/results/result.entity";
+import {
+  NEWEST_RESULT_FIRST,
+  Result,
+} from "src/codeclarity_modules/results/result.entity";
 import {
   Dependency,
   DependencyDetails,
@@ -68,11 +71,7 @@ export class SbomUtilsService {
         },
         plugin: In(["js-sbom", "php-sbom"]),
       },
-      order: {
-        analysis: {
-          created_on: "DESC",
-        },
-      },
+      order: NEWEST_RESULT_FIRST,
       cache: true,
     });
     if (!result) {
@@ -105,9 +104,7 @@ export class SbomUtilsService {
         },
         plugin: In(supportedPlugins),
       },
-      order: {
-        plugin: "ASC", // Consistent ordering
-      },
+      order: { plugin: "ASC", ...NEWEST_RESULT_FIRST },
       cache: true,
     });
 
@@ -115,8 +112,14 @@ export class SbomUtilsService {
       throw new PluginResultNotAvailable();
     }
 
+    // Rows are newest first within a plugin, so the first of each is kept.
+    const newestResults = results.filter(
+      (result, index) =>
+        results.findIndex((other) => other.plugin === result.plugin) === index,
+    );
+
     // Process each plugin result with ecosystem info
-    const pluginResults = results
+    const pluginResults = newestResults
       .map((result) => {
         const sbom = result.result as unknown as SBOMOutput;
         const ecosystemInfo = EcosystemMapper.getEcosystemInfo(result.plugin);

@@ -7,7 +7,10 @@ import {
   Status,
   WorkSpaceLicenseInfo,
 } from "src/codeclarity_modules/results/licenses/licenses.types";
-import { Result } from "src/codeclarity_modules/results/result.entity";
+import {
+  NEWEST_RESULT_FIRST,
+  Result,
+} from "src/codeclarity_modules/results/result.entity";
 import { PluginFailed, PluginResultNotAvailable } from "src/types/error.types";
 
 @Injectable()
@@ -27,11 +30,7 @@ export class LicensesUtilsService {
         },
         plugin: "license-finder",
       },
-      order: {
-        analysis: {
-          created_on: "DESC",
-        },
-      },
+      order: NEWEST_RESULT_FIRST,
       cache: true,
     });
 
@@ -44,11 +43,7 @@ export class LicensesUtilsService {
         },
         plugin: "js-license",
       },
-      order: {
-        analysis: {
-          created_on: "DESC",
-        },
-      },
+      order: NEWEST_RESULT_FIRST,
       cache: true,
     });
 

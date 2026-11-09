@@ -78,11 +78,7 @@ describe("LicensesRepository", () => {
           },
           plugin: "js-license",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -102,11 +98,7 @@ describe("LicensesRepository", () => {
           },
           plugin: "js-license",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -136,11 +128,7 @@ describe("LicensesRepository", () => {
           },
           plugin: "js-license",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -229,11 +217,7 @@ describe("LicensesRepository", () => {
 
       expect(resultRepository.findOne).toHaveBeenCalledWith(
         expect.objectContaining({
-          order: {
-            analysis: {
-              created_on: "DESC",
-            },
-          },
+          order: { created_on: "DESC", id: "DESC" },
           cache: true,
         }),
       );
