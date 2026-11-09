@@ -837,17 +837,16 @@ function probesBlock(
   };
 }
 
-/** The same source timestamps and the same number of EPSS rows. */
+/** The same EPSS row count and the same timestamps for sources in both snapshots. */
 function sameKnowledge(a: KnowledgeSnapshot, b: KnowledgeSnapshot): boolean {
   if (a.epss_rows !== b.epss_rows) return false;
-  const keys = new Set([
-    ...Object.keys(a.knowledge_sources),
-    ...Object.keys(b.knowledge_sources),
-  ]);
-  return [...keys].every(
-    (key) =>
-      (a.knowledge_sources[key] ?? null) === (b.knowledge_sources[key] ?? null),
-  );
+  return Object.keys(a.knowledge_sources)
+    .filter((key) => key in b.knowledge_sources)
+    .every(
+      (key) =>
+        (a.knowledge_sources[key] ?? null) ===
+        (b.knowledge_sources[key] ?? null),
+    );
 }
 
 function provenance(input: ResultsProvenanceInput): ProvenanceBlock {
