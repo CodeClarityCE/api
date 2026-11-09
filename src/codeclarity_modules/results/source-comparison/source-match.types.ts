@@ -30,23 +30,6 @@ export interface SourceMatch {
   modified?: string;
 }
 
-export interface SourceSnapshotEntry {
-  source: string;
-  status: string;
-  comparable: boolean;
-  watermark?: string | null;
-  row_count?: number;
-  last_outcome?: string | null;
-  stale_after_hours?: number;
-}
-
-// Each knowledge source's state when the analysis ran.
-export interface AnalysisSourceSnapshot {
-  taken_at: string;
-  knowledge_asof?: string;
-  sources: SourceSnapshotEntry[];
-}
-
 // The fields of a vulnerability instance the comparison reads.
 export interface ComparedVulnerability {
   VulnerabilityId: string;

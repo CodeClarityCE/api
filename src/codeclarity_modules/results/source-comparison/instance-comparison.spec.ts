@@ -1,13 +1,16 @@
-import { compareAnalysisSources } from "./instance-comparison";
 import type {
-  AnalysisSourceSnapshot,
-  ComparedVulnerability,
-  SourceMatch,
-} from "./source-match.types";
+  KnowledgeSnapshot,
+  KnowledgeSourceSnapshot,
+} from "../vulnerabilities/vulnerabilities.types";
+
+import { compareAnalysisSources } from "./instance-comparison";
+import type { ComparedVulnerability, SourceMatch } from "./source-match.types";
+
+type SourceStatus = KnowledgeSourceSnapshot["status"];
 
 const healthySnapshot = (
-  overrides: Record<string, string> = {},
-): AnalysisSourceSnapshot => ({
+  overrides: Record<string, SourceStatus> = {},
+): KnowledgeSnapshot => ({
   taken_at: "2026-11-09T12:00:00Z",
   sources: [
     "cwe",
@@ -19,7 +22,15 @@ const healthySnapshot = (
     "osv",
   ].map((source) => {
     const status = overrides[source] ?? "healthy";
-    return { source, status, comparable: status === "healthy" };
+    return {
+      source,
+      status,
+      comparable: status === "healthy",
+      watermark: "2026-11-09T06:00:00Z",
+      row_count: 1,
+      last_outcome: "success",
+      stale_after_hours: 24,
+    };
   }),
 });
 
@@ -62,7 +73,7 @@ const originOf = (m: SourceMatch): string | undefined => origins[m.record_id];
 
 const compare = (
   vulnerabilities: ComparedVulnerability[],
-  options: { snapshot?: AnalysisSourceSnapshot } = {
+  options: { snapshot?: KnowledgeSnapshot } = {
     snapshot: healthySnapshot(),
   },
 ) =>

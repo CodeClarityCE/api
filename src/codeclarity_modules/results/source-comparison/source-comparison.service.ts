@@ -14,10 +14,7 @@ import {
   AnalysisSourceComparison,
   compareAnalysisSources,
 } from "./instance-comparison";
-import type {
-  AnalysisSourceSnapshot,
-  ComparedWorkspace,
-} from "./source-match.types";
+import type { ComparedWorkspace } from "./source-match.types";
 
 @Injectable()
 export class SourceComparisonService {
@@ -57,12 +54,9 @@ export class SourceComparisonService {
       (ws.Vulnerabilities ?? []).flatMap((v) => v.SourceMatches ?? []),
     );
     const origins = await this.sourceOriginService.originsOf(matches);
-    const info = output.analysis_info as {
-      knowledge_snapshot?: AnalysisSourceSnapshot;
-    };
     return compareAnalysisSources({
       workspaces,
-      snapshot: info.knowledge_snapshot,
+      snapshot: output.analysis_info.knowledge_snapshot,
       originOf: (match) => origins.get(originKey(match)),
     });
   }

@@ -6,8 +6,9 @@ import {
   round,
 } from "src/codeclarity_modules/knowledge/comparison/comparison.types";
 
+import type { KnowledgeSnapshot } from "../vulnerabilities/vulnerabilities.types";
+
 import type {
-  AnalysisSourceSnapshot,
   ComparedVulnerability,
   ComparedWorkspace,
   SourceAffected,
@@ -72,7 +73,7 @@ export interface SourceOverlap {
 
 export interface CompareInput {
   workspaces: Record<string, ComparedWorkspace>;
-  snapshot: AnalysisSourceSnapshot | undefined;
+  snapshot: KnowledgeSnapshot | undefined;
   originOf: (match: SourceMatch) => string | undefined;
 }
 
