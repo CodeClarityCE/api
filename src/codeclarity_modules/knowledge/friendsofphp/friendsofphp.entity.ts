@@ -2,6 +2,8 @@ import { ApiProperty } from "@nestjs/swagger";
 import { Expose } from "class-transformer";
 import { Column, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
 
+import { timestampAsIso } from "../timestamp-column";
+
 @Entity("friends_of_php")
 export class FriendsOfPhp {
   @PrimaryGeneratedColumn("uuid")
@@ -50,13 +52,23 @@ export class FriendsOfPhp {
   @Expose()
   branches!: unknown;
 
-  @Column()
+  @Column({ type: "timestamptz", nullable: true, transformer: timestampAsIso })
   @ApiProperty()
   @Expose()
   published!: string;
 
-  @Column()
+  @Column({ type: "timestamptz", nullable: true, transformer: timestampAsIso })
   @ApiProperty()
   @Expose()
   modified!: string;
+
+  @Column({ type: "varchar", nullable: true })
+  @ApiProperty()
+  @Expose()
+  retired_reason?: string | null;
+
+  @Column({ type: "timestamptz", nullable: true, transformer: timestampAsIso })
+  @ApiProperty()
+  @Expose()
+  retired_at?: string | null;
 }

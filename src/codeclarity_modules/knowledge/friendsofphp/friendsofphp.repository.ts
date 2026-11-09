@@ -2,6 +2,8 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 
+import { activeRecordFilter, KnowledgeLookupOptions } from "../retired-records";
+
 import { FriendsOfPhp } from "./friendsofphp.entity";
 
 @Injectable()
@@ -11,10 +13,13 @@ export class FriendsOfPhpRepository {
     private friendsOfPhpRepository: Repository<FriendsOfPhp>,
   ) {}
 
-  async getVuln(cve: string): Promise<FriendsOfPhp | null> {
+  async getVuln(
+    cve: string,
+    options?: KnowledgeLookupOptions,
+  ): Promise<FriendsOfPhp | null> {
     try {
       const result = await this.friendsOfPhpRepository.findOne({
-        where: { cve: cve },
+        where: { cve: cve, ...activeRecordFilter(options) },
       });
       return result ?? null;
     } catch (error) {
@@ -26,7 +31,7 @@ export class FriendsOfPhpRepository {
   async getVulnByAdvisoryId(advisoryId: string): Promise<FriendsOfPhp | null> {
     try {
       const result = await this.friendsOfPhpRepository.findOne({
-        where: { advisory_id: advisoryId },
+        where: { advisory_id: advisoryId, ...activeRecordFilter() },
       });
       return result ?? null;
     } catch (error) {

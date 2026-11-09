@@ -2,6 +2,8 @@ import { ApiProperty } from "@nestjs/swagger";
 import { Expose } from "class-transformer";
 import { Column, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
 
+import { timestampAsIso } from "../timestamp-column";
+
 @Entity("gcve")
 export class GCVE {
   @PrimaryGeneratedColumn("uuid")
@@ -30,12 +32,12 @@ export class GCVE {
   @Expose()
   state!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: "timestamptz", nullable: true, transformer: timestampAsIso })
   @ApiProperty()
   @Expose()
   date_published!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: "timestamptz", nullable: true, transformer: timestampAsIso })
   @ApiProperty()
   @Expose()
   date_updated!: string;
@@ -94,4 +96,14 @@ export class GCVE {
   @ApiProperty()
   @Expose()
   vlai_confidence!: number;
+
+  @Column({ type: "varchar", nullable: true })
+  @ApiProperty()
+  @Expose()
+  retired_reason?: string | null;
+
+  @Column({ type: "timestamptz", nullable: true, transformer: timestampAsIso })
+  @ApiProperty()
+  @Expose()
+  retired_at?: string | null;
 }

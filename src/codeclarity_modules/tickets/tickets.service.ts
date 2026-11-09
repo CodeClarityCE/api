@@ -305,15 +305,17 @@ export class TicketsService {
     vulnerabilityId: string,
   ): Promise<VulnerabilityDetailsReport | null> {
     try {
-      const nvdData =
-        await this.nvdRepository.getVulnWithoutFailing(vulnerabilityId);
+      const nvdData = await this.nvdRepository.getVulnWithoutFailing(
+        vulnerabilityId,
+        { includeRetired: true },
+      );
 
       let osvData: OSV | null = null;
       if (vulnerabilityId.startsWith("CVE")) {
-        osvData =
-          await this.osvRepository.getVulnByCVEIDWithoutFailing(
-            vulnerabilityId,
-          );
+        osvData = await this.osvRepository.getVulnByCVEIDWithoutFailing(
+          vulnerabilityId,
+          { includeRetired: true },
+        );
       }
 
       if (!nvdData && !osvData) {

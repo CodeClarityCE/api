@@ -1,6 +1,6 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
-import type { Repository } from "typeorm";
+import { IsNull, type Repository } from "typeorm";
 
 import { EntityNotFound } from "src/types/error.types";
 
@@ -132,9 +132,7 @@ describe("NVDRepository", () => {
 
       expect(result).toEqual(mockNVD);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          nvd_id: "CVE-2021-44228",
-        },
+        where: { nvd_id: "CVE-2021-44228", retired_at: IsNull() },
       });
       expect(mockRepository.findOne).toHaveBeenCalledTimes(1);
     });
@@ -146,9 +144,7 @@ describe("NVDRepository", () => {
         nvdRepository.getVuln("CVE-2023-NONEXISTENT"),
       ).rejects.toThrow(EntityNotFound);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          nvd_id: "CVE-2023-NONEXISTENT",
-        },
+        where: { nvd_id: "CVE-2023-NONEXISTENT", retired_at: IsNull() },
       });
     });
 
@@ -160,9 +156,7 @@ describe("NVDRepository", () => {
         "Database connection failed",
       );
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          nvd_id: "CVE-2021-44228",
-        },
+        where: { nvd_id: "CVE-2021-44228", retired_at: IsNull() },
       });
     });
 
@@ -181,9 +175,7 @@ describe("NVDRepository", () => {
 
         expect(result.nvd_id).toBe(cveId);
         expect(mockRepository.findOne).toHaveBeenCalledWith({
-          where: {
-            nvd_id: cveId,
-          },
+          where: { nvd_id: cveId, retired_at: IsNull() },
         });
       }
     });
@@ -198,9 +190,7 @@ describe("NVDRepository", () => {
 
       expect(result).toEqual(mockNVD);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          nvd_id: "CVE-2021-44228",
-        },
+        where: { nvd_id: "CVE-2021-44228", retired_at: IsNull() },
       });
     });
 
@@ -213,9 +203,7 @@ describe("NVDRepository", () => {
 
       expect(result).toBeNull();
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          nvd_id: "CVE-2023-NONEXISTENT",
-        },
+        where: { nvd_id: "CVE-2023-NONEXISTENT", retired_at: IsNull() },
       });
     });
 
@@ -226,9 +214,7 @@ describe("NVDRepository", () => {
 
       expect(result).toBeNull();
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          nvd_id: "",
-        },
+        where: { nvd_id: "", retired_at: IsNull() },
       });
     });
 
@@ -249,9 +235,7 @@ describe("NVDRepository", () => {
 
       expect(result).toBeNull();
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          nvd_id: specialCveId,
-        },
+        where: { nvd_id: specialCveId, retired_at: IsNull() },
       });
     });
   });
@@ -400,9 +384,7 @@ describe("NVDRepository", () => {
 
       expect(result).toBeNull();
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          nvd_id: undefined,
-        },
+        where: { nvd_id: undefined, retired_at: IsNull() },
       });
     });
 
@@ -413,9 +395,7 @@ describe("NVDRepository", () => {
 
       expect(result).toBeNull();
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          nvd_id: null,
-        },
+        where: { nvd_id: null, retired_at: IsNull() },
       });
     });
 
@@ -427,9 +407,7 @@ describe("NVDRepository", () => {
 
       expect(result).toBeNull();
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          nvd_id: longCveId,
-        },
+        where: { nvd_id: longCveId, retired_at: IsNull() },
       });
     });
 

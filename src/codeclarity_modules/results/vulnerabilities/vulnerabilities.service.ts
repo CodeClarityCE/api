@@ -21,6 +21,7 @@ import {
 import {
   AffectedVuln,
   ConflictFlag,
+  MaliciousPackageAdvisory,
   newVulnerabilityAnalysisStats,
   Output as VulnsOutput,
   Source,
@@ -367,6 +368,26 @@ export class VulnerabilitiesService {
     return wStats;
   }
 
+  async getMaliciousPackageAdvisories(
+    orgId: string,
+    projectId: string,
+    analysisId: string,
+    user: AuthenticatedUser,
+    workspace: string,
+  ): Promise<MaliciousPackageAdvisory[]> {
+    await this.analysisResultsService.checkAccess(
+      orgId,
+      projectId,
+      analysisId,
+      user,
+    );
+
+    return await this.findingsUtilsService.getMaliciousPackageAdvisories(
+      analysisId,
+      workspace,
+    );
+  }
+
   // eslint-disable-next-line max-params, complexity
   async getVulnerabilities(
     orgId: string,
@@ -588,6 +609,7 @@ export class VulnerabilitiesService {
       if (isCve) {
         nvdVuln = await this.nvdRepository.getVulnWithoutFailing(
           finding.Vulnerability,
+          { includeRetired: true },
         );
 
         if (nvdVuln) {
@@ -598,6 +620,7 @@ export class VulnerabilitiesService {
 
         osvVuln = await this.osvRepository.getVulnByCVEIDWithoutFailing(
           finding.Vulnerability,
+          { includeRetired: true },
         );
 
         if (osvVuln) {
@@ -609,6 +632,7 @@ export class VulnerabilitiesService {
       if (isGhsa) {
         osvVuln = await this.osvRepository.getVulnByOSVIDWithoutFailing(
           finding.Vulnerability,
+          { includeRetired: true },
         );
 
         if (osvVuln) {
@@ -621,6 +645,7 @@ export class VulnerabilitiesService {
       if (isCve) {
         const gcveVuln = await this.gcveRepository.getVulnByCVEId(
           finding.Vulnerability,
+          { includeRetired: true },
         );
         if (gcveVuln) {
           // Add GCVE to sources if not already present

@@ -24,4 +24,9 @@ export class EPSS {
   @ApiProperty()
   @Expose()
   percentile!: number;
+
+  @Column({ type: "date", nullable: true })
+  @ApiProperty()
+  @Expose()
+  score_date?: string | null;
 }

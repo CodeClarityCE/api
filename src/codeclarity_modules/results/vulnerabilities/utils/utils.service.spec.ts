@@ -267,6 +267,79 @@ describe("VulnerabilitiesUtilsService", () => {
     });
   });
 
+  describe("getMaliciousPackageAdvisories", () => {
+    const analysisInfo = { status: Status.Success };
+
+    const mockVulnFinderResult = (workspaces: unknown): void => {
+      mockRepository.findOne.mockResolvedValue({
+        id: "result-id",
+        plugin: "vuln-finder",
+        result: { analysis_info: analysisInfo, workspaces },
+        analysis: {} as any,
+      } as any);
+    };
+
+    it("returns the advisories of the workspace", async () => {
+      const advisory = {
+        AdvisoryId: "MAL-2024-1",
+        AffectedDependency: "evil-pkg",
+        AffectedVersion: "1.2.3",
+        DirectDependency: true,
+        Summary: "Malicious code in evil-pkg",
+        References: ["https://example.com/mal-2024-1"],
+      };
+      mockVulnFinderResult({
+        ".": {
+          Vulnerabilities: [],
+          MaliciousPackageAdvisories: [advisory],
+        },
+      });
+
+      const result = await service.getMaliciousPackageAdvisories(
+        "analysis-id",
+        ".",
+      );
+
+      expect(result).toEqual([advisory]);
+    });
+
+    it("returns no advisories for an analysis without the field", async () => {
+      mockVulnFinderResult({ ".": { Vulnerabilities: [] } });
+
+      const result = await service.getMaliciousPackageAdvisories(
+        "analysis-id",
+        ".",
+      );
+
+      expect(result).toEqual([]);
+    });
+
+    it("leaves malicious records of an old analysis in its findings", async () => {
+      const oldMaliciousFinding = {
+        Id: "vuln-1",
+        VulnerabilityId: "MAL-2023-9",
+        AffectedDependency: "evil-pkg",
+        AffectedVersion: "1.0.0",
+      };
+      mockVulnFinderResult({ ".": { Vulnerabilities: [oldMaliciousFinding] } });
+
+      await expect(
+        service.getFindingsData("analysis-id", "."),
+      ).resolves.toEqual([oldMaliciousFinding]);
+      await expect(
+        service.getMaliciousPackageAdvisories("analysis-id", "."),
+      ).resolves.toEqual([]);
+    });
+
+    it("throws UnknownWorkspace when the workspace does not exist", async () => {
+      mockVulnFinderResult({ ".": { Vulnerabilities: [] } });
+
+      await expect(
+        service.getMaliciousPackageAdvisories("analysis-id", "other"),
+      ).rejects.toThrow(UnknownWorkspace);
+    });
+  });
+
   describe("getImportPaths", () => {
     it("should return empty array when dependency is already in parents set", async () => {
       const dependenciesMap = {
