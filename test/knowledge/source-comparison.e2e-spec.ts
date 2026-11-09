@@ -31,7 +31,7 @@ const gcveMetrics = (score: number) =>
 const SCHEMA = `
   CREATE TABLE osv (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    osv_id varchar NOT NULL UNIQUE, aliases jsonb, "references" jsonb,
+    osv_id varchar NOT NULL UNIQUE, cve varchar, aliases jsonb, "references" jsonb,
     severity jsonb, affected jsonb, published timestamptz,
     kind varchar NOT NULL DEFAULT 'vulnerability', retired_at timestamptz,
     cve_aliases jsonb GENERATED ALWAYS AS (
@@ -166,8 +166,8 @@ describe("Knowledge source comparison", () => {
         comparable: true,
         records: 2,
         records_without_cve: 1,
-        vulnerabilities: 1,
-        only_source: 0,
+        vulnerabilities: 2,
+        only_source: 1,
       },
       {
         source: "friends_of_php",
@@ -184,8 +184,8 @@ describe("Knowledge source comparison", () => {
         comparable: true,
         records: 2,
         records_without_cve: 1,
-        vulnerabilities: 1,
-        only_source: 0,
+        vulnerabilities: 2,
+        only_source: 1,
       },
       {
         source: "nvd",
@@ -298,6 +298,49 @@ describe("Knowledge source comparison", () => {
     ].map((entry) => entry.sources);
     expect(pairs.flat()).not.toContain("nvd");
     expect(result.disclosure_lag.map((l) => l.source)).not.toContain("nvd");
+  });
+
+  it("keys records on the canonical vulnerability through transitive aliases", async () => {
+    await setStatus();
+    const pair = (
+      result: Awaited<ReturnType<typeof compare>>,
+      a: string,
+      b: string,
+    ): number =>
+      result.overlap.find((o) => o.sources.join() === [a, b].join())
+        ?.vulnerabilities ?? 0;
+    const before = await compare();
+
+    await knowledge.query(
+      `INSERT INTO osv (osv_id, aliases, published) VALUES
+        ('GHSA-join', '["CVE-2025-0006", "CVE-2025-0005"]', '2025-01-01T00:00:00Z'),
+        ('GHSA-only', '[]', '2025-01-01T00:00:00Z'),
+        ('PYSEC-2025-1', '["GHSA-only"]', '2025-01-01T00:00:00Z')`,
+    );
+    await knowledge.query(
+      `INSERT INTO nvd (nvd_id, metrics, published) VALUES ('CVE-2025-0005', '{}', '2025-01-02T00:00:00Z')`,
+    );
+    await knowledge.query(
+      `INSERT INTO gcve (gcve_id, cve_id, metrics, date_published) VALUES ('GCVE-1-2025-7', 'CVE-2025-0006', '[]', '2025-01-03T00:00:00Z')`,
+    );
+    try {
+      const after = await compare();
+
+      expect(pair(after, "gcve", "nvd") - pair(before, "gcve", "nvd")).toBe(1);
+      expect(pair(after, "gcve", "osv") - pair(before, "gcve", "osv")).toBe(1);
+      expect(pair(after, "nvd", "osv") - pair(before, "nvd", "osv")).toBe(1);
+      const osv = (r: typeof before) =>
+        r.sources.find((s) => s.source === "osv")!;
+      // GHSA-join and the GHSA-only group are one new vulnerability each.
+      expect(osv(after).vulnerabilities - osv(before).vulnerabilities).toBe(2);
+      expect(osv(after).only_source - osv(before).only_source).toBe(1);
+    } finally {
+      await knowledge.query(
+        `DELETE FROM osv WHERE osv_id IN ('GHSA-join', 'GHSA-only', 'PYSEC-2025-1')`,
+      );
+      await knowledge.query(`DELETE FROM nvd WHERE nvd_id = 'CVE-2025-0005'`);
+      await knowledge.query(`DELETE FROM gcve WHERE gcve_id = 'GCVE-1-2025-7'`);
+    }
   });
 
   it("looks up the origin of each stored source match", async () => {

@@ -16,6 +16,7 @@ import {
   severityClass,
 } from "./comparison.types";
 import { fixedVersions, osvFixedVersions } from "./fixed-versions";
+import { canonicalVulnerabilities } from "./canonical-vulnerability";
 import { cvss3Score } from "./osv-score";
 
 export interface DatasetSourceCoverage {
@@ -25,7 +26,7 @@ export interface DatasetSourceCoverage {
   // Active records, malicious package advisories and retired records left out.
   records: number;
   records_without_cve: number;
-  // Distinct vulnerabilities, keyed by their earliest CVE id.
+  // Distinct canonical vulnerabilities, resolved through transitive aliases.
   vulnerabilities: number;
   // Vulnerabilities no other comparable source has.
   only_source: number;
@@ -65,52 +66,73 @@ export interface DatasetSourceComparison {
   disclosure_lag: DisclosureLag[];
 }
 
-// Every active advisory record with its earliest CVE, origin, date and CVSS v3 score or vector.
+// Every active advisory record with its ID, aliases, earliest CVE, origin, date and CVSS v3 score or vector.
 const RECORDS_SQL = String.raw`
   CREATE TEMP TABLE comparison_record ON COMMIT DROP AS
-  SELECT 'osv'::text AS source, osv_id AS record_id, origin,
-    CASE WHEN osv_id ~ '^CVE-\d{4}-\d+$' THEN osv_id ELSE (
-      SELECT a FROM jsonb_array_elements_text(COALESCE(cve_aliases, '[]')) a
-      WHERE a ~ '^CVE-\d{4}-\d+$'
-      ORDER BY split_part(a, '-', 2)::int, split_part(a, '-', 3)::bigint LIMIT 1
-    ) END AS cve,
-    published, NULL::float8 AS score,
-    (SELECT s->>'score' FROM jsonb_array_elements(
-       CASE WHEN jsonb_typeof(severity) = 'array' THEN severity ELSE '[]' END
-     ) WITH ORDINALITY e(s, i) WHERE s->>'type' = 'CVSS_V3' ORDER BY i LIMIT 1) AS vector
-  FROM osv WHERE retired_at IS NULL AND kind = 'vulnerability'
+  SELECT *, COALESCE(cve, upper(node)) AS vulnerability FROM (
+    SELECT 'osv'::text AS source, osv_id AS record_id, osv_id AS node,
+      ARRAY(
+        SELECT a FROM jsonb_array_elements_text(
+          CASE WHEN jsonb_typeof(aliases) = 'array' THEN aliases ELSE '[]' END
+        ) a
+        UNION ALL SELECT cve WHERE COALESCE(cve, '') <> ''
+      ) AS links,
+      (SELECT upper(trim(a)) FROM (
+         SELECT osv_id AS a UNION ALL SELECT cve
+         UNION ALL SELECT jsonb_array_elements_text(
+           CASE WHEN jsonb_typeof(aliases) = 'array' THEN aliases ELSE '[]' END)
+       ) ids WHERE upper(trim(a)) ~ '^CVE-\d{4}-\d{4,}$'
+       ORDER BY split_part(upper(trim(a)), '-', 2)::int, split_part(upper(trim(a)), '-', 3)::numeric LIMIT 1
+      ) AS cve,
+      origin, published, NULL::float8 AS score,
+      (SELECT s->>'score' FROM jsonb_array_elements(
+         CASE WHEN jsonb_typeof(severity) = 'array' THEN severity ELSE '[]' END
+       ) WITH ORDINALITY e(s, i) WHERE s->>'type' = 'CVSS_V3' ORDER BY i LIMIT 1) AS vector
+    FROM osv WHERE retired_at IS NULL AND kind = 'vulnerability'
+    UNION ALL
+    SELECT 'friends_of_php', advisory_id, 'FRIENDSOFPHP-' || advisory_id,
+      ARRAY_REMOVE(ARRAY[NULLIF(cve, '')], NULL), upper(NULLIF(trim(cve), '')),
+      origin, published, NULL, NULL
+    FROM friends_of_php WHERE retired_at IS NULL
+    UNION ALL
+    SELECT 'gcve', gcve_id, gcve_id, ARRAY_REMOVE(ARRAY[NULLIF(cve_id, '')], NULL),
+      upper(NULLIF(trim(cve_id), '')), origin, date_published,
+      (SELECT COALESCE(m->'cvssV3_1'->>'baseScore', m->'cvssV3_0'->>'baseScore')::float8
+       FROM jsonb_array_elements(
+         CASE WHEN jsonb_typeof(metrics) = 'array' THEN metrics ELSE '[]' END
+       ) WITH ORDINALITY e(m, i) WHERE m ? 'cvssV3_1' OR m ? 'cvssV3_0' ORDER BY i LIMIT 1),
+      NULL
+    FROM gcve WHERE retired_at IS NULL
+    UNION ALL
+    SELECT 'nvd', nvd_id, nvd_id, '{}'::text[], upper(nvd_id), origin, published,
+      COALESCE(metrics->'cvssMetricV31'->0->'cvssData'->>'baseScore',
+               metrics->'cvssMetricV30'->0->'cvssData'->>'baseScore')::float8,
+      NULL
+    FROM nvd WHERE retired_at IS NULL
+  ) r`;
+
+// Records that can link vulnerabilities: OSV and FriendsOfPHP ones, and GCVE records another record names.
+const ALIASED_RECORDS_SQL = `
+  SELECT node, links FROM comparison_record WHERE source IN ('osv', 'friends_of_php')
   UNION ALL
-  SELECT 'friends_of_php', advisory_id, origin, NULLIF(cve, ''), published, NULL, NULL
-  FROM friends_of_php WHERE retired_at IS NULL
-  UNION ALL
-  SELECT 'gcve', gcve_id, origin, NULLIF(cve_id, ''), date_published,
-    (SELECT COALESCE(m->'cvssV3_1'->>'baseScore', m->'cvssV3_0'->>'baseScore')::float8
-     FROM jsonb_array_elements(
-       CASE WHEN jsonb_typeof(metrics) = 'array' THEN metrics ELSE '[]' END
-     ) WITH ORDINALITY e(m, i) WHERE m ? 'cvssV3_1' OR m ? 'cvssV3_0' ORDER BY i LIMIT 1),
-    NULL
-  FROM gcve WHERE retired_at IS NULL
-  UNION ALL
-  SELECT 'nvd', nvd_id, origin, nvd_id, published,
-    COALESCE(metrics->'cvssMetricV31'->0->'cvssData'->>'baseScore',
-             metrics->'cvssMetricV30'->0->'cvssData'->>'baseScore')::float8,
-    NULL
-  FROM nvd WHERE retired_at IS NULL`;
+  SELECT node, links FROM comparison_record WHERE source = 'gcve' AND upper(node) IN (
+    SELECT upper(trim(l)) FROM comparison_record, unnest(links) l
+    WHERE source IN ('osv', 'friends_of_php'))`;
 
 // One row per source and vulnerability; the record with the smallest id gives the score.
 const VULNERABILITIES_SQL = `
   CREATE TEMP TABLE comparison_vulnerability ON COMMIT DROP AS
-  SELECT source, cve, array_agg(DISTINCT origin) AS origins, min(published) AS published,
+  SELECT source, vulnerability, array_agg(DISTINCT origin) AS origins, min(published) AS published,
     (array_agg(score ORDER BY record_id) FILTER (WHERE score IS NOT NULL))[1] AS score,
     (array_agg(vector ORDER BY record_id) FILTER (WHERE vector IS NOT NULL))[1] AS vector
-  FROM comparison_record WHERE cve IS NOT NULL GROUP BY source, cve`;
+  FROM comparison_record GROUP BY source, vulnerability`;
 
 const severityClassSql = (score: string): string =>
   `CASE WHEN ${score} = 0 THEN 'NONE' WHEN ${score} < 4 THEN 'LOW' WHEN ${score} < 7 THEN 'MEDIUM' WHEN ${score} < 9 THEN 'HIGH' ELSE 'CRITICAL' END`;
 
 const PAIRS_FROM = `
   FROM comparison_vulnerability a
-  JOIN comparison_vulnerability b ON b.cve = a.cve AND a.source < b.source
+  JOIN comparison_vulnerability b ON b.vulnerability = a.vulnerability AND a.source < b.source
   WHERE a.source = ANY($1) AND b.source = ANY($1)`;
 
 type Pair = [string, string];
@@ -160,9 +182,10 @@ export class DatasetComparisonService {
 
     return this.knowledgeDataSource.transaction(async (manager) => {
       await manager.query(RECORDS_SQL);
+      await keyOnCanonicalVulnerability(manager);
       await manager.query(VULNERABILITIES_SQL);
       await manager.query(
-        `CREATE INDEX ON comparison_vulnerability (cve, source)`,
+        `CREATE INDEX ON comparison_vulnerability (vulnerability, source)`,
       );
       return {
         generated_at: new Date().toISOString(),
@@ -174,6 +197,38 @@ export class DatasetComparisonService {
       };
     });
   }
+}
+
+// Rekeys records whose aliases lead to a different canonical vulnerability than their own earliest CVE.
+async function keyOnCanonicalVulnerability(
+  manager: EntityManager,
+): Promise<void> {
+  const records =
+    await manager.query<{ node: string; links: string[] }[]>(
+      ALIASED_RECORDS_SQL,
+    );
+  const names = canonicalVulnerabilities(
+    records.map((r) => ({ id: r.node, aliases: r.links })),
+  );
+  // Keys are compared upper-cased, like the IDs the records are linked by.
+  const changed = [...names]
+    .map(([id, name]) => [id, name.toUpperCase()])
+    .filter(([id, name]) => id !== name);
+  if (changed.length === 0) return;
+  await manager.query(
+    `CREATE TEMP TABLE comparison_alias ON COMMIT DROP AS
+     SELECT * FROM unnest($1::text[], $2::text[]) AS m(id, vulnerability)`,
+    [changed.map(([id]) => id), changed.map(([, name]) => name)],
+  );
+  // A record joins through its own ID, or through its CVE when no other record names it.
+  await manager.query(
+    `UPDATE comparison_record r SET vulnerability = m.vulnerability
+     FROM comparison_alias m WHERE m.id = upper(trim(r.node))`,
+  );
+  await manager.query(
+    `UPDATE comparison_record r SET vulnerability = m.vulnerability
+     FROM comparison_alias m WHERE m.id = r.cve`,
+  );
 }
 
 async function coverage(
@@ -189,13 +244,13 @@ async function coverage(
       vulnerabilities: string;
     }[]
   >(`SELECT source, count(*) AS records, count(*) FILTER (WHERE cve IS NULL) AS without_cve,
-            count(DISTINCT cve) AS vulnerabilities
+            count(DISTINCT vulnerability) AS vulnerabilities
      FROM comparison_record GROUP BY source`);
   const only = await manager.query<{ source: string; total: string }[]>(
     `SELECT v.source, count(*) AS total FROM comparison_vulnerability v
      WHERE NOT EXISTS (
        SELECT 1 FROM comparison_vulnerability o
-       WHERE o.cve = v.cve AND o.source <> v.source AND o.source = ANY($1))
+       WHERE o.vulnerability = v.vulnerability AND o.source <> v.source AND o.source = ANY($1))
      GROUP BY v.source`,
     [comparable],
   );
@@ -289,7 +344,7 @@ async function severity(
       { vector: string; source: string; score: number }[]
     >(
       `SELECT o.vector, b.source, b.score FROM comparison_vulnerability o
-       JOIN comparison_vulnerability b ON b.cve = o.cve AND b.source <> 'osv'
+       JOIN comparison_vulnerability b ON b.vulnerability = o.vulnerability AND b.source <> 'osv'
        WHERE o.source = 'osv' AND o.vector IS NOT NULL
          AND b.score IS NOT NULL AND b.source = ANY($1)`,
       [comparable],
@@ -328,12 +383,17 @@ async function affectedVersions(
     return [];
   }
   const rows = await manager.query<
-    { cve: string; composer: string; branches: unknown; affected: unknown }[]
+    {
+      vulnerability: string;
+      composer: string;
+      branches: unknown;
+      affected: unknown;
+    }[]
   >(
-    `SELECT fr.cve, f.composer, f.branches, o.affected
+    `SELECT fr.vulnerability, f.composer, f.branches, o.affected
      FROM comparison_record fr
      JOIN friends_of_php f ON f.advisory_id = fr.record_id
-     JOIN comparison_record orr ON orr.source = 'osv' AND orr.cve = fr.cve
+     JOIN comparison_record orr ON orr.source = 'osv' AND orr.vulnerability = fr.vulnerability
      JOIN osv o ON o.osv_id = orr.record_id
      WHERE fr.source = 'friends_of_php' AND f.composer IS NOT NULL`,
   );
@@ -342,7 +402,7 @@ async function affectedVersions(
     { fop: Set<string>; osv: Set<string>; named: boolean }
   >();
   for (const row of rows) {
-    const key = `${row.cve}|${row.composer.toLowerCase()}`;
+    const key = `${row.vulnerability}|${row.composer.toLowerCase()}`;
     const entry = byPackage.get(key) ?? {
       fop: new Set<string>(),
       osv: new Set<string>(),
@@ -392,15 +452,15 @@ async function disclosureLag(
     }[]
   >(
     `WITH dated AS (
-       SELECT source, cve, published FROM comparison_vulnerability
+       SELECT source, vulnerability, published FROM comparison_vulnerability
        WHERE source = ANY($1) AND published IS NOT NULL
      ), reference AS (
-       SELECT cve, min(published) AS published, count(*) AS publishers
-       FROM dated WHERE NOT (source = ANY($2)) GROUP BY cve
+       SELECT vulnerability, min(published) AS published, count(*) AS publishers
+       FROM dated WHERE NOT (source = ANY($2)) GROUP BY vulnerability
      ), lag AS (
        SELECT d.source, d.published = r.published AND NOT (d.source = ANY($2)) AS first,
               extract(epoch FROM d.published - r.published) / 86400 AS days
-       FROM dated d JOIN reference r USING (cve)
+       FROM dated d JOIN reference r USING (vulnerability)
        WHERE d.source = ANY($2) OR r.publishers >= 2
      )
      SELECT source, count(*) AS compared, count(*) FILTER (WHERE first) AS first,
