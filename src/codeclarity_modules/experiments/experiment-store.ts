@@ -5,7 +5,7 @@ import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialE
 
 import { DatasetEntry } from "../datasets/dataset-entry.entity";
 import type { KnowledgeProvenance } from "../knowledge/provenance/provenance.service";
-import { Result } from "../results/result.entity";
+import { NEWEST_RESULT_FIRST, Result } from "../results/result.entity";
 
 import { Experiment, ExperimentStatus } from "./experiment.entity";
 import type { ExposuresInput } from "./experiment-exposures";
@@ -565,7 +565,8 @@ export class TypeOrmExperimentStore extends ExperimentStore {
   async getPluginResult(analysisId: string, plugin: string): Promise<unknown> {
     const result = await this.resultRepository.findOne({
       where: { analysis: { id: analysisId }, plugin },
-      select: { id: true, result: true },
+      select: { id: true, result: true, created_on: true },
+      order: NEWEST_RESULT_FIRST,
     });
     return result?.result ?? null;
   }

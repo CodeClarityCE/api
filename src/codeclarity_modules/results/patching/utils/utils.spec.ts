@@ -108,11 +108,7 @@ describe("PatchingUtilsService", () => {
           },
           plugin: "js-patching",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -132,11 +128,7 @@ describe("PatchingUtilsService", () => {
           },
           plugin: "js-patching",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -161,11 +153,7 @@ describe("PatchingUtilsService", () => {
           },
           plugin: "js-patching",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -186,11 +174,7 @@ describe("PatchingUtilsService", () => {
           },
           plugin: "js-patching",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -209,7 +193,7 @@ describe("PatchingUtilsService", () => {
       expect((callArgs.where as any).plugin).toBe("js-patching");
     });
 
-    it("should order by analysis created_on DESC", async () => {
+    it("should order by result created_on DESC", async () => {
       const mockPatchesOutput = createMockPatchesOutput();
       const mockResult = createMockResult(mockPatchesOutput);
 
@@ -220,7 +204,7 @@ describe("PatchingUtilsService", () => {
       await service.getPatchingResult(analysisId);
 
       const callArgs = resultRepository.findOne.mock.calls[0]![0];
-      expect((callArgs.order as any).analysis.created_on).toBe("DESC");
+      expect((callArgs.order as any).created_on).toBe("DESC");
     });
 
     it("should enable caching", async () => {
@@ -269,11 +253,7 @@ describe("PatchingUtilsService", () => {
           },
           plugin: "js-patching",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });

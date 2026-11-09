@@ -98,11 +98,7 @@ describe("SBOMRepository", () => {
           },
           plugin: In(["js-sbom", "php-sbom"]),
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -122,11 +118,7 @@ describe("SBOMRepository", () => {
           },
           plugin: In(["js-sbom", "php-sbom"]),
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -156,11 +148,7 @@ describe("SBOMRepository", () => {
           },
           plugin: In(["js-sbom", "php-sbom"]),
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -266,11 +254,7 @@ describe("SBOMRepository", () => {
 
       expect(resultRepository.findOne).toHaveBeenCalledWith(
         expect.objectContaining({
-          order: {
-            analysis: {
-              created_on: "DESC",
-            },
-          },
+          order: { created_on: "DESC", id: "DESC" },
           cache: true,
         }),
       );

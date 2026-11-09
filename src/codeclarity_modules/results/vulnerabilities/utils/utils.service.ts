@@ -2,7 +2,10 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 
-import { Result } from "src/codeclarity_modules/results/result.entity";
+import {
+  NEWEST_RESULT_FIRST,
+  Result,
+} from "src/codeclarity_modules/results/result.entity";
 import { Dependency } from "src/codeclarity_modules/results/sbom/sbom.types";
 import {
   MaliciousPackageAdvisory,
@@ -33,11 +36,7 @@ export class VulnerabilitiesUtilsService {
         },
         plugin: "vuln-finder",
       },
-      order: {
-        analysis: {
-          created_on: "DESC",
-        },
-      },
+      order: NEWEST_RESULT_FIRST,
       cache: true,
     });
 
@@ -50,11 +49,7 @@ export class VulnerabilitiesUtilsService {
         },
         plugin: "js-vuln-finder",
       },
-      order: {
-        analysis: {
-          created_on: "DESC",
-        },
-      },
+      order: NEWEST_RESULT_FIRST,
       cache: true,
     });
 

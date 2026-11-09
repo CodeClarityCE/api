@@ -80,11 +80,7 @@ describe("VulnerabilitiesUtilsService", () => {
           },
           plugin: "vuln-finder",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });

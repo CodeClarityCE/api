@@ -3,7 +3,10 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 
 import { Output as PatchesOutput } from "src/codeclarity_modules/results/patching/patching.types";
-import { Result } from "src/codeclarity_modules/results/result.entity";
+import {
+  NEWEST_RESULT_FIRST,
+  Result,
+} from "src/codeclarity_modules/results/result.entity";
 import { Status } from "src/types/apiResponses.types";
 import { PluginFailed, PluginResultNotAvailable } from "src/types/error.types";
 
@@ -23,11 +26,7 @@ export class PatchingUtilsService {
         },
         plugin: "js-patching",
       },
-      order: {
-        analysis: {
-          created_on: "DESC",
-        },
-      },
+      order: NEWEST_RESULT_FIRST,
       cache: true,
     });
     if (!result) {
