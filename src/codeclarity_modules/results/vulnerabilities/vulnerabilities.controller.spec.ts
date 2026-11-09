@@ -34,6 +34,7 @@ describe("FindingsController", () => {
   const mockVulnerabilitiesService = {
     getVulnerabilities: jest.fn(),
     getStats: jest.fn(),
+    getMaliciousPackageAdvisories: jest.fn(),
   };
 
   const mockVulnerabilityService = {
@@ -736,6 +737,50 @@ describe("FindingsController", () => {
           baseParams.workspace,
         ),
       ).rejects.toThrow("Database timeout");
+    });
+  });
+
+  describe("getMaliciousPackageAdvisories", () => {
+    it("wraps the advisories of the workspace in a data response", async () => {
+      const advisories = [
+        {
+          AdvisoryId: "MAL-2024-1",
+          AffectedDependency: "evil-pkg",
+          AffectedVersion: "1.2.3",
+          DirectDependency: true,
+        },
+      ];
+      mockVulnerabilitiesService.getMaliciousPackageAdvisories.mockResolvedValue(
+        advisories,
+      );
+
+      const result = await controller.getMaliciousPackageAdvisories(
+        "org-1",
+        "project-1",
+        "analysis-1",
+        mockAuthenticatedUser,
+        ".",
+      );
+
+      expect(result).toEqual({ data: advisories });
+      expect(
+        mockVulnerabilitiesService.getMaliciousPackageAdvisories,
+      ).toHaveBeenCalledWith(
+        "org-1",
+        "project-1",
+        "analysis-1",
+        mockAuthenticatedUser,
+        ".",
+      );
+    });
+
+    it("is served under the vulnerabilities route of an analysis", () => {
+      expect(
+        Reflect.getMetadata(
+          "path",
+          FindingsController.prototype.getMaliciousPackageAdvisories,
+        ),
+      ).toBe(":analysis_id/vulnerabilities/malicious-packages");
     });
   });
 
