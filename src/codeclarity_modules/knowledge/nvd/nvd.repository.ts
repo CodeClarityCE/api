@@ -3,6 +3,10 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 
 import { NVD } from "src/codeclarity_modules/knowledge/nvd/nvd.entity";
+import {
+  activeRecordFilter,
+  KnowledgeLookupOptions,
+} from "src/codeclarity_modules/knowledge/retired-records";
 import { EntityNotFound } from "src/types/error.types";
 
 @Injectable()
@@ -12,18 +16,22 @@ export class NVDRepository {
     private nvdRepository: Repository<NVD>,
   ) {}
 
-  async getVuln(cve: string): Promise<NVD> {
-    const nvd = await this.getVulnWithoutFailing(cve);
+  async getVuln(cve: string, options?: KnowledgeLookupOptions): Promise<NVD> {
+    const nvd = await this.getVulnWithoutFailing(cve, options);
     if (!nvd) {
       throw new EntityNotFound();
     }
     return nvd;
   }
 
-  async getVulnWithoutFailing(cve: string): Promise<NVD | null> {
+  async getVulnWithoutFailing(
+    cve: string,
+    options?: KnowledgeLookupOptions,
+  ): Promise<NVD | null> {
     return await this.nvdRepository.findOne({
       where: {
         nvd_id: cve,
+        ...activeRecordFilter(options),
       },
     });
   }

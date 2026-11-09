@@ -1152,10 +1152,11 @@ describe("VulnerabilitiesService", () => {
 
       expect(mockNVDRepository.getVulnWithoutFailing).toHaveBeenCalledWith(
         "CVE-2024-1234",
+        { includeRetired: true },
       );
       expect(
         mockOSVRepository.getVulnByCVEIDWithoutFailing,
-      ).toHaveBeenCalledWith("CVE-2024-1234");
+      ).toHaveBeenCalledWith("CVE-2024-1234", { includeRetired: true });
       expect((result.data as { Description: string }[])[0]!.Description).toBe(
         "#### .\n\n",
       );
@@ -1241,7 +1242,7 @@ describe("VulnerabilitiesService", () => {
 
       expect(
         mockOSVRepository.getVulnByOSVIDWithoutFailing,
-      ).toHaveBeenCalledWith("GHSA-xxxx-yyyy-zzzz");
+      ).toHaveBeenCalledWith("GHSA-xxxx-yyyy-zzzz", { includeRetired: true });
       expect(
         (result.data as { Description: string }[])[0]!.Description,
       ).toContain("Test GHSA summary");

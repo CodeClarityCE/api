@@ -588,6 +588,7 @@ export class VulnerabilitiesService {
       if (isCve) {
         nvdVuln = await this.nvdRepository.getVulnWithoutFailing(
           finding.Vulnerability,
+          { includeRetired: true },
         );
 
         if (nvdVuln) {
@@ -598,6 +599,7 @@ export class VulnerabilitiesService {
 
         osvVuln = await this.osvRepository.getVulnByCVEIDWithoutFailing(
           finding.Vulnerability,
+          { includeRetired: true },
         );
 
         if (osvVuln) {
@@ -609,6 +611,7 @@ export class VulnerabilitiesService {
       if (isGhsa) {
         osvVuln = await this.osvRepository.getVulnByOSVIDWithoutFailing(
           finding.Vulnerability,
+          { includeRetired: true },
         );
 
         if (osvVuln) {
@@ -621,6 +624,7 @@ export class VulnerabilitiesService {
       if (isCve) {
         const gcveVuln = await this.gcveRepository.getVulnByCVEId(
           finding.Vulnerability,
+          { includeRetired: true },
         );
         if (gcveVuln) {
           // Add GCVE to sources if not already present
