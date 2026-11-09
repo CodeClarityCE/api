@@ -19,7 +19,7 @@ import { fixedVersions, osvFixedVersions } from "./fixed-versions";
 import { canonicalVulnerabilities } from "./canonical-vulnerability";
 import { cvss3Score } from "./osv-score";
 
-export interface DatasetSourceCoverage {
+export interface KnowledgeDbSourceCoverage {
   source: string;
   status: string;
   comparable: boolean;
@@ -32,7 +32,7 @@ export interface DatasetSourceCoverage {
   only_source: number;
 }
 
-export interface DatasetOverlap {
+export interface KnowledgeDbOverlap {
   sources: [string, string];
   vulnerabilities: number;
   // Both sources hold a record from the same origin, so it is not corroboration.
@@ -40,7 +40,7 @@ export interface DatasetOverlap {
   corroborating: number;
 }
 
-export interface DatasetSeverityAgreement {
+export interface KnowledgeDbSeverityAgreement {
   sources: [string, string];
   // Vulnerabilities both sources score with CVSS v3.
   compared: number;
@@ -48,7 +48,7 @@ export interface DatasetSeverityAgreement {
   mean_score_difference: number | null;
 }
 
-export interface DatasetAffectedAgreement {
+export interface KnowledgeDbAffectedAgreement {
   sources: [string, string];
   // Vulnerability and package pairs both sources give affected versions for.
   compared: number;
@@ -57,12 +57,12 @@ export interface DatasetAffectedAgreement {
   package_not_named: number;
 }
 
-export interface DatasetSourceComparison {
+export interface KnowledgeDbSourceComparison {
   generated_at: string;
-  sources: DatasetSourceCoverage[];
-  overlap: DatasetOverlap[];
-  severity: DatasetSeverityAgreement[];
-  affected_versions: DatasetAffectedAgreement[];
+  sources: KnowledgeDbSourceCoverage[];
+  overlap: KnowledgeDbOverlap[];
+  severity: KnowledgeDbSeverityAgreement[];
+  affected_versions: KnowledgeDbAffectedAgreement[];
   disclosure_lag: DisclosureLag[];
 }
 
@@ -140,7 +140,7 @@ const pairKey = (a: string, b: string): string => [a, b].sort().join("|");
 const toPair = (a: string, b: string): Pair => [a, b].sort() as Pair;
 
 @Injectable()
-export class DatasetComparisonService {
+export class KnowledgeDbComparisonService {
   constructor(
     @InjectDataSource("knowledge")
     private readonly knowledgeDataSource: DataSource,
@@ -150,11 +150,11 @@ export class DatasetComparisonService {
   // The last comparison and the source state it was computed from.
   private cached: {
     key: string;
-    result: Promise<DatasetSourceComparison>;
+    result: Promise<KnowledgeDbSourceComparison>;
   } | null = null;
 
   /** Compares the knowledge sources over the whole knowledge database, reusing the last result until a source changes. */
-  async compare(): Promise<DatasetSourceComparison> {
+  async compare(): Promise<KnowledgeDbSourceComparison> {
     const status = await this.statusService.get();
     const key = JSON.stringify(
       status.sources.map((s) => [s.source, s.status, s.watermark]),
@@ -172,7 +172,7 @@ export class DatasetComparisonService {
 
   private async computeComparison(
     status: KnowledgeStatus,
-  ): Promise<DatasetSourceComparison> {
+  ): Promise<KnowledgeDbSourceComparison> {
     const statusOf = new Map<string, string>(
       status.sources.map((s) => [s.source, s.status]),
     );
@@ -235,7 +235,7 @@ async function coverage(
   manager: EntityManager,
   comparable: string[],
   statusOf: Map<string, string>,
-): Promise<DatasetSourceCoverage[]> {
+): Promise<KnowledgeDbSourceCoverage[]> {
   const counts = await manager.query<
     {
       source: string;
@@ -273,7 +273,7 @@ async function coverage(
 async function overlap(
   manager: EntityManager,
   comparable: string[],
-): Promise<DatasetOverlap[]> {
+): Promise<KnowledgeDbOverlap[]> {
   const rows = await manager.query<
     { a: string; b: string; total: string; same_origin: string }[]
   >(
@@ -294,7 +294,7 @@ async function overlap(
 async function severity(
   manager: EntityManager,
   comparable: string[],
-): Promise<DatasetSeverityAgreement[]> {
+): Promise<KnowledgeDbSeverityAgreement[]> {
   const totals = new Map<
     string,
     { sources: Pair; compared: number; disagreements: number; diff: number }
@@ -378,7 +378,7 @@ async function severity(
 async function affectedVersions(
   manager: EntityManager,
   comparable: string[],
-): Promise<DatasetAffectedAgreement[]> {
+): Promise<KnowledgeDbAffectedAgreement[]> {
   if (!comparable.includes("osv") || !comparable.includes("friends_of_php")) {
     return [];
   }
@@ -416,7 +416,7 @@ async function affectedVersions(
     }
     byPackage.set(key, entry);
   }
-  const result: DatasetAffectedAgreement = {
+  const result: KnowledgeDbAffectedAgreement = {
     sources: ["friends_of_php", "osv"],
     compared: 0,
     fixed_version_disagreements: 0,

@@ -1,7 +1,7 @@
 import { Client } from "pg";
 import { DataSource } from "typeorm";
 
-import { DatasetComparisonService } from "../../src/codeclarity_modules/knowledge/comparison/dataset-comparison.service";
+import { KnowledgeDbComparisonService } from "../../src/codeclarity_modules/knowledge/comparison/knowledge-db-comparison.service";
 import { SourceOriginService } from "../../src/codeclarity_modules/knowledge/comparison/source-origin.service";
 import { KnowledgeStatusService } from "../../src/codeclarity_modules/knowledge/status/knowledge-status.service";
 import { AddKnowledgeSourceOrigins1794441600000 as AddOrigins } from "../../src/migrations/knowledge/1794441600000-AddKnowledgeSourceOrigins";
@@ -149,7 +149,7 @@ describe("Knowledge source comparison", () => {
     }
   };
   const compare = () =>
-    new DatasetComparisonService(
+    new KnowledgeDbComparisonService(
       knowledge,
       new KnowledgeStatusService(knowledge),
     ).compare();
