@@ -6,14 +6,16 @@ import { AuthUser } from "src/decorators/UserDecorator";
 import { TypedResponse } from "src/types/apiResponses.types";
 
 import {
-  DatasetComparisonService,
-  DatasetSourceComparison,
-} from "./dataset-comparison.service";
+  KnowledgeDbComparisonService,
+  KnowledgeDbSourceComparison,
+} from "./knowledge-db-comparison.service";
 
 @ApiTags("Knowledge - Source comparison")
 @Controller("knowledge/comparison")
-export class DatasetComparisonController {
-  constructor(private readonly comparisonService: DatasetComparisonService) {}
+export class KnowledgeDbComparisonController {
+  constructor(
+    private readonly comparisonService: KnowledgeDbComparisonService,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -24,7 +26,7 @@ export class DatasetComparisonController {
   @ApiResponse({ status: 200, description: "Knowledge source comparison" })
   async get(
     @AuthUser() _user: AuthenticatedUser,
-  ): Promise<TypedResponse<DatasetSourceComparison>> {
+  ): Promise<TypedResponse<KnowledgeDbSourceComparison>> {
     return { data: await this.comparisonService.compare() };
   }
 }

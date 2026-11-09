@@ -2,7 +2,7 @@ import type { DataSource } from "typeorm";
 
 import type { KnowledgeStatusService } from "../status/knowledge-status.service";
 
-import { DatasetComparisonService } from "./dataset-comparison.service";
+import { KnowledgeDbComparisonService } from "./knowledge-db-comparison.service";
 
 function serviceWith(watermarks: string[]) {
   let call = 0;
@@ -25,12 +25,12 @@ function serviceWith(watermarks: string[]) {
     );
   const dataSource = { transaction } as unknown as DataSource;
   return {
-    service: new DatasetComparisonService(dataSource, statusService),
+    service: new KnowledgeDbComparisonService(dataSource, statusService),
     transaction,
   };
 }
 
-describe("DatasetComparisonService", () => {
+describe("KnowledgeDbComparisonService", () => {
   it("reuses the last comparison while no source has synchronized since", async () => {
     const { service, transaction } = serviceWith(["2026-11-09T06:00:00Z"]);
 

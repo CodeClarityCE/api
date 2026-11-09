@@ -1,4 +1,4 @@
-// Shapes vuln-finder writes for comparing knowledge sources (see backend#28).
+// Shapes vuln-finder writes for comparing knowledge sources.
 
 export interface SourceRange {
   introduced?: string;
