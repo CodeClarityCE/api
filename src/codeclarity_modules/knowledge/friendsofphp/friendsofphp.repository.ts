@@ -28,13 +28,10 @@ export class FriendsOfPhpRepository {
     }
   }
 
-  async getVulnByAdvisoryId(
-    advisoryId: string,
-    options?: KnowledgeLookupOptions,
-  ): Promise<FriendsOfPhp | null> {
+  async getVulnByAdvisoryId(advisoryId: string): Promise<FriendsOfPhp | null> {
     try {
       const result = await this.friendsOfPhpRepository.findOne({
-        where: { advisory_id: advisoryId, ...activeRecordFilter(options) },
+        where: { advisory_id: advisoryId, ...activeRecordFilter() },
       });
       return result ?? null;
     } catch (error) {
