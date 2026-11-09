@@ -38,6 +38,7 @@ export class CreateKnowledgeSourceSync1794182400000 implements MigrationInterfac
         "last_outcome" character varying,
         "last_error" text,
         "row_count" bigint NOT NULL DEFAULT 0,
+        "bulk_completed_at" timestamptz,
         CONSTRAINT "PK_knowledge_source_sync" PRIMARY KEY ("source"),
         CONSTRAINT "CHK_knowledge_source_sync_last_outcome"
           CHECK ("last_outcome" IN ('success', 'failure'))
