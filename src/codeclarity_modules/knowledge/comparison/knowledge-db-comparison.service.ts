@@ -7,6 +7,7 @@ import {
   KnowledgeStatusService,
 } from "../status/knowledge-status.service";
 
+import { canonicalVulnerabilities } from "./canonical-vulnerability";
 import {
   ADVISORY_SOURCES,
   dateKind,
@@ -16,7 +17,6 @@ import {
   severityClass,
 } from "./comparison.types";
 import { fixedVersions, osvFixedVersions } from "./fixed-versions";
-import { canonicalVulnerabilities } from "./canonical-vulnerability";
 import { cvss3Score } from "./osv-score";
 
 export interface KnowledgeDbSourceCoverage {
