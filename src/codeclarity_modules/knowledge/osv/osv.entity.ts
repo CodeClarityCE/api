@@ -4,6 +4,12 @@ import { Column, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
 
 import { timestampAsIso } from "../timestamp-column";
 
+export const AdvisoryKind = {
+  Vulnerability: "vulnerability",
+  Malicious: "malicious",
+} as const;
+export type AdvisoryKind = (typeof AdvisoryKind)[keyof typeof AdvisoryKind];
+
 @Entity("osv")
 export class OSV {
   @PrimaryGeneratedColumn("uuid")
@@ -102,10 +108,10 @@ export class OSV {
   @Expose()
   cwes!: unknown;
 
-  @Column({ type: "varchar", default: "vulnerability" })
+  @Column({ type: "varchar", default: AdvisoryKind.Vulnerability })
   @ApiProperty()
   @Expose()
-  kind?: string;
+  kind?: AdvisoryKind;
 
   @Column({ type: "jsonb", insert: false, update: false, nullable: true })
   @ApiProperty()
