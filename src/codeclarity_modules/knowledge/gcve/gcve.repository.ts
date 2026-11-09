@@ -27,14 +27,11 @@ export class GCVERepository {
     });
   }
 
-  async getVulnByGCVEId(
-    gcveId: string,
-    options?: KnowledgeLookupOptions,
-  ): Promise<GCVE | null> {
+  async getVulnByGCVEId(gcveId: string): Promise<GCVE | null> {
     return this.gcveRepository.findOne({
       where: {
         gcve_id: gcveId,
-        ...activeRecordFilter(options),
+        ...activeRecordFilter(),
       },
     });
   }
