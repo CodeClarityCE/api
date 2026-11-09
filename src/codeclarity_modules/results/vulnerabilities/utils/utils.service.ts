@@ -8,6 +8,7 @@ import {
 } from "src/codeclarity_modules/results/result.entity";
 import { Dependency } from "src/codeclarity_modules/results/sbom/sbom.types";
 import {
+  KnowledgeSnapshot,
   MaliciousPackageAdvisory,
   Output as VulnsOutput,
   Status,
@@ -131,6 +132,14 @@ export class VulnerabilitiesUtilsService {
     }
 
     return findings.workspaces[workspace]!.MaliciousPackageAdvisories ?? [];
+  }
+
+  /** The analysis's knowledge source snapshot, or null for an older analysis. */
+  async getKnowledgeSnapshot(
+    analysis_id: string,
+  ): Promise<KnowledgeSnapshot | null> {
+    const findings: VulnsOutput = await this.getVulnsResult(analysis_id);
+    return findings.analysis_info.knowledge_snapshot ?? null;
   }
 
   async getImportPaths(
