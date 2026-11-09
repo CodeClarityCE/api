@@ -36,6 +36,7 @@ import {
   readAnalysesSubmitted,
   readKnownVersions,
   readProbeOutcomes,
+  readProbeOutcomesInBatches,
   readProbeRows,
 } from "./experiment-probe-rows";
 import type {
@@ -89,6 +90,9 @@ const EXPOSURE_EXPORT_ENTRIES_PER_CHUNK = 20;
 /** Ended experiments whose bootstrap intervals are kept in memory */
 const INTERVAL_CACHE_SIZE = 100;
 
+/** Ended experiments whose copied rows are kept in memory */
+const ROWS_CACHE_SIZE = 8;
+
 /** The rows exposures are derived from. */
 interface ExposureRows {
   runs: ResultsRunInput[];
@@ -97,6 +101,43 @@ interface ExposureRows {
   probe_intervals: ResultsProbeIntervalInput[];
   probe_analyses: ResultsProbeAnalysisInput[];
   budget: AnalysisBudgetUsage | null;
+}
+
+/** Stored rows read so far; zero total when no read is under way. */
+export interface LoadProgress {
+  done: number;
+  total: number;
+}
+
+/** Everything results and Figures are computed from. */
+interface ExperimentRows extends ExposureRows {
+  summaries: ResultsSummaryInput[];
+}
+
+/** Cache key of an ended experiment, null while it runs and its rows change. */
+function endedKey(experiment: Experiment): string | null {
+  return experiment.ended_on
+    ? `${experiment.id}:${new Date(experiment.ended_on).toISOString()}:${METRIC_VERSION}`
+    : null;
+}
+
+/** The cached promise for a key, kept by last read. A failure is not kept. */
+function remember<T>(
+  cache: Map<string, Promise<T>>,
+  key: string,
+  limit: number,
+  start: () => Promise<T>,
+): Promise<T> {
+  let value = cache.get(key);
+  if (!value) {
+    value = start();
+    value.catch(() => cache.delete(key));
+  }
+  // Re-inserting keeps the map ordered by last read
+  cache.delete(key);
+  cache.set(key, value);
+  if (cache.size > limit) cache.delete(cache.keys().next().value!);
+  return value;
 }
 
 /** Export columns read from the dataset entry and from the run itself */
@@ -191,6 +232,12 @@ export class ExperimentResultsService {
 
   /** Bootstrap intervals by experiment and end time, oldest read first */
   private readonly intervalCache = new Map<string, Promise<ResultIntervals>>();
+
+  /** Copied rows by experiment and end time, oldest read first */
+  private readonly rowsCache = new Map<string, Promise<ExperimentRows>>();
+
+  /** How far each read of an experiment's stored rows has got */
+  private readonly readProgress = new Map<string, LoadProgress>();
 
   private readonly rawQuery: RawQuery = (sql, params) =>
     this.probeOutcomeRepository.query(sql, params);
@@ -431,6 +478,20 @@ export class ExperimentResultsService {
   }
 
   /**
+   * How far the current read of the experiment's stored rows has got.
+   * @throws {NotAuthorized} If the user is not a member of the org
+   * @throws {EntityNotFound} If the org has no such experiment
+   */
+  async loadProgress(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+  ): Promise<LoadProgress> {
+    const experiment = await this.experimentFor(orgId, experimentId, user);
+    return this.readProgress.get(experiment.id) ?? { done: 0, total: 0 };
+  }
+
+  /**
    * The metric version a publish would store now.
    * @throws {NotAuthorized} If the user is not a member of the org
    * @throws {EntityNotFound} If the org has no such experiment
@@ -522,13 +583,8 @@ export class ExperimentResultsService {
   private async computeResults(
     experiment: Experiment,
   ): Promise<ExperimentResults> {
-    const [rows, summaries] = await Promise.all([
-      this.exposureRows(experiment, null),
-      this.summaryRows(experiment),
-    ]);
     const input = {
-      ...rows,
-      summaries,
+      ...(await this.rowsOf(experiment)),
       provenance: provenanceInput(experiment),
     };
     return aggregateExperimentResults({
@@ -539,15 +595,27 @@ export class ExperimentResultsService {
 
   /** The tidy rows a Figure is computed from. */
   async figureRows(experiment: Experiment): Promise<FigureRows> {
-    const [rows, summaries] = await Promise.all([
-      this.exposureRows(experiment, null),
-      this.summaryRows(experiment),
-    ]);
     return {
-      ...rows,
-      summaries,
+      ...(await this.rowsOf(experiment)),
       head_cutoff: headCutoff(experiment.ended_on ?? null, new Date()),
     };
+  }
+
+  /** The rows results and Figures read; an ended experiment's are read once. */
+  private rowsOf(experiment: Experiment): Promise<ExperimentRows> {
+    const read = async (): Promise<ExperimentRows> => {
+      try {
+        const [rows, summaries] = await Promise.all([
+          this.exposureRows(experiment, null),
+          this.summaryRows(experiment),
+        ]);
+        return { ...rows, summaries };
+      } finally {
+        this.readProgress.delete(experiment.id);
+      }
+    };
+    const key = endedKey(experiment);
+    return key ? remember(this.rowsCache, key, ROWS_CACHE_SIZE, read) : read();
   }
 
   /** The copied summary of each done run, with its entry's star rank. */
@@ -575,27 +643,11 @@ export class ExperimentResultsService {
     experiment: Experiment,
     input: ExperimentResultsInput,
   ): Promise<ResultIntervals> | null {
-    if (!experiment.ended_on) return null;
-    const key = `${experiment.id}:${new Date(experiment.ended_on).toISOString()}`;
-    const intervals =
-      this.intervalCache.get(key) ?? this.startIntervals(key, input);
-    // Re-inserting keeps the map ordered by last read
-    this.intervalCache.delete(key);
-    this.intervalCache.set(key, intervals);
-    if (this.intervalCache.size > INTERVAL_CACHE_SIZE) {
-      this.intervalCache.delete(this.intervalCache.keys().next().value!);
-    }
-    return intervals;
-  }
-
-  /** Starts computing intervals; a failure is not kept, so the next read retries. */
-  private startIntervals(
-    key: string,
-    input: ExperimentResultsInput,
-  ): Promise<ResultIntervals> {
-    const intervals = computeResultIntervalsYielding(input);
-    intervals.catch(() => this.intervalCache.delete(key));
-    return intervals;
+    const key = endedKey(experiment);
+    if (!key) return null;
+    return remember(this.intervalCache, key, INTERVAL_CACHE_SIZE, () =>
+      computeResultIntervalsYielding(input),
+    );
   }
 
   /**
@@ -646,7 +698,11 @@ export class ExperimentResultsService {
     const budget = experiment.analysis_budget ?? null;
     const [vulnerabilities, probes, probeRows, submitted] = await Promise.all([
       instances.getRawMany<ResultsVulnerabilityInput>(),
-      readProbeOutcomes(query, experimentId, entryIds),
+      entryIds
+        ? readProbeOutcomes(query, experimentId, entryIds)
+        : readProbeOutcomesInBatches(query, experimentId, (done, total) =>
+            this.readProgress.set(experimentId, { done, total }),
+          ),
       readProbeRows(query, experimentId, entryIds),
       budget === null ? null : readAnalysesSubmitted(query, experimentId),
     ]);

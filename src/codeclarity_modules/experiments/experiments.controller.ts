@@ -42,6 +42,7 @@ import {
 import type { ExperimentResults } from "./experiment-results";
 import {
   ExperimentResultsService,
+  type LoadProgress,
   type PublishedResultsSummary,
 } from "./experiment-results.service";
 import { ExperimentsService } from "./experiments.service";
@@ -174,6 +175,20 @@ export class ExperimentsController {
   ): Promise<TypedResponse<ExperimentResults>> {
     return {
       data: await this.resultsService.getResults(org_id, experiment_id, user),
+    };
+  }
+
+  @Get(":experiment_id/results/progress")
+  @ApiOperation({ summary: "How far the current results read has got" })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "experiment_id", description: "Experiment ID" })
+  async getLoadProgress(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("experiment_id") experiment_id: string,
+  ): Promise<TypedResponse<LoadProgress>> {
+    return {
+      data: await this.resultsService.loadProgress(org_id, experiment_id, user),
     };
   }
 

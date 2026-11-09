@@ -27,6 +27,7 @@ import { type ResidenceBlock, residenceBlock } from "./experiment-residence";
 import {
   NO_LOCKFILE_YET,
   type ProbePackage,
+  type ResolvedPackage,
   type RunSummaryRow,
   type VulnerabilityInstanceRow,
 } from "./experiment-row-copy";
@@ -119,7 +120,7 @@ export type { ResultsProbeAnalysisInput, ResultsProbeIntervalInput };
 export interface ResultsProbeInput {
   dataset_entry_id: string;
   commit_hash: string;
-  packages: ProbePackage[];
+  packages: ResolvedPackage[];
 }
 
 export interface KnowledgeSnapshot {

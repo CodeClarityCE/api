@@ -74,6 +74,9 @@ export interface ProbePackage {
   direct: boolean;
 }
 
+/** A package as results read it: the same package across workspaces is one row. */
+export type ResolvedPackage = Omit<ProbePackage, "workspace">;
+
 export interface RunRows {
   summary: RunSummaryRow;
   vulnerabilities: VulnerabilityInstanceRow[];
