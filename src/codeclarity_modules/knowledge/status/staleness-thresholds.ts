@@ -1,5 +1,5 @@
 // Hours after which each knowledge source counts as stale.
-// Grafana alerts must use the same values (codeclarity-dev#75).
+// Grafana alerts must use the same values: overriding KNOWLEDGE_STALE_AFTER_HOURS_* needs the Grafana rules changed to match.
 export const DEFAULT_STALE_AFTER_HOURS = {
   cwe: 168,
   epss: 24,

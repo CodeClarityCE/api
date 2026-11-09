@@ -777,6 +777,63 @@ describe("aggregateExperimentResults", () => {
       expect(changed.knowledge_changed).toBe(true);
     });
 
+    it("compares only the sources present in both snapshots", () => {
+      const base = input().provenance;
+      const spanningDeploy = aggregateExperimentResults(
+        input({
+          provenance: {
+            ...base,
+            knowledge_start: {
+              knowledge_sources: {
+                npm: "2026-11-01T00:00:00Z",
+                nvd: "2026-11-01T00:00:00Z",
+                osv: "2026-11-01T00:00:00Z",
+              },
+              epss_rows: 10,
+            },
+            knowledge_end: {
+              knowledge_sources: {
+                cwe: "2026-11-02T00:00:00Z",
+                epss: "2026-11-02T00:00:00Z",
+                friends_of_php: "2026-11-02T00:00:00Z",
+                licenses: "2026-11-02T00:00:00Z",
+                nvd: "2026-11-01T00:00:00Z",
+                osv: "2026-11-01T00:00:00Z",
+              },
+              epss_rows: 10,
+            },
+          },
+        }),
+      ).provenance;
+      expect(spanningDeploy.knowledge_changed).toBe(false);
+    });
+
+    it("flags a shared source that moved even when others are missing", () => {
+      const base = input().provenance;
+      const moved = aggregateExperimentResults(
+        input({
+          provenance: {
+            ...base,
+            knowledge_start: {
+              knowledge_sources: {
+                npm: "2026-11-01T00:00:00Z",
+                nvd: "2026-11-01T00:00:00Z",
+              },
+              epss_rows: 10,
+            },
+            knowledge_end: {
+              knowledge_sources: {
+                cwe: "2026-11-02T00:00:00Z",
+                nvd: "2026-11-02T00:00:00Z",
+              },
+              epss_rows: 10,
+            },
+          },
+        }),
+      ).provenance;
+      expect(moved.knowledge_changed).toBe(true);
+    });
+
     it("does not flag a change before the end snapshot exists", () => {
       const base = input().provenance;
       const running = aggregateExperimentResults(
