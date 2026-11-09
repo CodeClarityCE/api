@@ -7,6 +7,22 @@ import { EntityNotFound } from "src/types/error.types";
 import { OSV } from "./osv.entity";
 import { OSVRepository } from "./osv.repository";
 
+// The query a CVE lookup sends, matching any alias and ordering results predictably.
+const cveLookup = (cve: string) => ({
+  where: {
+    cve_aliases: expect.objectContaining({
+      _type: "raw",
+      _objectLiteralParameters: { cve },
+    }),
+    retired_at: IsNull(),
+  },
+  order: {
+    kind: "DESC",
+    retired_at: { direction: "ASC", nulls: "FIRST" },
+    osv_id: "ASC",
+  },
+});
+
 describe("OSVRepository", () => {
   let osvRepository: OSVRepository;
   let mockRepository: jest.Mocked<Repository<OSV>>;
@@ -170,7 +186,7 @@ describe("OSVRepository", () => {
 
       expect(result).toEqual(mockOSV);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { cve: "CVE-2021-44228", retired_at: IsNull() },
+        ...cveLookup("CVE-2021-44228"),
       });
       expect(mockRepository.findOne).toHaveBeenCalledTimes(1);
     });
@@ -182,7 +198,7 @@ describe("OSVRepository", () => {
         osvRepository.getVulnCVE("CVE-2023-NONEXISTENT"),
       ).rejects.toThrow(EntityNotFound);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { cve: "CVE-2023-NONEXISTENT", retired_at: IsNull() },
+        ...cveLookup("CVE-2023-NONEXISTENT"),
       });
     });
 
@@ -194,7 +210,7 @@ describe("OSVRepository", () => {
         "Database connection failed",
       );
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { cve: "CVE-2021-44228", retired_at: IsNull() },
+        ...cveLookup("CVE-2021-44228"),
       });
     });
 
@@ -213,7 +229,7 @@ describe("OSVRepository", () => {
 
         expect(result.cve).toBe(cveId);
         expect(mockRepository.findOne).toHaveBeenCalledWith({
-          where: { cve: cveId, retired_at: IsNull() },
+          ...cveLookup(cveId),
         });
       }
     });
@@ -228,7 +244,7 @@ describe("OSVRepository", () => {
 
       expect(result).toEqual(mockOSV);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { cve: "CVE-2021-44228", retired_at: IsNull() },
+        ...cveLookup("CVE-2021-44228"),
       });
     });
 
@@ -241,7 +257,7 @@ describe("OSVRepository", () => {
 
       expect(result).toBeNull();
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { cve: "CVE-2023-NONEXISTENT", retired_at: IsNull() },
+        ...cveLookup("CVE-2023-NONEXISTENT"),
       });
     });
 
@@ -261,7 +277,7 @@ describe("OSVRepository", () => {
 
       expect(result).toBeNull();
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { cve: "", retired_at: IsNull() },
+        ...cveLookup(""),
       });
     });
 
@@ -274,7 +290,7 @@ describe("OSVRepository", () => {
 
       expect(result).toBeNull();
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { cve: specialCveId, retired_at: IsNull() },
+        ...cveLookup(specialCveId),
       });
     });
   });
@@ -630,8 +646,8 @@ describe("OSVRepository", () => {
 
     it("should handle mixed CVE and OSV ID requests", async () => {
       mockRepository.findOne.mockImplementation((options: any) => {
-        if (options.where?.cve) {
-          return Promise.resolve({ ...mockOSV, cve: options.where.cve });
+        if (options.where?.cve_aliases) {
+          return Promise.resolve({ ...mockOSV, cve: "CVE-2021-44228" });
         } else if (options.where?.osv_id) {
           return Promise.resolve({ ...mockOSV, osv_id: options.where.osv_id });
         }
