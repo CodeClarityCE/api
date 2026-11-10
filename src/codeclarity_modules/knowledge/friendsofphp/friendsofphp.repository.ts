@@ -13,6 +13,7 @@ export class FriendsOfPhpRepository {
     private friendsOfPhpRepository: Repository<FriendsOfPhp>,
   ) {}
 
+  // Prefers the active record when a retired one shares the CVE, and picks the same one every time.
   async getVuln(
     cve: string,
     options?: KnowledgeLookupOptions,
@@ -20,6 +21,10 @@ export class FriendsOfPhpRepository {
     try {
       const result = await this.friendsOfPhpRepository.findOne({
         where: { cve: cve, ...activeRecordFilter(options) },
+        order: {
+          retired_at: { direction: "ASC", nulls: "FIRST" },
+          advisory_id: "ASC",
+        },
       });
       return result ?? null;
     } catch (error) {

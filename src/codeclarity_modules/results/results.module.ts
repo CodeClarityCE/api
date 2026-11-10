@@ -11,6 +11,7 @@ import { ResultsController } from "./results.controller";
 import { AnalysisResultsRepository } from "./results.repository";
 import { AnalysisResultsService } from "./results.service";
 import { SbomModule } from "./sbom/sbom.module";
+import { SourceComparisonModule } from "./source-comparison/source-comparison.module";
 import { VulnerabilitiesModule } from "./vulnerabilities/vulnerabilities.module";
 
 @Module({
@@ -21,6 +22,7 @@ import { VulnerabilitiesModule } from "./vulnerabilities/vulnerabilities.module"
     SbomModule,
     PatchingModule,
     LicenseModule,
+    SourceComparisonModule,
     TypeOrmModule.forFeature([Result], "codeclarity"),
   ],
   exports: [AnalysisResultsRepository],

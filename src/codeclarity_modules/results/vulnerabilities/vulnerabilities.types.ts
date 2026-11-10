@@ -115,6 +115,28 @@ export interface AnalysisInfo {
   import_path_seperator: string;
   default_workspace_name: string;
   self_managed_workspace_name: string;
+  /** Absent on analyses that predate source snapshots */
+  knowledge_snapshot?: KnowledgeSnapshot;
+}
+
+/** The state of every knowledge source when an analysis ran */
+export interface KnowledgeSnapshot {
+  taken_at: string;
+  /** The as-of day (YYYY-MM-DD), absent for a normal analysis */
+  knowledge_asof?: string;
+  sources: KnowledgeSourceSnapshot[];
+}
+
+/** One knowledge source's state when an analysis ran */
+export interface KnowledgeSourceSnapshot {
+  source: string;
+  status: "healthy" | "stale" | "failed" | "unknown";
+  /** True only when the source was healthy */
+  comparable: boolean;
+  watermark: string | null;
+  row_count: number;
+  last_outcome: "success" | "failure" | null;
+  stale_after_hours: number;
 }
 
 export interface SeverityDist {

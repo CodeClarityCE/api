@@ -35,6 +35,7 @@ describe("FindingsController", () => {
     getVulnerabilities: jest.fn(),
     getStats: jest.fn(),
     getMaliciousPackageAdvisories: jest.fn(),
+    getKnowledgeSnapshot: jest.fn(),
   };
 
   const mockVulnerabilityService = {
@@ -781,6 +782,54 @@ describe("FindingsController", () => {
           FindingsController.prototype.getMaliciousPackageAdvisories,
         ),
       ).toBe(":analysis_id/vulnerabilities/malicious-packages");
+    });
+  });
+
+  describe("getKnowledgeSnapshot", () => {
+    it("wraps the analysis's snapshot in a data response", async () => {
+      const snapshot = { taken_at: "2026-11-09T12:00:00Z", sources: [] };
+      mockVulnerabilitiesService.getKnowledgeSnapshot.mockResolvedValue(
+        snapshot,
+      );
+
+      const result = await controller.getKnowledgeSnapshot(
+        "org-1",
+        "project-1",
+        "analysis-1",
+        mockAuthenticatedUser,
+      );
+
+      expect(result).toEqual({ data: snapshot });
+      expect(
+        mockVulnerabilitiesService.getKnowledgeSnapshot,
+      ).toHaveBeenCalledWith(
+        "org-1",
+        "project-1",
+        "analysis-1",
+        mockAuthenticatedUser,
+      );
+    });
+
+    it("answers null data for an analysis without a snapshot", async () => {
+      mockVulnerabilitiesService.getKnowledgeSnapshot.mockResolvedValue(null);
+
+      await expect(
+        controller.getKnowledgeSnapshot(
+          "org-1",
+          "project-1",
+          "analysis-1",
+          mockAuthenticatedUser,
+        ),
+      ).resolves.toEqual({ data: null });
+    });
+
+    it("is served under the vulnerabilities route of an analysis", () => {
+      expect(
+        Reflect.getMetadata(
+          "path",
+          FindingsController.prototype.getKnowledgeSnapshot,
+        ),
+      ).toBe(":analysis_id/vulnerabilities/knowledge-snapshot");
     });
   });
 
