@@ -294,6 +294,24 @@ describe("Knowledge and config baseline migrations", () => {
     );
   }, 60000);
 
+  it("stores a FriendsOfPHP advisory with no published or modified date", async () => {
+    const fresh = await install("fop_dates");
+
+    await fresh.migrate();
+
+    // The repository gives no modified date, and some advisories have no branch time.
+    await query(
+      fresh.knowledge,
+      `INSERT INTO friends_of_php (advisory_id, title, link, reference)
+       VALUES ('twig/twig/2024-01-01', 'Sandbox bypass', '', 'composer://twig/twig')`,
+    );
+    const rows = await query(
+      fresh.knowledge,
+      `SELECT published, modified FROM friends_of_php`,
+    );
+    expect(rows).toEqual([{ published: null, modified: null }]);
+  }, 60000);
+
   it("matches the schema of the old dump restored and then migrated", async () => {
     const fresh = await install("fresh");
     const restored = await install("restored");
