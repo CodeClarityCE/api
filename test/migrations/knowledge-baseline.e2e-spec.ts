@@ -278,6 +278,22 @@ describe("Knowledge and config baseline migrations", () => {
     );
   }, 60000);
 
+  it("starts every source with no recorded upstream total", async () => {
+    const fresh = await install("totals");
+
+    await fresh.migrate();
+
+    const sync = await query<{ source: string; upstream_total: string | null }>(
+      fresh.knowledge,
+      `SELECT source, upstream_total FROM knowledge_source_sync ORDER BY source`,
+    );
+    expect(sync).toEqual(
+      ["cwe", "epss", "friends_of_php", "gcve", "licenses", "nvd", "osv"].map(
+        (source) => ({ source, upstream_total: null }),
+      ),
+    );
+  }, 60000);
+
   it("matches the schema of the old dump restored and then migrated", async () => {
     const fresh = await install("fresh");
     const restored = await install("restored");
