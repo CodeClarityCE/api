@@ -11,7 +11,6 @@ import {
   Version,
 } from "src/codeclarity_modules/knowledge/package/package.entity";
 
-import { DatabaseService } from "../../services/database.service";
 import {
   NVDReportGenerator,
   OSVReportGenerator,
@@ -101,7 +100,6 @@ import { VulnerabilitySearchService } from "./vulnerability/vulnerability.servic
     EPSSRepository,
     FriendsOfPhpRepository,
     GCVERepository,
-    DatabaseService,
     VulnerabilitySearchService,
     OutdatedCheckService,
     VulnerabilityCheckService,

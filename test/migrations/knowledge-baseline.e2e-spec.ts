@@ -294,6 +294,31 @@ describe("Knowledge and config baseline migrations", () => {
     );
   }, 60000);
 
+  it("creates the advisory JSON lookup indexes", async () => {
+    const fresh = await install("gin");
+
+    await fresh.migrate();
+
+    const indexes = await query(
+      fresh.knowledge,
+      `SELECT indexname, indexdef FROM pg_indexes
+       WHERE indexname IN ('nvd_affectedflattened_gin_pathops_idx', 'osv_affected_gin_pathops_idx')
+       ORDER BY indexname`,
+    );
+    expect(indexes).toEqual([
+      {
+        indexname: "nvd_affectedflattened_gin_pathops_idx",
+        indexdef:
+          'CREATE INDEX nvd_affectedflattened_gin_pathops_idx ON public.nvd USING gin ("affectedFlattened" jsonb_path_ops)',
+      },
+      {
+        indexname: "osv_affected_gin_pathops_idx",
+        indexdef:
+          "CREATE INDEX osv_affected_gin_pathops_idx ON public.osv USING gin (affected jsonb_path_ops)",
+      },
+    ]);
+  }, 60000);
+
   it("stores a FriendsOfPHP advisory with no published or modified date", async () => {
     const fresh = await install("fop_dates");
 
