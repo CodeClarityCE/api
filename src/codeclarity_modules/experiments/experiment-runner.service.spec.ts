@@ -1,4 +1,5 @@
 import { AnalysisStatus } from "src/base_modules/analyses/analysis.entity";
+import { TERMINAL_ANALYSIS_STATUSES } from "src/base_modules/analyses/analysis-outcome";
 import type { GithubIntegrationService } from "src/base_modules/integrations/github/github.service";
 import * as githubSearch from "src/base_modules/integrations/github/githubSearch";
 import type {
@@ -42,6 +43,9 @@ jest.mock("src/base_modules/integrations/github/githubSearch", () => ({
   ),
   createGithubClient: jest.fn(),
 }));
+
+/** The runner's default EXPERIMENT_WATCH_MS */
+const WATCH_MS = 2_000;
 
 const NON_TERMINAL = new Set([
   ExperimentStatus.PENDING,
@@ -293,11 +297,7 @@ class FakeStore extends ExperimentStore {
   ): Promise<string | undefined> {
     const now = Date.now();
     const candidates = [...this.experiments.values()]
-      .filter(
-        (e) =>
-          NON_TERMINAL.has(e.status) ||
-          (e.status === ExperimentStatus.CANCELLED && !e.ended_on),
-      )
+      .filter((e) => this.drivable(e.id))
       .filter(
         (e) =>
           !e.lease_until ||
@@ -427,6 +427,29 @@ class FakeStore extends ExperimentStore {
     );
   }
 
+  async hasFinishedInFlight(): Promise<boolean> {
+    const finished = (analysis: { id: string } | null | undefined): boolean => {
+      const status = analysis ? this.analyses.get(analysis.id)?.status : null;
+      return !status || TERMINAL_ANALYSIS_STATUSES.includes(status);
+    };
+    return (
+      this.runs.some(
+        (r) =>
+          this.drivable(r.experiment.id) &&
+          r.status === ExperimentRunStatus.PENDING &&
+          r.submitted_on &&
+          !r.shared_from &&
+          finished(r.analysis),
+      ) ||
+      this.probes.some(
+        (p) =>
+          this.drivable(p.experimentId) &&
+          p.status === "pending" &&
+          finished(p.analysis),
+      )
+    );
+  }
+
   async findCommitRun(
     experimentId: string,
     entryId: string,
@@ -528,6 +551,16 @@ class FakeStore extends ExperimentStore {
 
   private runsOf(experimentId: string): ExperimentRun[] {
     return this.runs.filter((r) => r.experiment.id === experimentId);
+  }
+
+  /** Not ended, or cancelled and winding down: a pass can still drive it. */
+  private drivable(experimentId: string): boolean {
+    const e = this.experiments.get(experimentId);
+    if (!e) return false;
+    return (
+      NON_TERMINAL.has(e.status) ||
+      (e.status === ExperimentStatus.CANCELLED && !e.ended_on)
+    );
   }
 
   private withAnalysis(run: ExperimentRun): ExperimentRun {
@@ -922,6 +955,284 @@ describe("ExperimentRunnerService", () => {
     await service.tick();
     expect(submit).toHaveBeenCalledTimes(4);
     expect(store.run("b/2").submitted_on).toBeTruthy();
+  });
+
+  it("keeps up to 16 analyses in flight by default", async () => {
+    addExperiment(
+      "exp-1",
+      Array.from({ length: 20 }, (_, i) => `octo/repo-${i}`),
+    );
+
+    await runner().tick();
+
+    expect(submit).toHaveBeenCalledTimes(16);
+  });
+
+  describe("completion watch", () => {
+    let service: ExperimentRunnerService | undefined;
+
+    /** Start the runner as the app does and let its first pass finish. */
+    async function start(): Promise<ExperimentRunnerService> {
+      service = runner();
+      service.onApplicationBootstrap();
+      await jest.advanceTimersByTimeAsync(0);
+      return service;
+    }
+
+    /** Advance time, then run any pass the watch kicked. */
+    async function elapse(ms: number): Promise<void> {
+      await jest.advanceTimersByTimeAsync(ms);
+      // The kicked pass is due at that instant: one more ms runs it
+      await jest.advanceTimersByTimeAsync(1);
+    }
+
+    beforeEach(() => {
+      process.env["EXPERIMENT_MAX_IN_FLIGHT"] = "1";
+    });
+
+    afterEach(() => {
+      service?.onApplicationShutdown();
+      service = undefined;
+      delete process.env["EXPERIMENT_WATCH_MS"];
+    });
+
+    it("completes a run within the watch interval and submits the next run in the freed slot", async () => {
+      addExperiment("exp-1", ["octo/app", "octo/lib"]);
+      await start();
+      expect(submit).toHaveBeenCalledTimes(1);
+
+      finishAnalysis("octo/app", AnalysisStatus.SUCCESS);
+      await elapse(WATCH_MS);
+
+      expect(store.run("octo/app").status).toBe(ExperimentRunStatus.DONE);
+      expect(store.copied.has("run-exp-1-octo/app")).toBe(true);
+      expect(submit).toHaveBeenCalledTimes(2);
+      expect(store.run("octo/lib").submitted_on).toBeTruthy();
+    });
+
+    it("retries a failed analysis within the watch interval", async () => {
+      addExperiment("exp-1", ["octo/app"]);
+      await start();
+
+      finishAnalysis("octo/app", AnalysisStatus.FAILED, "clone failed");
+      await elapse(WATCH_MS);
+
+      expect(submit).toHaveBeenCalledTimes(2);
+      expect(store.run("octo/app")).toMatchObject({
+        attempts: 2,
+        analysis: { id: "analysis-2" },
+      });
+    });
+
+    it("fails a run out of attempts and ends the experiment within the watch interval", async () => {
+      addExperiment("exp-1", ["octo/app"], { retries: 0 });
+      await start();
+
+      finishAnalysis("octo/app", "failure" as AnalysisStatus, "boom");
+      await elapse(WATCH_MS);
+
+      expect(store.run("octo/app")).toMatchObject({
+        status: ExperimentRunStatus.FAILED,
+        error: "boom",
+      });
+      expect(store.experiments.get("exp-1")!.status).toBe(
+        ExperimentStatus.COMPLETED,
+      );
+    });
+
+    it("marks a snapshot with no lockfile yet done within the watch interval and reuses its slot", async () => {
+      github.addHistory("octo/app", [["sha-jan", "2025-01-10T08:00:00Z"]]);
+      addExperiment("exp-1", ["octo/app"], {}, ["2025-02-01T00:00:00Z"]);
+      await start();
+
+      const analysis = store.analysisOf("octo/app", 0);
+      analysis.status = AnalysisStatus.FAILED;
+      store.results.set(`${analysis.id}/js-sbom`, {
+        workspaces: {},
+        analysis_info: {
+          status: "failure",
+          errors: [
+            {
+              private_error: {
+                description:
+                  "Unable to parse package file, error: no lock file found",
+              },
+            },
+          ],
+        },
+      });
+      await elapse(WATCH_MS);
+
+      expect(store.run("octo/app", 0)).toMatchObject({
+        status: ExperimentRunStatus.DONE,
+        error: "no_lockfile_yet",
+      });
+      expect(store.run("octo/app").submitted_on).toBeTruthy();
+    });
+
+    it("retries a run whose analysis was deleted within the watch interval", async () => {
+      addExperiment("exp-1", ["octo/app"]);
+      await start();
+
+      store.analyses.delete(store.run("octo/app").analysis!.id);
+      await elapse(WATCH_MS);
+
+      expect(store.run("octo/app")).toMatchObject({
+        attempts: 2,
+        error: "analysis deleted",
+        analysis: { id: "analysis-2" },
+      });
+    });
+
+    it("runs no pass between ticks while nothing has finished", async () => {
+      addExperiment("exp-1", ["octo/app", "octo/lib"]);
+      await start();
+      const claimNext = jest.spyOn(store, "claimNext");
+      const githubCalls = { ...github.calls };
+
+      await elapse(14_000);
+
+      expect(claimNext).not.toHaveBeenCalled();
+      expect(github.calls).toEqual(githubCalls);
+      expect(submit).toHaveBeenCalledTimes(1);
+    });
+
+    it("runs no pass between ticks for a finished probe of an experiment that already ended", async () => {
+      addExperiment("ended", [], {
+        status: ExperimentStatus.FAILED,
+        ended_on: new Date(),
+      });
+      store.analyses.set("analysis-old", {
+        id: "analysis-old",
+        status: AnalysisStatus.SUCCESS,
+      });
+      store.probes.push({
+        experimentId: "ended",
+        datasetEntryId: "entry-0",
+        commitHash: "abc",
+        committedAt: null,
+        id: "probe-old",
+        status: "pending",
+        error: null,
+        submitted_on: new Date(),
+        analysis: { id: "analysis-old" },
+      });
+      addExperiment("exp-1", ["octo/app", "octo/lib"]);
+      await start();
+      const claimNext = jest.spyOn(store, "claimNext");
+
+      await elapse(14_000);
+
+      expect(claimNext).not.toHaveBeenCalled();
+    });
+
+    it("coalesces kicks during a running pass into one follow-up pass", async () => {
+      addExperiment("exp-1", ["octo/app", "octo/lib"]);
+      const service = await start();
+      let passes = 0;
+      const claimNext = store.claimNext.bind(store);
+      jest
+        .spyOn(store, "claimNext")
+        .mockImplementation(async (owner, exclude) => {
+          if (exclude.length === 0) passes++;
+          return claimNext(owner, exclude);
+        });
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => (release = resolve));
+      const getInFlightRuns = store.getInFlightRuns.bind(store);
+      jest
+        .spyOn(store, "getInFlightRuns")
+        .mockImplementationOnce(async (experimentId) => {
+          await gate;
+          return getInFlightRuns(experimentId);
+        });
+
+      finishAnalysis("octo/app", AnalysisStatus.SUCCESS);
+      await elapse(WATCH_MS);
+      expect(passes).toBe(1);
+      service.kick();
+      service.kick();
+      await elapse(4_000);
+      release();
+      await elapse(WATCH_MS);
+
+      expect(passes).toBe(2);
+      expect(store.run("octo/app").status).toBe(ExperimentRunStatus.DONE);
+    });
+
+    it("runs no watch when the runner is disabled", async () => {
+      process.env["EXPERIMENT_RUNNER_ENABLED"] = "false";
+      try {
+        addExperiment("exp-1", ["octo/app"]);
+        const check = jest.spyOn(store, "hasFinishedInFlight");
+
+        await start();
+        await elapse(20_000);
+
+        expect(check).not.toHaveBeenCalled();
+        expect(submit).not.toHaveBeenCalled();
+      } finally {
+        delete process.env["EXPERIMENT_RUNNER_ENABLED"];
+      }
+    });
+
+    it("checks and passes no more after shutdown", async () => {
+      addExperiment("exp-1", ["octo/app"]);
+      const service = await start();
+      const check = jest.spyOn(store, "hasFinishedInFlight");
+      const claimNext = jest.spyOn(store, "claimNext");
+
+      service.onApplicationShutdown();
+      finishAnalysis("octo/app", AnalysisStatus.SUCCESS);
+      await elapse(30_000);
+
+      expect(check).not.toHaveBeenCalled();
+      expect(claimNext).not.toHaveBeenCalled();
+    });
+
+    it("logs a failed check and checks again at the next interval", async () => {
+      addExperiment("exp-1", ["octo/app"]);
+      await start();
+      jest
+        .spyOn(store, "hasFinishedInFlight")
+        .mockRejectedValueOnce(new Error("connection reset"));
+      const warn = jest.spyOn(CodeClarityLogger.prototype, "warn");
+
+      finishAnalysis("octo/app", AnalysisStatus.SUCCESS);
+      await elapse(WATCH_MS);
+      expect(warn).toHaveBeenCalledWith("Experiment completion check failed", {
+        error: "connection reset",
+      });
+      expect(store.run("octo/app").status).toBe(ExperimentRunStatus.PENDING);
+
+      await elapse(WATCH_MS);
+      expect(store.run("octo/app").status).toBe(ExperimentRunStatus.DONE);
+      warn.mockRestore();
+    });
+
+    it("checks at EXPERIMENT_WATCH_MS when set", async () => {
+      process.env["EXPERIMENT_WATCH_MS"] = "5000";
+      addExperiment("exp-1", ["octo/app"]);
+      await start();
+
+      finishAnalysis("octo/app", AnalysisStatus.SUCCESS);
+      await elapse(WATCH_MS);
+      expect(store.run("octo/app").status).toBe(ExperimentRunStatus.PENDING);
+
+      await elapse(3_000);
+      expect(store.run("octo/app").status).toBe(ExperimentRunStatus.DONE);
+    });
+
+    it("falls back to the default interval on an invalid EXPERIMENT_WATCH_MS", async () => {
+      process.env["EXPERIMENT_WATCH_MS"] = "soon";
+      addExperiment("exp-1", ["octo/app"]);
+      await start();
+
+      finishAnalysis("octo/app", AnalysisStatus.SUCCESS);
+      await elapse(WATCH_MS);
+
+      expect(store.run("octo/app").status).toBe(ExperimentRunStatus.DONE);
+    });
   });
 
   it("retries a failed analysis on the same pinned SHA, even after the branch moved", async () => {
@@ -2058,6 +2369,28 @@ describe("ExperimentRunnerService", () => {
         ["f6a", "2025-03-28T12:00:00Z"],
       ]);
       addExperiment("exp-1", ["octo/app"], {}, GRID);
+    });
+
+    it("submits the next bisection probe within the watch interval of the previous one finishing", async () => {
+      const service = runner();
+      service.onApplicationBootstrap();
+      try {
+        await jest.advanceTimersByTimeAsync(0);
+        settle();
+        await jest.advanceTimersByTimeAsync(WATCH_MS + 1);
+        expect(
+          submitProbe.mock.calls.map(([request]) => request.head.commitHash),
+        ).toEqual(["d4e"]);
+
+        settle();
+        await jest.advanceTimersByTimeAsync(WATCH_MS + 1);
+
+        expect(
+          submitProbe.mock.calls.map(([request]) => request.head.commitHash),
+        ).toEqual(["d4e", "e5f"]);
+      } finally {
+        service.onApplicationShutdown();
+      }
     });
 
     it("halves over the lockfile-touching commits between two snapshots, probing each commit once for several fixes", async () => {

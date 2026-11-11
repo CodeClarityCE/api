@@ -3,6 +3,8 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { EntityManager, In, IsNull, Not, Repository } from "typeorm";
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity";
 
+import { TERMINAL_ANALYSIS_STATUSES } from "src/base_modules/analyses/analysis-outcome";
+
 import { DatasetEntry } from "../datasets/dataset-entry.entity";
 import type { KnowledgeProvenance } from "../knowledge/provenance/provenance.service";
 import { NEWEST_RESULT_FIRST, Result } from "../results/result.entity";
@@ -28,6 +30,12 @@ export const EXPERIMENT_LEASE_SECONDS = 120;
 const ERROR_MAX_LENGTH = 1000;
 /** Instance rows per INSERT, well under Postgres's 65535 bind parameters */
 const INSERT_CHUNK = 1000;
+
+/** SQL for an experiment a pass can still drive: not ended, or cancelled and winding down. */
+function drivable(alias: string): string {
+  return `(${alias}.status IN ('${ExperimentStatus.PENDING}', '${ExperimentStatus.RUNNING}')
+           OR (${alias}.status = '${ExperimentStatus.CANCELLED}' AND ${alias}.ended_on IS NULL))`;
+}
 
 /** A jsonb value for a query builder set(), whose typing expects an entity. */
 function jsonb(
@@ -143,6 +151,12 @@ export abstract class ExperimentStore {
 
   /** In-flight runs across every experiment (the global cap). */
   abstract countInFlight(): Promise<number>;
+
+  /**
+   * True when an in-flight run or probe of an experiment a pass can still
+   * drive has a finished or deleted analysis.
+   */
+  abstract hasFinishedInFlight(): Promise<boolean>;
 
   abstract countPending(experimentId: string): Promise<number>;
 
@@ -306,21 +320,14 @@ export class TypeOrmExperimentStore extends ExperimentStore {
       })
       .where(
         `id = (SELECT e.id FROM experiment e
-               WHERE (e.status IN (:pending, :running)
-                      OR (e.status = :cancelled AND e.ended_on IS NULL))
+               WHERE ${drivable("e")}
                  AND (e.lease_until IS NULL OR e.lease_until < now()
                       OR e.lease_owner = :owner)
                  AND e.id <> ALL(CAST(:exclude AS uuid[]))
                ORDER BY e.created_on
                LIMIT 1
                FOR UPDATE SKIP LOCKED)`,
-        {
-          pending: ExperimentStatus.PENDING,
-          running: ExperimentStatus.RUNNING,
-          cancelled: ExperimentStatus.CANCELLED,
-          owner,
-          exclude,
-        },
+        { owner, exclude },
       )
       .returning(["id"])
       .execute();
@@ -477,6 +484,30 @@ export class TypeOrmExperimentStore extends ExperimentStore {
       this.probeRepository.count({ where: { status: "pending" } }),
     ]);
     return runs + probes;
+  }
+
+  async hasFinishedInFlight(): Promise<boolean> {
+    const rows: { finished: boolean }[] = await this.runRepository.query(
+      `SELECT EXISTS (
+                SELECT 1 FROM experiment_run AS run
+                  JOIN experiment ON experiment.id = run."experimentId"
+                  LEFT JOIN analysis ON analysis.id = run."analysisId"
+                 WHERE ${drivable("experiment")}
+                   AND run.status = $1
+                   AND run.submitted_on IS NOT NULL
+                   AND run."sharedFromId" IS NULL
+                   AND (analysis.id IS NULL OR analysis.status = ANY($2))
+              ) OR EXISTS (
+                SELECT 1 FROM experiment_probe AS probe
+                  JOIN experiment ON experiment.id = probe."experimentId"
+                  LEFT JOIN analysis ON analysis.id = probe."analysisId"
+                 WHERE ${drivable("experiment")}
+                   AND probe.status = 'pending'
+                   AND (analysis.id IS NULL OR analysis.status = ANY($2))
+              ) AS finished`,
+      [ExperimentRunStatus.PENDING, [...TERMINAL_ANALYSIS_STATUSES]],
+    );
+    return rows[0]?.finished === true;
   }
 
   async countPending(experimentId: string): Promise<number> {

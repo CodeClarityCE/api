@@ -64,9 +64,11 @@ import {
 
 /** How often experiments are looked at (in-flight analyses polled) */
 const TICK_MS = 15_000;
+/** How often to check whether an in-flight analysis finished */
+const DEFAULT_WATCH_MS = 2_000;
 /** Short rate limit waits are sat out inside the request */
 const MAX_THROTTLE_WAIT_SECONDS = 60;
-const DEFAULT_MAX_IN_FLIGHT = 8;
+const DEFAULT_MAX_IN_FLIGHT = 16;
 const DEFAULT_RUN_CEILING_HOURS = 24;
 /** Lockfile-touching commits listed per interval: 10 pages of 100 */
 const COMMITS_PER_PAGE = 100;
@@ -136,6 +138,8 @@ function readApiVersion(): string | null {
  * memory between passes: each tick leases experiments oldest first, polls
  * their in-flight analyses in the DB, and submits new ones while the global
  * in-flight cap allows, so a restarted API resumes once the lease expires.
+ * Between ticks, a cheap check every EXPERIMENT_WATCH_MS kicks a pass as soon
+ * as an in-flight analysis finishes.
  */
 @Injectable()
 export class ExperimentRunnerService
@@ -153,7 +157,12 @@ export class ExperimentRunnerService
       "EXPERIMENT_RUN_CEILING_HOURS",
       DEFAULT_RUN_CEILING_HOURS,
     ) * 3_600_000;
+  private readonly watchMs = positiveNumberEnv(
+    "EXPERIMENT_WATCH_MS",
+    DEFAULT_WATCH_MS,
+  );
   private timer: NodeJS.Timeout | undefined;
+  private watchTimer: NodeJS.Timeout | undefined;
   private running = false;
   private tickRequested = false;
   private stopped = false;
@@ -166,12 +175,15 @@ export class ExperimentRunnerService
   ) {}
 
   onApplicationBootstrap(): void {
-    if (this.enabled) this.schedule(0);
+    if (!this.enabled) return;
+    this.schedule(0);
+    this.scheduleWatch();
   }
 
   onApplicationShutdown(): void {
     this.stopped = true;
     clearTimeout(this.timer);
+    clearTimeout(this.watchTimer);
   }
 
   /** Look for work now rather than at the next tick. */
@@ -1208,6 +1220,29 @@ export class ExperimentRunnerService
     return createGithubClient(token, {
       maxThrottleWaitSeconds: MAX_THROTTLE_WAIT_SECONDS,
     });
+  }
+
+  /** Kick a pass as soon as an in-flight analysis finishes, between ticks. */
+  private async watch(): Promise<void> {
+    // Skip the check while a pass runs: the pass reads the same state
+    if (!this.running) {
+      try {
+        if (await this.store.hasFinishedInFlight()) this.kick();
+      } catch (err) {
+        this.logger.warn("Experiment completion check failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+    if (!this.stopped) this.scheduleWatch();
+  }
+
+  private scheduleWatch(): void {
+    clearTimeout(this.watchTimer);
+    this.watchTimer = setTimeout(() => {
+      void this.watch();
+    }, this.watchMs);
+    this.watchTimer.unref();
   }
 
   private schedule(delayMs: number): void {
