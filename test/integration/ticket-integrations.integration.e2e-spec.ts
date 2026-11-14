@@ -234,4 +234,19 @@ describe("Ticket integrations (e2e)", () => {
       expect(response.statusCode).toBe(403);
     },
   );
+
+  it.each([
+    ["DELETE", "clickup"],
+    ["POST", "NOPE/test"],
+    ["PATCH", "clickup/toggle?enabled=true"],
+    ["GET", "jira-cloud/workspaces"],
+  ] as const)("rejects %s %s as a bad provider", async (method, path) => {
+    const response = await testHelper.makeAuthenticatedRequest(
+      method,
+      `${base}/${path}`,
+      user.accessToken,
+    );
+
+    expect(response.statusCode).toBe(400);
+  });
 });
