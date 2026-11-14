@@ -8,7 +8,7 @@ import {
 } from "src/base_modules/analyses/analysis.entity";
 import { TERMINAL_ANALYSIS_STATUSES } from "src/base_modules/analyses/analysis-outcome";
 import { Result } from "src/codeclarity_modules/results/result.entity";
-import { EntityNotFound, NotAuthorized } from "src/types/error.types";
+import { EntityNotFound } from "src/types/error.types";
 import { TypedPaginatedData } from "src/types/pagination.types";
 
 /** Caller writes committed in the same transaction as a new analysis. */
@@ -222,7 +222,7 @@ export class AnalysesRepository {
    * Checks whether an analysis belongs to a given project.
    * @param analysisId The ID of the analysis to check.
    * @param projectId The ID of the project to check against.
-   * @throws NotAuthorized if the analysis does not belong to the project.
+   * @throws EntityNotFound if the analysis does not belong to the project.
    */
   async doesAnalysesBelongToProject(
     analysisId: string,
@@ -238,7 +238,7 @@ export class AnalysesRepository {
       },
     });
     if (!belongs) {
-      throw new NotAuthorized();
+      throw new EntityNotFound();
     }
   }
 

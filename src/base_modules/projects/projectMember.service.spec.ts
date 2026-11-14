@@ -2,7 +2,7 @@ import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
 
-import { NotAuthorized } from "../../types/error.types";
+import { EntityNotFound } from "../../types/error.types";
 
 import { Project } from "./project.entity";
 import { ProjectMemberService } from "./projectMember.service";
@@ -62,12 +62,12 @@ describe("ProjectMemberService", () => {
       });
     });
 
-    it("should throw NotAuthorized when project does not belong to organization", async () => {
+    it("should throw EntityNotFound when project does not belong to organization", async () => {
       projectRepository.findOne.mockResolvedValue(null);
 
       await expect(
         service.doesProjectBelongToOrg(mockProjectId, mockOrgId),
-      ).rejects.toThrow(NotAuthorized);
+      ).rejects.toThrow(EntityNotFound);
 
       expect(projectRepository.findOne).toHaveBeenCalledWith({
         relations: {
@@ -77,12 +77,12 @@ describe("ProjectMemberService", () => {
       });
     });
 
-    it("should throw NotAuthorized when project does not exist", async () => {
+    it("should throw EntityNotFound when project does not exist", async () => {
       projectRepository.findOne.mockResolvedValue(null);
 
       await expect(
         service.doesProjectBelongToOrg("nonexistent-project-id", mockOrgId),
-      ).rejects.toThrow(NotAuthorized);
+      ).rejects.toThrow(EntityNotFound);
 
       expect(projectRepository.findOne).toHaveBeenCalledWith({
         relations: {
@@ -116,7 +116,7 @@ describe("ProjectMemberService", () => {
 
       await expect(
         service.doesProjectBelongToOrg("", mockOrgId),
-      ).rejects.toThrow(NotAuthorized);
+      ).rejects.toThrow(EntityNotFound);
 
       expect(projectRepository.findOne).toHaveBeenCalledWith({
         relations: {
@@ -131,7 +131,7 @@ describe("ProjectMemberService", () => {
 
       await expect(
         service.doesProjectBelongToOrg(mockProjectId, ""),
-      ).rejects.toThrow(NotAuthorized);
+      ).rejects.toThrow(EntityNotFound);
 
       expect(projectRepository.findOne).toHaveBeenCalledWith({
         relations: {
@@ -146,7 +146,7 @@ describe("ProjectMemberService", () => {
 
       await expect(
         service.doesProjectBelongToOrg(null as any, mockOrgId),
-      ).rejects.toThrow(NotAuthorized);
+      ).rejects.toThrow(EntityNotFound);
 
       expect(projectRepository.findOne).toHaveBeenCalledWith({
         relations: {
@@ -161,7 +161,7 @@ describe("ProjectMemberService", () => {
 
       await expect(
         service.doesProjectBelongToOrg(mockProjectId, null as any),
-      ).rejects.toThrow(NotAuthorized);
+      ).rejects.toThrow(EntityNotFound);
 
       expect(projectRepository.findOne).toHaveBeenCalledWith({
         relations: {

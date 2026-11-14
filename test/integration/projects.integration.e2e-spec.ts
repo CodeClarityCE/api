@@ -271,7 +271,7 @@ describe("Projects Integration (e2e)", () => {
       );
     });
 
-    it("should refuse a project outside the organization", async () => {
+    it("should return 404 for an unknown project", async () => {
       // Act
       const response = await testHelper.makeAuthenticatedRequest(
         "GET",
@@ -280,8 +280,48 @@ describe("Projects Integration (e2e)", () => {
       );
 
       // Assert
-      expect(response.statusCode).toBe(403);
-      expect(response.json().error_code).toBe("NotAuthorized");
+      expect(response.statusCode).toBe(404);
+      expect(response.json().error_code).toBe("EntityNotFound");
+    });
+
+    it("should return 404 for a project of another organization", async () => {
+      const otherProject = await testHelper.makeAuthenticatedRequest(
+        "POST",
+        `/org/${otherOrgUser.organization.id}/projects`,
+        otherOrgUser.accessToken,
+        { name: "Other Project", description: "Not in the main org" },
+      );
+
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `/org/${adminUser.organization.id}/projects/${otherProject.json().id}`,
+        adminUser.accessToken,
+      );
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json().error_code).toBe("EntityNotFound");
+    });
+
+    it("should return 400 for a malformed project id", async () => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `/org/${adminUser.organization.id}/projects/not-a-uuid`,
+        adminUser.accessToken,
+      );
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error_code).toBe("ValidationFailed");
+    });
+
+    it("should return 400 for a malformed organization id", async () => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `/org/not-a-uuid/projects/${projectId}`,
+        adminUser.accessToken,
+      );
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error_code).toBe("ValidationFailed");
     });
 
     it("should reject requests from non-members", async () => {
@@ -332,7 +372,7 @@ describe("Projects Integration (e2e)", () => {
         `/org/${adminUser.organization.id}/projects/${projectId}`,
         adminUser.accessToken,
       );
-      expect(getResponse.statusCode).toBe(403);
+      expect(getResponse.statusCode).toBe(404);
     });
 
     it("should reject deletion by a regular user who did not add the project", async () => {
@@ -348,7 +388,7 @@ describe("Projects Integration (e2e)", () => {
       expect(response.json().error_code).toBe("NotAuthorized");
     });
 
-    it("should refuse a project outside the organization", async () => {
+    it("should return 404 for an unknown project", async () => {
       // Act
       const response = await testHelper.makeAuthenticatedRequest(
         "DELETE",
@@ -357,8 +397,19 @@ describe("Projects Integration (e2e)", () => {
       );
 
       // Assert
-      expect(response.statusCode).toBe(403);
-      expect(response.json().error_code).toBe("NotAuthorized");
+      expect(response.statusCode).toBe(404);
+      expect(response.json().error_code).toBe("EntityNotFound");
+    });
+
+    it("should return 400 for a malformed project id", async () => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "DELETE",
+        `/org/${adminUser.organization.id}/projects/not-a-uuid`,
+        adminUser.accessToken,
+      );
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error_code).toBe("ValidationFailed");
     });
   });
 
@@ -513,7 +564,7 @@ describe("Projects Integration (e2e)", () => {
         `/org/${adminUser.organization.id}/projects/${projectId}`,
         adminUser.accessToken,
       );
-      expect(verifyResponse.statusCode).toBe(403);
+      expect(verifyResponse.statusCode).toBe(404);
     });
 
     it("should handle concurrent project operations", async () => {

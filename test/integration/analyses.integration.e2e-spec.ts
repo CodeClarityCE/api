@@ -181,7 +181,7 @@ describe("Analyses Integration (e2e)", () => {
       expect(response.json().error_code).toBe("AnaylzerMissingConfigAttribute");
     });
 
-    it("should refuse an analysis for a project outside the organization", async () => {
+    it("should return 404 when creating an analysis for an unknown project", async () => {
       // Act
       const response = await testHelper.makeAuthenticatedRequest(
         "POST",
@@ -191,8 +191,8 @@ describe("Analyses Integration (e2e)", () => {
       );
 
       // Assert
-      expect(response.statusCode).toBe(403);
-      expect(response.json().error_code).toBe("NotAuthorized");
+      expect(response.statusCode).toBe(404);
+      expect(response.json().error_code).toBe("EntityNotFound");
     });
 
     it("should reject unauthenticated requests", async () => {
@@ -273,7 +273,7 @@ describe("Analyses Integration (e2e)", () => {
       expect(body.total_pages).toBe(2);
     });
 
-    it("should refuse a project outside the organization", async () => {
+    it("should return 404 for an unknown project", async () => {
       // Act
       const response = await testHelper.makeAuthenticatedRequest(
         "GET",
@@ -282,8 +282,19 @@ describe("Analyses Integration (e2e)", () => {
       );
 
       // Assert
-      expect(response.statusCode).toBe(403);
-      expect(response.json().error_code).toBe("NotAuthorized");
+      expect(response.statusCode).toBe(404);
+      expect(response.json().error_code).toBe("EntityNotFound");
+    });
+
+    it("should return 400 for a malformed project id", async () => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `/org/${adminUser.organization.id}/projects/not-a-uuid/analyses`,
+        adminUser.accessToken,
+      );
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error_code).toBe("ValidationFailed");
     });
   });
 
@@ -334,7 +345,18 @@ describe("Analyses Integration (e2e)", () => {
       expect(response.json().data.tag).toBe("v1.0.0");
     });
 
-    it("should refuse an analysis outside the project", async () => {
+    it("should return 400 for a malformed analysis id", async () => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `/org/${adminUser.organization.id}/projects/${projectId}/analyses/not-a-uuid`,
+        adminUser.accessToken,
+      );
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error_code).toBe("ValidationFailed");
+    });
+
+    it("should return 404 for an unknown analysis", async () => {
       // Act
       const response = await testHelper.makeAuthenticatedRequest(
         "GET",
@@ -343,8 +365,8 @@ describe("Analyses Integration (e2e)", () => {
       );
 
       // Assert
-      expect(response.statusCode).toBe(403);
-      expect(response.json().error_code).toBe("NotAuthorized");
+      expect(response.statusCode).toBe(404);
+      expect(response.json().error_code).toBe("EntityNotFound");
     });
   });
 
@@ -419,7 +441,7 @@ describe("Analyses Integration (e2e)", () => {
         `/org/${adminUser.organization.id}/projects/${projectId}/analyses/${analysisId}`,
         adminUser.accessToken,
       );
-      expect(getResponse.statusCode).toBe(403);
+      expect(getResponse.statusCode).toBe(404);
     });
 
     it("should delete an analysis with license and vulnerability policies attached", async () => {
@@ -461,7 +483,7 @@ describe("Analyses Integration (e2e)", () => {
       });
     });
 
-    it("should refuse to delete an analysis outside the project", async () => {
+    it("should return 404 when deleting an unknown analysis", async () => {
       // Act
       const response = await testHelper.makeAuthenticatedRequest(
         "DELETE",
@@ -470,8 +492,8 @@ describe("Analyses Integration (e2e)", () => {
       );
 
       // Assert
-      expect(response.statusCode).toBe(403);
-      expect(response.json().error_code).toBe("NotAuthorized");
+      expect(response.statusCode).toBe(404);
+      expect(response.json().error_code).toBe("EntityNotFound");
     });
   });
 
@@ -525,7 +547,7 @@ describe("Analyses Integration (e2e)", () => {
         `/org/${adminUser.organization.id}/projects/${projectId}/analyses/${analysisId}`,
         adminUser.accessToken,
       );
-      expect(verifyResponse.statusCode).toBe(403);
+      expect(verifyResponse.statusCode).toBe(404);
     });
 
     it("should handle multiple concurrent analyses", async () => {
