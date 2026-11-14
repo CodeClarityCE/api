@@ -61,6 +61,27 @@ function getLanguageFromEcosystem(ecosystem: string | undefined): string {
   return "javascript";
 }
 
+const PURL_TYPES: Record<string, string> = {
+  npm: "npm",
+  packagist: "composer",
+  pypi: "pypi",
+  cargo: "cargo",
+};
+
+/** The package URL of a dependency, e.g. pkg:npm/%40vue/shared@3.5.0 */
+export function packageUrl(
+  name: string,
+  version: string,
+  ecosystem: string | undefined,
+): string {
+  const type = PURL_TYPES[ecosystem ?? "npm"] ?? "generic";
+  const path = (type === "pypi" ? name.toLowerCase().replace(/_/g, "-") : name)
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/");
+  return `pkg:${type}/${path}@${encodeURIComponent(version)}`;
+}
+
 @Injectable()
 export class SBOMService {
   /**
@@ -230,6 +251,11 @@ export class SBOMService {
         sbomDependency.is_transitive_count =
           (version.Transitive ?? version.transitive) ? 1 : 0;
         if (version.ecosystem) sbomDependency.ecosystem = version.ecosystem;
+        sbomDependency.purl = packageUrl(
+          dep_key,
+          version_key,
+          version.ecosystem,
+        );
         if (version.source_plugin)
           sbomDependency.source_plugin = version.source_plugin;
 
@@ -680,6 +706,7 @@ export class SBOMService {
     }
 
     sbomDependency.newest_release = pack.latest_version;
+    if (pack.license) sbomDependency.license = pack.license;
 
     try {
       const versionInfo = await this.packageRepository.getVersionInfo(

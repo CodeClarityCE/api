@@ -13,6 +13,7 @@ import { Result } from "../result.entity";
 import { AnalysisResultsService } from "../results.service";
 
 import { SBOMService } from "./sbom.service";
+import type { SbomDependency } from "./sbom.types";
 import { SbomUtilsService } from "./utils/utils";
 
 describe("SBOMService", () => {
@@ -288,6 +289,62 @@ describe("SBOMService", () => {
       expect(sbomUtilsService.getMergedSbomResults).toHaveBeenCalledWith(
         "analysis-123",
       );
+    });
+
+    it("gives each dependency its package URL and license", async () => {
+      mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+      mockSbomUtilsService.getMergedSbomResults.mockResolvedValue({
+        mergedSbom: {
+          workspaces: {
+            default: {
+              dependencies: {
+                "@vue/shared": {
+                  "3.5.0": { Prod: true, ecosystem: "npm" },
+                },
+                "monolog/monolog": {
+                  "3.7.0": { Prod: true, ecosystem: "packagist" },
+                },
+                "left-pad": { "1.3.0": { Prod: true } },
+              },
+              start: { dependencies: [] },
+            },
+          },
+          analysis_info: mockSbomOutput.analysis_info,
+        },
+      });
+      mockPackageRepository.getPackageInfoWithoutFailing.mockImplementation(
+        (name: string) =>
+          Promise.resolve(
+            name === "left-pad"
+              ? null
+              : {
+                  latest_version: "9.9.9",
+                  license: name === "@vue/shared" ? "MIT" : "(MIT OR GPL-2.0)",
+                },
+          ),
+      );
+
+      const result = await service.getSbom(
+        "org-123",
+        "project-123",
+        "analysis-123",
+        mockUser,
+        { workspace: "default", sortBy: "name", sortDirection: "ASC" },
+      );
+
+      const byName = Object.fromEntries(
+        (result.data as SbomDependency[]).map((d) => [d.name, d]),
+      );
+      expect(byName["@vue/shared"]).toMatchObject({
+        purl: "pkg:npm/%40vue/shared@3.5.0",
+        license: "MIT",
+      });
+      expect(byName["monolog/monolog"]).toMatchObject({
+        purl: "pkg:composer/monolog/monolog@3.7.0",
+        license: "(MIT OR GPL-2.0)",
+      });
+      expect(byName["left-pad"]!.purl).toBe("pkg:npm/left-pad@1.3.0");
+      expect(byName["left-pad"]!.license).toBeUndefined();
     });
 
     it("should handle active filters", async () => {
