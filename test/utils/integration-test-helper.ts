@@ -226,16 +226,32 @@ export class IntegrationTestHelper {
     };
   }
 
+  /** Adds an existing user to an existing organisation. */
+  async addMembership(
+    user: User,
+    organization: Organization,
+    role: MemberRole,
+  ): Promise<void> {
+    await this.membershipsRepository.saveMembership({
+      user,
+      organization,
+      role,
+      joined_on: new Date(),
+    } as any);
+  }
+
   async makeAuthenticatedRequest(
     method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
     url: string,
     accessToken: string,
     body?: any,
+    headers: Record<string, string> = {},
   ): Promise<any> {
     const requestOptions: any = {
       method,
       url,
       headers: {
+        ...headers,
         Authorization: `Bearer ${accessToken}`,
       },
     };

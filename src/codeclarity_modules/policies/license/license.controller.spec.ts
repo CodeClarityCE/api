@@ -180,7 +180,18 @@ describe("LicensePolicyController", () => {
 
       const result = await controller.get(mockUser, "org-123", "policy-123");
 
-      expect(result).toEqual({ data: mockPolicy });
+      expect(result).toEqual({
+        data: {
+          id: mockPolicy.id,
+          name: mockPolicy.name,
+          description: mockPolicy.description,
+          default: mockPolicy.default,
+          content: mockPolicy.content,
+          created_on: mockPolicy.created_on,
+          created_by: "test@example.com",
+          policy_type: PolicyType.LICENSE_POLICY,
+        },
+      });
       expect(licensePolicyService.get).toHaveBeenCalledWith(
         "org-123",
         "policy-123",

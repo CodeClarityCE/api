@@ -276,6 +276,18 @@ export type TicketSortField =
 // Integration Types
 // ============================================
 
+export class VerifyCredentialsBody {
+  @ApiPropertyOptional({ description: "API key to check (for API_KEY auth)" })
+  @IsOptional()
+  @IsString()
+  api_key?: string;
+
+  @ApiPropertyOptional({ description: "OAuth access token to check" })
+  @IsOptional()
+  @IsString()
+  access_token?: string;
+}
+
 export class ConfigureClickUpBody {
   @ApiProperty({ description: "Authentication method: API_KEY or OAUTH" })
   @IsString()
