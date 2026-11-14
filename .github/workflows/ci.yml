@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   node:
-    uses: CodeClarityCE/.github/.github/workflows/node-image.yml@v1
+    uses: CodeClarityCE/.github/.github/workflows/node-image.yml@ci/review-fixes
     # Release jobs only; they run on main when CI_RELEASE is true.
     permissions:
       contents: write
