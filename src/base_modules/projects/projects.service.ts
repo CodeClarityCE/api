@@ -452,7 +452,6 @@ export class ProjectService {
     const memberRole = membership.role;
 
     const project = await this.repos.projects.getProjectById(id, {
-      files: true,
       added_by: true,
     });
 
@@ -465,48 +464,8 @@ export class ProjectService {
       }
     }
 
-    const organization = await this.repos.organizations.getOrganizationById(
-      orgId,
-      {
-        projects: true,
-      },
-    );
-    organization.projects = organization.projects.filter((p) => p.id !== id);
-    await this.repos.organizations.saveOrganization(organization);
-
-    const analyses = await this.repos.analyses.getAnalysesByProjectId(
-      project.id,
-      {
-        results: true,
-      },
-    );
-    for (const analysis of analyses) {
-      for (const result of analysis.results) {
-        await this.repos.results.remove(result);
-      }
-
-      await this.repos.analyses.deleteAnalysis(analysis.id);
-    }
-
-    // Remove project folder
-    const downloadPath = process.env["DOWNLOAD_PATH"] ?? "/private";
-    const filePath = validateAndJoinPath(
-      downloadPath,
-      organization.id,
-      "projects",
-      project.id,
-    );
-    // Path is validated using validateAndJoinPath to prevent traversal attacks
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
-    if (existsSync(filePath)) {
-      await rm(filePath, { recursive: true, force: true });
-    }
-
-    for (const file of project.files) {
-      await this.repos.file.remove(file);
-    }
-
-    await this.repos.projects.deleteProject(id);
+    await this.deleteProjectRows(orgId, [id]);
+    await this.removeProjectFolder(orgId, id);
 
     await this.organizationLoggerService.addAuditLog(
       ActionType.ProjectDelete,
@@ -520,9 +479,8 @@ export class ProjectService {
    * Bulk-delete projects of an org in bounded, throttled batches.
    *
    * Replaces the per-project, per-row cascade (which overloaded the API/DB when
-   * run across many projects) with set-based bulk statements. In-flight analyses
-   * are first transitioned to `cancelled` so workers stop advancing them, then
-   * results, analyses, files and the projects themselves are removed per batch.
+   * run across many projects) with set-based bulk statements. Each batch removes
+   * analyses, policy links, results, files and the projects in one transaction.
    * Each id gets an independent outcome so a single bad id never fails the call.
    *
    * @throws {NotAuthorized} if the caller is not at least a USER of the org
@@ -590,36 +548,11 @@ export class ProjectService {
     for (let i = 0; i < deletableIds.length; i += batchSize) {
       const batch = deletableIds.slice(i, i + batchSize);
 
-      // Resolve the batch's analyses, cancel any in-flight ones (so workers
-      // stop advancing them), then bulk-remove results -> analyses -> files ->
-      // projects in FK-safe order.
-      const analysisIds =
-        await this.repos.analyses.getAnalysisIdsByProjectIds(batch);
-      if (analysisIds.length > 0) {
-        await this.repos.analyses.cancelByIds(analysisIds);
-        await this.repos.results.deleteByAnalysisIds(analysisIds);
-        await this.repos.analyses.deleteByIds(analysisIds);
-      }
-      await this.repos.file.deleteByProjectIds(batch);
-      // The org<->project M2M junction FK has no ON DELETE CASCADE, so detach
-      // the join rows (owning side) before removing the project rows.
-      await this.repos.projects.detachFromOrganization(orgId, batch);
-      await this.repos.projects.deleteByIds(batch);
+      await this.deleteProjectRows(orgId, batch);
 
-      // Best-effort removal of each project's download folder (no DB load).
-      const downloadPath = process.env["DOWNLOAD_PATH"] ?? "/private";
+      // Folders go only after the rows are gone for good
       for (const projectId of batch) {
-        const filePath = validateAndJoinPath(
-          downloadPath,
-          orgId,
-          "projects",
-          projectId,
-        );
-        // Path is validated using validateAndJoinPath to prevent traversal attacks
-        // eslint-disable-next-line security/detect-non-literal-fs-filename
-        if (existsSync(filePath)) {
-          await rm(filePath, { recursive: true, force: true });
-        }
+        await this.removeProjectFolder(orgId, projectId);
         results.push({ id: projectId, status: "deleted" });
       }
     }
@@ -637,5 +570,48 @@ export class ProjectService {
 
     const failed = results.filter((r) => r.status !== "deleted").length;
     return { results, succeeded: deletedCount, failed };
+  }
+
+  /**
+   * Remove projects with their analyses, policy links, results and files, and
+   * detach them from the org, in one transaction: all or nothing.
+   */
+  private async deleteProjectRows(
+    orgId: string,
+    projectIds: string[],
+  ): Promise<void> {
+    await this.repos.projects.runInTransaction(async (manager) => {
+      const analysisIds = await this.repos.analyses.getAnalysisIdsByProjectIds(
+        projectIds,
+        manager,
+      );
+      await this.repos.analyses.deleteByIds(analysisIds, manager);
+      await this.repos.file.deleteByProjectIds(projectIds, manager);
+      await this.repos.projects.detachFromOrganization(
+        orgId,
+        projectIds,
+        manager,
+      );
+      await this.repos.projects.deleteByIds(projectIds, manager);
+    });
+  }
+
+  /** Remove a deleted project's download folder, if any. */
+  private async removeProjectFolder(
+    orgId: string,
+    projectId: string,
+  ): Promise<void> {
+    const downloadPath = process.env["DOWNLOAD_PATH"] ?? "/private";
+    const filePath = validateAndJoinPath(
+      downloadPath,
+      orgId,
+      "projects",
+      projectId,
+    );
+    // Path is validated using validateAndJoinPath to prevent traversal attacks
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    if (existsSync(filePath)) {
+      await rm(filePath, { recursive: true, force: true });
+    }
   }
 }

@@ -517,14 +517,7 @@ export class AnalysesService {
     // (3) Check if the analysis belongs to the project
     await this.analysesRepository.doesAnalysesBelongToProject(id, projectId);
 
-    const analysis = await this.analysesRepository.getAnalysisById(id, {
-      results: true,
-    });
-
-    for (const result of analysis.results) {
-      await this.resultsRepository.delete(result.id);
-    }
-    await this.analysesRepository.deleteAnalysis(analysis.id);
+    await this.analysesRepository.deleteByIds([id]);
   }
 
   /**
@@ -596,7 +589,6 @@ export class AnalysesService {
       await this.analysesRepository.cancelByIds(cancellable);
     }
     if (toDelete.length > 0) {
-      await this.resultsRepository.deleteByAnalysisIds(toDelete);
       await this.analysesRepository.deleteByIds(toDelete);
     }
 
