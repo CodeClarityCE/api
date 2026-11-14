@@ -1,15 +1,17 @@
-import { IsNotEmpty, Length } from "class-validator";
+import { IsArray, IsNotEmpty, Length } from "class-validator";
 
 /********************************************/
 /*             HTTP Post bodies             */
 /********************************************/
 
 export class AnalyzerCreateBody {
-  @IsNotEmpty()
+  @IsArray({ each: true })
+  @IsArray()
   steps!: Stage[][];
 
+  // The name column is varchar(25).
   @IsNotEmpty()
-  @Length(5, 50)
+  @Length(5, 25)
   name!: string;
 
   @IsNotEmpty()
