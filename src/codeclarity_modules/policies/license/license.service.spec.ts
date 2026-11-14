@@ -8,6 +8,7 @@ import {
   OrganizationsRepository,
   UsersRepository,
 } from "src/base_modules/shared/repositories";
+import { EntityNotFound } from "src/types/error.types";
 
 import { Policy, PolicyType } from "../policy.entity";
 
@@ -305,7 +306,7 @@ describe("LicensePolicyService", () => {
       // Act & Assert
       await expect(
         service.get("org-123", "non-existent", mockUser),
-      ).rejects.toThrow("EntityNotFound");
+      ).rejects.toBeInstanceOf(EntityNotFound);
     });
 
     it("should require USER role for read access", async () => {
