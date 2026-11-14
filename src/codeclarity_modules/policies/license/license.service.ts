@@ -58,12 +58,12 @@ export class LicensePolicyService {
     const organization =
       await this.organizationsRepository.getOrganizationById(orgId);
     if (!organization) {
-      throw new Error("EntityNotFound");
+      throw new EntityNotFound();
     }
 
     const creator = await this.usersRepository.getUserById(user.userId);
     if (!creator) {
-      throw new Error("EntityNotFound");
+      throw new EntityNotFound();
     }
 
     const policy = await this.policyRepository.save({

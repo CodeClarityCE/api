@@ -2,7 +2,7 @@ import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
 
-import { EntityNotFound, NotAuthorized } from "src/types/error.types";
+import { EntityNotFound } from "src/types/error.types";
 
 import { AnalysesRepository } from "./analyses.repository";
 import { Analysis, AnalysisStatus } from "./analysis.entity";
@@ -428,7 +428,7 @@ describe("AnalysesRepository", () => {
       });
     });
 
-    it("should throw NotAuthorized when analysis does not belong to project", async () => {
+    it("should throw EntityNotFound when analysis does not belong to project", async () => {
       mockAnalysisRepository.findOne.mockResolvedValue(null);
 
       await expect(
@@ -436,7 +436,7 @@ describe("AnalysesRepository", () => {
           "analysis-123",
           "wrong-project-id",
         ),
-      ).rejects.toThrow(NotAuthorized);
+      ).rejects.toThrow(EntityNotFound);
 
       expect(mockAnalysisRepository.findOne).toHaveBeenCalledWith({
         relations: { project: true },
@@ -447,7 +447,7 @@ describe("AnalysesRepository", () => {
       });
     });
 
-    it("should throw NotAuthorized when analysis does not exist", async () => {
+    it("should throw EntityNotFound when analysis does not exist", async () => {
       mockAnalysisRepository.findOne.mockResolvedValue(null);
 
       await expect(
@@ -455,7 +455,7 @@ describe("AnalysesRepository", () => {
           "non-existent-id",
           "project-123",
         ),
-      ).rejects.toThrow(NotAuthorized);
+      ).rejects.toThrow(EntityNotFound);
     });
 
     it("should handle database errors", async () => {
@@ -475,7 +475,7 @@ describe("AnalysesRepository", () => {
 
       await expect(
         analysesRepository.doesAnalysesBelongToProject("", ""),
-      ).rejects.toThrow(NotAuthorized);
+      ).rejects.toThrow(EntityNotFound);
 
       expect(mockAnalysisRepository.findOne).toHaveBeenCalledWith({
         relations: { project: true },

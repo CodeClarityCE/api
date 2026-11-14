@@ -4,11 +4,7 @@ import { EntityManager, In, Repository } from "typeorm";
 
 import { Organization } from "src/base_modules/organizations/organization.entity";
 import { Project } from "src/base_modules/projects/project.entity";
-import {
-  EntityNotFound,
-  NotAuthorized,
-  ProjectDoesNotExist,
-} from "src/types/error.types";
+import { EntityNotFound, ProjectDoesNotExist } from "src/types/error.types";
 import { TypedPaginatedData } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
 
@@ -111,7 +107,7 @@ export class ProjectsRepository {
 
   /**
    * Check if a project belongs to an organization.
-   * @throws {NotAuthorized} if the project does not belong to the org.
+   * @throws {EntityNotFound} if the project does not belong to the org.
    */
   async doesProjectBelongToOrg(
     projectId: string,
@@ -125,7 +121,7 @@ export class ProjectsRepository {
       },
     });
     if (!belongs) {
-      throw new NotAuthorized();
+      throw new EntityNotFound();
     }
   }
 

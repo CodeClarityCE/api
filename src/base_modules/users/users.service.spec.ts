@@ -16,8 +16,9 @@ jest.mock("src/utils/crypto", () => ({
 
 import {
   AccountRegistrationVerificationTokenInvalidOrExpired,
-  PasswordsDoNotMatch,
   HandleAlreadyExists,
+  IncorrectCurrentPassword,
+  PasswordsDoNotMatch,
 } from "../auth/auth.errors";
 import { type AuthService } from "../auth/auth.service";
 import { AUTH_SERVICE } from "../auth/auth.tokens";
@@ -632,7 +633,7 @@ describe("UsersService", () => {
       ).rejects.toThrow(CannotPerformActionOnSocialAccount);
     });
 
-    it("should throw error when old password is incorrect", async () => {
+    it("should throw IncorrectCurrentPassword when old password is incorrect", async () => {
       const userWithOldPassword = { ...mockUser, social: false };
       jest
         .spyOn(usersRepository, "getUserById")
@@ -647,7 +648,7 @@ describe("UsersService", () => {
           mockUserPasswordPatchBody,
           mockAuthenticatedUser,
         ),
-      ).rejects.toThrow("Old password not correct");
+      ).rejects.toThrow(IncorrectCurrentPassword);
     });
   });
 

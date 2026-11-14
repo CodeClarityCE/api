@@ -40,6 +40,7 @@ import {
 
 import {
   AccountRegistrationVerificationTokenInvalidOrExpired,
+  IncorrectCurrentPassword,
   PasswordsDoNotMatch,
 } from "../auth/auth.errors";
 
@@ -142,7 +143,11 @@ export class UsersController {
   @APIDocNoDataResponseDecorator()
   @ApiErrorDecorator({
     statusCode: 400,
-    errors: [CannotPerformActionOnSocialAccount, PasswordsDoNotMatch],
+    errors: [
+      CannotPerformActionOnSocialAccount,
+      PasswordsDoNotMatch,
+      IncorrectCurrentPassword,
+    ],
   })
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
   @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
