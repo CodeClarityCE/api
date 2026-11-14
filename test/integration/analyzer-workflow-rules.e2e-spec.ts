@@ -46,6 +46,7 @@ function body(steps: unknown): Record<string, unknown> {
 describe("Analyzer workflow rules (HTTP)", () => {
   let app: NestFastifyApplication;
   const saveAnalyzer = jest.fn();
+  const getAnalyzerById = jest.fn();
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -76,7 +77,7 @@ describe("Analyzer workflow rules (HTTP)", () => {
           provide: AnalyzersRepository,
           useValue: {
             saveAnalyzer,
-            getAnalyzerById: jest.fn().mockResolvedValue({ id: "a1" }),
+            getAnalyzerById,
           },
         },
         {
@@ -115,6 +116,7 @@ describe("Analyzer workflow rules (HTTP)", () => {
 
   beforeEach(() => {
     saveAnalyzer.mockReset().mockResolvedValue({ id: "a1" });
+    getAnalyzerById.mockReset().mockResolvedValue({ id: "a1" });
   });
 
   async function send(
@@ -186,5 +188,82 @@ describe("Analyzer workflow rules (HTTP)", () => {
     expect(res.status).toBe(400);
     expect(res.json["error_code"]).toBe("ValidationFailed");
     expect(saveAnalyzer).not.toHaveBeenCalled();
+  });
+
+  describe("language configuration of a template-based analyzer", () => {
+    const jsTemplate = {
+      supported_languages: ["javascript"],
+      language_config: {
+        javascript: { plugins: ["js-sbom", "vuln-finder", "license-finder"] },
+      },
+    };
+
+    function saved(): {
+      supported_languages: string[];
+      language_config?: Record<string, { plugins: string[] }>;
+    } {
+      return saveAnalyzer.mock.calls[0][0];
+    }
+
+    it("lists a plugin added to the template under its language", async () => {
+      const res = await send("POST", {
+        ...body([
+          [step("js-sbom")],
+          [step("vuln-finder"), step("license-finder")],
+          [step("js-patching")],
+        ]),
+        ...jsTemplate,
+      });
+      expect(res.status).toBe(201);
+      expect(saved().supported_languages).toEqual(["javascript"]);
+      expect(saved().language_config).toEqual({
+        javascript: {
+          plugins: ["js-sbom", "vuln-finder", "license-finder", "js-patching"],
+        },
+      });
+    });
+
+    it("adds the language of an added SBOM producer", async () => {
+      const res = await send("POST", {
+        ...body([[step("js-sbom"), step("php-sbom")], [step("vuln-finder")]]),
+        ...jsTemplate,
+      });
+      expect(res.status).toBe(201);
+      expect(saved().supported_languages).toEqual(["javascript", "php"]);
+      expect(saved().language_config).toEqual({
+        javascript: { plugins: ["js-sbom", "vuln-finder"] },
+        php: { plugins: ["php-sbom", "vuln-finder"] },
+      });
+    });
+
+    it("updates the saved configuration when plugins change on edit", async () => {
+      getAnalyzerById.mockResolvedValue({
+        id: "a1",
+        supported_languages: ["javascript", "php"],
+        language_config: {
+          javascript: { plugins: ["js-sbom", "vuln-finder"] },
+          php: { plugins: ["php-sbom", "vuln-finder"] },
+        },
+      });
+      // The edit page sends no language fields: php-sbom removed, js-patching added.
+      const res = await send(
+        "PUT",
+        body([[step("js-sbom")], [step("vuln-finder")], [step("js-patching")]]),
+      );
+      expect(res.status).toBe(200);
+      expect(saved().supported_languages).toEqual(["javascript"]);
+      expect(saved().language_config).toEqual({
+        javascript: { plugins: ["js-sbom", "vuln-finder", "js-patching"] },
+      });
+    });
+
+    it("leaves an analyzer without a language configuration alone", async () => {
+      const res = await send("POST", {
+        ...body([[step("js-sbom")], [step("vuln-finder")]]),
+        language_config: {},
+      });
+      expect(res.status).toBe(201);
+      expect(saved().language_config).toEqual({});
+    });
   });
 });
