@@ -78,6 +78,43 @@ export class FindingsController {
     };
   }
 
+  @Get(":analysis_id/vulnerabilities/malicious-packages")
+  async getMaliciousPackageAdvisories(
+    @Param("org_id") org_id: string,
+    @Param("project_id") project_id: string,
+    @Param("analysis_id") analysis_id: string,
+    @AuthUser() user: AuthenticatedUser,
+    @Query("workspace") workspace: string,
+  ): Promise<Response> {
+    return {
+      data: await this.vulnerabilitiesService.getMaliciousPackageAdvisories(
+        org_id,
+        project_id,
+        analysis_id,
+        user,
+        workspace,
+      ),
+    };
+  }
+
+  // Answers null data for an analysis that predates source snapshots.
+  @Get(":analysis_id/vulnerabilities/knowledge-snapshot")
+  async getKnowledgeSnapshot(
+    @Param("org_id") org_id: string,
+    @Param("project_id") project_id: string,
+    @Param("analysis_id") analysis_id: string,
+    @AuthUser() user: AuthenticatedUser,
+  ): Promise<Response> {
+    return {
+      data: await this.vulnerabilitiesService.getKnowledgeSnapshot(
+        org_id,
+        project_id,
+        analysis_id,
+        user,
+      ),
+    };
+  }
+
   @Get(":analysis_id/vulnerabilities/vulnerability/:vulnerability_id")
   async getVulnerability(
     @Param("org_id") org_id: string,

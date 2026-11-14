@@ -1,4 +1,12 @@
 import { Test, type TestingModule } from "@nestjs/testing";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import { In } from "typeorm";
+
+import {
+  Experiment,
+  ExperimentStatus,
+} from "src/codeclarity_modules/experiments/experiment.entity";
+import { EntityInUse } from "src/types/error.types";
 
 import { AuthenticatedUser, ROLE } from "../auth/auth.types";
 import { OrganizationLoggerService } from "../organizations/log/organizationLogger.service";
@@ -22,6 +30,7 @@ describe("AnalyzersService", () => {
   let membershipsRepository: MembershipsRepository;
   let usersRepository: UsersRepository;
   let analyzersRepository: AnalyzersRepository;
+  let experimentRepository: { exists: jest.Mock };
 
   // Mock data
   const mockUser = new AuthenticatedUser("user-123", [ROLE.USER], true);
@@ -95,6 +104,10 @@ describe("AnalyzersService", () => {
       providers: [
         AnalyzersService,
         {
+          provide: getRepositoryToken(Experiment, "codeclarity"),
+          useValue: { exists: jest.fn().mockResolvedValue(false) },
+        },
+        {
           provide: OrganizationLoggerService,
           useValue: {
             addAuditLog: jest.fn(),
@@ -144,6 +157,9 @@ describe("AnalyzersService", () => {
     );
     usersRepository = module.get<UsersRepository>(UsersRepository);
     analyzersRepository = module.get<AnalyzersRepository>(AnalyzersRepository);
+    experimentRepository = module.get(
+      getRepositoryToken(Experiment, "codeclarity"),
+    );
 
     // Reset mocks
     jest.clearAllMocks();
@@ -720,6 +736,25 @@ describe("AnalyzersService", () => {
         "analyzer-123",
         "org-123",
       );
+      expect(analyzersRepository.deleteAnalyzer).not.toHaveBeenCalled();
+    });
+
+    it("refuses an analyzer used by a PENDING or RUNNING experiment", async () => {
+      jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
+      jest
+        .spyOn(analyzersRepository, "doesAnalyzerBelongToOrg")
+        .mockResolvedValue();
+      experimentRepository.exists.mockResolvedValue(true);
+
+      await expect(
+        service.delete("org-123", "analyzer-123", mockUser),
+      ).rejects.toBeInstanceOf(EntityInUse);
+      expect(experimentRepository.exists).toHaveBeenCalledWith({
+        where: {
+          analyzer: { id: "analyzer-123" },
+          status: In([ExperimentStatus.PENDING, ExperimentStatus.RUNNING]),
+        },
+      });
       expect(analyzersRepository.deleteAnalyzer).not.toHaveBeenCalled();
     });
 

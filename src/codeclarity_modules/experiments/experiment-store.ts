@@ -1,0 +1,814 @@
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { EntityManager, In, IsNull, Not, Repository } from "typeorm";
+import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity";
+
+import { TERMINAL_ANALYSIS_STATUSES } from "src/base_modules/analyses/analysis-outcome";
+
+import { DatasetEntry } from "../datasets/dataset-entry.entity";
+import type { KnowledgeProvenance } from "../knowledge/provenance/provenance.service";
+import { NEWEST_RESULT_FIRST, Result } from "../results/result.entity";
+
+import { Experiment, ExperimentStatus } from "./experiment.entity";
+import type { ExposuresInput } from "./experiment-exposures";
+import { ExperimentProbe } from "./experiment-probe.entity";
+import { ExperimentProbeOutcome } from "./experiment-probe-outcome.entity";
+import {
+  type RawQuery,
+  readAnalysesSubmitted,
+  readPlanningRows,
+} from "./experiment-probe-rows";
+import type { ProbeCandidate } from "./experiment-probes";
+import type { ResultsRunInput } from "./experiment-results";
+import type { ProbePackage, RunRows } from "./experiment-row-copy";
+import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
+import { ExperimentRunSummaryRow } from "./experiment-run-summary-row.entity";
+import { ExperimentVulnerabilityInstance } from "./experiment-vulnerability-instance.entity";
+
+/** A runner that stops renewing its lease for this long is replaced */
+export const EXPERIMENT_LEASE_SECONDS = 120;
+const ERROR_MAX_LENGTH = 1000;
+/** Instance rows per INSERT, well under Postgres's 65535 bind parameters */
+const INSERT_CHUNK = 1000;
+
+/** SQL for an experiment a pass can still drive: not ended, or cancelled and winding down. */
+function drivable(alias: string): string {
+  return `(${alias}.status IN ('${ExperimentStatus.PENDING}', '${ExperimentStatus.RUNNING}')
+           OR (${alias}.status = '${ExperimentStatus.CANCELLED}' AND ${alias}.ended_on IS NULL))`;
+}
+
+/** A jsonb value for a query builder set(), whose typing expects an entity. */
+function jsonb(
+  value: Record<string, unknown> | null,
+): NonNullable<QueryDeepPartialEntity<Experiment>["provenance"]> | null {
+  return value as NonNullable<QueryDeepPartialEntity<Experiment>["provenance"]>;
+}
+
+/** Another instance took over the experiment, or it was deleted. */
+export class ExperimentLeaseLost extends Error {
+  constructor() {
+    super("Experiment lease lost");
+    this.name = "ExperimentLeaseLost";
+  }
+}
+
+/** Fields of a run the runner changes. */
+export type RunPatch = Partial<
+  Pick<
+    ExperimentRun,
+    | "status"
+    | "error"
+    | "attempts"
+    | "branch"
+    | "commit_hash"
+    | "committed_at"
+    | "submitted_on"
+    | "first_submitted_on"
+    | "ended_on"
+  >
+> & { analysis?: { id: string }; shared_from?: { id: string } };
+
+export interface ExperimentFinish {
+  status:
+    | ExperimentStatus.COMPLETED
+    | ExperimentStatus.CANCELLED
+    | ExperimentStatus.FAILED;
+  error?: string;
+  provenance?: Record<string, unknown> | null;
+}
+
+/**
+ * Where experiment and run state lives. Everything the runner knows is read
+ * from here on each pass, so a restarted API resumes from it.
+ *
+ * A run is in flight once it has an analysis submitted (pending with
+ * submitted_on set), and unsubmitted while pending without it. A shared
+ * run (shared_from set) is never in flight: it takes its owner's outcome.
+ */
+export abstract class ExperimentStore {
+  /**
+   * Lease the oldest experiment that still needs driving (PENDING, RUNNING,
+   * or CANCELLED with analyses still finishing) whose lease is free, expired
+   * or already ours.
+   */
+  abstract claimNext(
+    owner: string,
+    exclude: string[],
+  ): Promise<string | undefined>;
+
+  /** @throws {ExperimentLeaseLost} If the lease is no longer ours */
+  abstract renewLease(id: string, owner: string): Promise<void>;
+
+  /** Give the experiment back, to be claimed again no earlier than `retryAt`. */
+  abstract release(id: string, owner: string, retryAt: Date): Promise<void>;
+
+  /** With organization, created_by, dataset.integration and analyzer. */
+  abstract getExperiment(id: string): Promise<Experiment | null>;
+
+  /** The status as committed now, null if the experiment is gone. */
+  abstract getStatus(id: string): Promise<ExperimentStatus | null>;
+
+  /**
+   * PENDING to RUNNING, with what was snapshotted at start.
+   * @throws {ExperimentLeaseLost} If the lease is no longer ours
+   */
+  abstract start(
+    id: string,
+    owner: string,
+    patch: Pick<Experiment, "analyzer_steps" | "provenance">,
+  ): Promise<void>;
+
+  /**
+   * End the experiment and drop the lease. FAILED also skips every pending run.
+   * @throws {ExperimentLeaseLost} If the lease is no longer ours
+   */
+  abstract finish(
+    id: string,
+    owner: string,
+    finish: ExperimentFinish,
+  ): Promise<void>;
+
+  /**
+   * PENDING or RUNNING to CANCELLED; unsubmitted runs are skipped, in-flight
+   * runs are left to finish. False if the experiment had already ended.
+   */
+  abstract cancel(id: string): Promise<boolean>;
+
+  /**
+   * Skip the unsubmitted runs of a cancelled experiment, such as a failed
+   * attempt that was set up for a retry while cancel committed.
+   */
+  abstract skipUnsubmitted(experimentId: string): Promise<void>;
+
+  /** In-flight runs with their analysis and dataset entry. */
+  abstract getInFlightRuns(experimentId: string): Promise<ExperimentRun[]>;
+
+  /** Unsubmitted runs with their dataset entry, by entry rank then grid index. */
+  abstract getUnsubmittedRuns(
+    experimentId: string,
+    limit: number,
+  ): Promise<ExperimentRun[]>;
+
+  /** In-flight runs across every experiment (the global cap). */
+  abstract countInFlight(): Promise<number>;
+
+  /**
+   * True when an in-flight run or probe of an experiment a pass can still
+   * drive has a finished or deleted analysis.
+   */
+  abstract hasFinishedInFlight(): Promise<boolean>;
+
+  abstract countPending(experimentId: string): Promise<number>;
+
+  /**
+   * Another run of the entry pinned to this commit that owns its analysis
+   * (shares from no other run) and was not skipped, null if there is none.
+   */
+  abstract findCommitRun(
+    experimentId: string,
+    entryId: string,
+    commitHash: string,
+    excludeRunId: string,
+  ): Promise<ExperimentRun | null>;
+
+  /**
+   * Give every pending run that shares a commit the outcome of the run it
+   * shares from, once that run has ended: status, reason, analysis and the
+   * knowledge its rows were matched against.
+   */
+  abstract settleSharedRuns(experimentId: string): Promise<void>;
+
+  /** Apply a patch to a run that is still pending. False if it was not. */
+  abstract updateRun(runId: string, patch: RunPatch): Promise<boolean>;
+
+  /**
+   * Link a still-pending run to its analysis inside the caller's transaction.
+   * False if the run was no longer pending.
+   */
+  abstract linkRun(
+    manager: EntityManager,
+    runId: string,
+    analysisId: string,
+  ): Promise<boolean>;
+
+  /** A plugin's stored result payload for an analysis, null if it has none. */
+  abstract getPluginResult(
+    analysisId: string,
+    plugin: string,
+  ): Promise<unknown>;
+
+  /**
+   * Replace the run's copied rows and mark it done, with `reason` when empty.
+   * False, with nothing written, if the run is failed or skipped.
+   */
+  abstract copyRunRows(
+    experimentId: string,
+    runId: string,
+    rows: RunRows,
+    reason?: string,
+    knowledge?: KnowledgeProvenance | null,
+  ): Promise<boolean>;
+
+  /** Write the packages an entry resolves at a commit, replacing any row for it. */
+  abstract saveProbeOutcome(outcome: ProbeOutcome): Promise<void>;
+
+  /**
+   * What probe planning reads, for the entries whose snapshot runs have all
+   * ended: runs, instances, probe outcome rows, intervals and probes.
+   */
+  abstract getProbeRows(
+    experimentId: string,
+  ): Promise<ExposuresInput & { runs: ResultsRunInput[] }>;
+
+  abstract getDatasetEntries(ids: string[]): Promise<DatasetEntry[]>;
+
+  /** Record the lockfile-touching commits of an interval; a listed one is kept. */
+  abstract saveProbeInterval(interval: ProbeInterval): Promise<void>;
+
+  /**
+   * Insert a pending, submitted probe of a commit. Null if the commit was
+   * already probed (or is being).
+   */
+  abstract reserveProbe(probe: ProbeReservation): Promise<string | null>;
+
+  /** Link a pending probe to its analysis inside the caller's transaction. */
+  abstract linkProbe(
+    manager: EntityManager,
+    probeId: string,
+    analysisId: string,
+  ): Promise<boolean>;
+
+  /** Analyses the experiment submitted: every snapshot attempt and every submitted probe. */
+  abstract countSubmittedAnalyses(experimentId: string): Promise<number>;
+
+  /** End a pending probe whose analysis was never submitted, so the budget skips it. */
+  abstract failProbeSubmission(probeId: string, error: string): Promise<void>;
+
+  /** Pending probes of the experiment, with their analysis and dataset entry. */
+  abstract getInFlightProbes(experimentId: string): Promise<ExperimentProbe[]>;
+
+  /** End a pending probe as done or failed. False if it was not pending. */
+  abstract endProbe(
+    probeId: string,
+    status: "done" | "failed",
+    error?: string,
+  ): Promise<boolean>;
+}
+
+/** The lockfile-touching commits between two snapshot commits of an entry. */
+export interface ProbeInterval {
+  experimentId: string;
+  datasetEntryId: string;
+  /** Null when the interval starts before the first commit */
+  fromCommit: string | null;
+  toCommit: string;
+  lockfilePath: string | null;
+  candidates: ProbeCandidate[];
+  error: string | null;
+}
+
+export interface ProbeReservation {
+  experimentId: string;
+  datasetEntryId: string;
+  commitHash: string;
+  committedAt: Date | null;
+}
+
+/** The packages one dataset entry resolves at one commit. */
+export interface ProbeOutcome {
+  experimentId: string;
+  datasetEntryId: string;
+  commitHash: string;
+  committedAt: Date | null;
+  packages: ProbePackage[];
+}
+
+/**
+ * Leases are plain row updates, as in the dataset builder: session advisory
+ * locks don't survive pgbouncer's transaction pooling.
+ */
+@Injectable()
+export class TypeOrmExperimentStore extends ExperimentStore {
+  constructor(
+    @InjectRepository(Experiment, "codeclarity")
+    private readonly experimentRepository: Repository<Experiment>,
+    @InjectRepository(ExperimentRun, "codeclarity")
+    private readonly runRepository: Repository<ExperimentRun>,
+    @InjectRepository(Result, "codeclarity")
+    private readonly resultRepository: Repository<Result>,
+    @InjectRepository(ExperimentProbeOutcome, "codeclarity")
+    private readonly probeOutcomeRepository: Repository<ExperimentProbeOutcome>,
+    @InjectRepository(ExperimentProbe, "codeclarity")
+    private readonly probeRepository: Repository<ExperimentProbe>,
+    @InjectRepository(DatasetEntry, "codeclarity")
+    private readonly entryRepository: Repository<DatasetEntry>,
+  ) {
+    super();
+  }
+
+  async claimNext(
+    owner: string,
+    exclude: string[],
+  ): Promise<string | undefined> {
+    const result = await this.experimentRepository
+      .createQueryBuilder()
+      .update(Experiment)
+      .set({
+        lease_owner: owner,
+        lease_until: () =>
+          `now() + interval '${EXPERIMENT_LEASE_SECONDS} seconds'`,
+      })
+      .where(
+        `id = (SELECT e.id FROM experiment e
+               WHERE ${drivable("e")}
+                 AND (e.lease_until IS NULL OR e.lease_until < now()
+                      OR e.lease_owner = :owner)
+                 AND e.id <> ALL(CAST(:exclude AS uuid[]))
+               ORDER BY e.created_on
+               LIMIT 1
+               FOR UPDATE SKIP LOCKED)`,
+        { owner, exclude },
+      )
+      .returning(["id"])
+      .execute();
+    const rows = result.raw as { id: string }[];
+    return rows[0]?.id;
+  }
+
+  async renewLease(id: string, owner: string): Promise<void> {
+    await this.updateHeld(id, owner, {
+      lease_until: () =>
+        `now() + interval '${EXPERIMENT_LEASE_SECONDS} seconds'`,
+    });
+  }
+
+  async release(id: string, owner: string, retryAt: Date): Promise<void> {
+    await this.updateHeld(id, owner, {
+      lease_owner: null,
+      lease_until: retryAt,
+    });
+  }
+
+  async getExperiment(id: string): Promise<Experiment | null> {
+    return this.experimentRepository.findOne({
+      where: { id },
+      relations: {
+        organization: true,
+        created_by: true,
+        dataset: { integration: true },
+        analyzer: true,
+      },
+    });
+  }
+
+  async getStatus(id: string): Promise<ExperimentStatus | null> {
+    const experiment = await this.experimentRepository.findOne({
+      where: { id },
+      select: { id: true, status: true },
+    });
+    return experiment?.status ?? null;
+  }
+
+  async start(
+    id: string,
+    owner: string,
+    patch: Pick<Experiment, "analyzer_steps" | "provenance">,
+  ): Promise<void> {
+    await this.updateHeld(id, owner, {
+      status: ExperimentStatus.RUNNING,
+      started_on: new Date(),
+      analyzer_steps: patch.analyzer_steps ?? null,
+      provenance: jsonb(patch.provenance ?? null),
+    });
+  }
+
+  async finish(
+    id: string,
+    owner: string,
+    finish: ExperimentFinish,
+  ): Promise<void> {
+    await this.experimentRepository.manager.transaction(async (manager) => {
+      const update = await manager
+        .createQueryBuilder()
+        .update(Experiment)
+        .set({
+          status: finish.status,
+          error: finish.error?.slice(0, ERROR_MAX_LENGTH) ?? null,
+          ...(finish.provenance === undefined
+            ? {}
+            : { provenance: jsonb(finish.provenance) }),
+          ended_on: new Date(),
+          lease_owner: null,
+          lease_until: null,
+        })
+        .where("id = :id AND lease_owner = :owner", { id, owner })
+        .execute();
+      if (!update.affected) throw new ExperimentLeaseLost();
+
+      if (finish.status === ExperimentStatus.FAILED) {
+        await manager.update(
+          ExperimentRun,
+          { experiment: { id }, status: ExperimentRunStatus.PENDING },
+          {
+            status: ExperimentRunStatus.SKIPPED,
+            error: `experiment failed: ${finish.error ?? ""}`.slice(
+              0,
+              ERROR_MAX_LENGTH,
+            ),
+            ended_on: new Date(),
+          },
+        );
+      }
+    });
+  }
+
+  async cancel(id: string): Promise<boolean> {
+    return this.experimentRepository.manager.transaction(async (manager) => {
+      const update = await manager
+        .createQueryBuilder()
+        .update(Experiment)
+        .set({ status: ExperimentStatus.CANCELLED })
+        .where("id = :id AND status IN (:...statuses)", {
+          id,
+          statuses: [ExperimentStatus.PENDING, ExperimentStatus.RUNNING],
+        })
+        .execute();
+      if (!update.affected) return false;
+      await this.skipUnsubmittedWith(manager, id);
+      return true;
+    });
+  }
+
+  async skipUnsubmitted(experimentId: string): Promise<void> {
+    await this.skipUnsubmittedWith(this.runRepository.manager, experimentId);
+  }
+
+  async getInFlightRuns(experimentId: string): Promise<ExperimentRun[]> {
+    return this.runRepository.find({
+      where: {
+        experiment: { id: experimentId },
+        status: ExperimentRunStatus.PENDING,
+        submitted_on: Not(IsNull()),
+        shared_from: IsNull(),
+      },
+      relations: { analysis: true, dataset_entry: true },
+    });
+  }
+
+  async getUnsubmittedRuns(
+    experimentId: string,
+    limit: number,
+  ): Promise<ExperimentRun[]> {
+    if (limit <= 0) return [];
+    return this.runRepository.find({
+      where: {
+        experiment: { id: experimentId },
+        status: ExperimentRunStatus.PENDING,
+        submitted_on: IsNull(),
+      },
+      relations: { dataset_entry: true },
+      order: { dataset_entry: { rank: "ASC" }, grid_index: "ASC" },
+      take: limit,
+    });
+  }
+
+  async countInFlight(): Promise<number> {
+    const [runs, probes] = await Promise.all([
+      this.runRepository.count({
+        where: {
+          status: ExperimentRunStatus.PENDING,
+          submitted_on: Not(IsNull()),
+          shared_from: IsNull(),
+        },
+      }),
+      this.probeRepository.count({ where: { status: "pending" } }),
+    ]);
+    return runs + probes;
+  }
+
+  async hasFinishedInFlight(): Promise<boolean> {
+    const rows: { finished: boolean }[] = await this.runRepository.query(
+      `SELECT EXISTS (
+                SELECT 1 FROM experiment_run AS run
+                  JOIN experiment ON experiment.id = run."experimentId"
+                  LEFT JOIN analysis ON analysis.id = run."analysisId"
+                 WHERE ${drivable("experiment")}
+                   AND run.status = $1
+                   AND run.submitted_on IS NOT NULL
+                   AND run."sharedFromId" IS NULL
+                   AND (analysis.id IS NULL OR analysis.status = ANY($2))
+              ) OR EXISTS (
+                SELECT 1 FROM experiment_probe AS probe
+                  JOIN experiment ON experiment.id = probe."experimentId"
+                  LEFT JOIN analysis ON analysis.id = probe."analysisId"
+                 WHERE ${drivable("experiment")}
+                   AND probe.status = 'pending'
+                   AND (analysis.id IS NULL OR analysis.status = ANY($2))
+              ) AS finished`,
+      [ExperimentRunStatus.PENDING, [...TERMINAL_ANALYSIS_STATUSES]],
+    );
+    return rows[0]?.finished === true;
+  }
+
+  async countPending(experimentId: string): Promise<number> {
+    return this.runRepository.count({
+      where: {
+        experiment: { id: experimentId },
+        status: ExperimentRunStatus.PENDING,
+      },
+    });
+  }
+
+  async findCommitRun(
+    experimentId: string,
+    entryId: string,
+    commitHash: string,
+    excludeRunId: string,
+  ): Promise<ExperimentRun | null> {
+    return this.runRepository.findOne({
+      where: {
+        id: Not(excludeRunId),
+        experiment: { id: experimentId },
+        dataset_entry: { id: entryId },
+        commit_hash: commitHash,
+        shared_from: IsNull(),
+        status: Not(ExperimentRunStatus.SKIPPED),
+      },
+      order: { grid_index: "ASC" },
+    });
+  }
+
+  async settleSharedRuns(experimentId: string): Promise<void> {
+    await this.runRepository.query(
+      `UPDATE experiment_run AS run
+          SET status = owner.status,
+              error = owner.error,
+              ended_on = COALESCE(owner.ended_on, now()),
+              "analysisId" = owner."analysisId",
+              knowledge = owner.knowledge
+         FROM experiment_run AS owner
+        WHERE owner.id = run."sharedFromId"
+          AND run."experimentId" = $1
+          AND run.status = $2
+          AND owner.status <> $2`,
+      [experimentId, ExperimentRunStatus.PENDING],
+    );
+  }
+
+  async updateRun(runId: string, patch: RunPatch): Promise<boolean> {
+    const { analysis, shared_from, ...fields } = patch;
+    const result = await this.runRepository
+      .createQueryBuilder()
+      .update(ExperimentRun)
+      .set({
+        ...fields,
+        ...(fields.error === undefined
+          ? {}
+          : { error: fields.error?.slice(0, ERROR_MAX_LENGTH) ?? null }),
+        ...(analysis ? { analysis: { id: analysis.id } } : {}),
+        ...(shared_from ? { shared_from: { id: shared_from.id } } : {}),
+      })
+      .where("id = :id AND status = :pending", {
+        id: runId,
+        pending: ExperimentRunStatus.PENDING,
+      })
+      .execute();
+    return Boolean(result.affected);
+  }
+
+  async linkRun(
+    manager: EntityManager,
+    runId: string,
+    analysisId: string,
+  ): Promise<boolean> {
+    const result = await manager
+      .createQueryBuilder()
+      .update(ExperimentRun)
+      .set({ analysis: { id: analysisId } })
+      .where("id = :id AND status = :pending", {
+        id: runId,
+        pending: ExperimentRunStatus.PENDING,
+      })
+      .execute();
+    return Boolean(result.affected);
+  }
+
+  async getPluginResult(analysisId: string, plugin: string): Promise<unknown> {
+    const result = await this.resultRepository.findOne({
+      where: { analysis: { id: analysisId }, plugin },
+      select: { id: true, result: true, created_on: true },
+      order: NEWEST_RESULT_FIRST,
+    });
+    return result?.result ?? null;
+  }
+
+  async copyRunRows(
+    experimentId: string,
+    runId: string,
+    rows: RunRows,
+    reason?: string,
+    knowledge: KnowledgeProvenance | null = null,
+  ): Promise<boolean> {
+    return this.runRepository.manager.transaction(async (manager) => {
+      // Locking the run serializes concurrent copies of it
+      const run = await manager
+        .createQueryBuilder(ExperimentRun, "run")
+        .setLock("pessimistic_write")
+        .where("run.id = :runId", { runId })
+        .getOne();
+      if (
+        run?.status !== ExperimentRunStatus.PENDING &&
+        run?.status !== ExperimentRunStatus.DONE
+      ) {
+        return false;
+      }
+
+      const owner = { experiment: { id: experimentId }, run: { id: runId } };
+      await manager.delete(ExperimentVulnerabilityInstance, {
+        run: { id: runId },
+      });
+      await manager.delete(ExperimentRunSummaryRow, { run: { id: runId } });
+      await manager.insert(ExperimentRunSummaryRow, {
+        ...rows.summary,
+        ...owner,
+      });
+      for (let i = 0; i < rows.vulnerabilities.length; i += INSERT_CHUNK) {
+        await manager.insert(
+          ExperimentVulnerabilityInstance,
+          rows.vulnerabilities
+            .slice(i, i + INSERT_CHUNK)
+            .map((row) => ({ ...row, ...owner })),
+        );
+      }
+      await manager.update(
+        ExperimentRun,
+        { id: runId },
+        {
+          status: ExperimentRunStatus.DONE,
+          error: reason ?? null,
+          ended_on: run.ended_on ?? new Date(),
+          knowledge,
+        },
+      );
+      return true;
+    });
+  }
+
+  private async skipUnsubmittedWith(
+    manager: EntityManager,
+    experimentId: string,
+  ): Promise<void> {
+    await manager.update(
+      ExperimentRun,
+      {
+        experiment: { id: experimentId },
+        status: ExperimentRunStatus.PENDING,
+        submitted_on: IsNull(),
+      },
+      {
+        status: ExperimentRunStatus.SKIPPED,
+        error: "cancelled",
+        ended_on: new Date(),
+      },
+    );
+  }
+
+  /** @throws {ExperimentLeaseLost} If the lease is no longer ours */
+  private async updateHeld(
+    id: string,
+    owner: string,
+    set: QueryDeepPartialEntity<Experiment>,
+  ): Promise<void> {
+    const result = await this.experimentRepository
+      .createQueryBuilder()
+      .update(Experiment)
+      .set(set)
+      .where("id = :id AND lease_owner = :owner", { id, owner })
+      .execute();
+    if (!result.affected) throw new ExperimentLeaseLost();
+  }
+
+  async saveProbeOutcome(outcome: ProbeOutcome): Promise<void> {
+    await this.probeOutcomeRepository.query(
+      `INSERT INTO experiment_probe_outcome
+         ("experimentId", "datasetEntryId", commit_hash, committed_at, packages)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT ("experimentId", "datasetEntryId", commit_hash)
+       DO UPDATE SET committed_at = EXCLUDED.committed_at, packages = EXCLUDED.packages`,
+      [
+        outcome.experimentId,
+        outcome.datasetEntryId,
+        outcome.commitHash,
+        outcome.committedAt,
+        JSON.stringify(outcome.packages),
+      ],
+    );
+  }
+
+  async getProbeRows(
+    experimentId: string,
+  ): Promise<ExposuresInput & { runs: ResultsRunInput[] }> {
+    const query: RawQuery = (sql, params) =>
+      this.runRepository.query(sql, params);
+    return readPlanningRows(query, experimentId);
+  }
+
+  async getDatasetEntries(ids: string[]): Promise<DatasetEntry[]> {
+    if (ids.length === 0) return [];
+    return this.entryRepository.find({ where: { id: In(ids) } });
+  }
+
+  async saveProbeInterval(interval: ProbeInterval): Promise<void> {
+    await this.runRepository.query(
+      `INSERT INTO experiment_probe_interval
+         ("experimentId", "datasetEntryId", from_commit, to_commit, lockfile_path, candidates, error)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT ("experimentId", "datasetEntryId", from_commit, to_commit) DO NOTHING`,
+      [
+        interval.experimentId,
+        interval.datasetEntryId,
+        interval.fromCommit ?? "",
+        interval.toCommit,
+        interval.lockfilePath,
+        JSON.stringify(interval.candidates),
+        interval.error?.slice(0, ERROR_MAX_LENGTH) ?? null,
+      ],
+    );
+  }
+
+  async reserveProbe(probe: ProbeReservation): Promise<string | null> {
+    const rows = await this.runRepository.query<{ id: string }[]>(
+      `INSERT INTO experiment_probe
+         ("experimentId", "datasetEntryId", commit_hash, committed_at, status, submitted_on)
+       VALUES ($1, $2, $3, $4, 'pending', now())
+       ON CONFLICT ("experimentId", "datasetEntryId", commit_hash) DO NOTHING
+       RETURNING id`,
+      [
+        probe.experimentId,
+        probe.datasetEntryId,
+        probe.commitHash,
+        probe.committedAt,
+      ],
+    );
+    return rows[0]?.id ?? null;
+  }
+
+  async linkProbe(
+    manager: EntityManager,
+    probeId: string,
+    analysisId: string,
+  ): Promise<boolean> {
+    const result = await manager
+      .createQueryBuilder()
+      .update(ExperimentProbe)
+      .set({ analysis: { id: analysisId } })
+      .where("id = :id AND status = 'pending'", { id: probeId })
+      .execute();
+    return Boolean(result.affected);
+  }
+
+  async countSubmittedAnalyses(experimentId: string): Promise<number> {
+    const query: RawQuery = (sql, params) =>
+      this.runRepository.query(sql, params);
+    return readAnalysesSubmitted(query, experimentId);
+  }
+
+  async failProbeSubmission(probeId: string, error: string): Promise<void> {
+    await this.probeRepository
+      .createQueryBuilder()
+      .update(ExperimentProbe)
+      .set({
+        status: "failed",
+        error: error.slice(0, ERROR_MAX_LENGTH),
+        submitted_on: null,
+        ended_on: new Date(),
+      })
+      .where("id = :id AND status = 'pending'", { id: probeId })
+      .execute();
+  }
+
+  async getInFlightProbes(experimentId: string): Promise<ExperimentProbe[]> {
+    return this.probeRepository.find({
+      where: { experiment: { id: experimentId }, status: "pending" },
+      relations: { analysis: true, dataset_entry: true },
+    });
+  }
+
+  async endProbe(
+    probeId: string,
+    status: "done" | "failed",
+    error?: string,
+  ): Promise<boolean> {
+    const result = await this.probeRepository
+      .createQueryBuilder()
+      .update(ExperimentProbe)
+      .set({
+        status,
+        error: error?.slice(0, ERROR_MAX_LENGTH) ?? null,
+        ended_on: new Date(),
+      })
+      .where("id = :id AND status = 'pending'", { id: probeId })
+      .execute();
+    return Boolean(result.affected);
+  }
+}

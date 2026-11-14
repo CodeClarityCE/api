@@ -27,6 +27,7 @@ export enum AnalysisStatus {
   FAILED = "failed",
   SUCCESS = "success",
   CANCELLED = "cancelled",
+  SKIPPED = "skipped",
 }
 
 export interface StageBase {
@@ -85,6 +86,8 @@ export class Analysis {
   })
   branch!: string;
 
+  @ApiProperty()
+  @Expose()
   @Column({
     type: "varchar",
     length: 25,

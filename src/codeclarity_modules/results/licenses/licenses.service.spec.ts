@@ -70,7 +70,7 @@ describe("LicensesService", () => {
   };
 
   const mockSbomUtilsService = {
-    getSbomResult: jest.fn(),
+    getMergedSbomResults: jest.fn(),
   };
 
   const mockResultRepository = {
@@ -215,7 +215,10 @@ describe("LicensesService", () => {
       mockLicensesUtilsService.getLicensesResult.mockResolvedValue(
         mockLicensesOutput,
       );
-      mockSbomUtilsService.getSbomResult.mockResolvedValue(mockSbomOutput);
+      mockSbomUtilsService.getMergedSbomResults.mockResolvedValue({
+        mergedSbom: mockSbomOutput,
+        pluginResults: [],
+      });
 
       // Mock the getDependencyVersions method to avoid "Not implemented" error
       jest.spyOn(service as any, "getDependencyVersions").mockResolvedValue({});
@@ -239,9 +242,59 @@ describe("LicensesService", () => {
       expect(licensesUtilsService.getLicensesResult).toHaveBeenCalledWith(
         "analysis-123",
       );
-      expect(sbomUtilsService.getSbomResult).toHaveBeenCalledWith(
+      expect(sbomUtilsService.getMergedSbomResults).toHaveBeenCalledWith(
         "analysis-123",
       );
+    });
+
+    it("should describe dependencies from every ecosystem of a mixed project", async () => {
+      mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+      mockLicensesUtilsService.getLicensesResult.mockResolvedValue({
+        workspaces: {
+          default: {
+            LicensesDepMap: {
+              MIT: ["lodash@4.17.21", "monolog/monolog@3.0.0"],
+            },
+          },
+        },
+      });
+      const sbomWith = (name: string, packageManager: string) => ({
+        workspaces: { default: { dependencies: { [name]: {} } } },
+        analysis_info: { package_manager: packageManager },
+      });
+      mockSbomUtilsService.getMergedSbomResults.mockResolvedValue({
+        mergedSbom: {
+          workspaces: {},
+          analysis_info: { package_manager: "NPM" },
+        },
+        pluginResults: [
+          { plugin: "js-sbom", sbom: sbomWith("lodash", "NPM") },
+          {
+            plugin: "php-sbom",
+            sbom: sbomWith("monolog/monolog", "COMPOSER"),
+          },
+        ],
+      });
+
+      const result = await service.getDependenciesUsingLicense(
+        "org-123",
+        "project-123",
+        "analysis-123",
+        mockUser,
+        "default",
+        "MIT",
+      );
+
+      expect(result["lodash@4.17.21"]).toMatchObject({
+        name: "lodash",
+        version: "4.17.21",
+        package_manager: "NPM",
+      });
+      expect(result["monolog/monolog@3.0.0"]).toMatchObject({
+        name: "monolog/monolog",
+        version: "3.0.0",
+        package_manager: "COMPOSER",
+      });
     });
 
     it("should throw UnknownWorkspace error for invalid workspace", async () => {
@@ -249,7 +302,10 @@ describe("LicensesService", () => {
       mockLicensesUtilsService.getLicensesResult.mockResolvedValue(
         mockLicensesOutput,
       );
-      mockSbomUtilsService.getSbomResult.mockResolvedValue(mockSbomOutput);
+      mockSbomUtilsService.getMergedSbomResults.mockResolvedValue({
+        mergedSbom: mockSbomOutput,
+        pluginResults: [],
+      });
 
       await expect(
         service.getDependenciesUsingLicense(

@@ -26,7 +26,7 @@ verifyDepsBeforeRun: false
 # @fastify/* plugin types disagree with the app's FastifyInstance type.
 # Keep this in sync with the fastify version in package.json.
 overrides:
-  fastify: 5.12.3
+  fastify: 5.12.8
 
 # Mirror the root workspace's allowBuilds verdicts so lifecycle scripts
 # (bcrypt native build, esbuild binary download, etc.) run for the right packages.

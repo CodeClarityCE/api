@@ -9,10 +9,6 @@ import {
   UseInterceptors,
 } from "@nestjs/common";
 import { ApiBody, ApiConsumes, ApiTags } from "@nestjs/swagger";
-import {
-  FileInterceptor,
-  MulterFile,
-} from "@webundsoehne/nest-fastify-file-upload";
 import { readFile } from "fs";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
@@ -28,6 +24,10 @@ import {
 import { validateAndJoinPath } from "src/utils/path-validator";
 
 import { FileService } from "./file.service";
+import {
+  SingleFileInterceptor,
+  type UploadedFilePart,
+} from "./single-file.interceptor";
 
 export interface UploadData {
   type: string;
@@ -48,7 +48,7 @@ export class FileController {
   @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
   @Patch("upload")
   @ApiConsumes("multipart/form-data")
-  @UseInterceptors(FileInterceptor("file"))
+  @UseInterceptors(SingleFileInterceptor)
   @ApiBody({
     required: true,
     schema: {
@@ -69,7 +69,7 @@ export class FileController {
     @Param("project_id") project_id: string,
     @Param("organization_id") organization_id: string,
     @Body() queryParams: UploadData,
-    @UploadedFile() file: MulterFile,
+    @UploadedFile() file: UploadedFilePart,
   ): Promise<void> {
     // https://medium.com/@hackntosh/how-to-handle-file-uploading-with-nestjs-fastify-swagger-81afb08767ce
     if (!file) {

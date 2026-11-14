@@ -71,6 +71,7 @@ export class CombinedAuthGuard implements CanActivate {
     if (jwtToken) {
       // 1. Verify jwt token (stateless no db lookup -> faster)
       const [jwtTokenValid, userJWT] = await this.verifyJWTToken(jwtToken);
+      if (!jwtTokenValid) throw new NotAuthenticated();
       if (!userJWT?.activated) throw new AccountNotActivated();
       if (jwtTokenValid) {
         if (request) {

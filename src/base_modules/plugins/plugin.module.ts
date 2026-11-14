@@ -15,6 +15,7 @@ import { PluginService } from "./plugin.service";
       imports: [ConfigModule],
       name: "plugin",
       useFactory: () => ({
+        name: "plugin",
         ...defaultOptions,
         database: "plugins",
         entities: [Plugin],

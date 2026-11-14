@@ -1,10 +1,17 @@
 import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { In, Repository } from "typeorm";
 
 import { Analyzer } from "src/base_modules/analyzers/analyzer.entity";
 import { AnalyzerCreateBody } from "src/base_modules/analyzers/analyzer.types";
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { ActionType } from "src/base_modules/organizations/log/orgAuditLog.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
+import {
+  Experiment,
+  ExperimentStatus,
+} from "src/codeclarity_modules/experiments/experiment.entity";
+import { assertNotUsedByExperiments } from "src/codeclarity_modules/experiments/experiment-in-use";
 import {
   PaginationConfig,
   PaginationUserSuppliedConf,
@@ -28,6 +35,8 @@ export class AnalyzersService {
     private readonly organizationsRepository: OrganizationsRepository,
     private readonly usersRepository: UsersRepository,
     private readonly analyzersRepository: AnalyzersRepository,
+    @InjectRepository(Experiment, "codeclarity")
+    private readonly experimentRepository: Repository<Experiment>,
   ) {}
 
   /**
@@ -236,6 +245,7 @@ export class AnalyzersService {
    * @param orgId - ID of the organization containing the analyzer to delete.
    * @param id - ID of the analyzer to be deleted.
    * @param user - Authenticated user deleting the analyzer.
+   * @throws {EntityInUse} If a PENDING or RUNNING experiment uses the analyzer
    */
   async delete(
     orgId: string,
@@ -251,6 +261,12 @@ export class AnalyzersService {
 
     // Verify that the specified analyzer belongs to the organization
     await this.analyzersRepository.doesAnalyzerBelongToOrg(id, orgId);
+
+    // An experiment still to run needs its analyzer; finished ones keep a step snapshot
+    await assertNotUsedByExperiments(this.experimentRepository, {
+      analyzer: { id },
+      status: In([ExperimentStatus.PENDING, ExperimentStatus.RUNNING]),
+    });
 
     // Delete the analyzer from the database
     await this.analyzersRepository.deleteAnalyzer(id);

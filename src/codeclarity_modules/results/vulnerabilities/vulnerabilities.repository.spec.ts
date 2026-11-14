@@ -106,11 +106,7 @@ describe("VulnerabilitiesRepository", () => {
           },
           plugin: "js-vuln-finder",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -130,11 +126,7 @@ describe("VulnerabilitiesRepository", () => {
           },
           plugin: "js-vuln-finder",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -164,11 +156,7 @@ describe("VulnerabilitiesRepository", () => {
           },
           plugin: "js-vuln-finder",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -319,11 +307,7 @@ describe("VulnerabilitiesRepository", () => {
 
       expect(resultRepository.findOne).toHaveBeenCalledWith(
         expect.objectContaining({
-          order: {
-            analysis: {
-              created_on: "DESC",
-            },
-          },
+          order: { created_on: "DESC", id: "DESC" },
           cache: true,
         }),
       );

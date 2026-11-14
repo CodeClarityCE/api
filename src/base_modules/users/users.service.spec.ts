@@ -6,7 +6,7 @@ import {
   ProjectsRepository,
   UsersRepository,
 } from "src/base_modules/shared/repositories";
-import { NotAuthorized } from "src/types/error.types";
+import { EmailAlreadyExists, NotAuthorized } from "src/types/error.types";
 import * as crypto from "src/utils/crypto";
 
 jest.mock("src/utils/crypto", () => ({
@@ -17,6 +17,7 @@ jest.mock("src/utils/crypto", () => ({
 import {
   AccountRegistrationVerificationTokenInvalidOrExpired,
   PasswordsDoNotMatch,
+  HandleAlreadyExists,
 } from "../auth/auth.errors";
 import { type AuthService } from "../auth/auth.service";
 import { AUTH_SERVICE } from "../auth/auth.tokens";
@@ -196,6 +197,8 @@ describe("UsersService", () => {
           useValue: {
             getUserById: jest.fn(),
             getUserByEmail: jest.fn(),
+            userExistsByEmail: jest.fn().mockResolvedValue(false),
+            userExistsByHandle: jest.fn().mockResolvedValue(false),
             saveUser: jest.fn(),
             deleteUser: jest.fn(),
           },
@@ -343,6 +346,24 @@ describe("UsersService", () => {
       await expect(service.register(invalidUserData)).rejects.toThrow(
         PasswordsDoNotMatch,
       );
+    });
+
+    it("should refuse an email that is already registered", async () => {
+      jest.spyOn(usersRepository, "userExistsByEmail").mockResolvedValue(true);
+
+      await expect(service.register(mockUserCreateBody)).rejects.toThrow(
+        EmailAlreadyExists,
+      );
+      expect(organizationsRepository.saveOrganization).not.toHaveBeenCalled();
+    });
+
+    it("should refuse a handle that is already taken", async () => {
+      jest.spyOn(usersRepository, "userExistsByHandle").mockResolvedValue(true);
+
+      await expect(service.register(mockUserCreateBody)).rejects.toThrow(
+        HandleAlreadyExists,
+      );
+      expect(organizationsRepository.saveOrganization).not.toHaveBeenCalled();
     });
 
     it("should continue registration even if email sending fails", async () => {

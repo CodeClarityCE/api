@@ -65,7 +65,11 @@ export class GithubRateLimited extends Error {
   }
 }
 
-function rateLimitedAt(err: GithubApiError, now: number): GithubRateLimited {
+/** The GithubRateLimited for a rate-limited request, at GitHub's reset time. */
+export function rateLimitedAt(
+  err: GithubApiError,
+  now: number,
+): GithubRateLimited {
   const delayMs = requestedRetryDelayMs(err.response?.headers ?? {}, now);
   return new GithubRateLimited(now + (delayMs || DEFAULT_RATE_LIMIT_WAIT_MS));
 }

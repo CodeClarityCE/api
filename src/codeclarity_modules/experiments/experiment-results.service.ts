@@ -1,0 +1,1078 @@
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import type { Readable } from "node:stream";
+import { In, Repository } from "typeorm";
+
+import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
+import { MembershipsRepository } from "src/base_modules/shared/repositories";
+import { CodeClarityLogger } from "src/services/logger.service";
+import { EntityNotFound } from "src/types/error.types";
+
+import { Experiment, ExperimentStatus } from "./experiment.entity";
+import type { AnalysisBudgetUsage } from "./experiment-budget";
+import {
+  type CsvEntry,
+  type CsvRow,
+  EXPOSURE_CSV_COLUMNS,
+  exposureCsvRow,
+  FIX_CSV_COLUMNS,
+  fixCsvRow,
+  RUN_CSV_COLUMNS,
+  streamCsv,
+  VULNERABILITY_CSV_COLUMNS,
+} from "./experiment-csv";
+import { dataDictionary } from "./experiment-data-dictionary";
+import { isUniqueViolation } from "./experiment-db-errors";
+import { deriveExposures, type Exposure } from "./experiment-exposures";
+import type { FigureRows } from "./experiment-figure-data";
+import type { ResultIntervals } from "./experiment-intervals";
+import { methodsText } from "./experiment-methods-text";
+import { METRIC_VERSION } from "./experiment-metric-version";
+import { ExperimentProbeOutcome } from "./experiment-probe-outcome.entity";
+import {
+  INSTANCE_COLUMNS,
+  type RawQuery,
+  readAnalysesSubmitted,
+  readKnownVersions,
+  readProbeOutcomes,
+  readProbeOutcomesInBatches,
+  readProbeRows,
+} from "./experiment-probe-rows";
+import type {
+  KnownVersionsInput,
+  ResultsProbeAnalysisInput,
+  ResultsProbeIntervalInput,
+} from "./experiment-probes";
+import { ExperimentPublishedResults } from "./experiment-published-results.entity";
+import {
+  buildReplicationPackage,
+  citationCff,
+  type ManifestCommit,
+  manifestJson,
+  type PackageFile,
+  packageFileStream,
+} from "./experiment-replication-package";
+import {
+  aggregateExperimentResults,
+  computeResultIntervalsYielding,
+  type ExperimentResults,
+  type ExperimentResultsInput,
+  headCutoff,
+  type KnowledgeSnapshot,
+  type ResultsProbeInput,
+  type ResultsProvenanceInput,
+  type ResultsRunInput,
+  type ResultsSummaryInput,
+  type ResultsVulnerabilityInput,
+} from "./experiment-results";
+import { ExperimentRun, ExperimentRunStatus } from "./experiment-run.entity";
+import { ExperimentRunSummaryRow } from "./experiment-run-summary-row.entity";
+import { ExperimentVulnerabilityInstance } from "./experiment-vulnerability-instance.entity";
+import {
+  ExperimentAlreadyPublished,
+  ExperimentNotPublishable,
+} from "./experiments.errors";
+import { creatorName, findExperimentInOrg } from "./experiments.service";
+
+/** Runs read per runs.csv chunk */
+const RUN_EXPORT_CHUNK = 1000;
+
+/**
+ * Runs whose instances are read per vulnerabilities.csv chunk. A chunk
+ * never splits a run, so its size is bounded by the runs' instance counts.
+ */
+const VULNERABILITY_EXPORT_RUNS_PER_CHUNK = 20;
+
+/** Entries whose exposures are derived per exposures.csv / fixes.csv chunk */
+const EXPOSURE_EXPORT_ENTRIES_PER_CHUNK = 20;
+
+/** Ended experiments whose bootstrap intervals are kept in memory */
+const INTERVAL_CACHE_SIZE = 100;
+
+/** Ended experiments whose copied rows are kept in memory */
+const ROWS_CACHE_SIZE = 8;
+
+/** The rows exposures are derived from. */
+interface ExposureRows {
+  runs: ResultsRunInput[];
+  vulnerabilities: ResultsVulnerabilityInput[];
+  probes: ResultsProbeInput[];
+  probe_intervals: ResultsProbeIntervalInput[];
+  probe_analyses: ResultsProbeAnalysisInput[];
+  budget: AnalysisBudgetUsage | null;
+}
+
+/** Stored rows read so far; zero total when no read is under way. */
+export interface LoadProgress {
+  done: number;
+  total: number;
+}
+
+/** Everything results and Figures are computed from. */
+interface ExperimentRows extends ExposureRows {
+  summaries: ResultsSummaryInput[];
+}
+
+/** Cache key of an ended experiment, null while it runs and its rows change. */
+function endedKey(experiment: Experiment): string | null {
+  return experiment.ended_on
+    ? `${experiment.id}:${new Date(experiment.ended_on).toISOString()}:${METRIC_VERSION}`
+    : null;
+}
+
+/** The cached promise for a key, kept by last read. A failure is not kept. */
+function remember<T>(
+  cache: Map<string, Promise<T>>,
+  key: string,
+  limit: number,
+  start: () => Promise<T>,
+): Promise<T> {
+  let value = cache.get(key);
+  if (!value) {
+    value = start();
+    value.catch(() => cache.delete(key));
+  }
+  // Re-inserting keeps the map ordered by last read
+  cache.delete(key);
+  cache.set(key, value);
+  if (cache.size > limit) cache.delete(cache.keys().next().value!);
+  return value;
+}
+
+/** Export columns read from the dataset entry and from the run itself */
+const ENTRY_COLUMNS: ReadonlySet<string> = new Set([
+  "rank",
+  "full_name",
+  "stars",
+  "git_url",
+]);
+const RUN_COLUMNS: ReadonlySet<string> = new Set([
+  "status",
+  "error",
+  "attempts",
+  "branch",
+  "commit_hash",
+  "committed_at",
+]);
+
+/** The run's grid date as its UTC calendar day, "HEAD" for HEAD. */
+const GRID_DATE_SELECT = `CASE WHEN run.grid_date IS NULL THEN 'HEAD'
+  ELSE to_char(run.grid_date AT TIME ZONE 'UTC', 'YYYY-MM-DD') END AS "grid_date"`;
+
+/** Export chunks are keyed by (rank, grid index): read along, not written */
+const GRID_INDEX_SELECT = 'run.grid_index AS "grid_index"';
+
+/** Rows strictly after the last exported (rank, grid index). */
+function afterSnapshot(after: CsvRow): {
+  where: string;
+  params: { rank: number; gridIndex: number };
+} {
+  return {
+    where: "(entry.rank, run.grid_index) > (:rank, :gridIndex)",
+    params: {
+      rank: Number(after["rank"]),
+      gridIndex: Number(after["grid_index"]),
+    },
+  };
+}
+
+/**
+ * SELECT expressions for export columns, each aliased to its CSV header:
+ * entry and run columns from their tables, the rest from `rowsAlias` (the
+ * copied summary or instance rows).
+ */
+function exportSelect(
+  columns: readonly string[],
+  rowsAlias: "summary" | "instance",
+): string[] {
+  return columns.map((column) => {
+    if (column === "analysis_id") return 'run."analysisId" AS "analysis_id"';
+    if (column === "grid_date") return GRID_DATE_SELECT;
+    let alias: string = rowsAlias;
+    if (ENTRY_COLUMNS.has(column)) alias = "entry";
+    else if (RUN_COLUMNS.has(column)) alias = "run";
+    return `${alias}.${column} AS "${column}"`;
+  });
+}
+
+/** A streamed CSV export of an experiment. */
+export interface ExperimentCsvExport {
+  experiment_name: string;
+  stream: Readable;
+}
+
+/** The results of an experiment, for download. */
+export interface ExperimentResultsExport {
+  experiment_name: string;
+  results: ExperimentResults;
+}
+
+/** One Published results version, without its payload. */
+export interface PublishedResultsSummary {
+  metric_version: number;
+  published_on: Date;
+  published_by_name: string | null;
+  package_checksum: string | null;
+}
+
+/** A replication package, for download. */
+export interface PublishedPackageExport {
+  experiment_name: string;
+  archive: Buffer;
+}
+
+/**
+ * Reads over an experiment's copied rows: the results computed on every
+ * read, and the streamed CSV exports.
+ */
+@Injectable()
+export class ExperimentResultsService {
+  private readonly logger = CodeClarityLogger.forService("Experiments");
+
+  /** Bootstrap intervals by experiment and end time, oldest read first */
+  private readonly intervalCache = new Map<string, Promise<ResultIntervals>>();
+
+  /** Copied rows by experiment and end time, oldest read first */
+  private readonly rowsCache = new Map<string, Promise<ExperimentRows>>();
+
+  /** How far each read of an experiment's stored rows has got */
+  private readonly readProgress = new Map<string, LoadProgress>();
+
+  private readonly rawQuery: RawQuery = (sql, params) =>
+    this.probeOutcomeRepository.query(sql, params);
+
+  constructor(
+    private readonly membershipsRepository: MembershipsRepository,
+    @InjectRepository(Experiment, "codeclarity")
+    private readonly experimentRepository: Repository<Experiment>,
+    @InjectRepository(ExperimentRun, "codeclarity")
+    private readonly runRepository: Repository<ExperimentRun>,
+    @InjectRepository(ExperimentRunSummaryRow, "codeclarity")
+    private readonly summaryRepository: Repository<ExperimentRunSummaryRow>,
+    @InjectRepository(ExperimentVulnerabilityInstance, "codeclarity")
+    private readonly vulnerabilityRepository: Repository<ExperimentVulnerabilityInstance>,
+    @InjectRepository(ExperimentProbeOutcome, "codeclarity")
+    private readonly probeOutcomeRepository: Repository<ExperimentProbeOutcome>,
+    @InjectRepository(ExperimentPublishedResults, "codeclarity")
+    private readonly publishedRepository: Repository<ExperimentPublishedResults>,
+  ) {}
+
+  /** @throws {NotAuthorized} @throws {EntityNotFound} */
+  private async experimentFor(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+    role: MemberRole = MemberRole.USER,
+  ): Promise<Experiment> {
+    await this.membershipsRepository.hasRequiredRole(orgId, user.userId, role);
+    return findExperimentInOrg(this.experimentRepository, orgId, experimentId);
+  }
+
+  /**
+   * The newest Published results of an experiment, else its results computed
+   * from its copied rows on every read (ADR 0001), over the runs done so far.
+   * @throws {NotAuthorized} If the user is not a member of the org
+   * @throws {EntityNotFound} If the org has no such experiment
+   */
+  async getResults(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+  ): Promise<ExperimentResults> {
+    return (await this.exportResults(orgId, experimentId, user)).results;
+  }
+
+  /**
+   * The results payload with the experiment's name, for results.json: the
+   * given Published results version, else what the page shows by default.
+   * @throws {NotAuthorized} If the user is not a member of the org
+   * @throws {EntityNotFound} If the org has no such experiment
+   */
+  async exportResults(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+    metricVersion?: number,
+  ): Promise<ExperimentResultsExport> {
+    const experiment = await this.experimentFor(orgId, experimentId, user);
+
+    const published = await this.publishedRepository.findOne({
+      where: {
+        experiment: { id: experiment.id },
+        ...(metricVersion === undefined
+          ? {}
+          : { metric_version: metricVersion }),
+      },
+      order: { metric_version: "DESC" },
+    });
+    if (metricVersion !== undefined && !published) throw new EntityNotFound();
+    return {
+      experiment_name: experiment.name,
+      results: published?.results ?? (await this.computeResults(experiment)),
+    };
+  }
+
+  /**
+   * Freeze a finished experiment's results under the current metric version.
+   * One-way (ADR 0007). Runs the bootstrap unless it is already cached.
+   * @throws {NotAuthorized} If the user is not an admin of the org
+   * @throws {EntityNotFound} If the org has no such experiment
+   * @throws {ExperimentNotPublishable} If the experiment is not COMPLETED
+   * @throws {ExperimentAlreadyPublished} If this metric version is already stored
+   */
+  async publish(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+  ): Promise<Omit<PublishedResultsSummary, "published_by_name">> {
+    const experiment = await this.experimentFor(
+      orgId,
+      experimentId,
+      user,
+      MemberRole.ADMIN,
+    );
+    // Without an end time the bootstrap intervals would be left out
+    if (
+      experiment.status !== ExperimentStatus.COMPLETED ||
+      !experiment.ended_on
+    ) {
+      throw new ExperimentNotPublishable();
+    }
+    // Checked first so a repeat request never runs the bootstrap
+    const taken = await this.publishedRepository.exists({
+      where: {
+        experiment: { id: experiment.id },
+        metric_version: METRIC_VERSION,
+      },
+    });
+    if (taken) throw new ExperimentAlreadyPublished();
+
+    const results = await this.computeResults(experiment);
+    const publishedOn = new Date();
+    // Stored as bytes, so later metric or data changes cannot reach the package
+    const { archive, checksum } = await buildReplicationPackage(
+      this.packageFiles(experiment, results, publishedOn),
+    );
+    const stored = await this.publishedRepository
+      .save({
+        experiment,
+        metric_version: METRIC_VERSION,
+        results,
+        package_archive: archive,
+        package_checksum: checksum,
+        published_on: publishedOn,
+        published_by: { id: user.userId },
+      })
+      .catch((error: unknown) => {
+        throw isUniqueViolation(error)
+          ? new ExperimentAlreadyPublished(error)
+          : error;
+      });
+    this.logger.log("Experiment published", {
+      experimentId: experiment.id,
+      organizationId: orgId,
+      userId: user.userId,
+      metricVersion: METRIC_VERSION,
+    });
+    return {
+      metric_version: stored.metric_version,
+      published_on: stored.published_on,
+      package_checksum: stored.package_checksum,
+    };
+  }
+
+  /** Every file of the replication package, in archive order. */
+  private packageFiles(
+    experiment: Experiment,
+    results: ExperimentResults,
+    publishedOn: Date,
+  ): PackageFile[] {
+    return [
+      { name: "runs.csv", open: () => this.runsCsv(experiment) },
+      {
+        name: "vulnerabilities.csv",
+        open: () => this.vulnerabilitiesCsv(experiment),
+      },
+      {
+        name: "exposures.csv",
+        open: () =>
+          this.exposureCsv(
+            experiment,
+            "exposures.csv",
+            EXPOSURE_CSV_COLUMNS,
+            (entry, exposure) => exposureCsvRow(entry, exposure),
+          ),
+      },
+      {
+        name: "fixes.csv",
+        open: () =>
+          this.exposureCsv(experiment, "fixes.csv", FIX_CSV_COLUMNS, fixCsvRow),
+      },
+      { name: "results.json", open: () => JSON.stringify(results, null, 2) },
+      { name: "data_dictionary.md", open: () => dataDictionary() },
+      {
+        name: "manifest.json",
+        open: async () =>
+          manifestJson({
+            experiment_id: experiment.id,
+            experiment_name: experiment.name,
+            metric_version: METRIC_VERSION,
+            published_on: publishedOn,
+            provenance: results.provenance,
+            commits: await this.manifestCommits(experiment),
+          }),
+      },
+      {
+        name: "CITATION.cff",
+        open: () =>
+          citationCff({
+            experiment_name: experiment.name,
+            metric_version: METRIC_VERSION,
+            published_on: publishedOn,
+            author: experiment.created_by ?? null,
+          }),
+      },
+      {
+        name: "methods.md",
+        open: () =>
+          methodsText({
+            experiment_name: experiment.name,
+            metric_version: METRIC_VERSION,
+            published_on: publishedOn,
+            results,
+          }),
+      },
+    ];
+  }
+
+  /** Each snapshot of the experiment and its pinned commit, by rank then date. */
+  private async manifestCommits(
+    experiment: Experiment,
+  ): Promise<ManifestCommit[]> {
+    const runs = await this.runRepository.find({
+      where: { experiment: { id: experiment.id } },
+      select: {
+        id: true,
+        status: true,
+        grid_date: true,
+        branch: true,
+        commit_hash: true,
+        committed_at: true,
+        dataset_entry: { id: true, rank: true, full_name: true },
+      },
+      relations: { dataset_entry: true },
+      order: { dataset_entry: { rank: "ASC" }, grid_index: "ASC" },
+    });
+    return runs.map((run) => ({
+      rank: run.dataset_entry.rank,
+      full_name: run.dataset_entry.full_name,
+      grid_date: run.grid_date
+        ? new Date(run.grid_date).toISOString().slice(0, 10)
+        : "HEAD",
+      status: run.status,
+      branch: run.branch ?? null,
+      commit_hash: run.commit_hash ?? null,
+      committed_at: run.committed_at ?? null,
+    }));
+  }
+
+  /**
+   * How far the current read of the experiment's stored rows has got.
+   * @throws {NotAuthorized} If the user is not a member of the org
+   * @throws {EntityNotFound} If the org has no such experiment
+   */
+  async loadProgress(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+  ): Promise<LoadProgress> {
+    const experiment = await this.experimentFor(orgId, experimentId, user);
+    return this.readProgress.get(experiment.id) ?? { done: 0, total: 0 };
+  }
+
+  /**
+   * The metric version a publish would store now.
+   * @throws {NotAuthorized} If the user is not a member of the org
+   * @throws {EntityNotFound} If the org has no such experiment
+   */
+  async currentMetricVersion(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+  ): Promise<{ metric_version: number }> {
+    await this.experimentFor(orgId, experimentId, user);
+    return { metric_version: METRIC_VERSION };
+  }
+
+  /**
+   * The Published results versions of an experiment, newest first.
+   * @throws {NotAuthorized} If the user is not a member of the org
+   * @throws {EntityNotFound} If the org has no such experiment
+   */
+  async listPublished(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+  ): Promise<PublishedResultsSummary[]> {
+    const experiment = await this.experimentFor(orgId, experimentId, user);
+    const versions = await this.publishedRepository.find({
+      where: { experiment: { id: experiment.id } },
+      select: {
+        id: true,
+        metric_version: true,
+        published_on: true,
+        package_checksum: true,
+        published_by: { id: true, first_name: true, last_name: true },
+      },
+      relations: { published_by: true },
+      order: { metric_version: "DESC" },
+    });
+    return versions.map(publishedSummary);
+  }
+
+  /**
+   * One stored Published results version.
+   * @throws {NotAuthorized} If the user is not a member of the org
+   * @throws {EntityNotFound} If the experiment or the version does not exist
+   */
+  async getPublished(
+    orgId: string,
+    experimentId: string,
+    metricVersion: number,
+    user: AuthenticatedUser,
+  ): Promise<ExperimentResults> {
+    const experiment = await this.experimentFor(orgId, experimentId, user);
+    const published = await this.publishedRepository.findOne({
+      where: {
+        experiment: { id: experiment.id },
+        metric_version: metricVersion,
+      },
+    });
+    if (!published) throw new EntityNotFound();
+    return published.results;
+  }
+
+  /**
+   * The replication package frozen when a version was published.
+   * @throws {NotAuthorized} If the user is not a member of the org
+   * @throws {EntityNotFound} If the experiment, the version or its package does not exist
+   */
+  async getPublishedPackage(
+    orgId: string,
+    experimentId: string,
+    metricVersion: number,
+    user: AuthenticatedUser,
+  ): Promise<PublishedPackageExport> {
+    const experiment = await this.experimentFor(orgId, experimentId, user);
+    const published = await this.publishedRepository.findOne({
+      where: {
+        experiment: { id: experiment.id },
+        metric_version: metricVersion,
+      },
+      select: { id: true, package_archive: true },
+    });
+    if (!published?.package_archive) throw new EntityNotFound();
+    return {
+      experiment_name: experiment.name,
+      archive: published.package_archive,
+    };
+  }
+
+  /** The results computed from the experiment's copied rows (ADR 0001). */
+  private async computeResults(
+    experiment: Experiment,
+  ): Promise<ExperimentResults> {
+    const input = {
+      ...(await this.rowsOf(experiment)),
+      provenance: provenanceInput(experiment),
+    };
+    return aggregateExperimentResults({
+      ...input,
+      bootstrap_intervals: await this.intervalsOf(experiment, input),
+    });
+  }
+
+  /** The tidy rows a Figure is computed from. */
+  async figureRows(experiment: Experiment): Promise<FigureRows> {
+    return {
+      ...(await this.rowsOf(experiment)),
+      head_cutoff: headCutoff(experiment.ended_on ?? null, new Date()),
+    };
+  }
+
+  /** The rows results and Figures read; an ended experiment's are read once. */
+  private rowsOf(experiment: Experiment): Promise<ExperimentRows> {
+    const read = async (): Promise<ExperimentRows> => {
+      try {
+        const [rows, summaries] = await Promise.all([
+          this.exposureRows(experiment, null),
+          this.summaryRows(experiment),
+        ]);
+        return { ...rows, summaries };
+      } finally {
+        this.readProgress.delete(experiment.id);
+      }
+    };
+    const key = endedKey(experiment);
+    return key ? remember(this.rowsCache, key, ROWS_CACHE_SIZE, read) : read();
+  }
+
+  /** The copied summary of each done run, with its entry's star rank. */
+  private summaryRows(experiment: Experiment): Promise<ResultsSummaryInput[]> {
+    return this.summaryRepository
+      .createQueryBuilder("summary")
+      .innerJoin("summary.run", "run")
+      .innerJoin("run.dataset_entry", "entry")
+      .select('summary."runId"', "run_id")
+      .addSelect("entry.rank", "rank")
+      .addSelect("summary.total_dependencies", "total_dependencies")
+      .addSelect("summary.total_vulnerabilities", "total_vulnerabilities")
+      .addSelect("summary.package_manager", "package_manager")
+      .where('summary."experimentId" = :experimentId', {
+        experimentId: experiment.id,
+      })
+      .getRawMany<ResultsSummaryInput>();
+  }
+
+  /**
+   * The bootstrap intervals of an ended experiment, computed once. Null
+   * while it runs, as its rows still change on every poll.
+   */
+  private intervalsOf(
+    experiment: Experiment,
+    input: ExperimentResultsInput,
+  ): Promise<ResultIntervals> | null {
+    const key = endedKey(experiment);
+    if (!key) return null;
+    return remember(this.intervalCache, key, INTERVAL_CACHE_SIZE, () =>
+      computeResultIntervalsYielding(input),
+    );
+  }
+
+  /**
+   * Runs, instances and probe outcome rows of the experiment, or of some of
+   * its dataset entries only.
+   */
+  private async exposureRows(
+    experiment: Experiment,
+    entryIds: string[] | null,
+  ): Promise<ExposureRows> {
+    const experimentId = experiment.id;
+    const runs = await this.runRepository.find({
+      where: {
+        experiment: { id: experimentId },
+        ...(entryIds ? { dataset_entry: { id: In(entryIds) } } : {}),
+      },
+      select: {
+        id: true,
+        status: true,
+        error: true,
+        grid_index: true,
+        grid_date: true,
+        knowledge: true,
+        commit_hash: true,
+        committed_at: true,
+        shared_from: { id: true },
+        dataset_entry: { id: true },
+      },
+      relations: { shared_from: true, dataset_entry: true },
+    });
+
+    const instances = this.vulnerabilityRepository
+      .createQueryBuilder("instance")
+      .select('instance."runId"', "run_id");
+    for (const column of INSTANCE_COLUMNS) {
+      instances.addSelect(`instance.${column}`, column);
+    }
+    instances.where('instance."experimentId" = :experimentId', {
+      experimentId,
+    });
+    if (entryIds) {
+      instances.andWhere('instance."runId" IN (:...runIds)', {
+        runIds: runs.length ? runs.map((run) => run.id) : [null],
+      });
+    }
+
+    const query = this.rawQuery;
+    const budget = experiment.analysis_budget ?? null;
+    const [vulnerabilities, probes, probeRows, submitted] = await Promise.all([
+      instances.getRawMany<ResultsVulnerabilityInput>(),
+      entryIds
+        ? readProbeOutcomes(query, experimentId, entryIds)
+        : readProbeOutcomesInBatches(query, experimentId, (done, total) =>
+            this.readProgress.set(experimentId, { done, total }),
+          ),
+      readProbeRows(query, experimentId, entryIds),
+      budget === null ? null : readAnalysesSubmitted(query, experimentId),
+    ]);
+
+    return {
+      runs: runs.map((run) => ({
+        status: run.status,
+        error: run.error ?? null,
+        grid_index: run.grid_index,
+        grid_date: run.grid_date ?? null,
+        commit_hash: run.commit_hash ?? null,
+        committed_at: run.committed_at ?? null,
+        rows_run_id: run.shared_from?.id ?? run.id,
+        knowledge: knowledgeSnapshot(run.knowledge),
+        ...(run.dataset_entry
+          ? { dataset_entry_id: run.dataset_entry.id }
+          : {}),
+      })),
+      vulnerabilities,
+      probes,
+      ...probeRows,
+      budget:
+        budget === null || submitted === null
+          ? null
+          : { analysis_budget: budget, analyses_submitted: submitted },
+    };
+  }
+
+  /**
+   * exposures.csv: one row per exposure, derived on read, by entry rank.
+   * Streamed a few entries at a time.
+   * @throws {NotAuthorized} If the user is not a member of the org
+   * @throws {EntityNotFound} If the org has no such experiment
+   */
+  async exportExposuresCsv(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+    metricVersion?: number,
+  ): Promise<ExperimentCsvExport> {
+    return this.exportExposureCsv(
+      orgId,
+      experimentId,
+      user,
+      "exposures.csv",
+      EXPOSURE_CSV_COLUMNS,
+      (entry, exposure) => exposureCsvRow(entry, exposure),
+      metricVersion,
+    );
+  }
+
+  /**
+   * fixes.csv: one row per fix, derived on read, by entry rank. Streamed a
+   * few entries at a time.
+   * @throws {NotAuthorized} If the user is not a member of the org
+   * @throws {EntityNotFound} If the org has no such experiment
+   */
+  async exportFixesCsv(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+    metricVersion?: number,
+  ): Promise<ExperimentCsvExport> {
+    return this.exportExposureCsv(
+      orgId,
+      experimentId,
+      user,
+      "fixes.csv",
+      FIX_CSV_COLUMNS,
+      fixCsvRow,
+      metricVersion,
+    );
+  }
+
+  private async exportExposureCsv(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+    file: string,
+    columns: readonly string[],
+    toRow: (entry: CsvEntry, exposure: Exposure) => CsvRow | null,
+    metricVersion?: number,
+  ): Promise<ExperimentCsvExport> {
+    const experiment = await this.experimentFor(orgId, experimentId, user);
+    return {
+      experiment_name: experiment.name,
+      stream:
+        metricVersion === undefined
+          ? this.exposureCsv(experiment, file, columns, toRow)
+          : await this.frozenCsv(experiment, metricVersion, file),
+    };
+  }
+
+  private exposureCsv(
+    experiment: Experiment,
+    file: string,
+    columns: readonly string[],
+    toRow: (entry: CsvEntry, exposure: Exposure) => CsvRow | null,
+  ): Readable {
+    // Read once over every entry, so each chunk dates fixes as the results page does
+    let knownVersions: Promise<KnownVersionsInput[]> | null = null;
+
+    const nextChunk = async (after: CsvRow | null): Promise<CsvRow[]> => {
+      let afterRank = after ? Number(after["rank"]) : null;
+      // Entries without rows give empty chunks: skip past them, since an
+      // empty chunk ends the export.
+      for (;;) {
+        const query = this.runRepository
+          .createQueryBuilder("run")
+          .innerJoin("run.dataset_entry", "entry")
+          .select("entry.id", "id")
+          .addSelect("entry.rank", "rank")
+          .addSelect("entry.full_name", "full_name")
+          .where('run."experimentId" = :experimentId', {
+            experimentId: experiment.id,
+          });
+        if (afterRank !== null) {
+          query.andWhere("entry.rank > :afterRank", { afterRank });
+        }
+        const entries = await query
+          .groupBy("entry.id")
+          .addGroupBy("entry.rank")
+          .addGroupBy("entry.full_name")
+          .orderBy("entry.rank", "ASC")
+          .limit(EXPOSURE_EXPORT_ENTRIES_PER_CHUNK)
+          .getRawMany<CsvEntry & { id: string }>();
+        if (entries.length === 0) return [];
+
+        const byId = new Map(entries.map((entry) => [entry.id, entry]));
+        const exposures = deriveExposures({
+          ...(await this.exposureRows(experiment, [...byId.keys()])),
+          known_versions: await (knownVersions ??= readKnownVersions(
+            this.rawQuery,
+            experiment.id,
+          )),
+        });
+        const rows = exposures
+          .map((exposure) => {
+            const entry = byId.get(exposure.dataset_entry_id);
+            return entry ? toRow(entry, exposure) : null;
+          })
+          .filter((row): row is CsvRow => row !== null)
+          .sort((a, b) => Number(a["rank"]) - Number(b["rank"]));
+        if (rows.length > 0) return rows;
+        afterRank = Number(entries[entries.length - 1]!.rank);
+      }
+    };
+
+    return this.logStreamErrors(
+      streamCsv(columns, nextChunk),
+      file,
+      experiment.id,
+    );
+  }
+
+  /**
+   * runs.csv: one row per run by entry rank then grid date, with the
+   * entry's metadata and, for done runs, the copied summary (of the run it
+   * shares from, if any). Streamed in chunks keyed by (rank, grid index).
+   * @throws {NotAuthorized} If the user is not a member of the org
+   * @throws {EntityNotFound} If the org has no such experiment
+   */
+  async exportRunsCsv(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+    metricVersion?: number,
+  ): Promise<ExperimentCsvExport> {
+    const experiment = await this.experimentFor(orgId, experimentId, user);
+    return {
+      experiment_name: experiment.name,
+      stream:
+        metricVersion === undefined
+          ? this.runsCsv(experiment)
+          : await this.frozenCsv(experiment, metricVersion, "runs.csv"),
+    };
+  }
+
+  private runsCsv(experiment: Experiment): Readable {
+    const nextChunk = (after: CsvRow | null): Promise<CsvRow[]> => {
+      const query = this.runRepository
+        .createQueryBuilder("run")
+        .innerJoin("run.dataset_entry", "entry")
+        .leftJoin(
+          ExperimentRunSummaryRow,
+          "summary",
+          'summary."runId" = COALESCE(run."sharedFromId", run.id) AND run.status = :done',
+          { done: ExperimentRunStatus.DONE },
+        )
+        .select([
+          ...exportSelect(RUN_CSV_COLUMNS, "summary"),
+          GRID_INDEX_SELECT,
+        ])
+        .where('run."experimentId" = :experimentId', {
+          experimentId: experiment.id,
+        });
+      if (after) {
+        const { where, params } = afterSnapshot(after);
+        query.andWhere(where, params);
+      }
+      return query
+        .orderBy("entry.rank", "ASC")
+        .addOrderBy("run.grid_index", "ASC")
+        .limit(RUN_EXPORT_CHUNK)
+        .getRawMany<CsvRow>();
+    };
+
+    return this.logStreamErrors(
+      streamCsv(RUN_CSV_COLUMNS, nextChunk),
+      "runs.csv",
+      experiment.id,
+    );
+  }
+
+  /**
+   * vulnerabilities.csv: one row per copied vulnerability instance, with the
+   * entry's metadata, by entry rank then grid date. Streamed a few done
+   * runs at a time; runs sharing another's rows hold none and are passed.
+   * @throws {NotAuthorized} If the user is not a member of the org
+   * @throws {EntityNotFound} If the org has no such experiment
+   */
+  async exportVulnerabilitiesCsv(
+    orgId: string,
+    experimentId: string,
+    user: AuthenticatedUser,
+    metricVersion?: number,
+  ): Promise<ExperimentCsvExport> {
+    const experiment = await this.experimentFor(orgId, experimentId, user);
+    return {
+      experiment_name: experiment.name,
+      stream:
+        metricVersion === undefined
+          ? this.vulnerabilitiesCsv(experiment)
+          : await this.frozenCsv(
+              experiment,
+              metricVersion,
+              "vulnerabilities.csv",
+            ),
+    };
+  }
+
+  private vulnerabilitiesCsv(experiment: Experiment): Readable {
+    const nextChunk = async (after: CsvRow | null): Promise<CsvRow[]> => {
+      let cursor = after;
+      // Done runs without instances give empty reads: skip past them, since
+      // an empty chunk ends the export.
+      for (;;) {
+        const query = this.runRepository
+          .createQueryBuilder("run")
+          .innerJoin("run.dataset_entry", "entry")
+          .select("run.id", "id")
+          .addSelect("entry.rank", "rank")
+          .addSelect(GRID_INDEX_SELECT)
+          .where('run."experimentId" = :experimentId', {
+            experimentId: experiment.id,
+          })
+          .andWhere("run.status = :done", { done: ExperimentRunStatus.DONE })
+          .andWhere('run."sharedFromId" IS NULL');
+        if (cursor) {
+          const { where, params } = afterSnapshot(cursor);
+          query.andWhere(where, params);
+        }
+        const runs = await query
+          .orderBy("entry.rank", "ASC")
+          .addOrderBy("run.grid_index", "ASC")
+          .limit(VULNERABILITY_EXPORT_RUNS_PER_CHUNK)
+          .getRawMany<{ id: string; rank: number; grid_index: number }>();
+        if (runs.length === 0) return [];
+
+        const rows = await this.vulnerabilityRepository
+          .createQueryBuilder("instance")
+          .innerJoin("instance.run", "run")
+          .innerJoin("run.dataset_entry", "entry")
+          .select([
+            ...exportSelect(VULNERABILITY_CSV_COLUMNS, "instance"),
+            GRID_INDEX_SELECT,
+          ])
+          .where('instance."runId" IN (:...runIds)', {
+            runIds: runs.map((run) => run.id),
+          })
+          .orderBy("entry.rank", "ASC")
+          .addOrderBy("run.grid_index", "ASC")
+          .addOrderBy("instance.id", "ASC")
+          .getRawMany<CsvRow>();
+        if (rows.length > 0) return rows;
+        cursor = runs[runs.length - 1]!;
+      }
+    };
+
+    return this.logStreamErrors(
+      streamCsv(VULNERABILITY_CSV_COLUMNS, nextChunk),
+      "vulnerabilities.csv",
+      experiment.id,
+    );
+  }
+
+  /**
+   * A CSV as stored in a version's replication package.
+   * @throws {EntityNotFound} If the version or its package does not exist
+   */
+  private async frozenCsv(
+    experiment: Experiment,
+    metricVersion: number,
+    file: string,
+  ): Promise<Readable> {
+    const published = await this.publishedRepository.findOne({
+      where: {
+        experiment: { id: experiment.id },
+        metric_version: metricVersion,
+      },
+      select: { id: true, package_archive: true },
+    });
+    const stream = published?.package_archive
+      ? packageFileStream(published.package_archive, file)
+      : null;
+    if (!stream) throw new EntityNotFound();
+    return stream;
+  }
+
+  /** A stream failing mid-export cuts the download short: leave a trace. */
+  private logStreamErrors(
+    stream: Readable,
+    file: string,
+    experimentId: string,
+  ): Readable {
+    stream.on("error", (error: unknown) => {
+      this.logger.error(
+        `Experiment export ${file} failed`,
+        error instanceof Error ? error : String(error),
+        { experimentId },
+      );
+    });
+    return stream;
+  }
+}
+
+function publishedSummary(
+  published: ExperimentPublishedResults,
+): PublishedResultsSummary {
+  const publisher = published.published_by;
+  return {
+    metric_version: published.metric_version,
+    published_on: published.published_on,
+    package_checksum: published.package_checksum ?? null,
+    published_by_name: publisher
+      ? `${publisher.first_name} ${publisher.last_name}`
+      : null,
+  };
+}
+
+function knowledgeSnapshot(value: unknown): KnowledgeSnapshot | null {
+  return typeof value === "object" &&
+    value !== null &&
+    "knowledge_sources" in value
+    ? (value as KnowledgeSnapshot)
+    : null;
+}
+
+/** The provenance the runner recorded on the experiment, as results show it. */
+function provenanceInput(experiment: Experiment): ResultsProvenanceInput {
+  const recorded = experiment.provenance ?? {};
+  const apiVersion = recorded["api_version"];
+  return {
+    api_version: typeof apiVersion === "string" ? apiVersion : null,
+    analyzer_steps: experiment.analyzer_steps ?? null,
+    knowledge_start: knowledgeSnapshot(recorded["knowledge_start"]),
+    knowledge_end: knowledgeSnapshot(recorded["knowledge_end"]),
+    created_by: creatorName(experiment),
+    created_on: experiment.created_on,
+    started_on: experiment.started_on ?? null,
+    ended_on: experiment.ended_on ?? null,
+  };
+}

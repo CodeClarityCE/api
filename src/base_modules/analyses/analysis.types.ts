@@ -178,6 +178,7 @@ export enum AnalysisStatus {
   FAILED = "failed",
   SUCCESS = "success",
   CANCELLED = "cancelled",
+  SKIPPED = "skipped",
 }
 
 /********************************************/

@@ -53,6 +53,8 @@ describe("VulnerabilitiesService", () => {
 
   const mockFindingsUtilsService = {
     getVulnsResult: jest.fn(),
+    getMaliciousPackageAdvisories: jest.fn(),
+    getKnowledgeSnapshot: jest.fn(),
     getFindingsData: jest.fn().mockResolvedValue([
       {
         vulnerability_id: "CVE-2024-1234",
@@ -112,6 +114,7 @@ describe("VulnerabilitiesService", () => {
         default: {},
       },
     }),
+    getMergedSbomResults: jest.fn(),
   };
 
   const mockOSVRepository = {
@@ -161,6 +164,7 @@ describe("VulnerabilitiesService", () => {
 
   const mockAnalysesRepository = {
     getAnalysisById: jest.fn(),
+    getPreviousCompletedAnalysis: jest.fn(),
     saveAnalysis: jest.fn(),
     doesAnalysesBelongToProject: jest.fn(),
   };
@@ -239,8 +243,247 @@ describe("VulnerabilitiesService", () => {
         default: {},
       },
     });
+    mockSbomUtilsService.getMergedSbomResults.mockResolvedValue({
+      mergedSbom: { workspaces: { default: { dependencies: {} } } },
+      pluginResults: [],
+    });
     mockFindingsUtilsService.getFindingsData.mockResolvedValue([]);
     mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+    mockAnalysesRepository.getPreviousCompletedAnalysis.mockResolvedValue(null);
+  });
+
+  describe("getStats direct and transitive counts", () => {
+    const finding = (
+      dependency: string,
+      version: string,
+      vulnerabilityId: string,
+    ): object => ({
+      Id: vulnerabilityId,
+      VulnerabilityId: vulnerabilityId,
+      AffectedDependency: dependency,
+      AffectedVersion: version,
+      Sources: ["NVD"],
+      Severity: null,
+      Weaknesses: null,
+    });
+
+    const useSbom = (dependencies: object): void => {
+      mockSbomUtilsService.getMergedSbomResults.mockResolvedValue({
+        mergedSbom: { workspaces: { default: { dependencies } } },
+        pluginResults: [],
+      });
+    };
+
+    const getStats = (): ReturnType<VulnerabilitiesService["getStats"]> =>
+      service.getStats(
+        "org-123",
+        "project-123",
+        "analysis-123",
+        mockUser,
+        "default",
+      );
+
+    it("counts a dependency by its role in the SBOM", async () => {
+      useSbom({
+        direct: { "1.0.0": { Direct: true, Transitive: false } },
+        deep: { "2.0.0": { Direct: false, Transitive: true } },
+      });
+      mockFindingsUtilsService.getFindingsData.mockResolvedValue([
+        finding("direct", "1.0.0", "CVE-1"),
+        finding("deep", "2.0.0", "CVE-2"),
+      ]);
+
+      const result = await getStats();
+
+      expect(result.number_of_direct_vulnerabilities).toBe(1);
+      expect(result.number_of_transitive_vulnerabilities).toBe(1);
+    });
+
+    it("counts a dependency that is both in both categories", async () => {
+      useSbom({ both: { "1.0.0": { Direct: true, Transitive: true } } });
+      mockFindingsUtilsService.getFindingsData.mockResolvedValue([
+        finding("both", "1.0.0", "CVE-1"),
+      ]);
+
+      const result = await getStats();
+
+      expect(result.number_of_direct_vulnerabilities).toBe(1);
+      expect(result.number_of_transitive_vulnerabilities).toBe(1);
+    });
+
+    it("counts a dependency once when it has several vulnerabilities", async () => {
+      useSbom({ dep: { "1.0.0": { Direct: true, Transitive: false } } });
+      mockFindingsUtilsService.getFindingsData.mockResolvedValue([
+        finding("dep", "1.0.0", "CVE-1"),
+        finding("dep", "1.0.0", "CVE-2"),
+      ]);
+
+      const result = await getStats();
+
+      expect(result.number_of_direct_vulnerabilities).toBe(1);
+    });
+
+    it("counts each version of a dependency by its own role", async () => {
+      useSbom({
+        dep: {
+          "1.0.0": { Direct: true, Transitive: false },
+          "2.0.0": { Direct: false, Transitive: true },
+        },
+      });
+      mockFindingsUtilsService.getFindingsData.mockResolvedValue([
+        finding("dep", "1.0.0", "CVE-1"),
+        finding("dep", "2.0.0", "CVE-2"),
+      ]);
+
+      const result = await getStats();
+
+      expect(result.number_of_direct_vulnerabilities).toBe(1);
+      expect(result.number_of_transitive_vulnerabilities).toBe(1);
+    });
+
+    it("reads the lowercase flags written by the PHP SBOM plugin", async () => {
+      useSbom({
+        "vendor/direct": { "1.0.0": { direct: true, transitive: false } },
+        "vendor/deep": { "1.0.0": { direct: false, transitive: true } },
+      });
+      mockFindingsUtilsService.getFindingsData.mockResolvedValue([
+        finding("vendor/direct", "1.0.0", "CVE-1"),
+        finding("vendor/deep", "1.0.0", "CVE-2"),
+      ]);
+
+      const result = await getStats();
+
+      expect(result.number_of_direct_vulnerabilities).toBe(1);
+      expect(result.number_of_transitive_vulnerabilities).toBe(1);
+    });
+
+    describe("compared with the previous analysis", () => {
+      const severe = (dependency: string, vulnerabilityId: string): object => ({
+        ...finding(dependency, "1.0.0", vulnerabilityId),
+        Severity: {
+          Severity: 9.5,
+          ConfidentialityImpact: "HIGH",
+          IntegrityImpact: "HIGH",
+          AvailabilityImpact: "HIGH",
+        },
+      });
+
+      const useAnalyses = (
+        current: { dependencies: object; findings: object[] },
+        previous: { dependencies: object; findings: object[] },
+      ): void => {
+        mockAnalysesRepository.getPreviousCompletedAnalysis.mockResolvedValue({
+          id: "analysis-previous",
+        });
+        mockSbomUtilsService.getMergedSbomResults.mockImplementation(
+          (id: string) => {
+            const { dependencies } =
+              id === "analysis-previous" ? previous : current;
+            return Promise.resolve({
+              mergedSbom: { workspaces: { default: { dependencies } } },
+              pluginResults: [],
+            });
+          },
+        );
+        mockFindingsUtilsService.getFindingsData.mockImplementation(
+          (id: string) =>
+            Promise.resolve(
+              id === "analysis-previous" ? previous.findings : current.findings,
+            ),
+        );
+      };
+
+      const direct = { "1.0.0": { Direct: true, Transitive: false } };
+      const deep = { "1.0.0": { Direct: false, Transitive: true } };
+
+      it("reports the change in direct and transitive counts", async () => {
+        useAnalyses(
+          {
+            dependencies: { a: direct, b: direct, c: deep },
+            findings: [
+              finding("a", "1.0.0", "CVE-1"),
+              finding("b", "1.0.0", "CVE-2"),
+              finding("c", "1.0.0", "CVE-3"),
+            ],
+          },
+          {
+            dependencies: { a: direct, c: deep, d: deep, e: deep },
+            findings: [
+              finding("a", "1.0.0", "CVE-1"),
+              finding("c", "1.0.0", "CVE-3"),
+              finding("d", "1.0.0", "CVE-4"),
+              finding("e", "1.0.0", "CVE-5"),
+            ],
+          },
+        );
+
+        const result = await getStats();
+
+        expect(result.number_of_direct_vulnerabilities_diff).toBe(1);
+        expect(result.number_of_transitive_vulnerabilities_diff).toBe(-2);
+      });
+
+      it("reports no change when a dependency stays in both roles", async () => {
+        const both = { "1.0.0": { Direct: true, Transitive: true } };
+        const scan = {
+          dependencies: { a: both },
+          findings: [finding("a", "1.0.0", "CVE-1")],
+        };
+        useAnalyses(scan, scan);
+
+        const result = await getStats();
+
+        expect(result.number_of_direct_vulnerabilities_diff).toBe(0);
+        expect(result.number_of_transitive_vulnerabilities_diff).toBe(0);
+      });
+
+      it("counts a repeated vulnerability once on both sides", async () => {
+        const scan = {
+          dependencies: { a: direct, b: direct },
+          findings: [severe("a", "CVE-1"), severe("b", "CVE-1")],
+        };
+        useAnalyses(scan, scan);
+
+        const result = await getStats();
+
+        expect(result.number_of_critical_diff).toBe(0);
+        expect(result.number_of_vulnerabilities_diff).toBe(0);
+      });
+
+      it("compares against nothing when the previous results are unreadable", async () => {
+        mockAnalysesRepository.getPreviousCompletedAnalysis.mockResolvedValue({
+          id: "analysis-previous",
+        });
+        useSbom({ a: direct });
+        mockSbomUtilsService.getMergedSbomResults
+          .mockResolvedValueOnce({
+            mergedSbom: {
+              workspaces: { default: { dependencies: { a: direct } } },
+            },
+            pluginResults: [],
+          })
+          .mockRejectedValueOnce(new Error("no result"));
+        mockFindingsUtilsService.getFindingsData.mockResolvedValue([
+          finding("a", "1.0.0", "CVE-1"),
+        ]);
+
+        const result = await getStats();
+
+        expect(result.number_of_direct_vulnerabilities_diff).toBe(1);
+      });
+    });
+
+    it("does not count a finding missing from the SBOM", async () => {
+      useSbom({});
+      mockFindingsUtilsService.getFindingsData.mockResolvedValue([
+        finding("ghost", "1.0.0", "CVE-1"),
+      ]);
+
+      const result = await getStats();
+
+      expect(result.number_of_direct_vulnerabilities).toBe(0);
+      expect(result.number_of_transitive_vulnerabilities).toBe(0);
+    });
   });
 
   describe("getStats", () => {
@@ -302,9 +545,10 @@ describe("VulnerabilitiesService", () => {
       };
 
       mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
-      mockSbomUtilsService.getSbomResult.mockResolvedValue(
-        mockSbomOutputEmptyWorkspace,
-      );
+      mockSbomUtilsService.getMergedSbomResults.mockResolvedValue({
+        mergedSbom: mockSbomOutputEmptyWorkspace,
+        pluginResults: [],
+      });
 
       await expect(
         service.getStats(
@@ -910,10 +1154,11 @@ describe("VulnerabilitiesService", () => {
 
       expect(mockNVDRepository.getVulnWithoutFailing).toHaveBeenCalledWith(
         "CVE-2024-1234",
+        { includeRetired: true },
       );
       expect(
         mockOSVRepository.getVulnByCVEIDWithoutFailing,
-      ).toHaveBeenCalledWith("CVE-2024-1234");
+      ).toHaveBeenCalledWith("CVE-2024-1234", { includeRetired: true });
       expect((result.data as { Description: string }[])[0]!.Description).toBe(
         "#### .\n\n",
       );
@@ -999,7 +1244,7 @@ describe("VulnerabilitiesService", () => {
 
       expect(
         mockOSVRepository.getVulnByOSVIDWithoutFailing,
-      ).toHaveBeenCalledWith("GHSA-xxxx-yyyy-zzzz");
+      ).toHaveBeenCalledWith("GHSA-xxxx-yyyy-zzzz", { includeRetired: true });
       expect(
         (result.data as { Description: string }[])[0]!.Description,
       ).toContain("Test GHSA summary");
@@ -1615,6 +1860,93 @@ describe("VulnerabilitiesService", () => {
       await expect(
         service.getStatus("org-123", "project-123", "analysis-123", mockUser),
       ).rejects.toThrow("Access denied");
+    });
+  });
+
+  describe("getMaliciousPackageAdvisories", () => {
+    const advisory = {
+      AdvisoryId: "MAL-2024-1",
+      AffectedDependency: "evil-pkg",
+      AffectedVersion: "1.2.3",
+      DirectDependency: false,
+    };
+
+    it("returns the advisories of an analysis the user can access", async () => {
+      mockFindingsUtilsService.getMaliciousPackageAdvisories.mockResolvedValue([
+        advisory,
+      ]);
+
+      const result = await service.getMaliciousPackageAdvisories(
+        "org-1",
+        "project-1",
+        "analysis-1",
+        mockUser,
+        ".",
+      );
+
+      expect(result).toEqual([advisory]);
+      expect(
+        mockFindingsUtilsService.getMaliciousPackageAdvisories,
+      ).toHaveBeenCalledWith("analysis-1", ".");
+    });
+
+    it("does not read advisories when access is denied", async () => {
+      mockFindingsUtilsService.getMaliciousPackageAdvisories.mockClear();
+      mockAnalysisResultsService.checkAccess.mockRejectedValueOnce(
+        new Error("denied"),
+      );
+
+      await expect(
+        service.getMaliciousPackageAdvisories(
+          "org-1",
+          "project-1",
+          "analysis-1",
+          mockUser,
+          ".",
+        ),
+      ).rejects.toThrow("denied");
+      expect(
+        mockFindingsUtilsService.getMaliciousPackageAdvisories,
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("getKnowledgeSnapshot", () => {
+    const snapshot = { taken_at: "2026-11-09T12:00:00Z", sources: [] };
+
+    it("returns the snapshot of an analysis the user can access", async () => {
+      mockFindingsUtilsService.getKnowledgeSnapshot.mockResolvedValue(snapshot);
+
+      await expect(
+        service.getKnowledgeSnapshot(
+          "org-1",
+          "project-1",
+          "analysis-1",
+          mockUser,
+        ),
+      ).resolves.toEqual(snapshot);
+      expect(
+        mockFindingsUtilsService.getKnowledgeSnapshot,
+      ).toHaveBeenCalledWith("analysis-1");
+    });
+
+    it("does not read the snapshot when access is denied", async () => {
+      mockFindingsUtilsService.getKnowledgeSnapshot.mockClear();
+      mockAnalysisResultsService.checkAccess.mockRejectedValueOnce(
+        new Error("denied"),
+      );
+
+      await expect(
+        service.getKnowledgeSnapshot(
+          "org-1",
+          "project-1",
+          "analysis-1",
+          mockUser,
+        ),
+      ).rejects.toThrow("denied");
+      expect(
+        mockFindingsUtilsService.getKnowledgeSnapshot,
+      ).not.toHaveBeenCalled();
     });
   });
 });

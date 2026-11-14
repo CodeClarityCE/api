@@ -1,8 +1,6 @@
 import { Module } from "@nestjs/common";
-import { ConfigModule } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 
-import { Config } from "src/base_modules/config/config.entity";
 import { CWE } from "src/codeclarity_modules/knowledge/cwe/cwe.entity";
 import { License } from "src/codeclarity_modules/knowledge/license/license.entity";
 import { LicenseRepository } from "src/codeclarity_modules/knowledge/license/license.repository";
@@ -12,14 +10,15 @@ import {
   Package,
   Version,
 } from "src/codeclarity_modules/knowledge/package/package.entity";
-import { defaultOptions } from "src/datasources/base-options";
 
-import { DatabaseService } from "../../services/database.service";
 import {
   NVDReportGenerator,
   OSVReportGenerator,
 } from "../results/vulnerabilities/services/reportGenerator";
 
+import { KnowledgeDbComparisonController } from "./comparison/knowledge-db-comparison.controller";
+import { KnowledgeDbComparisonService } from "./comparison/knowledge-db-comparison.service";
+import { SourceOriginService } from "./comparison/source-origin.service";
 import { CWERepository } from "./cwe/cwe.repository";
 import { EPSS } from "./epss/epss.entity";
 import { EPSSRepository } from "./epss/epss.repository";
@@ -42,6 +41,8 @@ import { VulnerabilityCheckController } from "./package-vulnerability/vulnerabil
 import { VulnerabilityCheckService } from "./package-vulnerability/vulnerability-check.service";
 import { ProvenanceController } from "./provenance/provenance.controller";
 import { ProvenanceService } from "./provenance/provenance.service";
+import { KnowledgeStatusController } from "./status/knowledge-status.controller";
+import { KnowledgeStatusService } from "./status/knowledge-status.service";
 import { VulnerabilityController } from "./vulnerability/vulnerability.controller";
 import { VulnerabilitySearchService } from "./vulnerability/vulnerability.service";
 
@@ -62,19 +63,6 @@ import { VulnerabilitySearchService } from "./vulnerability/vulnerability.servic
       ],
       "knowledge",
     ),
-    // Module-local connection to the config DB, which holds the knowledge
-    // update timestamps written by the Go knowledge service.
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      name: "config",
-      useFactory: () => ({
-        ...defaultOptions,
-        synchronize: false,
-        database: "config",
-        entities: [Config],
-        migrations: ["dist/migrations/config/*.js"],
-      }),
-    }),
   ],
   exports: [
     LicenseRepository,
@@ -93,6 +81,9 @@ import { VulnerabilitySearchService } from "./vulnerability/vulnerability.servic
     VulnerabilitySearchService,
     OutdatedCheckService,
     VulnerabilityCheckService,
+    ProvenanceService,
+    KnowledgeStatusService,
+    SourceOriginService,
   ],
   providers: [
     LicenseService,
@@ -109,11 +100,13 @@ import { VulnerabilitySearchService } from "./vulnerability/vulnerability.servic
     EPSSRepository,
     FriendsOfPhpRepository,
     GCVERepository,
-    DatabaseService,
     VulnerabilitySearchService,
     OutdatedCheckService,
     VulnerabilityCheckService,
     ProvenanceService,
+    KnowledgeStatusService,
+    KnowledgeDbComparisonService,
+    SourceOriginService,
   ],
   controllers: [
     LicenseController,
@@ -121,6 +114,8 @@ import { VulnerabilitySearchService } from "./vulnerability/vulnerability.servic
     OutdatedController,
     VulnerabilityCheckController,
     ProvenanceController,
+    KnowledgeStatusController,
+    KnowledgeDbComparisonController,
   ],
 })
 export class KnowledgeModule {}

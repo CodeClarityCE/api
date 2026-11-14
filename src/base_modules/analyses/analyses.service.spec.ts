@@ -1,14 +1,12 @@
 import { ConfigService } from "@nestjs/config";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
-import * as amqp from "amqplib";
 
 import { Policy } from "src/codeclarity_modules/policies/policy.entity";
 import { LicensesRepository } from "src/codeclarity_modules/results/licenses/licenses.repository";
 import { AnalysisResultsRepository } from "src/codeclarity_modules/results/results.repository";
 import { SBOMRepository } from "src/codeclarity_modules/results/sbom/sbom.repository";
 import { VulnerabilitiesRepository } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.repository";
-import { RabbitMQError } from "src/types/error.types";
 
 import { AnaylzerMissingConfigAttribute } from "../analyzers/analyzers.errors";
 import { AnalyzersRepository } from "../analyzers/analyzers.repository";
@@ -26,12 +24,11 @@ import { AnalysesRepository } from "./analyses.repository";
 import { AnalysesService } from "./analyses.service";
 import { AnalysisStatus } from "./analysis.entity";
 import type { AnalysisCreateBody } from "./analysis.types";
+import {
+  AnalysisPublisher,
+  InMemoryAnalysisPublisher,
+} from "./analysis-publisher";
 import { LanguageDetectionService } from "./language-detection.service";
-
-// Mock amqplib
-jest.mock("amqplib", () => ({
-  connect: jest.fn(),
-}));
 
 describe("AnalysesService", () => {
   let service: AnalysesService;
@@ -109,21 +106,14 @@ describe("AnalysesService", () => {
     },
   };
 
-  // Mock RabbitMQ connection
-  const mockChannel = {
-    assertQueue: jest.fn(),
-    sendToQueue: jest.fn(),
-    close: jest.fn(),
-  };
-
-  const mockConnection = {
-    createChannel: jest.fn().mockResolvedValue(mockChannel),
-  };
+  let publisher: InMemoryAnalysisPublisher;
 
   beforeEach(async () => {
+    publisher = new InMemoryAnalysisPublisher();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AnalysesService,
+        { provide: AnalysisPublisher, useValue: publisher },
         {
           provide: ProjectMemberService,
           useValue: {
@@ -253,8 +243,6 @@ describe("AnalysesService", () => {
 
     // Reset mocks
     jest.clearAllMocks();
-    (amqp.connect as jest.Mock).mockResolvedValue(mockConnection);
-    process.env["AMQP_PASSWORD"] = "password";
   });
 
   describe("create", () => {
@@ -300,17 +288,14 @@ describe("AnalysesService", () => {
         "org-123",
       );
       expect(analysesRepository.saveAnalysis).toHaveBeenCalled();
-      expect(mockChannel.sendToQueue).toHaveBeenCalledWith(
-        "analyses",
-        Buffer.from(
-          JSON.stringify({
-            analysis_id: "analysis-123",
-            integration_id: "integration-123",
-            organization_id: "org-123",
-            project_id: "project-123",
-          }),
-        ),
-      );
+      expect(publisher.published).toEqual([
+        {
+          analysis_id: "analysis-123",
+          integration_id: "integration-123",
+          organization_id: "org-123",
+          project_id: "project-123",
+        },
+      ]);
     });
 
     it("should throw AnaylzerMissingConfigAttribute when required config is missing", async () => {
@@ -362,7 +347,7 @@ describe("AnalysesService", () => {
       ).rejects.toThrow(AnaylzerMissingConfigAttribute);
     });
 
-    it("should handle RabbitMQ connection error", async () => {
+    it("still returns the saved analysis when publishing fails", async () => {
       // Arrange
       jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
       jest
@@ -383,19 +368,54 @@ describe("AnalysesService", () => {
       jest
         .spyOn(analysesRepository, "saveAnalysis")
         .mockResolvedValue(mockAnalysis);
-      (amqp.connect as jest.Mock).mockRejectedValue(
-        new Error("Connection failed"),
+      publisher.failWith = new Error("Connection failed");
+
+      // Act
+      const result = await service.create(
+        "org-123",
+        "project-123",
+        mockAnalysisCreateBody,
+        mockUser,
       );
 
-      // Act & Assert
-      await expect(
-        service.create(
-          "org-123",
-          "project-123",
-          mockAnalysisCreateBody,
-          mockUser,
-        ),
-      ).rejects.toThrow(RabbitMQError);
+      // Assert: the reaper delivers it later
+      expect(result).toBe("analysis-123");
+      expect(analysesRepository.saveAnalysis).toHaveBeenCalled();
+    });
+
+    it("does not publish a scheduled analysis", async () => {
+      // Arrange
+      jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
+      jest
+        .spyOn(projectsRepository, "doesProjectBelongToOrg")
+        .mockResolvedValue();
+      jest
+        .spyOn(analyzersRepository, "getAnalyzerById")
+        .mockResolvedValue(mockAnalyzer as any);
+      jest
+        .spyOn(projectsRepository, "getProjectById")
+        .mockResolvedValue(mockProject as any);
+      jest
+        .spyOn(usersRepository, "getUserById")
+        .mockResolvedValue(mockCreator as any);
+      jest
+        .spyOn(organizationsRepository, "getOrganizationById")
+        .mockResolvedValue(mockOrganization as any);
+      jest
+        .spyOn(analysesRepository, "saveAnalysis")
+        .mockResolvedValue(mockAnalysis);
+
+      // Act
+      const result = await service.create(
+        "org-123",
+        "project-123",
+        { ...mockAnalysisCreateBody, schedule_type: "daily" },
+        mockUser,
+      );
+
+      // Assert: the scheduler triggers its executions
+      expect(result).toBe("analysis-123");
+      expect(publisher.published).toEqual([]);
     });
 
     it("should handle project without integration", async () => {
@@ -431,17 +451,14 @@ describe("AnalysesService", () => {
 
       // Assert
       expect(result).toBe("analysis-123");
-      expect(mockChannel.sendToQueue).toHaveBeenCalledWith(
-        "analyses",
-        Buffer.from(
-          JSON.stringify({
-            analysis_id: "analysis-123",
-            integration_id: null,
-            organization_id: "org-123",
-            project_id: "project-123",
-          }),
-        ),
-      );
+      expect(publisher.published).toEqual([
+        {
+          analysis_id: "analysis-123",
+          integration_id: null,
+          organization_id: "org-123",
+          project_id: "project-123",
+        },
+      ]);
     });
   });
 

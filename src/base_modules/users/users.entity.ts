@@ -104,8 +104,7 @@ export class User {
   @Column()
   registration_verified!: boolean;
 
-  @ApiProperty()
-  @Expose()
+  // Never exposed: responses that include a user must not carry the hash.
   @Column({
     length: 100,
   })

@@ -19,6 +19,9 @@ import {
   PaginationUserSuppliedConf,
 } from "src/types/pagination.types";
 
+import { Experiment } from "../experiments/experiment.entity";
+import { assertNotUsedByExperiments } from "../experiments/experiment-in-use";
+
 import { Dataset, DatasetStatus } from "./dataset.entity";
 import { DatasetBuildService } from "./dataset-build.service";
 import { DEFAULT_LOCKFILES } from "./dataset-builder";
@@ -40,7 +43,7 @@ const ENTRY_PAGINATION: PaginationConfig = {
   defaultEntriesPerPage: 100,
 };
 
-function resolvePagination(
+export function resolvePagination(
   requested: PaginationUserSuppliedConf,
   config: PaginationConfig,
 ): { currentPage: number; entriesPerPage: number } {
@@ -53,7 +56,7 @@ function resolvePagination(
   return { currentPage, entriesPerPage };
 }
 
-function paginated<T>(
+export function paginated<T>(
   data: T[],
   fullCount: number,
   currentPage: number,
@@ -81,6 +84,8 @@ export class DatasetsService {
     private readonly datasetRepository: Repository<Dataset>,
     @InjectRepository(DatasetEntry, "codeclarity")
     private readonly entryRepository: Repository<DatasetEntry>,
+    @InjectRepository(Experiment, "codeclarity")
+    private readonly experimentRepository: Repository<Experiment>,
   ) {}
 
   /**
@@ -247,6 +252,7 @@ export class DatasetsService {
    * cancels the build: the builder loses its lease and discards its result.
    * @throws {NotAuthorized} If the user is not an admin of the org
    * @throws {EntityNotFound} If the org has no such dataset
+   * @throws {EntityInUse} If an experiment uses the dataset
    */
   async delete(
     orgId: string,
@@ -259,6 +265,9 @@ export class DatasetsService {
       MemberRole.ADMIN,
     );
     const dataset = await this.findInOrg(orgId, datasetId);
+    await assertNotUsedByExperiments(this.experimentRepository, {
+      dataset: { id: dataset.id },
+    });
     await this.datasetRepository.delete({ id: dataset.id });
   }
 

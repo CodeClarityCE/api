@@ -1,11 +1,27 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
-import type { Repository } from "typeorm";
+import { IsNull, type Repository } from "typeorm";
 
 import { EntityNotFound } from "src/types/error.types";
 
 import { OSV } from "./osv.entity";
 import { OSVRepository } from "./osv.repository";
+
+// The query a CVE lookup sends, matching any alias and ordering results predictably.
+const cveLookup = (cve: string) => ({
+  where: {
+    cve_aliases: expect.objectContaining({
+      _type: "raw",
+      _objectLiteralParameters: { cve },
+    }),
+    retired_at: IsNull(),
+  },
+  order: {
+    kind: "DESC",
+    retired_at: { direction: "ASC", nulls: "FIRST" },
+    osv_id: "ASC",
+  },
+});
 
 describe("OSVRepository", () => {
   let osvRepository: OSVRepository;
@@ -110,7 +126,7 @@ describe("OSVRepository", () => {
 
       expect(result).toEqual(mockOSV);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { osv_id: "GHSA-jfh8-c2jp-5v3q" },
+        where: { osv_id: "GHSA-jfh8-c2jp-5v3q", retired_at: IsNull() },
       });
       expect(mockRepository.findOne).toHaveBeenCalledTimes(1);
     });
@@ -122,7 +138,7 @@ describe("OSVRepository", () => {
         osvRepository.getVulnGHSA("GHSA-nonexistent"),
       ).rejects.toThrow(EntityNotFound);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { osv_id: "GHSA-nonexistent" },
+        where: { osv_id: "GHSA-nonexistent", retired_at: IsNull() },
       });
     });
 
@@ -134,7 +150,7 @@ describe("OSVRepository", () => {
         osvRepository.getVulnGHSA("GHSA-jfh8-c2jp-5v3q"),
       ).rejects.toThrow("Database connection failed");
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { osv_id: "GHSA-jfh8-c2jp-5v3q" },
+        where: { osv_id: "GHSA-jfh8-c2jp-5v3q", retired_at: IsNull() },
       });
     });
 
@@ -156,7 +172,7 @@ describe("OSVRepository", () => {
 
         expect(result.osv_id).toBe(ghsaId);
         expect(mockRepository.findOne).toHaveBeenCalledWith({
-          where: { osv_id: ghsaId },
+          where: { osv_id: ghsaId, retired_at: IsNull() },
         });
       }
     });
@@ -170,7 +186,7 @@ describe("OSVRepository", () => {
 
       expect(result).toEqual(mockOSV);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { cve: "CVE-2021-44228" },
+        ...cveLookup("CVE-2021-44228"),
       });
       expect(mockRepository.findOne).toHaveBeenCalledTimes(1);
     });
@@ -182,7 +198,7 @@ describe("OSVRepository", () => {
         osvRepository.getVulnCVE("CVE-2023-NONEXISTENT"),
       ).rejects.toThrow(EntityNotFound);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { cve: "CVE-2023-NONEXISTENT" },
+        ...cveLookup("CVE-2023-NONEXISTENT"),
       });
     });
 
@@ -194,7 +210,7 @@ describe("OSVRepository", () => {
         "Database connection failed",
       );
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { cve: "CVE-2021-44228" },
+        ...cveLookup("CVE-2021-44228"),
       });
     });
 
@@ -213,7 +229,7 @@ describe("OSVRepository", () => {
 
         expect(result.cve).toBe(cveId);
         expect(mockRepository.findOne).toHaveBeenCalledWith({
-          where: { cve: cveId },
+          ...cveLookup(cveId),
         });
       }
     });
@@ -228,7 +244,7 @@ describe("OSVRepository", () => {
 
       expect(result).toEqual(mockOSV);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { cve: "CVE-2021-44228" },
+        ...cveLookup("CVE-2021-44228"),
       });
     });
 
@@ -241,7 +257,7 @@ describe("OSVRepository", () => {
 
       expect(result).toBeNull();
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { cve: "CVE-2023-NONEXISTENT" },
+        ...cveLookup("CVE-2023-NONEXISTENT"),
       });
     });
 
@@ -261,7 +277,7 @@ describe("OSVRepository", () => {
 
       expect(result).toBeNull();
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { cve: "" },
+        ...cveLookup(""),
       });
     });
 
@@ -274,7 +290,7 @@ describe("OSVRepository", () => {
 
       expect(result).toBeNull();
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { cve: specialCveId },
+        ...cveLookup(specialCveId),
       });
     });
   });
@@ -289,7 +305,7 @@ describe("OSVRepository", () => {
 
       expect(result).toEqual(mockOSV);
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { osv_id: "GHSA-jfh8-c2jp-5v3q" },
+        where: { osv_id: "GHSA-jfh8-c2jp-5v3q", retired_at: IsNull() },
       });
     });
 
@@ -301,7 +317,7 @@ describe("OSVRepository", () => {
 
       expect(result).toBeNull();
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { osv_id: "GHSA-nonexistent" },
+        where: { osv_id: "GHSA-nonexistent", retired_at: IsNull() },
       });
     });
 
@@ -329,7 +345,7 @@ describe("OSVRepository", () => {
 
         expect(result?.osv_id).toBe(osvId);
         expect(mockRepository.findOne).toHaveBeenCalledWith({
-          where: { osv_id: osvId },
+          where: { osv_id: osvId, retired_at: IsNull() },
         });
       }
     });
@@ -582,7 +598,7 @@ describe("OSVRepository", () => {
 
       expect(result).toBeNull();
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { osv_id: longId },
+        where: { osv_id: longId, retired_at: IsNull() },
       });
     });
   });
@@ -630,8 +646,8 @@ describe("OSVRepository", () => {
 
     it("should handle mixed CVE and OSV ID requests", async () => {
       mockRepository.findOne.mockImplementation((options: any) => {
-        if (options.where?.cve) {
-          return Promise.resolve({ ...mockOSV, cve: options.where.cve });
+        if (options.where?.cve_aliases) {
+          return Promise.resolve({ ...mockOSV, cve: "CVE-2021-44228" });
         } else if (options.where?.osv_id) {
           return Promise.resolve({ ...mockOSV, osv_id: options.where.osv_id });
         }
@@ -667,5 +683,28 @@ describe("OSVRepository", () => {
         "function",
       );
     });
+  });
+});
+
+describe("OSVRepository retired records", () => {
+  const findOne = jest.fn();
+  const repository = new OSVRepository({
+    findOne,
+  } as unknown as Repository<OSV>);
+
+  beforeEach(() => findOne.mockReset());
+
+  it("excludes retired records by default", async () => {
+    await repository.getVulnByOSVIDWithoutFailing("GHSA-x");
+    expect(findOne).toHaveBeenCalledWith({
+      where: { osv_id: "GHSA-x", retired_at: IsNull() },
+    });
+  });
+
+  it("includes retired records when asked, for analyses that matched them earlier", async () => {
+    await repository.getVulnByOSVIDWithoutFailing("GHSA-x", {
+      includeRetired: true,
+    });
+    expect(findOne).toHaveBeenCalledWith({ where: { osv_id: "GHSA-x" } });
   });
 });

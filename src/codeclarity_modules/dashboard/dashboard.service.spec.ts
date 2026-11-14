@@ -400,6 +400,44 @@ describe("DashboardService", () => {
       expect(result["GPL-3.0"]).toBeDefined();
     });
 
+    it("adds nothing for a result stored with no license distribution", async () => {
+      membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
+      organizationRepository.createQueryBuilder.mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue({
+          projects: [
+            {
+              analyses: [
+                {
+                  results: [
+                    {
+                      result: {
+                        analysis_info: { stats: { license_dist: null } },
+                      },
+                    },
+                    {
+                      result: {
+                        analysis_info: { stats: { license_dist: { MIT: 2 } } },
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        }),
+      } as any);
+
+      const result = await service.getOverallLicenseDist(
+        mockOrgId,
+        mockAuthenticatedUser,
+      );
+
+      expect(result).toEqual({ MIT: 2 });
+    });
+
     it("should return empty object when no licenses found", async () => {
       const emptyOrg = {
         ...mockLicenseOrganization,

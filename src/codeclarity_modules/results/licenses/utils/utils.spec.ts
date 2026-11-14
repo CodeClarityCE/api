@@ -127,11 +127,7 @@ describe("LicensesUtilsService", () => {
           },
           plugin: "license-finder",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -151,11 +147,7 @@ describe("LicensesUtilsService", () => {
           },
           plugin: "license-finder",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -180,11 +172,7 @@ describe("LicensesUtilsService", () => {
           },
           plugin: "license-finder",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -205,11 +193,7 @@ describe("LicensesUtilsService", () => {
           },
           plugin: "license-finder",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -228,7 +212,7 @@ describe("LicensesUtilsService", () => {
       expect((callArgs.where as any).plugin).toBe("license-finder");
     });
 
-    it("should order by analysis created_on DESC", async () => {
+    it("should order by result created_on DESC", async () => {
       const mockLicensesOutput = createMockLicensesOutput();
       const mockResult = createMockResult(mockLicensesOutput);
 
@@ -239,7 +223,7 @@ describe("LicensesUtilsService", () => {
       await service.getLicensesResult(analysisId);
 
       const callArgs = resultRepository.findOne.mock.calls[0]![0];
-      expect((callArgs.order as any).analysis.created_on).toBe("DESC");
+      expect((callArgs.order as any).created_on).toBe("DESC");
     });
 
     it("should enable caching", async () => {
@@ -288,11 +272,7 @@ describe("LicensesUtilsService", () => {
           },
           plugin: "license-finder",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -315,11 +295,7 @@ describe("LicensesUtilsService", () => {
           },
           plugin: "license-finder",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -342,11 +318,7 @@ describe("LicensesUtilsService", () => {
           },
           plugin: "license-finder",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -702,11 +674,7 @@ describe("LicensesUtilsService", () => {
           },
           plugin: "license-finder",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -731,11 +699,7 @@ describe("LicensesUtilsService", () => {
           },
           plugin: "license-finder",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });

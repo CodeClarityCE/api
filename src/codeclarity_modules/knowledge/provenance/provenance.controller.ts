@@ -16,7 +16,7 @@ export class ProvenanceController {
   @ApiOperation({
     summary: "Get knowledge database provenance",
     description:
-      "Returns the last-update timestamp of each knowledge source and the number of EPSS rows, identifying the vulnerability-data snapshot currently in use.",
+      "Returns the source watermark of each knowledge source and the number of EPSS rows, identifying the vulnerability-data snapshot currently in use.",
   })
   @ApiResponse({
     status: 200,
@@ -31,7 +31,7 @@ export class ProvenanceController {
               type: "object",
               additionalProperties: { type: "string", nullable: true },
               description:
-                "Last-update timestamp (ISO) per knowledge source, or null if never updated",
+                "Source watermark (ISO) per knowledge source, or null if none is recorded",
             },
             epss_rows: {
               type: "number",

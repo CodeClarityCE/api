@@ -6,6 +6,7 @@ import { defaultOptions } from "src/datasources/base-options";
 
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { DatasetsModule } from "./datasets/datasets.module";
+import { ExperimentsModule } from "./experiments/experiments.module";
 import { KnowledgeModule } from "./knowledge/knowledge.module";
 import { PolicyModule } from "./policies/policy.module";
 import { ResultsModule } from "./results/results.module";
@@ -19,10 +20,12 @@ import { TicketsModule } from "./tickets/tickets.module";
     DashboardModule,
     TicketsModule,
     DatasetsModule,
+    ExperimentsModule,
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       name: "knowledge",
       useFactory: () => ({
+        name: "knowledge",
         ...defaultOptions,
         autoLoadEntities: true,
         database: "knowledge",
@@ -35,6 +38,7 @@ import { TicketsModule } from "./tickets/tickets.module";
       useFactory: () => {
         const isTs = __filename.endsWith(".ts");
         return {
+          name: "codeclarity",
           ...defaultOptions,
           // Use explicit entity glob patterns instead of autoLoadEntities
           // This ensures ONLY entities matching these patterns are loaded
@@ -50,7 +54,9 @@ import { TicketsModule } from "./tickets/tickets.module";
               ? "src/codeclarity_modules/!(knowledge)/**/*.entity.ts"
               : "dist/codeclarity_modules/!(knowledge)/**/*.entity.js",
           ],
-          database: "codeclarity",
+          // Tests truncate tables, so they get their own database.
+          database:
+            process.env["ENV"] === "test" ? "codeclarity_test" : "codeclarity",
           migrations: ["dist/migrations/codeclarity/*.js"],
         };
       },

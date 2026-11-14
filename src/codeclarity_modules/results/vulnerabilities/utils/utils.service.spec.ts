@@ -80,11 +80,7 @@ describe("VulnerabilitiesUtilsService", () => {
           },
           plugin: "vuln-finder",
         },
-        order: {
-          analysis: {
-            created_on: "DESC",
-          },
-        },
+        order: { created_on: "DESC", id: "DESC" },
         cache: true,
       });
     });
@@ -264,6 +260,123 @@ describe("VulnerabilitiesUtilsService", () => {
       );
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe("getMaliciousPackageAdvisories", () => {
+    const analysisInfo = { status: Status.Success };
+
+    const mockVulnFinderResult = (workspaces: unknown): void => {
+      mockRepository.findOne.mockResolvedValue({
+        id: "result-id",
+        plugin: "vuln-finder",
+        result: { analysis_info: analysisInfo, workspaces },
+        analysis: {} as any,
+      } as any);
+    };
+
+    it("returns the advisories of the workspace", async () => {
+      const advisory = {
+        AdvisoryId: "MAL-2024-1",
+        AffectedDependency: "evil-pkg",
+        AffectedVersion: "1.2.3",
+        DirectDependency: true,
+        Summary: "Malicious code in evil-pkg",
+        References: ["https://example.com/mal-2024-1"],
+      };
+      mockVulnFinderResult({
+        ".": {
+          Vulnerabilities: [],
+          MaliciousPackageAdvisories: [advisory],
+        },
+      });
+
+      const result = await service.getMaliciousPackageAdvisories(
+        "analysis-id",
+        ".",
+      );
+
+      expect(result).toEqual([advisory]);
+    });
+
+    it("returns no advisories for an analysis without the field", async () => {
+      mockVulnFinderResult({ ".": { Vulnerabilities: [] } });
+
+      const result = await service.getMaliciousPackageAdvisories(
+        "analysis-id",
+        ".",
+      );
+
+      expect(result).toEqual([]);
+    });
+
+    it("leaves malicious records of an old analysis in its findings", async () => {
+      const oldMaliciousFinding = {
+        Id: "vuln-1",
+        VulnerabilityId: "MAL-2023-9",
+        AffectedDependency: "evil-pkg",
+        AffectedVersion: "1.0.0",
+      };
+      mockVulnFinderResult({ ".": { Vulnerabilities: [oldMaliciousFinding] } });
+
+      await expect(
+        service.getFindingsData("analysis-id", "."),
+      ).resolves.toEqual([oldMaliciousFinding]);
+      await expect(
+        service.getMaliciousPackageAdvisories("analysis-id", "."),
+      ).resolves.toEqual([]);
+    });
+
+    it("throws UnknownWorkspace when the workspace does not exist", async () => {
+      mockVulnFinderResult({ ".": { Vulnerabilities: [] } });
+
+      await expect(
+        service.getMaliciousPackageAdvisories("analysis-id", "other"),
+      ).rejects.toThrow(UnknownWorkspace);
+    });
+  });
+
+  describe("getKnowledgeSnapshot", () => {
+    const mockAnalysisInfo = (analysisInfo: object): void => {
+      mockRepository.findOne.mockResolvedValue({
+        id: "result-id",
+        plugin: "vuln-finder",
+        result: {
+          analysis_info: { status: Status.Success, ...analysisInfo },
+          workspaces: {},
+        },
+        analysis: {} as any,
+      } as any);
+    };
+
+    it("returns the source snapshot stored with the analysis", async () => {
+      const snapshot = {
+        taken_at: "2026-11-09T12:00:00Z",
+        sources: [
+          {
+            source: "nvd",
+            status: "stale",
+            comparable: false,
+            watermark: "2026-11-01T00:00:00Z",
+            row_count: 300000,
+            last_outcome: "success",
+            stale_after_hours: 48,
+          },
+        ],
+      };
+      mockAnalysisInfo({ knowledge_snapshot: snapshot });
+
+      await expect(
+        service.getKnowledgeSnapshot("analysis-id"),
+      ).resolves.toEqual(snapshot);
+    });
+
+    it("returns null for an analysis that predates source snapshots", async () => {
+      mockAnalysisInfo({});
+
+      await expect(
+        service.getKnowledgeSnapshot("analysis-id"),
+      ).resolves.toBeNull();
     });
   });
 

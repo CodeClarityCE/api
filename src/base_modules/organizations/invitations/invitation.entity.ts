@@ -27,7 +27,7 @@ export class Invitation {
 
   @ApiProperty()
   @Expose()
-  @Column()
+  @Column("integer")
   role!: MemberRole;
 
   @Column({

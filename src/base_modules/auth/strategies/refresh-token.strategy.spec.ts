@@ -72,6 +72,19 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
   });
 
   describe("validate", () => {
+    it.each([true, false])(
+      "should keep activated=%s from the payload",
+      async (activated) => {
+        const result = await strategy.validate({
+          userId: "test-user-id",
+          roles: [ROLE.USER],
+          activated,
+        });
+
+        expect(result.activated).toBe(activated);
+      },
+    );
+
     it("should return user object with userId and roles from payload", async () => {
       // Arrange
       const payload: JwtPayload = {

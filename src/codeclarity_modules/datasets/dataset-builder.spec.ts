@@ -113,7 +113,12 @@ function fakeClient(
     });
 
   return {
-    client: { rest: { search: { repos: search }, repos: { get, getContent } } },
+    client: {
+      rest: {
+        search: { repos: search },
+        repos: { get, getContent, listCommits: jest.fn() },
+      },
+    },
     search,
     get,
     getContent,

@@ -2,9 +2,14 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 
-import { Result } from "src/codeclarity_modules/results/result.entity";
+import {
+  NEWEST_RESULT_FIRST,
+  Result,
+} from "src/codeclarity_modules/results/result.entity";
 import { Dependency } from "src/codeclarity_modules/results/sbom/sbom.types";
 import {
+  KnowledgeSnapshot,
+  MaliciousPackageAdvisory,
   Output as VulnsOutput,
   Status,
   Vulnerability,
@@ -32,11 +37,7 @@ export class VulnerabilitiesUtilsService {
         },
         plugin: "vuln-finder",
       },
-      order: {
-        analysis: {
-          created_on: "DESC",
-        },
-      },
+      order: NEWEST_RESULT_FIRST,
       cache: true,
     });
 
@@ -49,11 +50,7 @@ export class VulnerabilitiesUtilsService {
         },
         plugin: "js-vuln-finder",
       },
-      order: {
-        analysis: {
-          created_on: "DESC",
-        },
-      },
+      order: NEWEST_RESULT_FIRST,
       cache: true,
     });
 
@@ -122,6 +119,27 @@ export class VulnerabilitiesUtilsService {
     // }
 
     return vulnerabilities;
+  }
+
+  async getMaliciousPackageAdvisories(
+    analysis_id: string,
+    workspace: string,
+  ): Promise<MaliciousPackageAdvisory[]> {
+    const findings: VulnsOutput = await this.getVulnsResult(analysis_id);
+
+    if (!(workspace in findings.workspaces)) {
+      throw new UnknownWorkspace();
+    }
+
+    return findings.workspaces[workspace]!.MaliciousPackageAdvisories ?? [];
+  }
+
+  /** The analysis's knowledge source snapshot, or null for an older analysis. */
+  async getKnowledgeSnapshot(
+    analysis_id: string,
+  ): Promise<KnowledgeSnapshot | null> {
+    const findings: VulnsOutput = await this.getVulnsResult(analysis_id);
+    return findings.analysis_info.knowledge_snapshot ?? null;
   }
 
   async getImportPaths(

@@ -19,6 +19,7 @@ import {
   AlreadyExists,
   EntityNotFound,
   FailedToAuthenticateSocialAccount,
+  UserDoesNotExist,
 } from "src/types/error.types";
 
 import { CannotPerformActionOnSocialAccount } from "../users/users.errors";
@@ -51,7 +52,13 @@ export class AuthService {
    * @returns A JWT and Refresh token
    */
   async authenticate(email: string, password: string): Promise<TokenResponse> {
-    const user = await this.usersRepository.getUserByEmail(email);
+    // An unknown email gets the same error as a wrong password.
+    const user = await this.usersRepository
+      .getUserByEmail(email)
+      .catch((err: unknown) => {
+        if (err instanceof UserDoesNotExist) throw new WrongCredentials();
+        throw err;
+      });
 
     if (!user) {
       throw new WrongCredentials();

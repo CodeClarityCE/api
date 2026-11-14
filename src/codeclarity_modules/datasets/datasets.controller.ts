@@ -114,6 +114,7 @@ export class DatasetsController {
   @ApiOperation({ summary: "Delete a dataset (cancels a running build)" })
   @ApiParam({ name: "org_id", description: "Organization ID" })
   @ApiParam({ name: "dataset_id", description: "Dataset ID" })
+  @ApiResponse({ status: 409, description: "Experiments use the dataset" })
   async delete(
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,

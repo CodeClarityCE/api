@@ -25,9 +25,19 @@ export interface GithubRepoMetadata {
   owner?: { login: string } | null;
   html_url: string;
   default_branch: string | null;
+  description?: string | null;
   fork: boolean;
   archived: boolean;
   disabled: boolean;
+}
+
+/** The subset of one item of GET /repos/{owner}/{repo}/commits CodeClarity consumes. */
+export interface GithubCommitItem {
+  sha: string;
+  commit: {
+    committer?: { date?: string | null } | null;
+    author?: { date?: string | null } | null;
+  };
 }
 
 /** One entry of a directory listing from GET /repos/{owner}/{repo}/contents/{path} */
@@ -52,6 +62,19 @@ export interface GithubRestClient {
         repo: string;
         path: string;
         ref?: string;
+      }): Promise<unknown>;
+      listCommits(params: {
+        owner: string;
+        repo: string;
+        sha?: string;
+        /** Only commits that touched this path */
+        path?: string;
+        /** ISO 8601: only commits on or after this time */
+        since?: string;
+        /** ISO 8601: only commits on or before this time */
+        until?: string;
+        per_page?: number;
+        page?: number;
       }): Promise<unknown>;
     };
   };
