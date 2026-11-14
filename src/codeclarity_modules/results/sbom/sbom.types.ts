@@ -155,4 +155,6 @@ export interface GraphOutput {
 export interface WorkspacesOutput {
   workspaces: string[];
   package_manager: string;
+  /** Package manager of each workspace, keyed by workspace */
+  package_managers: Record<string, string>;
 }
