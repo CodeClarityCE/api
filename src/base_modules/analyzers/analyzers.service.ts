@@ -19,13 +19,19 @@ import {
 } from "src/types/pagination.types";
 
 import { OrganizationLoggerService } from "../organizations/log/organizationLogger.service";
+import { PluginsRepository } from "../plugins/plugin.repository";
 import {
   MembershipsRepository,
   OrganizationsRepository,
   UsersRepository,
 } from "../shared/repositories";
 
+import {
+  AnalyzerDependencyMissing,
+  AnalyzerHasNoPlugins,
+} from "./analyzers.errors";
 import { AnalyzersRepository } from "./analyzers.repository";
+import { findWorkflowProblem } from "./workflow-rules";
 
 @Injectable()
 export class AnalyzersService {
@@ -35,9 +41,28 @@ export class AnalyzersService {
     private readonly organizationsRepository: OrganizationsRepository,
     private readonly usersRepository: UsersRepository,
     private readonly analyzersRepository: AnalyzersRepository,
+    private readonly pluginsRepository: PluginsRepository,
     @InjectRepository(Experiment, "codeclarity")
     private readonly experimentRepository: Repository<Experiment>,
   ) {}
+
+  /**
+   * Throws unless every plugin of the workflow can run.
+   * @throws {AnalyzerHasNoPlugins} If the workflow has no plugins
+   * @throws {AnalyzerDependencyMissing} If a plugin lacks a dependency
+   */
+  private async assertRunnable(
+    steps: AnalyzerCreateBody["steps"],
+  ): Promise<void> {
+    const problem = findWorkflowProblem(
+      steps,
+      await this.pluginsRepository.getAll(),
+    );
+    if (problem?.kind === "no-plugins") throw new AnalyzerHasNoPlugins();
+    if (problem?.kind === "missing-dependency") {
+      throw new AnalyzerDependencyMissing(problem.plugin, problem.missing);
+    }
+  }
 
   /**
    * Create a new analyzer in the specified organization.
@@ -56,6 +81,7 @@ export class AnalyzersService {
       user.userId,
       MemberRole.ADMIN,
     );
+    await this.assertRunnable(analyzerData.steps);
 
     const creator = await this.usersRepository.getUserById(user.userId);
     const organization =
@@ -112,6 +138,7 @@ export class AnalyzersService {
       user.userId,
       MemberRole.ADMIN,
     );
+    await this.assertRunnable(analyzerData.steps);
 
     const analyzer = await this.analyzersRepository.getAnalyzerById(analyzerId);
 
