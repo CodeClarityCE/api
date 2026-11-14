@@ -7,6 +7,7 @@ import { LicensesRepository } from "src/codeclarity_modules/results/licenses/lic
 import { AnalysisResultsRepository } from "src/codeclarity_modules/results/results.repository";
 import { SBOMRepository } from "src/codeclarity_modules/results/sbom/sbom.repository";
 import { VulnerabilitiesRepository } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.repository";
+import { NotAuthorized } from "src/types/error.types";
 
 import { AnaylzerMissingConfigAttribute } from "../analyzers/analyzers.errors";
 import { AnalyzersRepository } from "../analyzers/analyzers.repository";
@@ -37,7 +38,6 @@ describe("AnalysesService", () => {
   let membershipsRepository: MembershipsRepository;
   let projectsRepository: ProjectsRepository;
   let analyzersRepository: AnalyzersRepository;
-  let resultsRepository: AnalysisResultsRepository;
   let sbomRepository: SBOMRepository;
   let vulnerabilitiesRepository: VulnerabilitiesRepository;
   let licensesRepository: LicensesRepository;
@@ -198,7 +198,7 @@ describe("AnalysesService", () => {
             getAnalysisById: jest.fn(),
             doesAnalysesBelongToProject: jest.fn(),
             getAnalysisByProjectId: jest.fn(),
-            deleteAnalysis: jest.fn(),
+            deleteByIds: jest.fn(),
             getScheduledAnalysesByProjectId: jest.fn(),
             getAllByAnalysisId: jest.fn(),
           },
@@ -231,9 +231,6 @@ describe("AnalysesService", () => {
     );
     projectsRepository = module.get<ProjectsRepository>(ProjectsRepository);
     analyzersRepository = module.get<AnalyzersRepository>(AnalyzersRepository);
-    resultsRepository = module.get<AnalysisResultsRepository>(
-      AnalysisResultsRepository,
-    );
     sbomRepository = module.get<SBOMRepository>(SBOMRepository);
     vulnerabilitiesRepository = module.get<VulnerabilitiesRepository>(
       VulnerabilitiesRepository,
@@ -698,13 +695,7 @@ describe("AnalysesService", () => {
   });
 
   describe("delete", () => {
-    it("should delete an analysis and its results", async () => {
-      // Arrange
-      const analysisWithResults = {
-        ...mockAnalysis,
-        results: [{ id: "result-1" }, { id: "result-2" }],
-      };
-
+    it("should delete the analysis once it belongs to the project", async () => {
       jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
       jest
         .spyOn(projectsRepository, "doesProjectBelongToOrg")
@@ -712,64 +703,36 @@ describe("AnalysesService", () => {
       jest
         .spyOn(analysesRepository, "doesAnalysesBelongToProject")
         .mockResolvedValue();
-      jest
-        .spyOn(analysesRepository, "getAnalysisById")
-        .mockResolvedValue(analysisWithResults);
-      jest.spyOn(resultsRepository, "delete").mockResolvedValue();
-      jest.spyOn(analysesRepository, "deleteAnalysis").mockResolvedValue();
+      jest.spyOn(analysesRepository, "deleteByIds").mockResolvedValue(1);
 
-      // Act
       await service.delete("org-123", "project-123", "analysis-123", mockUser);
 
-      // Assert
       expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
         "org-123",
         "user-123",
         MemberRole.USER,
       );
-      expect(projectsRepository.doesProjectBelongToOrg).toHaveBeenCalledWith(
-        "project-123",
-        "org-123",
-      );
       expect(
         analysesRepository.doesAnalysesBelongToProject,
       ).toHaveBeenCalledWith("analysis-123", "project-123");
-      expect(analysesRepository.getAnalysisById).toHaveBeenCalledWith(
+      expect(analysesRepository.deleteByIds).toHaveBeenCalledWith([
         "analysis-123",
-        {
-          results: true,
-        },
-      );
-      expect(resultsRepository.delete).toHaveBeenCalledTimes(2);
-      expect(resultsRepository.delete).toHaveBeenCalledWith("result-1");
-      expect(resultsRepository.delete).toHaveBeenCalledWith("result-2");
-      expect(analysesRepository.deleteAnalysis).toHaveBeenCalledWith(
-        "analysis-123",
-      );
+      ]);
     });
 
-    it("should handle analysis with no results", async () => {
-      // Arrange
+    it("should not delete an analysis outside the project", async () => {
       jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
       jest
         .spyOn(projectsRepository, "doesProjectBelongToOrg")
         .mockResolvedValue();
       jest
         .spyOn(analysesRepository, "doesAnalysesBelongToProject")
-        .mockResolvedValue();
-      jest
-        .spyOn(analysesRepository, "getAnalysisById")
-        .mockResolvedValue(mockAnalysis);
-      jest.spyOn(analysesRepository, "deleteAnalysis").mockResolvedValue();
+        .mockRejectedValue(new NotAuthorized());
 
-      // Act
-      await service.delete("org-123", "project-123", "analysis-123", mockUser);
-
-      // Assert
-      expect(resultsRepository.delete).not.toHaveBeenCalled();
-      expect(analysesRepository.deleteAnalysis).toHaveBeenCalledWith(
-        "analysis-123",
-      );
+      await expect(
+        service.delete("org-123", "project-123", "analysis-123", mockUser),
+      ).rejects.toThrow(NotAuthorized);
+      expect(analysesRepository.deleteByIds).not.toHaveBeenCalled();
     });
   });
 

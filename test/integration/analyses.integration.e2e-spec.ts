@@ -1,4 +1,9 @@
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
+import {
+  createAnalysisWithPolicies,
+  leftoverRows,
+  useDeployedJoinTableKeys,
+} from "../utils/deletion-fixtures";
 import { testHelper, type TestUser } from "../utils/integration-test-helper";
 
 describe("Analyses Integration (e2e)", () => {
@@ -415,6 +420,45 @@ describe("Analyses Integration (e2e)", () => {
         adminUser.accessToken,
       );
       expect(getResponse.statusCode).toBe(403);
+    });
+
+    it("should delete an analysis with license and vulnerability policies attached", async () => {
+      await useDeployedJoinTableKeys();
+      const id = await createAnalysisWithPolicies(adminUser, projectId);
+      expect((await leftoverRows([id], projectId)).policyLinks).toBe(2);
+
+      const response = await testHelper.makeAuthenticatedRequest(
+        "DELETE",
+        `/org/${adminUser.organization.id}/projects/${projectId}/analyses/${id}`,
+        adminUser.accessToken,
+      );
+
+      expect(response.statusCode).toBe(200);
+      expect(await leftoverRows([id], projectId)).toMatchObject({
+        analyses: 0,
+        results: 0,
+        policyLinks: 0,
+      });
+    });
+
+    it("should batch-delete analyses with policies attached", async () => {
+      await useDeployedJoinTableKeys();
+      const id = await createAnalysisWithPolicies(adminUser, projectId);
+
+      const response = await testHelper.makeAuthenticatedRequest(
+        "POST",
+        `/org/${adminUser.organization.id}/projects/${projectId}/analyses/batch-delete`,
+        adminUser.accessToken,
+        { analysis_ids: [id] },
+      );
+
+      expect(response.statusCode).toBe(201);
+      expect(response.json().data.succeeded).toBe(1);
+      expect(await leftoverRows([id], projectId)).toMatchObject({
+        analyses: 0,
+        results: 0,
+        policyLinks: 0,
+      });
     });
 
     it("should refuse to delete an analysis outside the project", async () => {
