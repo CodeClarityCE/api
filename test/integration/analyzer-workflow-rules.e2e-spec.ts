@@ -116,7 +116,9 @@ describe("Analyzer workflow rules (HTTP)", () => {
 
   beforeEach(() => {
     saveAnalyzer.mockReset().mockResolvedValue({ id: "a1" });
-    getAnalyzerById.mockReset().mockResolvedValue({ id: "a1" });
+    getAnalyzerById
+      .mockReset()
+      .mockResolvedValue({ id: "a1", steps: [[step("js-sbom")]] });
   });
 
   async function send(

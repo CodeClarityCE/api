@@ -35,6 +35,17 @@ import {
 import { AnalyzersRepository } from "./analyzers.repository";
 import { findWorkflowProblem } from "./workflow-rules";
 
+type StepNames = { name: string }[][] | null | undefined;
+
+// Same plugin names in the same stages.
+function samePlugins(stored: StepNames, incoming: StepNames): boolean {
+  const layout = (steps: StepNames): string =>
+    JSON.stringify(
+      (steps ?? []).map((stage) => stage.map((step) => step.name)),
+    );
+  return layout(stored) === layout(incoming);
+}
+
 @Injectable()
 export class AnalyzersService {
   constructor(
@@ -152,9 +163,11 @@ export class AnalyzersService {
       user.userId,
       MemberRole.ADMIN,
     );
-    await this.assertRunnable(analyzerData.steps);
-
     const analyzer = await this.analyzersRepository.getAnalyzerById(analyzerId);
+    // An older analyzer saved before the rules existed can still be renamed.
+    if (!samePlugins(analyzer.steps, analyzerData.steps)) {
+      await this.assertRunnable(analyzerData.steps);
+    }
 
     // Update the properties of the analyzer with new data
     analyzer.name = analyzerData.name;

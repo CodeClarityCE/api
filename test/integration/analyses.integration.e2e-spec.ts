@@ -615,5 +615,45 @@ describe("Analyses Integration (e2e)", () => {
       );
       expect(still.statusCode).toBe(200);
     });
+
+    it("renames an older analyzer saved without plugins", async () => {
+      await testHelper
+        .getDataSource()
+        .query(`UPDATE analyzer SET steps = '[]' WHERE id = $1`, [analyzerId]);
+
+      const response = await testHelper.makeAuthenticatedRequest(
+        "PUT",
+        `${analyzersUrl()}/${analyzerId}`,
+        adminUser.accessToken,
+        {
+          name: "Renamed Analyzer",
+          description: "Analyzer for testing",
+          steps: [],
+        },
+      );
+
+      expect(response.statusCode).toBe(200);
+      const renamed = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `${analyzersUrl()}/${analyzerId}`,
+        adminUser.accessToken,
+      );
+      expect(renamed.json().data.name).toBe("Renamed Analyzer");
+    });
+
+    it("still refuses to empty the plugins of an analyzer", async () => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "PUT",
+        `${analyzersUrl()}/${analyzerId}`,
+        adminUser.accessToken,
+        {
+          name: "Test Analyzer",
+          description: "Analyzer for testing",
+          steps: [],
+        },
+      );
+
+      expect(response.statusCode).toBe(400);
+    });
   });
 });
