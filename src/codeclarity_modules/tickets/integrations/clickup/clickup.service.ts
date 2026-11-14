@@ -45,6 +45,33 @@ import {
  * ClickUp integration provider.
  * Supports both API key and OAuth authentication.
  */
+/** A non-2xx reply from the ClickUp API. */
+export class ClickUpApiError extends BadRequestException {
+  constructor(
+    readonly clickUpStatus: number,
+    body: string,
+  ) {
+    super(`ClickUp API error (${clickUpStatus}): ${body}`);
+  }
+}
+
+// Turns a failed connection test into a sentence a user can act on.
+function connectionFailureMessage(error: unknown): string {
+  if (error instanceof ClickUpApiError) {
+    if (error.clickUpStatus === 401 || error.clickUpStatus === 403) {
+      return "ClickUp did not accept these credentials. Check the API key or reconnect with OAuth.";
+    }
+    if (error.clickUpStatus === 429) {
+      return "ClickUp is limiting requests right now. Try again in a minute.";
+    }
+    return `ClickUp could not complete the check (error ${error.clickUpStatus}). Try again later.`;
+  }
+  if (error instanceof BadRequestException) {
+    return "No ClickUp API key or access token is set.";
+  }
+  return "ClickUp could not be reached. Try again later.";
+}
+
 @Injectable()
 export class ClickUpService implements ITicketIntegrationProvider {
   private readonly logger = new Logger(ClickUpService.name);
@@ -119,10 +146,7 @@ export class ClickUpService implements ITicketIntegrationProvider {
         },
       };
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Connection failed",
-      };
+      return { success: false, error: connectionFailureMessage(error) };
     }
   }
 
@@ -644,9 +668,7 @@ export class ClickUpService implements ITicketIntegrationProvider {
     if (!response.ok) {
       const errorText = await response.text();
       this.logger.error(`ClickUp API error: ${response.status} - ${errorText}`);
-      throw new BadRequestException(
-        `ClickUp API error (${response.status}): ${errorText}`,
-      );
+      throw new ClickUpApiError(response.status, errorText);
     }
 
     // Handle DELETE with no content

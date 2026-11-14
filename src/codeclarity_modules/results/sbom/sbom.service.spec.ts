@@ -592,6 +592,7 @@ describe("SBOMService", () => {
       mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
       mockSbomUtilsService.getMergedSbomResults.mockResolvedValue({
         mergedSbom: mockWorkspacesOutput,
+        pluginResults: [{ plugin: "js-sbom", sbom: mockWorkspacesOutput }],
       });
 
       const result = await service.getWorkspaces(
@@ -604,6 +605,7 @@ describe("SBOMService", () => {
       expect(result).toEqual({
         workspaces: ["default", "workspace1"],
         package_manager: "npm",
+        package_managers: { default: "npm", workspace1: "npm" },
       });
       expect(analysisResultsService.checkAccess).toHaveBeenCalledWith(
         "org-123",

@@ -33,6 +33,17 @@ interface EnhancedDependency extends Dependency {
   transitive?: boolean;
 }
 
+/** Reported when the given SBOMs use different package managers */
+export const MIXED_PACKAGE_MANAGERS = "multi-language";
+
+/** The package manager the SBOMs share, or MIXED_PACKAGE_MANAGERS */
+export function sharedPackageManager(sboms: SBOMOutput[]): string {
+  const managers = new Set(
+    sboms.map((sbom) => sbom.analysis_info.package_manager),
+  );
+  return managers.size === 1 ? [...managers][0]! : MIXED_PACKAGE_MANAGERS;
+}
+
 @Injectable()
 export class SbomUtilsService {
   constructor(
@@ -196,7 +207,9 @@ export class SbomUtilsService {
       ...baseSbom.analysis_info,
       project_name:
         baseSbom.analysis_info.project_name || "Multi-language Project",
-      package_manager: "multi-language", // Indicate this is a merged result
+      package_manager: sharedPackageManager(
+        pluginResults.map(({ sbom }) => sbom),
+      ),
     };
 
     return baseSbom;

@@ -15,7 +15,10 @@ import {
   AnalysisStats,
   newAnalysisStats,
 } from "src/codeclarity_modules/results/sbom/sbom_stats.types";
-import { SbomUtilsService } from "src/codeclarity_modules/results/sbom/utils/utils";
+import {
+  SbomUtilsService,
+  sharedPackageManager,
+} from "src/codeclarity_modules/results/sbom/utils/utils";
 import { StatusResponse } from "src/codeclarity_modules/results/status.types";
 import { paginate } from "src/codeclarity_modules/results/utils/utils";
 import { PaginatedResponse } from "src/types/apiResponses.types";
@@ -342,12 +345,23 @@ export class SBOMService {
     );
 
     // Get merged SBOM results from all supported plugins
-    const { mergedSbom } =
+    const { mergedSbom, pluginResults } =
       await this.sbomUtilsService.getMergedSbomResults(analysisId);
+
+    // Each workspace takes the manager of the plugins that found it.
+    const packageManagers: Record<string, string> = {};
+    for (const workspace of Object.keys(mergedSbom.workspaces)) {
+      packageManagers[workspace] = sharedPackageManager(
+        pluginResults
+          .map(({ sbom }) => sbom)
+          .filter((sbom) => workspace in sbom.workspaces),
+      );
+    }
 
     return {
       workspaces: Object.keys(mergedSbom.workspaces),
       package_manager: mergedSbom.analysis_info.package_manager,
+      package_managers: packageManagers,
     };
   }
 

@@ -25,6 +25,7 @@ import { PluginService } from "./plugin.service";
     TypeOrmModule.forFeature([Plugin], "plugin"),
   ],
   providers: [PluginService, PluginsRepository],
+  exports: [PluginsRepository],
   controllers: [PluginController],
 })
 export class PluginModule {}

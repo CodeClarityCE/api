@@ -161,29 +161,44 @@ export class MembershipsRepository {
    */
   async getOrganizationsOfUser(
     userId: string,
-  ): Promise<TypedPaginatedData<object>> {
-    const memberships = await this.membershipRepository.find({
-      where: { user: { id: userId } },
-      relations: {
-        organization: {
-          owners: true,
-          created_by: true,
-          organizationMemberships: true,
+    currentPage: number,
+    entriesPerPage: number,
+  ): Promise<TypedPaginatedData<OrganizationMemberships>> {
+    const [memberships, fullCount] =
+      await this.membershipRepository.findAndCount({
+        where: { user: { id: userId } },
+        relations: {
+          organization: {
+            owners: true,
+            created_by: true,
+            organizationMemberships: true,
+          },
+          user: true,
         },
-        user: true,
-      },
-    });
+        order: { joined_on: "ASC", organization: { name: "ASC" } },
+        take: entriesPerPage,
+        skip: currentPage * entriesPerPage,
+      });
+    return paginated(memberships, fullCount, currentPage, entriesPerPage);
+  }
 
-    return {
-      data: memberships,
-      page: 1,
-      entry_count: 1,
-      entries_per_page: 1,
-      total_entries: 1,
-      total_pages: 1,
-      matching_count: 1,
-      filter_count: {},
-    };
+  /**
+   * Retrieve one page of an organization's members, owners first.
+   */
+  async getMembersPage(
+    organizationId: string,
+    currentPage: number,
+    entriesPerPage: number,
+  ): Promise<TypedPaginatedData<OrganizationMemberships>> {
+    const [memberships, fullCount] =
+      await this.membershipRepository.findAndCount({
+        where: { organization: { id: organizationId } },
+        relations: { organization: true, user: true },
+        order: { role: "ASC", joined_on: "ASC" },
+        take: entriesPerPage,
+        skip: currentPage * entriesPerPage,
+      });
+    return paginated(memberships, fullCount, currentPage, entriesPerPage);
   }
 
   /**
@@ -194,4 +209,22 @@ export class MembershipsRepository {
       where: { organization: { id: organizationId } },
     });
   }
+}
+
+function paginated<T>(
+  data: T[],
+  fullCount: number,
+  currentPage: number,
+  entriesPerPage: number,
+): TypedPaginatedData<T> {
+  return {
+    data,
+    page: currentPage,
+    entry_count: data.length,
+    entries_per_page: entriesPerPage,
+    total_entries: fullCount,
+    total_pages: Math.ceil(fullCount / entriesPerPage),
+    matching_count: fullCount,
+    filter_count: {},
+  };
 }
