@@ -26,7 +26,7 @@ function filter(
   if (searchKey === null || searchKey === undefined) {
     searchkeySafe = "";
   } else {
-    searchkeySafe = searchKey;
+    searchkeySafe = searchKey.trim();
   }
 
   if (activeFilters === null || activeFilters === undefined) {
@@ -36,7 +36,7 @@ function filter(
   }
 
   function filterBySearchKey(dependencies: SbomDependency[]): SbomDependency[] {
-    if (searchKey === "") {
+    if (searchkeySafe === "") {
       return dependencies;
     }
 

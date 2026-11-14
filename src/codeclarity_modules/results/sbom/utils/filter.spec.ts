@@ -58,6 +58,17 @@ describe("filter", () => {
   });
 
   describe("search key filtering", () => {
+    it("ignores spaces around the search key", () => {
+      const dependencies = [
+        createMockDependency({ name: "package-a" }),
+        createMockDependency({ name: "other" }),
+      ];
+
+      const [filteredDeps] = filter(dependencies, "  package-a ", undefined);
+
+      expect(filteredDeps.map((d) => d.name)).toEqual(["package-a"]);
+    });
+
     const dependencies = [
       createMockDependency({ name: "lodash", version: "4.17.21" }),
       createMockDependency({ name: "express", version: "4.18.2" }),
