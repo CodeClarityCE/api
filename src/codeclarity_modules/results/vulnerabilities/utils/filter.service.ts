@@ -67,7 +67,7 @@ export class VulnerabilitiesFilterService {
     if (searchKey === null || searchKey === undefined) {
       searchkeySafe = "";
     } else {
-      searchkeySafe = searchKey;
+      searchkeySafe = searchKey.trim();
     }
 
     if (activeFilters === null || activeFilters === undefined) {
@@ -87,10 +87,14 @@ export class VulnerabilitiesFilterService {
       const searchKeyLower = searchkeySafe.toLocaleLowerCase();
 
       for (const vulnerability of vulnerabilities) {
-        const matchesDependency = vulnerability.Affected.some((affected) =>
-          affected.AffectedDependency?.toLocaleLowerCase().includes(
-            searchKeyLower,
-          ),
+        const matchesDependency = vulnerability.Affected.some(
+          (affected) =>
+            affected.AffectedDependency?.toLocaleLowerCase().includes(
+              searchKeyLower,
+            ) ||
+            affected.AffectedVersion?.toLocaleLowerCase().includes(
+              searchKeyLower,
+            ),
         );
         const matchesId =
           vulnerability.Vulnerability?.toLocaleLowerCase().includes(
