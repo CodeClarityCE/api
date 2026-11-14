@@ -21,6 +21,7 @@ import {
 import { TeamMember } from "src/base_modules/users/teamMember.types";
 import { EntityNotFound } from "src/types/error.types";
 import {
+  PaginationConfig,
   PaginationUserSuppliedConf,
   TypedPaginatedData,
 } from "src/types/pagination.types";
@@ -156,13 +157,18 @@ export class OrganizationsService {
    * @returns the orgs
    */
   async getMany(
-    _paginationUserSuppliedConf: PaginationUserSuppliedConf,
+    paginationUserSuppliedConf: PaginationUserSuppliedConf,
     user: AuthenticatedUser,
     _searchKey?: string,
     _sortBy?: string,
     _sortDirection?: SortDirection,
-  ): Promise<TypedPaginatedData<object>> {
-    return this.membershipsRepository.getOrganizationsOfUser(user.userId);
+  ): Promise<TypedPaginatedData<OrganizationMemberships>> {
+    const { currentPage, entriesPerPage } = pageOf(paginationUserSuppliedConf);
+    return this.membershipsRepository.getOrganizationsOfUser(
+      user.userId,
+      currentPage,
+      entriesPerPage,
+    );
   }
 
   /**
@@ -179,27 +185,23 @@ export class OrganizationsService {
    */
   async getOrgMembers(
     orgId: string,
-    _paginationUserSuppliedConf: PaginationUserSuppliedConf,
-    _user: AuthenticatedUser,
+    paginationUserSuppliedConf: PaginationUserSuppliedConf,
+    user: AuthenticatedUser,
     _searchKey?: string,
     _sortBy?: string,
     _sortDirection?: SortDirection,
   ): Promise<TypedPaginatedData<OrganizationMemberships>> {
-    const memberships =
-      await this.membershipsRepository.getMembershipsByOrganizationId(orgId, {
-        organization: true,
-        user: true,
-      });
-    return {
-      data: memberships,
-      page: 0,
-      entry_count: 0,
-      entries_per_page: 0,
-      total_entries: 0,
-      total_pages: 0,
-      matching_count: 0,
-      filter_count: {},
-    };
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.USER,
+    );
+    const { currentPage, entriesPerPage } = pageOf(paginationUserSuppliedConf);
+    return this.membershipsRepository.getMembersPage(
+      orgId,
+      currentPage,
+      entriesPerPage,
+    );
   }
 
   /**
@@ -554,4 +556,20 @@ export class OrganizationsService {
 
     await this.organizationsRepository.saveOrganization(organization);
   }
+}
+
+/** Turns the requested page into a safe page index and size. */
+function pageOf(conf: PaginationUserSuppliedConf): {
+  currentPage: number;
+  entriesPerPage: number;
+} {
+  const config: PaginationConfig = {
+    maxEntriesPerPage: 100,
+    defaultEntriesPerPage: 50,
+  };
+  const entriesPerPage = conf.entriesPerPage
+    ? Math.min(config.maxEntriesPerPage, Math.max(1, conf.entriesPerPage))
+    : config.defaultEntriesPerPage;
+  const currentPage = Math.max(0, conf.currentPage ?? 0);
+  return { currentPage, entriesPerPage };
 }
