@@ -185,6 +185,47 @@ describe("LicensesService", () => {
       );
     });
 
+    it("names and describes licenses that are not on the SPDX list", async () => {
+      mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+      mockLicensesUtilsService.getLicensesResult.mockResolvedValue({
+        ...mockLicensesOutput,
+        workspaces: {
+          default: {
+            LicensesDepMap: {},
+            NonSpdxLicensesDepMap: {
+              "SEE LICENSE IN FEEL-FREE.md": ["rgbcolor@1.0.1"],
+              "": ["ghost@1.0.0"],
+            },
+            LicenseComplianceViolations: [],
+          },
+        },
+      });
+
+      const result = await service.getLicensesUsed(
+        "org-123",
+        "project-123",
+        "analysis-123",
+        mockUser,
+        { workspace: "default" },
+      );
+
+      const rows = result.data as {
+        id: string;
+        name: string;
+        description: string;
+      }[];
+      expect(rows.map(({ id, name }) => ({ id, name }))).toEqual(
+        expect.arrayContaining([
+          {
+            id: "SEE LICENSE IN FEEL-FREE.md",
+            name: "SEE LICENSE IN FEEL-FREE.md",
+          },
+          { id: "", name: "Unknown license" },
+        ]),
+      );
+      for (const row of rows) expect(row.description).not.toBe("");
+    });
+
     it("should throw error when checkAccess fails", async () => {
       const accessError = new Error("Access denied");
       mockAnalysisResultsService.checkAccess.mockRejectedValue(accessError);
