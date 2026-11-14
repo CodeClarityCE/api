@@ -226,6 +226,8 @@ describe("Dashboard aggregates against Postgres", () => {
       { severity_class: "CRITICAL", count: 3 },
       { severity_class: "HIGH", count: 3 },
       { severity_class: "MEDIUM", count: 3 },
+      { severity_class: "LOW", count: 2 },
+      { severity_class: "NONE", count: 1 },
     ]);
     expect(weekTotals(weeks)).toEqual({
       critical: 3,
