@@ -433,22 +433,6 @@ export class SBOMService {
       );
     }
 
-    // If the target node is a direct dependency and does not already have the virtual root as a parent, add it
-    if (
-      virtualRoot &&
-      !targetNode.parentIds?.includes(SBOMService.VIRTUAL_ROOT_ID)
-    ) {
-      // Add virtual root as parent
-      targetNode.parentIds = Array.from(
-        new Set([...(targetNode.parentIds ?? []), SBOMService.VIRTUAL_ROOT_ID]),
-      );
-      // Add target node as child of virtual root if not already present
-      virtualRoot.childrenIds ??= [];
-      if (!virtualRoot.childrenIds.includes(targetNode.id)) {
-        virtualRoot.childrenIds.push(targetNode.id);
-      }
-    }
-
     // Find only the paths that contain the target dependency
     // This excludes branches that don't lead to the target
     const pathNodes = GraphTraversalUtils.findMinimalPathsToTarget(
@@ -599,14 +583,10 @@ export class SBOMService {
     // Find all parents for this node
     const parents = this.findParentDependencies(nodeId, dependenciesMap);
 
-    if (parents.length > 0) {
-      node.parentIds = parents;
-    } else if (isRoot) {
-      node.parentIds = [virtualRootId];
-      virtualRootNode.childrenIds!.push(nodeId);
-    } else {
-      // Orphaned node - make it a child of virtual root
-      node.parentIds = [virtualRootId];
+    node.parentIds = parents;
+    // Direct dependencies hang off the root; so do orphans, to keep one tree.
+    if (isRoot || parents.length === 0) {
+      node.parentIds = [...parents, virtualRootId];
       virtualRootNode.childrenIds!.push(nodeId);
     }
 

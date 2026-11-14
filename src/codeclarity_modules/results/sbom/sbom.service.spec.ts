@@ -629,6 +629,73 @@ describe("SBOMService", () => {
       );
     });
 
+    describe("root edges", () => {
+      // app -> express -> debug, and app -> debug directly too; ms only via debug.
+      const graphSbom = {
+        workspaces: {
+          default: {
+            dependencies: {
+              express: {
+                "4.16.0": { Dependencies: { debug: "2.6.9" }, Prod: true },
+              },
+              debug: {
+                "2.6.9": { Dependencies: { ms: "2.0.0" }, Prod: true },
+              },
+              ms: { "2.0.0": { Dependencies: {}, Prod: true } },
+            },
+            start: {
+              dependencies: [
+                { name: "express", version: "4.16.0" },
+                { name: "debug", version: "2.6.9" },
+              ],
+            },
+          },
+        },
+        analysis_info: mockSbomOutput.analysis_info,
+      };
+
+      async function graphOf(
+        dependency: string,
+      ): Promise<Record<string, string[]>> {
+        mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+        mockSbomUtilsService.getMergedSbomResults.mockResolvedValue({
+          mergedSbom: graphSbom,
+        });
+        const graph = await service.getDependencyGraph(
+          "org-123",
+          "project-123",
+          "analysis-123",
+          "default",
+          dependency,
+          mockUser,
+        );
+        return Object.fromEntries(
+          graph.map((node) => [node.id, [...(node.parentIds ?? [])].sort()]),
+        );
+      }
+
+      it("gives a transitive dependency no root edge", async () => {
+        const parents = await graphOf("ms@2.0.0");
+
+        expect(parents["ms@2.0.0"]).toEqual(["debug@2.6.9"]);
+      });
+
+      it("gives a direct dependency a root edge", async () => {
+        const parents = await graphOf("express@4.16.0");
+
+        expect(parents["express@4.16.0"]).toEqual(["__VIRTUAL_ROOT__"]);
+      });
+
+      it("keeps the root edge of a dependency that is also transitive", async () => {
+        const parents = await graphOf("debug@2.6.9");
+
+        expect(parents["debug@2.6.9"]).toEqual([
+          "__VIRTUAL_ROOT__",
+          "express@4.16.0",
+        ]);
+      });
+    });
+
     it("should throw UnknownWorkspace for invalid workspace", async () => {
       mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
       mockSbomUtilsService.getSbomResult.mockResolvedValue(mockSbomOutput);
