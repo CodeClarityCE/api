@@ -95,7 +95,7 @@ export class AnalysesService {
    * Create/start an analysis
    * @throws {NotAuthorized} In case the user is not allowed to perform the action on the org
    * @throws {AnalyzerDoesNotExist} In case the referenced analyzer does not exist on the org
-   * @throws {AnaylzerMissingConfigAttribute} In case config options required by the anylzer were not provided
+   * @throws {AnaylzerMissingConfigAttribute} In case config options required by the analyzer were not provided
    * @param orgId The id of the organization to which the project belongs
    * @param projectId The id of the project on which the analysis should be performed
    * @param analysisData The analysis create body supplied by the user

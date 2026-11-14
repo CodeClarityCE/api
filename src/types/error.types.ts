@@ -109,9 +109,9 @@ export const errorMessages: Record<string, string> = {
   IntegrationIntegrationTokenMissingPermissions:
     "An integration token has missing permissions.",
   FailedToSendPasswordResetEmail:
-    "An error occured while trying to send the password reset email.",
+    "An error occurred while trying to send the password reset email.",
   FailedToSendOrganizationInviteEmail:
-    "An error occured while trying to send the organization invitation email.",
+    "An error occurred while trying to send the organization invitation email.",
 };
 
 export class PublicAPIError extends APIError {}
@@ -710,7 +710,7 @@ export class RabbitMQError extends PrivateAPIError {
       "We encountered a problem while processing your request.",
       500,
       "RabbitMQError",
-      "An error occured while communicating or setting up communication with rabbitmq.",
+      "An error occurred while communicating or setting up communication with rabbitmq.",
       cause,
     );
   }
