@@ -1,8 +1,9 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Expose } from "class-transformer";
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, PrimaryGeneratedColumn, Unique } from "typeorm";
 
 @Entity("plugin")
+@Unique("UQ_plugin_name", ["name"])
 export class Plugin {
   @PrimaryGeneratedColumn("uuid")
   @ApiProperty()
