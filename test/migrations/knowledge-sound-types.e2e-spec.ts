@@ -4,7 +4,7 @@ import { DataSource } from "typeorm";
 import { ExtendKnowledgeSoundTypes1794268800000 as Migration } from "../../src/migrations/knowledge/1794268800000-ExtendKnowledgeSoundTypes";
 
 const connection = {
-  host: process.env["TEST_PG_HOST"] ?? "host.docker.internal",
+  host: process.env["TEST_PG_HOST"] ?? "localhost",
   port: parseInt(process.env["TEST_PG_PORT"] ?? "5432", 10),
   user: process.env["TEST_PG_USER"] ?? "postgres",
   password: process.env["TEST_PG_PASSWORD"] ?? "!ChangeMe!",
