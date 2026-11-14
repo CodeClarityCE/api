@@ -18,6 +18,7 @@ import {
   PolicyFrontend,
 } from "src/codeclarity_modules/policies/policy.entity";
 import { PolicyType } from "src/codeclarity_modules/policies/policy.types";
+import { EntityNotFound } from "src/types/error.types";
 import {
   PaginationConfig,
   PaginationUserSuppliedConf,
@@ -109,7 +110,7 @@ export class LicensePolicyService {
     });
 
     if (!policy) {
-      throw new Error("EntityNotFound");
+      throw new EntityNotFound();
     }
 
     return policy;

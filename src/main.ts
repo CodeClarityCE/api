@@ -1,18 +1,15 @@
 // Import necessary modules and classes from NestJS and Fastify libraries
 import compression from "@fastify/compress";
 import multipart from "@fastify/multipart";
-import { ClassSerializerInterceptor, ValidationPipe } from "@nestjs/common";
-import { NestFactory, Reflector } from "@nestjs/core";
+import { NestFactory } from "@nestjs/core";
 import {
   FastifyAdapter,
   type NestFastifyApplication,
 } from "@nestjs/platform-fastify";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
+import { useGlobalHandlers } from "./app.globals";
 import { AppModule } from "./app.module";
-import { ErrorFilter } from "./filters/ExceptionFilter";
-import { ResponseBodyInterceptor } from "./interceptors/ResponseBodyInterceptor";
-import { ValidationFailed } from "./types/error.types";
 
 /**
  * The main entry point of the application.
@@ -72,32 +69,7 @@ async function bootstrap(): Promise<void> {
     origin: ["*"],
   });
 
-  /**
-   * Set up global pipes for validation and error handling.
-   * The ValidationPipe will throw a ValidationFailed exception if any validation errors occur.
-   */
-  app.useGlobalPipes(
-    new ValidationPipe({
-      // Create a custom ValidationFailed exception when validation fails
-      exceptionFactory: (errors) => {
-        return new ValidationFailed(errors);
-      },
-      // Stop at the first error and don't continue validating other fields
-      stopAtFirstError: true,
-    }),
-  );
-
-  // Set up global filters for error handling
-  app.useGlobalFilters(new ErrorFilter());
-
-  // Set up global interceptors for response body formatting and serialization
-  app.useGlobalInterceptors(new ResponseBodyInterceptor());
-  app.useGlobalInterceptors(
-    new ClassSerializerInterceptor(app.get(Reflector), {
-      // Exclude extraneous values from the serialized output
-      excludeExtraneousValues: true,
-    }),
-  );
+  useGlobalHandlers(app);
 
   /**
    * Set up Swagger documentation for the API.
