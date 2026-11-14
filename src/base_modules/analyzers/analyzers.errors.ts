@@ -27,10 +27,12 @@ export class AnaylzerMissingConfigAttribute extends PublicAPIError {
   static errorMessage =
     errorMessages[AnaylzerMissingConfigAttribute.errorCode]!;
   static statusCode = 400;
-  constructor(cause?: unknown) {
+  constructor(missing?: { plugin: string; option: string }, cause?: unknown) {
     super(
       AnaylzerMissingConfigAttribute.errorCode,
-      AnaylzerMissingConfigAttribute.errorMessage,
+      missing
+        ? `The plugin "${missing.plugin}" needs the option "${missing.option}", which is missing.`
+        : AnaylzerMissingConfigAttribute.errorMessage,
       AnaylzerMissingConfigAttribute.statusCode,
       cause,
     );

@@ -224,7 +224,10 @@ export class AnalysesService {
       for (const [key] of Object.entries(plugin_config)) {
         const config_element = config_structure[pluginName]?.[key];
         if (config_element?.required && !config[pluginName]?.[key]) {
-          throw new AnaylzerMissingConfigAttribute();
+          throw new AnaylzerMissingConfigAttribute({
+            plugin: pluginName,
+            option: key,
+          });
         }
       }
     }

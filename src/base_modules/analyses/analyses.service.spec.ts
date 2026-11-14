@@ -344,6 +344,41 @@ describe("AnalysesService", () => {
       ).rejects.toThrow(AnaylzerMissingConfigAttribute);
     });
 
+    it("names the missing plugin option in the error", async () => {
+      const analyzerWithRequiredConfig = {
+        ...mockAnalyzer,
+        steps: [
+          [
+            {
+              name: "step1",
+              version: "1.0.0",
+              config: { requiredOption: { required: true } },
+            },
+          ],
+        ],
+      };
+      jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
+      jest
+        .spyOn(projectsRepository, "doesProjectBelongToOrg")
+        .mockResolvedValue();
+      jest
+        .spyOn(analyzersRepository, "getAnalyzerById")
+        .mockResolvedValue(analyzerWithRequiredConfig as any);
+
+      await expect(
+        service.create(
+          "org-123",
+          "project-123",
+          { ...mockAnalysisCreateBody, config: {} },
+          mockUser,
+        ),
+      ).rejects.toMatchObject({
+        error_code: "AnaylzerMissingConfigAttribute",
+        error_message:
+          'The plugin "step1" needs the option "requiredOption", which is missing.',
+      });
+    });
+
     it("still returns the saved analysis when publishing fails", async () => {
       // Arrange
       jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
