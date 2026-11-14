@@ -32,15 +32,73 @@ const finding = (
   Conflict: { ConflictWinner: "NVD", ConflictFlag: "NO_CONFLICT" },
 });
 
+// lodash has an empty AI score, axios a real one.
 // Stored order matches neither name order nor severity order.
 const vulnsOutput = {
   workspaces: {
     ".": {
       Vulnerabilities: [
-        finding("TEST-0001", "lodash", "4.17.20", 5.0),
-        finding("TEST-0002", "axios", "0.21.1", 9.0),
+        {
+          ...finding("TEST-0001", "lodash", "4.17.20", 5.0),
+          NVDMatch: { Vulnerability: { Vlai_score: "", Vlai_confidence: 0 } },
+        },
+        {
+          ...finding("TEST-0002", "axios", "0.21.1", 9.0),
+          NVDMatch: {
+            Vulnerability: { Vlai_score: "high", Vlai_confidence: 0.8 },
+          },
+        },
         finding("TEST-0003", "minimist", "1.2.5", 7.0),
       ],
+    },
+  },
+  analysis_info: { status: "success" },
+};
+
+// A patching result entry, as js-patching writes one per direct dependency.
+const toPatch = (id: string, dependency: string, version: string) => ({
+  DependencyName: dependency,
+  DependencyVersion: version,
+  Path: [],
+  Vulnerability: {
+    VulnerabilityId: id,
+    AffectedDependency: dependency,
+    AffectedVersion: version,
+  },
+});
+
+// lodash is fixed by its upgrade, axios by none, minimist through one of two parents.
+const patchingOutput = {
+  workspaces: {
+    ".": {
+      patches: {
+        "lodash@4.17.20": {
+          IsPatchable: "FULL",
+          Patchable: [toPatch("TEST-0001", "lodash", "4.17.20")],
+          Unpatchable: [],
+          Introduced: [],
+        },
+        "axios@0.21.1": {
+          IsPatchable: "NONE",
+          Patchable: [],
+          Unpatchable: [toPatch("TEST-0002", "axios", "0.21.1")],
+          Introduced: [],
+        },
+        "yargs@15.0.0": {
+          IsPatchable: "FULL",
+          Patchable: [toPatch("TEST-0003", "minimist", "1.2.5")],
+          Unpatchable: [],
+          Introduced: [],
+        },
+      },
+      dev_patches: {
+        "mocha@8.0.0": {
+          IsPatchable: "PARTIAL",
+          Patchable: [],
+          Unpatchable: [toPatch("TEST-0003", "minimist", "1.2.5")],
+          Introduced: [],
+        },
+      },
     },
   },
   analysis_info: { status: "success" },
@@ -49,6 +107,7 @@ const vulnsOutput = {
 describe("Vulnerabilities list (e2e)", () => {
   let user: TestUser;
   let url: string;
+  let analysisId: string;
 
   beforeAll(async () => {
     await testHelper.setupTestApp();
@@ -74,7 +133,7 @@ describe("Vulnerabilities list (e2e)", () => {
     const projectId = project.json().id as string;
 
     const data = testHelper.getDataSource();
-    const analysisId = randomUUID();
+    analysisId = randomUUID();
     await data.query(
       `INSERT INTO analysis (id, created_on, config, status, steps, branch, "projectId", "organizationId")
        VALUES ($1, now(), '{}', 'completed', '[]', 'main', $2, $3)`,
@@ -123,5 +182,63 @@ describe("Vulnerabilities list (e2e)", () => {
     expect(
       await dependencies(`search_key=${encodeURIComponent("  axios ")}`),
     ).toEqual(["axios"]);
+  });
+
+  interface Affected {
+    AffectedDependency: string;
+    PatchType?: string;
+  }
+
+  const patchTypes = async (): Promise<Record<string, string | undefined>> => {
+    const response = await testHelper.makeAuthenticatedRequest(
+      "GET",
+      url,
+      user.accessToken,
+    );
+    expect(response.statusCode).toBe(200);
+    const findings = response.json().data as { Affected: Affected[] }[];
+    return Object.fromEntries(
+      findings
+        .flatMap((v) => v.Affected)
+        .map((a) => [a.AffectedDependency, a.PatchType]),
+    );
+  };
+
+  it("shows each dependency's patch status from the patching result", async () => {
+    await testHelper
+      .getDataSource()
+      .query(
+        `INSERT INTO result (result, plugin, created_on, "analysisId") VALUES ($1, 'js-patching', now(), $2)`,
+        [JSON.stringify(patchingOutput), analysisId],
+      );
+
+    expect(await patchTypes()).toEqual({
+      lodash: "FULL",
+      axios: "NONE",
+      minimist: "PARTIAL",
+    });
+  });
+
+  it("leaves the patch status out when patching did not run", async () => {
+    expect(await patchTypes()).toEqual({
+      lodash: undefined,
+      axios: undefined,
+      minimist: undefined,
+    });
+  });
+
+  it("sends only the AI assessments that have a score", async () => {
+    const response = await testHelper.makeAuthenticatedRequest(
+      "GET",
+      `${url}&sort_by=dep_name&sort_direction=ASC`,
+      user.accessToken,
+    );
+    const findings = response.json().data as { VLAI: unknown[] }[];
+
+    expect(findings.map((v) => v.VLAI)).toEqual([
+      [{ Source: "NVD", Score: "high", Confidence: 0.8 }],
+      [],
+      [],
+    ]);
   });
 });

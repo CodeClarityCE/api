@@ -228,6 +228,7 @@ export interface Vulnerability {
   NVDMatch: Vuln;
   GCVEMatch?: Vuln;
   Conflict: Conflict;
+  PatchType?: PatchType;
 }
 
 /** Vulnerability info containing VLAI scores from matching */
@@ -287,6 +288,7 @@ export interface AffectedVuln {
   NVDMatch: Vuln;
   GCVEMatch?: Vuln;
   Conflict: Conflict;
+  PatchType?: PatchType;
 }
 
 export enum ConflictFlag {

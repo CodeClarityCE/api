@@ -29,6 +29,7 @@ import {
   Vulnerability,
   VulnerabilityAnalysisStats,
   VulnerabilityMerged,
+  VulnInfo,
 } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
 import { CodeClarityLogger } from "src/services/logger.service";
 import { PaginatedResponse } from "src/types/apiResponses.types";
@@ -96,6 +97,20 @@ function getContinuousFromDiscreteCIA(metric: string): number {
 function isNoConflict(flag: ConflictFlag | string): boolean {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
   return flag === ConflictFlag.NO_CONFLICT || flag === "";
+}
+
+/** The AI assessment of a match, or null when it has no score. */
+function scoredVlai(
+  vuln: unknown,
+): { Score: string; Confidence: number } | null {
+  if (!vuln || typeof vuln !== "object" || !("Vlai_score" in vuln)) {
+    return null;
+  }
+  const { Vlai_score, Vlai_confidence } = vuln as VulnInfo;
+  if (Vlai_score === null || Vlai_score === undefined) return null;
+  const score = String(Vlai_score);
+  if (score.trim() === "") return null;
+  return { Score: score, Confidence: Number(Vlai_confidence) };
 }
 
 @Injectable()
@@ -471,6 +486,9 @@ export class VulnerabilitiesService {
       if (finding.Weaknesses) {
         affected.Weaknesses = finding.Weaknesses;
       }
+      if (finding.PatchType) {
+        affected.PatchType = finding.PatchType;
+      }
       // if vuln already in map
       const vuln = findingsMerged.get(finding.VulnerabilityId);
       if (vuln) {
@@ -497,47 +515,13 @@ export class VulnerabilitiesService {
         if (finding.Weaknesses) {
           mergedFinding.Weaknesses = finding.Weaknesses;
         }
-        if (finding.NVDMatch) {
-          const nvdVuln = finding.NVDMatch.Vulnerability;
-          if (
-            nvdVuln &&
-            typeof nvdVuln === "object" &&
-            "Vlai_score" in nvdVuln
-          ) {
-            mergedFinding.VLAI.push({
-              Source: Source.Nvd,
-              Score: String(nvdVuln.Vlai_score),
-              Confidence: Number(nvdVuln.Vlai_confidence),
-            });
-          }
-        }
-        if (finding.OSVMatch) {
-          const osvVuln = finding.OSVMatch.Vulnerability;
-          if (
-            osvVuln &&
-            typeof osvVuln === "object" &&
-            "Vlai_score" in osvVuln
-          ) {
-            mergedFinding.VLAI.push({
-              Source: Source.Osv,
-              Score: String(osvVuln.Vlai_score),
-              Confidence: Number(osvVuln.Vlai_confidence),
-            });
-          }
-        }
-        if (finding.GCVEMatch) {
-          const gcveVuln = finding.GCVEMatch.Vulnerability;
-          if (
-            gcveVuln &&
-            typeof gcveVuln === "object" &&
-            "Vlai_score" in gcveVuln
-          ) {
-            mergedFinding.VLAI.push({
-              Source: Source.Gcve,
-              Score: String(gcveVuln.Vlai_score),
-              Confidence: Number(gcveVuln.Vlai_confidence),
-            });
-          }
+        for (const [source, match] of [
+          [Source.Nvd, finding.NVDMatch],
+          [Source.Osv, finding.OSVMatch],
+          [Source.Gcve, finding.GCVEMatch],
+        ] as const) {
+          const vlai = scoredVlai(match?.Vulnerability);
+          if (vlai) mergedFinding.VLAI.push({ Source: source, ...vlai });
         }
 
         // Check for source disagreements
