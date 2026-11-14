@@ -409,15 +409,27 @@ describe("DashboardService", () => {
         getOne: jest.fn().mockResolvedValue({
           projects: [
             {
+              id: "project1",
               analyses: [
                 {
                   results: [
                     {
+                      plugin: "license-finder",
                       result: {
                         analysis_info: { stats: { license_dist: null } },
                       },
                     },
+                  ],
+                },
+              ],
+            },
+            {
+              id: "project2",
+              analyses: [
+                {
+                  results: [
                     {
+                      plugin: "license-finder",
                       result: {
                         analysis_info: { stats: { license_dist: { MIT: 2 } } },
                       },

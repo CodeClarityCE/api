@@ -7,6 +7,7 @@ import {
   AnalysisStatus,
 } from "src/base_modules/analyses/analysis.entity";
 import { TERMINAL_ANALYSIS_STATUSES } from "src/base_modules/analyses/analysis-outcome";
+import { Result } from "src/codeclarity_modules/results/result.entity";
 import { EntityNotFound, NotAuthorized } from "src/types/error.types";
 import { TypedPaginatedData } from "src/types/pagination.types";
 
@@ -68,13 +69,32 @@ export class AnalysesRepository {
   }
 
   /**
-   * Deletes multiple analyses in a single set-based statement.
+   * Deletes analyses with their policy links and results, all or nothing.
    * @param ids The IDs of the analyses to delete.
-   * @returns The number of rows removed.
+   * @param manager Runs the deletes in the caller's transaction when given.
+   * @returns The number of analyses removed.
    */
-  async deleteByIds(ids: string[]): Promise<number> {
+  async deleteByIds(ids: string[], manager?: EntityManager): Promise<number> {
     if (ids.length === 0) return 0;
-    const res = await this.analysisRepository.delete({ id: In(ids) });
+    if (!manager) {
+      return this.analysisRepository.manager.transaction((m) =>
+        this.deleteByIds(ids, m),
+      );
+    }
+    // The join table and result keys do not cascade, so clear them first
+    await manager
+      .createQueryBuilder()
+      .delete()
+      .from("policy_analyses_analysis")
+      .where('"analysisId" IN (:...ids)', { ids })
+      .execute();
+    await manager
+      .createQueryBuilder()
+      .delete()
+      .from(Result)
+      .where('"analysisId" IN (:...ids)', { ids })
+      .execute();
+    const res = await manager.delete(Analysis, { id: In(ids) });
     return res.affected ?? 0;
   }
 
@@ -97,10 +117,15 @@ export class AnalysesRepository {
   /**
    * Returns the IDs of every analysis belonging to any of the given projects.
    * @param projectIds The IDs of the projects to look up analyses for.
+   * @param manager Reads inside the caller's transaction when given.
    */
-  async getAnalysisIdsByProjectIds(projectIds: string[]): Promise<string[]> {
+  async getAnalysisIdsByProjectIds(
+    projectIds: string[],
+    manager?: EntityManager,
+  ): Promise<string[]> {
     if (projectIds.length === 0) return [];
-    const rows = await this.analysisRepository.find({
+    const repo = manager?.getRepository(Analysis) ?? this.analysisRepository;
+    const rows = await repo.find({
       select: { id: true },
       where: { project: { id: In(projectIds) } },
     });
