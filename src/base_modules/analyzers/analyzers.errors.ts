@@ -7,6 +7,7 @@ export const errorMessages: Record<string, string> = {
   AnalyzerHasNoPlugins: "An analyzer needs at least one plugin.",
   AnalyzerDependencyMissing:
     "A plugin in the analyzer is missing a plugin it depends on.",
+  AnalyzerHasAnalyses: "This analyzer has analyses, so it cannot be deleted.",
 };
 export class AnalyzerDoesNotExist extends PublicAPIError {
   static errorCode = "AnalyzerDoesNotExist";
@@ -63,6 +64,20 @@ export class AnalyzerDependencyMissing extends PublicAPIError {
       AnalyzerDependencyMissing.errorCode,
       `${plugin} needs ${missing.join(" and ")} in the same or an earlier stage.`,
       AnalyzerDependencyMissing.statusCode,
+      cause,
+    );
+  }
+}
+
+export class AnalyzerHasAnalyses extends PublicAPIError {
+  static errorCode = "AnalyzerHasAnalyses";
+  static errorMessage = errorMessages[AnalyzerHasAnalyses.errorCode]!;
+  static statusCode = 409;
+  constructor(cause?: unknown) {
+    super(
+      AnalyzerHasAnalyses.errorCode,
+      AnalyzerHasAnalyses.errorMessage,
+      AnalyzerHasAnalyses.statusCode,
       cause,
     );
   }

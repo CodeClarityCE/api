@@ -585,4 +585,35 @@ describe("Analyses Integration (e2e)", () => {
       expect(listResponse.json().data).toHaveLength(3);
     });
   });
+
+  describe("Analyzers", () => {
+    const analyzersUrl = (): string =>
+      `/org/${adminUser.organization.id}/analyzers`;
+
+    it("refuses to delete an analyzer that has analyses, with a 409", async () => {
+      await testHelper.makeAuthenticatedRequest(
+        "POST",
+        `/org/${adminUser.organization.id}/projects/${projectId}/analyses`,
+        adminUser.accessToken,
+        { analyzer_id: analyzerId, branch: "main", config: {} },
+      );
+
+      const response = await testHelper.makeAuthenticatedRequest(
+        "DELETE",
+        `${analyzersUrl()}/${analyzerId}`,
+        adminUser.accessToken,
+      );
+
+      expect(response.statusCode).toBe(409);
+      expect(response.json().error_message).toBe(
+        "This analyzer has analyses, so it cannot be deleted.",
+      );
+      const still = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `${analyzersUrl()}/${analyzerId}`,
+        adminUser.accessToken,
+      );
+      expect(still.statusCode).toBe(200);
+    });
+  });
 });

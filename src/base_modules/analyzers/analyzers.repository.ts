@@ -51,6 +51,15 @@ export class AnalyzersRepository {
    *
    * @param analyzerId - The ID of the Analyzer to delete.
    */
+  /** Whether any analysis was run with this analyzer. */
+  async hasAnalyses(analyzerId: string): Promise<boolean> {
+    return this.analyzerRepository
+      .createQueryBuilder("analyzer")
+      .innerJoin("analyzer.analyses", "analysis")
+      .where("analyzer.id = :analyzerId", { analyzerId })
+      .getExists();
+  }
+
   async deleteAnalyzer(analyzerId: string): Promise<void> {
     await this.analyzerRepository.delete(analyzerId);
   }

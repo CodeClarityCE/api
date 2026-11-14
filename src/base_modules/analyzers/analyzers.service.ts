@@ -29,6 +29,7 @@ import {
 import { deriveLanguages, hasLanguageConfig } from "./analyzer-languages";
 import {
   AnalyzerDependencyMissing,
+  AnalyzerHasAnalyses,
   AnalyzerHasNoPlugins,
 } from "./analyzers.errors";
 import { AnalyzersRepository } from "./analyzers.repository";
@@ -308,6 +309,10 @@ export class AnalyzersService {
       analyzer: { id },
       status: In([ExperimentStatus.PENDING, ExperimentStatus.RUNNING]),
     });
+
+    if (await this.analyzersRepository.hasAnalyses(id)) {
+      throw new AnalyzerHasAnalyses();
+    }
 
     // Delete the analyzer from the database
     await this.analyzersRepository.deleteAnalyzer(id);
