@@ -4,6 +4,7 @@ import {
   DefaultValuePipe,
   Delete,
   Get,
+  HttpCode,
   Param,
   ParseBoolPipe,
   ParseIntPipe,
@@ -12,6 +13,7 @@ import {
   Query,
 } from "@nestjs/common";
 import {
+  ApiHeader,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -31,6 +33,12 @@ import {
 import { SortDirection } from "src/types/sort.types";
 
 import { TicketAutomationService } from "./automation/ticket-automation.service";
+import {
+  ACCESS_TOKEN_HEADER,
+  API_KEY_HEADER,
+  IntegrationCredentials,
+  RequestCredentials,
+} from "./integrations/integration-credentials";
 import { ConnectionTestResult } from "./integrations/integration-provider.interface";
 import { TicketIntegrationService } from "./integrations/ticket-integration.service";
 import { TicketPriority, TicketStatus, TicketType } from "./ticket.entity";
@@ -62,6 +70,7 @@ import {
   TicketSortField,
   TicketSummary,
   UpdateTicketBody,
+  VerifyCredentialsBody,
 } from "./tickets.types";
 
 /** Response type for auto-resolve operation */
@@ -531,6 +540,32 @@ export class TicketsController {
     return { data: { access_token: tokens.access_token } };
   }
 
+  @Post("integrations/:provider/verify")
+  @HttpCode(200)
+  @ApiOperation({
+    summary: "Check credentials without saving them",
+  })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({
+    name: "provider",
+    description: "Integration provider",
+    enum: ExternalTicketProvider,
+  })
+  @ApiResponse({ status: 200, description: "Credentials checked" })
+  async verifyCredentials(
+    @AuthUser() _user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("provider") provider: ExternalTicketProvider,
+    @Body() body: VerifyCredentialsBody,
+  ): Promise<TypedResponse<ConnectionTestResult>> {
+    const result = await this.ticketIntegrationService.verifyCredentials(
+      org_id,
+      provider,
+      { api_key: body.api_key, access_token: body.access_token },
+    );
+    return { data: result };
+  }
+
   @Post("integrations/:provider/test")
   @ApiOperation({ summary: "Test integration connection" })
   @ApiParam({ name: "org_id", description: "Organization ID" })
@@ -592,6 +627,8 @@ export class TicketsController {
     description: "Integration provider",
     enum: ExternalTicketProvider,
   })
+  @ApiHeader({ name: API_KEY_HEADER, required: false })
+  @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
   @ApiResponse({
     status: 200,
     description: "Workspaces retrieved successfully",
@@ -600,10 +637,12 @@ export class TicketsController {
     @AuthUser() _user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("provider") provider: ExternalTicketProvider,
+    @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem[]>> {
     const workspaces = await this.ticketIntegrationService.getWorkspaces(
       org_id,
       provider,
+      credentials,
     );
     return { data: workspaces };
   }
@@ -617,17 +656,21 @@ export class TicketsController {
     enum: ExternalTicketProvider,
   })
   @ApiParam({ name: "workspace_id", description: "Workspace ID" })
+  @ApiHeader({ name: API_KEY_HEADER, required: false })
+  @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
   @ApiResponse({ status: 200, description: "Spaces retrieved successfully" })
   async getSpaces(
     @AuthUser() _user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("provider") provider: ExternalTicketProvider,
     @Param("workspace_id") workspace_id: string,
+    @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem[]>> {
     const spaces = await this.ticketIntegrationService.getSpaces(
       org_id,
       provider,
       workspace_id,
+      credentials,
     );
     return { data: spaces };
   }
@@ -641,17 +684,21 @@ export class TicketsController {
     enum: ExternalTicketProvider,
   })
   @ApiParam({ name: "space_id", description: "Space ID" })
+  @ApiHeader({ name: API_KEY_HEADER, required: false })
+  @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
   @ApiResponse({ status: 200, description: "Folders retrieved successfully" })
   async getFolders(
     @AuthUser() _user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("provider") provider: ExternalTicketProvider,
     @Param("space_id") space_id: string,
+    @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem[]>> {
     const folders = await this.ticketIntegrationService.getFolders(
       org_id,
       provider,
       space_id,
+      credentials,
     );
     return { data: folders };
   }
@@ -665,17 +712,21 @@ export class TicketsController {
     enum: ExternalTicketProvider,
   })
   @ApiParam({ name: "parent_id", description: "Parent (Folder or Space) ID" })
+  @ApiHeader({ name: API_KEY_HEADER, required: false })
+  @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
   @ApiResponse({ status: 200, description: "Lists retrieved successfully" })
   async getLists(
     @AuthUser() _user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("provider") provider: ExternalTicketProvider,
     @Param("parent_id") parent_id: string,
+    @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem[]>> {
     const lists = await this.ticketIntegrationService.getLists(
       org_id,
       provider,
       parent_id,
+      credentials,
     );
     return { data: lists };
   }
@@ -693,6 +744,8 @@ export class TicketsController {
     enum: ExternalTicketProvider,
   })
   @ApiParam({ name: "workspace_id", description: "Workspace ID" })
+  @ApiHeader({ name: API_KEY_HEADER, required: false })
+  @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
   @ApiResponse({ status: 201, description: "Space created successfully" })
   async createSpace(
     @AuthUser() _user: AuthenticatedUser,
@@ -700,12 +753,14 @@ export class TicketsController {
     @Param("provider") provider: ExternalTicketProvider,
     @Param("workspace_id") workspace_id: string,
     @Body() body: { name: string },
+    @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem>> {
     const space = await this.ticketIntegrationService.createSpace(
       org_id,
       provider,
       workspace_id,
       body.name,
+      credentials,
     );
     return { data: space };
   }
@@ -719,6 +774,8 @@ export class TicketsController {
     enum: ExternalTicketProvider,
   })
   @ApiParam({ name: "space_id", description: "Space ID" })
+  @ApiHeader({ name: API_KEY_HEADER, required: false })
+  @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
   @ApiResponse({ status: 201, description: "Folder created successfully" })
   async createFolder(
     @AuthUser() _user: AuthenticatedUser,
@@ -726,12 +783,14 @@ export class TicketsController {
     @Param("provider") provider: ExternalTicketProvider,
     @Param("space_id") space_id: string,
     @Body() body: { name: string },
+    @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem>> {
     const folder = await this.ticketIntegrationService.createFolder(
       org_id,
       provider,
       space_id,
       body.name,
+      credentials,
     );
     return { data: folder };
   }
@@ -745,6 +804,8 @@ export class TicketsController {
     enum: ExternalTicketProvider,
   })
   @ApiParam({ name: "folder_id", description: "Folder ID" })
+  @ApiHeader({ name: API_KEY_HEADER, required: false })
+  @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
   @ApiResponse({ status: 201, description: "List created successfully" })
   async createList(
     @AuthUser() _user: AuthenticatedUser,
@@ -752,12 +813,14 @@ export class TicketsController {
     @Param("provider") provider: ExternalTicketProvider,
     @Param("folder_id") folder_id: string,
     @Body() body: { name: string },
+    @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem>> {
     const list = await this.ticketIntegrationService.createList(
       org_id,
       provider,
       folder_id,
       body.name,
+      credentials,
     );
     return { data: list };
   }
@@ -771,6 +834,8 @@ export class TicketsController {
     enum: ExternalTicketProvider,
   })
   @ApiParam({ name: "space_id", description: "Space ID" })
+  @ApiHeader({ name: API_KEY_HEADER, required: false })
+  @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
   @ApiResponse({ status: 201, description: "List created successfully" })
   async createFolderlessList(
     @AuthUser() _user: AuthenticatedUser,
@@ -778,12 +843,14 @@ export class TicketsController {
     @Param("provider") provider: ExternalTicketProvider,
     @Param("space_id") space_id: string,
     @Body() body: { name: string },
+    @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem>> {
     const list = await this.ticketIntegrationService.createFolderlessList(
       org_id,
       provider,
       space_id,
       body.name,
+      credentials,
     );
     return { data: list };
   }

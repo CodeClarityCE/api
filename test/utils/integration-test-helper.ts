@@ -231,11 +231,13 @@ export class IntegrationTestHelper {
     url: string,
     accessToken: string,
     body?: any,
+    headers: Record<string, string> = {},
   ): Promise<any> {
     const requestOptions: any = {
       method,
       url,
       headers: {
+        ...headers,
         Authorization: `Bearer ${accessToken}`,
       },
     };
