@@ -78,11 +78,12 @@ export class AnalyzersService {
   }
 
   /** Lists every plugin of a template-based analyzer under its languages. */
-  private syncLanguages(analyzer: Analyzer): void {
+  private async syncLanguages(analyzer: Analyzer): Promise<void> {
     if (!hasLanguageConfig(analyzer.language_config)) return;
     const derived = deriveLanguages(
       analyzer.steps,
       analyzer.supported_languages,
+      await this.pluginsRepository.getAll(),
     );
     analyzer.supported_languages = derived.supported_languages;
     analyzer.language_config = derived.language_config;
@@ -124,7 +125,7 @@ export class AnalyzersService {
     if (analyzerData.language_config !== undefined) {
       analyzer.language_config = analyzerData.language_config;
     }
-    this.syncLanguages(analyzer);
+    await this.syncLanguages(analyzer);
     analyzer.logo = analyzerData.logo ?? "js";
     analyzer.global = false;
     analyzer.organization = organization;
@@ -179,7 +180,7 @@ export class AnalyzersService {
     if (analyzerData.language_config) {
       analyzer.language_config = analyzerData.language_config;
     }
-    this.syncLanguages(analyzer);
+    await this.syncLanguages(analyzer);
     if (analyzerData.logo) {
       analyzer.logo = analyzerData.logo;
     }
