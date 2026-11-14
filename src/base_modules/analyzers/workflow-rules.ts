@@ -15,11 +15,8 @@ export function isSbomProducer(name: string): boolean {
   return name.endsWith("-sbom");
 }
 
-/**
- * The first reason a workflow cannot run, or null. A plugin needs one of the
- * SBOM producers it lists plus every other dependency, in its own or an
- * earlier stage, since the dispatcher never runs a later stage first.
- */
+/** The first reason the steps cannot run, or null. Dependencies must sit in
+ *  the same or an earlier stage. */
 export function findWorkflowProblem(
   steps: StageBase[][],
   plugins: PluginDependencies[],

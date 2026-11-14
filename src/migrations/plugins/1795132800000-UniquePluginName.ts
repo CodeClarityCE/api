@@ -1,9 +1,6 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-/**
- * One registry row per plugin name. Merges the duplicates that replicas
- * starting together inserted, then lets plugins register with an upsert.
- */
+/** One registry row per plugin name: merges duplicates, then adds a unique index. */
 export class UniquePluginName1795132800000 implements MigrationInterface {
   name = "UniquePluginName1795132800000";
 

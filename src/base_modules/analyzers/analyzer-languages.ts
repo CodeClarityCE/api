@@ -11,11 +11,8 @@ function sbomLanguage(name: string): string {
   return sbomLanguages[name] ?? name.slice(0, -"-sbom".length);
 }
 
-/**
- * The languages and per-language plugins of a workflow. Each SBOM producer
- * brings its language; every other plugin is listed under all of them.
- * Without an SBOM producer the previous languages are kept.
- */
+/** Languages and per-language plugins of the steps, one language per SBOM
+ *  producer; without one the previous languages are kept. */
 export function deriveLanguages(
   steps: StageBase[][],
   previous: string[],
