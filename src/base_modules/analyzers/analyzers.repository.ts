@@ -147,7 +147,9 @@ export class AnalyzersRepository {
       .createQueryBuilder("analyzer")
       .leftJoinAndSelect("analyzer.organization", "organization")
       .where("organization.id = :orgId", { orgId })
-      .orWhere("analyzer.global = true");
+      .orWhere("analyzer.global = true")
+      .orderBy("analyzer.name", "ASC")
+      .addOrderBy("analyzer.id", "ASC");
 
     const fullCount = await analyzersQueryBuilder.getCount();
 

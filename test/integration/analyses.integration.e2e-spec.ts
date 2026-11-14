@@ -655,5 +655,43 @@ describe("Analyses Integration (e2e)", () => {
 
       expect(response.statusCode).toBe(400);
     });
+
+    it("lists analyzers in name order", async () => {
+      for (const name of ["Zeta Analyzer", "Alpha Analyzer"]) {
+        await testHelper.makeAuthenticatedRequest(
+          "POST",
+          analyzersUrl(),
+          adminUser.accessToken,
+          {
+            name,
+            description: "Analyzer for testing",
+            steps: [
+              [
+                {
+                  name: "js-sbom",
+                  version: "1.0.0",
+                  config: {},
+                  persistant_config: {},
+                },
+              ],
+            ],
+          },
+        );
+      }
+
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `${analyzersUrl()}?entries_per_page=100`,
+        adminUser.accessToken,
+      );
+
+      const names = (response.json().data as { name: string }[]).map(
+        (analyzer) => analyzer.name,
+      );
+      expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+      expect(names.indexOf("Alpha Analyzer")).toBeLessThan(
+        names.indexOf("Zeta Analyzer"),
+      );
+    });
   });
 });

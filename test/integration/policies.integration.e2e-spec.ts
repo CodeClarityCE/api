@@ -79,4 +79,32 @@ describe("Policy error statuses (e2e)", () => {
     expect(response.statusCode).toBe(400);
     expect(response.json().error_code).toBe("ValidationFailed");
   });
+
+  it("lists license policies in name order", async () => {
+    for (const name of ["Zeta policy", "Alpha policy", "Mid policy"]) {
+      const created = await testHelper.makeAuthenticatedRequest(
+        "POST",
+        licensePolicy(),
+        admin.accessToken,
+        {
+          name,
+          description: "",
+          type: "BLACKLIST",
+          licenses: [],
+          default: false,
+        },
+      );
+      expect(created.statusCode).toBe(201);
+    }
+
+    const response = await testHelper.makeAuthenticatedRequest(
+      "GET",
+      licensePolicy(),
+      admin.accessToken,
+    );
+
+    expect(
+      (response.json().data as { name: string }[]).map((p) => p.name),
+    ).toEqual(["Alpha policy", "Mid policy", "Zeta policy"]);
+  });
 });
