@@ -898,12 +898,18 @@ export class AnalysesService {
       }
     }
 
+    // Plugins no language lists run everywhere, as in the dispatcher
+    const languagePlugins = new Set(
+      Object.values(languageConfig).flatMap((entry) => entry?.plugins ?? []),
+    );
+
     // Filter steps to only include applicable plugins
     const filteredSteps: StageBase[][] = [];
 
     for (const stage of analyzerSteps) {
-      const filteredStage = stage.filter((step) =>
-        applicablePlugins.has(step.name),
+      const filteredStage = stage.filter(
+        (step) =>
+          applicablePlugins.has(step.name) || !languagePlugins.has(step.name),
       );
 
       if (filteredStage.length > 0) {
