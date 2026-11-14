@@ -158,36 +158,63 @@ describe("filter", () => {
     });
   });
 
-  describe("active filters (currently not implemented)", () => {
-    const dependencies = [
-      createMockDependency({ name: "package-a", dev: true, prod: false }),
-      createMockDependency({ name: "package-b", dev: false, prod: true }),
-    ];
+  describe("active filters", () => {
+    const direct = createMockDependency({
+      name: "direct",
+      is_direct_count: 1,
+      is_transitive_count: 0,
+      version: "2.0.0",
+      newest_release: "2.0.0",
+      license: "MIT",
+    });
+    const transitive = createMockDependency({
+      name: "transitive",
+      is_direct_count: 0,
+      is_transitive_count: 2,
+      version: "1.0.0",
+      newest_release: "1.4.0",
+      license: "MIT",
+    });
+    const deprecatedUnlicensed = createMockDependency({
+      name: "old",
+      is_direct_count: 1,
+      version: "1.0.0",
+      newest_release: "1.0.0",
+      deprecated: true,
+    });
+    const dependencies = [direct, transitive, deprecatedUnlicensed];
+    const names = (filters: string[]): string[] =>
+      filter(dependencies, undefined, filters)[0].map((d) => d.name);
 
-    it("should return all dependencies regardless of active filters", () => {
-      const [filteredDeps] = filter(dependencies, undefined, [
-        "user_installed",
-      ]);
-
-      // Since filter implementation is commented out, all dependencies should pass through
-      expect(filteredDeps).toHaveLength(2);
-      expect(filteredDeps).toEqual(dependencies);
+    it.each([
+      ["user_installed", ["direct", "old"]],
+      ["not_user_installed", ["transitive"]],
+      ["deprecated", ["old"]],
+      ["outdated", ["transitive"]],
+      ["unlicensed", ["old"]],
+    ])("%s keeps only matching dependencies", (option, expected) => {
+      expect(names([option])).toEqual(expected);
     });
 
-    it("should handle empty active filters array", () => {
-      const [filteredDeps] = filter(dependencies, undefined, []);
-
-      expect(filteredDeps).toHaveLength(2);
-      expect(filteredDeps).toEqual(dependencies);
+    it("combines filters", () => {
+      expect(names(["user_installed", "unlicensed"])).toEqual(["old"]);
     });
 
-    it("should handle invalid filter options", () => {
-      const [filteredDeps] = filter(dependencies, undefined, [
-        "invalid_filter",
-      ]);
+    it("counts each filter on top of the active ones", () => {
+      const [, counts] = filter(dependencies, undefined, ["user_installed"]);
 
-      expect(filteredDeps).toHaveLength(2);
-      expect(filteredDeps).toEqual(dependencies);
+      expect(counts).toEqual({
+        user_installed: 2,
+        not_user_installed: 0,
+        deprecated: 1,
+        outdated: 0,
+        unlicensed: 1,
+      });
+    });
+
+    it("returns everything for no or unknown filters", () => {
+      expect(names([])).toHaveLength(3);
+      expect(names(["invalid_filter"])).toHaveLength(3);
     });
   });
 
@@ -198,13 +225,6 @@ describe("filter", () => {
       "deprecated",
       "outdated",
       "unlicensed",
-      "vulnerable",
-      "not_vulnerable",
-      "severity_critical",
-      "severity_high",
-      "severity_medium",
-      "severity_low",
-      "severity_none",
     ];
 
     it("should calculate counts for all possible filters", () => {
@@ -220,12 +240,10 @@ describe("filter", () => {
 
     it("should exclude active filters from counts calculation", () => {
       const dependencies = [createMockDependency(), createMockDependency()];
-      const activeFilters = ["user_installed", "vulnerable"];
+      const activeFilters = ["user_installed", "deprecated"];
 
       const [, counts] = filter(dependencies, undefined, activeFilters);
 
-      // Due to bug in implementation using 'filter in activeFiltersSafe' instead of 'activeFiltersSafe.includes(filter)'
-      // Active filters are currently still included in counts
       for (const activeFilter of activeFilters) {
         expect(counts).toHaveProperty(activeFilter);
       }
@@ -248,11 +266,13 @@ describe("filter", () => {
 
       const [, counts] = filter(dependencies, "lodash", undefined);
 
-      // Since filterByOptions currently returns all dependencies,
-      // counts should be 1 for all filters (based on search-filtered results)
-      for (const filterOption of possibleFilters) {
-        expect(counts[filterOption]).toBe(1);
-      }
+      expect(counts).toEqual({
+        user_installed: 1,
+        not_user_installed: 0,
+        deprecated: 0,
+        outdated: 1,
+        unlicensed: 1,
+      });
     });
 
     it("should return zero counts when search yields no results", () => {
