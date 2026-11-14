@@ -26,6 +26,7 @@ import {
   UsersRepository,
 } from "../shared/repositories";
 
+import { deriveLanguages, hasLanguageConfig } from "./analyzer-languages";
 import {
   AnalyzerDependencyMissing,
   AnalyzerHasNoPlugins,
@@ -64,6 +65,17 @@ export class AnalyzersService {
     }
   }
 
+  /** Lists every plugin of a template-based analyzer under its languages. */
+  private syncLanguages(analyzer: Analyzer): void {
+    if (!hasLanguageConfig(analyzer.language_config)) return;
+    const derived = deriveLanguages(
+      analyzer.steps,
+      analyzer.supported_languages,
+    );
+    analyzer.supported_languages = derived.supported_languages;
+    analyzer.language_config = derived.language_config;
+  }
+
   /**
    * Create a new analyzer in the specified organization.
    * @param orgId - ID of the organization to create the analyzer for.
@@ -100,6 +112,7 @@ export class AnalyzersService {
     if (analyzerData.language_config !== undefined) {
       analyzer.language_config = analyzerData.language_config;
     }
+    this.syncLanguages(analyzer);
     analyzer.logo = analyzerData.logo ?? "js";
     analyzer.global = false;
     analyzer.organization = organization;
@@ -152,6 +165,7 @@ export class AnalyzersService {
     if (analyzerData.language_config) {
       analyzer.language_config = analyzerData.language_config;
     }
+    this.syncLanguages(analyzer);
     if (analyzerData.logo) {
       analyzer.logo = analyzerData.logo;
     }
