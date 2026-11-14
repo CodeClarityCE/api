@@ -53,6 +53,9 @@ export class SbomDependency {
   // Deprecation information
   @Expose() deprecated?: boolean;
   @Expose() deprecated_message?: string;
+  // Package URL (purl) and the license recorded for the package
+  @Expose() purl?: string;
+  @Expose() license?: string;
 }
 
 export interface DependencyDetails {
