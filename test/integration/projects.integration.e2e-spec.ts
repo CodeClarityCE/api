@@ -1,4 +1,11 @@
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
+import {
+  createAnalysisWithPolicies,
+  createProject,
+  failProjectDeletes,
+  leftoverRows,
+  useDeployedJoinTableKeys,
+} from "../utils/deletion-fixtures";
 import { testHelper, type TestUser } from "../utils/integration-test-helper";
 
 describe("Projects Integration (e2e)", () => {
@@ -352,6 +359,109 @@ describe("Projects Integration (e2e)", () => {
       // Assert
       expect(response.statusCode).toBe(403);
       expect(response.json().error_code).toBe("NotAuthorized");
+    });
+  });
+
+  describe("Deleting a project with analyses and policies", () => {
+    let projectId: string;
+    let analysisId: string;
+
+    beforeEach(async () => {
+      await useDeployedJoinTableKeys();
+      projectId = await createProject(adminUser, "Project with policies");
+      analysisId = await createAnalysisWithPolicies(adminUser, projectId);
+    });
+
+    const listedProjectIds = async (): Promise<string[]> => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `/org/${adminUser.organization.id}/projects`,
+        adminUser.accessToken,
+      );
+      return response.json().data.map((p: { id: string }) => p.id);
+    };
+
+    it("should remove the project, its analyses, results and policy links", async () => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "DELETE",
+        `/org/${adminUser.organization.id}/projects/${projectId}`,
+        adminUser.accessToken,
+      );
+
+      expect(response.statusCode).toBe(200);
+      expect(await leftoverRows([analysisId], projectId)).toEqual({
+        analyses: 0,
+        results: 0,
+        policyLinks: 0,
+        orgLinks: 0,
+        projects: 0,
+      });
+    });
+
+    it("should remove everything when batch-deleting the project", async () => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "POST",
+        `/org/${adminUser.organization.id}/projects/batch-delete`,
+        adminUser.accessToken,
+        { project_ids: [projectId] },
+      );
+
+      expect(response.statusCode).toBe(201);
+      expect(response.json().data.succeeded).toBe(1);
+      expect(await leftoverRows([analysisId], projectId)).toEqual({
+        analyses: 0,
+        results: 0,
+        policyLinks: 0,
+        orgLinks: 0,
+        projects: 0,
+      });
+    });
+
+    it("should leave the project attached and visible when deletion fails", async () => {
+      const allowDeletes = await failProjectDeletes();
+      try {
+        const response = await testHelper.makeAuthenticatedRequest(
+          "DELETE",
+          `/org/${adminUser.organization.id}/projects/${projectId}`,
+          adminUser.accessToken,
+        );
+        expect(response.statusCode).toBe(500);
+      } finally {
+        await allowDeletes();
+      }
+
+      expect(await listedProjectIds()).toContain(projectId);
+      expect(await leftoverRows([analysisId], projectId)).toEqual({
+        analyses: 1,
+        results: 1,
+        policyLinks: 2,
+        orgLinks: 1,
+        projects: 1,
+      });
+    });
+
+    it("should leave the project attached and visible when a batch deletion fails", async () => {
+      const allowDeletes = await failProjectDeletes();
+      try {
+        const response = await testHelper.makeAuthenticatedRequest(
+          "POST",
+          `/org/${adminUser.organization.id}/projects/batch-delete`,
+          adminUser.accessToken,
+          { project_ids: [projectId] },
+        );
+        expect(response.statusCode).toBe(500);
+      } finally {
+        await allowDeletes();
+      }
+
+      expect(await listedProjectIds()).toContain(projectId);
+      expect(await leftoverRows([analysisId], projectId)).toEqual({
+        analyses: 1,
+        results: 1,
+        policyLinks: 2,
+        orgLinks: 1,
+        projects: 1,
+      });
     });
   });
 
