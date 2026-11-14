@@ -27,6 +27,7 @@ import { genRandomString, hash } from "src/utils/crypto";
 import {
   AccountRegistrationVerificationTokenInvalidOrExpired,
   HandleAlreadyExists,
+  IncorrectCurrentPassword,
   PasswordsDoNotMatch,
 } from "../auth/auth.errors";
 import type { AuthService } from "../auth/auth.service";
@@ -337,6 +338,7 @@ export class UsersService {
    * @throws {EntityNotFound} If the user does not exist
    * @throws {NotAuthorized} If the user is not authorized to perform the action on the indicated userId
    * @throws {PasswordsDoNotMatch} If the provided password and passwordConfirmation do not match
+   * @throws {IncorrectCurrentPassword} If the old password is wrong
    * @throws {CannotPerformActionOnSocialAccount} If the user tries to update a password on a social account
    *
    * @param userId The id of the user to update
@@ -370,7 +372,7 @@ export class UsersService {
       passwordPatchBody.old_password,
     );
     if (!match) {
-      throw new Error("Old password not correct");
+      throw new IncorrectCurrentPassword();
     }
 
     const newPasswordHash = await this.authService.hashPassword(
