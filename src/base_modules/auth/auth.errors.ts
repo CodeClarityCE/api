@@ -2,7 +2,7 @@ import { PublicAPIError } from "src/types/error.types";
 
 export const errorMessages: Record<string, string> = {
   SetupAlreadyDone:
-    "An error occured while trying to send the account registration verficiation email.",
+    "An error occurred while trying to send the account registration verification email.",
   AccountRegistrationVerificationTokenInvalidOrExpired:
     "The account registration verification token does not exist or has expired.",
   HandleAlreadyExists:
@@ -13,6 +13,7 @@ export const errorMessages: Record<string, string> = {
   PasswordResetTokenInvalidOrExpired:
     "The password reset token does not exist or has expired.",
   PasswordsDoNotMatch: "The passwords do not match.",
+  IncorrectCurrentPassword: "The current password is incorrect.",
 };
 
 export class AccountRegistrationVerificationTokenInvalidOrExpired extends PublicAPIError {
@@ -96,8 +97,22 @@ export class PasswordsDoNotMatch extends PublicAPIError {
   constructor(cause?: unknown) {
     super(
       PasswordsDoNotMatch.errorCode,
-      PasswordsDoNotMatch.errorCode,
+      PasswordsDoNotMatch.errorMessage,
       PasswordsDoNotMatch.statusCode,
+      cause,
+    );
+  }
+}
+
+export class IncorrectCurrentPassword extends PublicAPIError {
+  static errorCode = "IncorrectCurrentPassword";
+  static errorMessage = errorMessages[IncorrectCurrentPassword.errorCode]!;
+  static statusCode = 400;
+  constructor(cause?: unknown) {
+    super(
+      IncorrectCurrentPassword.errorCode,
+      IncorrectCurrentPassword.errorMessage,
+      IncorrectCurrentPassword.statusCode,
       cause,
     );
   }

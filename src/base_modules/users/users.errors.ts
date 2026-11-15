@@ -4,7 +4,7 @@ export const errorMessages: Record<string, string> = {
   SetupAlreadyDone:
     "The requested action cannot be performed on the social account because it is already setup.",
   FailedToSendAccountRegistrationVerificationEmail:
-    "An error occured while trying to send the account registration verficiation email.",
+    "An error occurred while trying to send the account registration verification email.",
   CannotPerformActionOnSocialAccount:
     "The requested action cannot be performed on a social account.",
   CannotPerformActionOnNormalAccount:

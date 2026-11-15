@@ -74,12 +74,10 @@ export function filter(
 
   const counts: Record<string, number> = {};
   for (const filter of possibleFilters) {
-    if (filter in activeFiltersSafe) continue;
-    const filters = [filter];
-    for (const filter of activeFiltersSafe) {
-      filters.push(filter);
-    }
-    counts[filter] = filterByOptions(filteredBySearchKey, filters).length;
+    counts[filter] = filterByOptions(filteredBySearchKey, [
+      filter,
+      ...activeFiltersSafe,
+    ]).length;
   }
   const filteredByOptions = filterByOptions(
     filteredBySearchKey,

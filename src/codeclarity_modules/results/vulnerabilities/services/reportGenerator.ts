@@ -637,7 +637,7 @@ export class OSVReportGenerator extends BaseReportGenerator {
   protected getReferences(): ReferenceInfo[] {
     if (!this.osvItem?.references) return [];
     const refs = this.osvItem.references as OSVReference[];
-    return refs.map((r) => ({ url: r.url, tags: [r.type] }));
+    return uniqueReferences(refs.map((r) => ({ url: r.url, tags: [r.type] })));
   }
 
   protected async getPrimarySeverity(): Promise<SeverityInfo> {
@@ -751,7 +751,7 @@ export class NVDReportGenerator extends BaseReportGenerator {
 
   protected getReferences(): ReferenceInfo[] {
     const refs = this.nvdItem!.references as NVDReference[];
-    return refs.map((r) => ({ url: r.url, tags: [] }));
+    return uniqueReferences(refs.map((r) => ({ url: r.url, tags: [] })));
   }
 
   protected async getPrimarySeverity(): Promise<SeverityInfo> {
@@ -766,6 +766,22 @@ export class NVDReportGenerator extends BaseReportGenerator {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/** One entry per URL, in first-seen order, with the tags of every copy. */
+export function uniqueReferences(refs: ReferenceInfo[]): ReferenceInfo[] {
+  const byUrl = new Map<string, ReferenceInfo>();
+  for (const ref of refs) {
+    const seen = byUrl.get(ref.url);
+    if (!seen) {
+      byUrl.set(ref.url, { url: ref.url, tags: [...ref.tags] });
+      continue;
+    }
+    for (const tag of ref.tags) {
+      if (!seen.tags.includes(tag)) seen.tags.push(tag);
+    }
+  }
+  return [...byUrl.values()];
+}
 
 function cleanOsvDescription(description: string): string {
   const sections: string[] = [];

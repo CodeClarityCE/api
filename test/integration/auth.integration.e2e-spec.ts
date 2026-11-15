@@ -284,6 +284,65 @@ describe("Authentication Integration (e2e)", () => {
     });
   });
 
+  describe("PATCH /users/:userId/update_password", () => {
+    let account: TestUser;
+
+    beforeEach(async () => {
+      account = await testHelper.createTestUser({
+        email: "password@example.com",
+        password: "CurrentPassword123!",
+      });
+    });
+
+    function changePassword(oldPassword: string) {
+      return testHelper.makeAuthenticatedRequest(
+        "PATCH",
+        `/users/${account.user.id}/update_password`,
+        account.accessToken,
+        {
+          old_password: oldPassword,
+          password: "BrandNewPassword123!",
+          password_confirmation: "BrandNewPassword123!",
+        },
+      );
+    }
+
+    it("should change the password when the current one is right", async () => {
+      const response = await changePassword("CurrentPassword123!");
+
+      expect(response.statusCode).toBe(200);
+    });
+
+    it("should report a wrong current password as a client error", async () => {
+      const response = await changePassword("NotMyPassword123!");
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({
+        error_code: "IncorrectCurrentPassword",
+        error_message: "The current password is incorrect.",
+      });
+    });
+
+    it("should explain mismatched new passwords in words", async () => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "PATCH",
+        `/users/${account.user.id}/update_password`,
+        account.accessToken,
+        {
+          old_password: "CurrentPassword123!",
+          password: "BrandNewPassword123!",
+          password_confirmation: "OtherNewPassword123!",
+        },
+      );
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({
+        error_code: "PasswordsDoNotMatch",
+        error_message: "The passwords do not match.",
+      });
+    });
+  });
+
   describe("Authentication Flow Integration", () => {
     it("should complete full authentication lifecycle", async () => {
       const email = "lifecycle@example.com";

@@ -5,7 +5,7 @@ import { FriendsOfPhp } from "../../src/codeclarity_modules/knowledge/friendsofp
 import { FriendsOfPhpRepository } from "../../src/codeclarity_modules/knowledge/friendsofphp/friendsofphp.repository";
 
 const connection = {
-  host: process.env["TEST_PG_HOST"] ?? "host.docker.internal",
+  host: process.env["TEST_PG_HOST"] ?? "localhost",
   port: parseInt(process.env["TEST_PG_PORT"] ?? "5432", 10),
   user: process.env["TEST_PG_USER"] ?? "postgres",
   password: process.env["TEST_PG_PASSWORD"] ?? "!ChangeMe!",

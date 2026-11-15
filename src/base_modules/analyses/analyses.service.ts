@@ -95,7 +95,7 @@ export class AnalysesService {
    * Create/start an analysis
    * @throws {NotAuthorized} In case the user is not allowed to perform the action on the org
    * @throws {AnalyzerDoesNotExist} In case the referenced analyzer does not exist on the org
-   * @throws {AnaylzerMissingConfigAttribute} In case config options required by the anylzer were not provided
+   * @throws {AnaylzerMissingConfigAttribute} In case config options required by the analyzer were not provided
    * @param orgId The id of the organization to which the project belongs
    * @param projectId The id of the project on which the analysis should be performed
    * @param analysisData The analysis create body supplied by the user
@@ -224,7 +224,10 @@ export class AnalysesService {
       for (const [key] of Object.entries(plugin_config)) {
         const config_element = config_structure[pluginName]?.[key];
         if (config_element?.required && !config[pluginName]?.[key]) {
-          throw new AnaylzerMissingConfigAttribute();
+          throw new AnaylzerMissingConfigAttribute({
+            plugin: pluginName,
+            option: key,
+          });
         }
       }
     }
@@ -517,14 +520,7 @@ export class AnalysesService {
     // (3) Check if the analysis belongs to the project
     await this.analysesRepository.doesAnalysesBelongToProject(id, projectId);
 
-    const analysis = await this.analysesRepository.getAnalysisById(id, {
-      results: true,
-    });
-
-    for (const result of analysis.results) {
-      await this.resultsRepository.delete(result.id);
-    }
-    await this.analysesRepository.deleteAnalysis(analysis.id);
+    await this.analysesRepository.deleteByIds([id]);
   }
 
   /**
@@ -596,7 +592,6 @@ export class AnalysesService {
       await this.analysesRepository.cancelByIds(cancellable);
     }
     if (toDelete.length > 0) {
-      await this.resultsRepository.deleteByAnalysisIds(toDelete);
       await this.analysesRepository.deleteByIds(toDelete);
     }
 
@@ -906,12 +901,18 @@ export class AnalysesService {
       }
     }
 
+    // Plugins not listed under any language run for every language
+    const languagePlugins = new Set(
+      Object.values(languageConfig).flatMap((entry) => entry?.plugins ?? []),
+    );
+
     // Filter steps to only include applicable plugins
     const filteredSteps: StageBase[][] = [];
 
     for (const stage of analyzerSteps) {
-      const filteredStage = stage.filter((step) =>
-        applicablePlugins.has(step.name),
+      const filteredStage = stage.filter(
+        (step) =>
+          applicablePlugins.has(step.name) || !languagePlugins.has(step.name),
       );
 
       if (filteredStage.length > 0) {

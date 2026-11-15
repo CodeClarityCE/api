@@ -20,6 +20,11 @@ import {
 } from "../ticket-integration-config.entity";
 
 import {
+  hasCredentials,
+  IntegrationCredentials,
+  withCredentials,
+} from "./integration-credentials";
+import {
   ConnectionTestResult,
   ExternalFolder,
   ExternalList,
@@ -251,6 +256,45 @@ export class TicketIntegrationService {
     return providerInstance.testConnection(config);
   }
 
+  /**
+   * Test credentials the user has not saved yet; stores nothing
+   */
+  async verifyCredentials(
+    organizationId: string,
+    provider: ExternalTicketProvider,
+    credentials: IntegrationCredentials,
+  ): Promise<ConnectionTestResult> {
+    if (!hasCredentials(credentials)) {
+      throw new BadRequestException("An API key or access token is required");
+    }
+    const config = await this.resolveConfig(
+      organizationId,
+      provider,
+      credentials,
+    );
+    return this.getProvider(provider).testConnection(config);
+  }
+
+  /**
+   * The saved config, with any unsaved credentials from the request laid over it
+   */
+  private async resolveConfig(
+    organizationId: string,
+    provider: ExternalTicketProvider,
+    credentials?: IntegrationCredentials,
+  ): Promise<IntegrationConfig> {
+    const saved = await this.getIntegrationConfig(organizationId, provider);
+    if (hasCredentials(credentials)) {
+      return withCredentials(saved?.config, credentials);
+    }
+    if (!saved) {
+      throw new NotFoundException(
+        `Integration config for ${provider} not found`,
+      );
+    }
+    return saved.config;
+  }
+
   // ============================================
   // OAuth Flow
   // ============================================
@@ -347,13 +391,13 @@ export class TicketIntegrationService {
   async getWorkspaces(
     organizationId: string,
     provider: ExternalTicketProvider,
+    credentials?: IntegrationCredentials,
   ): Promise<ExternalWorkspace[]> {
-    const config = await this.getIntegrationConfig(organizationId, provider);
-    if (!config) {
-      throw new NotFoundException(
-        `Integration config for ${provider} not found`,
-      );
-    }
+    const config = await this.resolveConfig(
+      organizationId,
+      provider,
+      credentials,
+    );
 
     const providerInstance = this.getProvider(provider);
     if (!providerInstance.getWorkspaces) {
@@ -362,7 +406,7 @@ export class TicketIntegrationService {
       );
     }
 
-    return providerInstance.getWorkspaces(config.config);
+    return providerInstance.getWorkspaces(config);
   }
 
   /**
@@ -372,13 +416,13 @@ export class TicketIntegrationService {
     organizationId: string,
     provider: ExternalTicketProvider,
     workspaceId: string,
+    credentials?: IntegrationCredentials,
   ): Promise<ExternalSpace[]> {
-    const config = await this.getIntegrationConfig(organizationId, provider);
-    if (!config) {
-      throw new NotFoundException(
-        `Integration config for ${provider} not found`,
-      );
-    }
+    const config = await this.resolveConfig(
+      organizationId,
+      provider,
+      credentials,
+    );
 
     const providerInstance = this.getProvider(provider);
     if (!providerInstance.getSpaces) {
@@ -387,7 +431,7 @@ export class TicketIntegrationService {
       );
     }
 
-    return providerInstance.getSpaces(workspaceId, config.config);
+    return providerInstance.getSpaces(workspaceId, config);
   }
 
   /**
@@ -397,13 +441,13 @@ export class TicketIntegrationService {
     organizationId: string,
     provider: ExternalTicketProvider,
     spaceId: string,
+    credentials?: IntegrationCredentials,
   ): Promise<ExternalFolder[]> {
-    const config = await this.getIntegrationConfig(organizationId, provider);
-    if (!config) {
-      throw new NotFoundException(
-        `Integration config for ${provider} not found`,
-      );
-    }
+    const config = await this.resolveConfig(
+      organizationId,
+      provider,
+      credentials,
+    );
 
     const providerInstance = this.getProvider(provider);
     if (!providerInstance.getFolders) {
@@ -412,7 +456,7 @@ export class TicketIntegrationService {
       );
     }
 
-    return providerInstance.getFolders(spaceId, config.config);
+    return providerInstance.getFolders(spaceId, config);
   }
 
   /**
@@ -422,13 +466,13 @@ export class TicketIntegrationService {
     organizationId: string,
     provider: ExternalTicketProvider,
     parentId: string,
+    credentials?: IntegrationCredentials,
   ): Promise<ExternalList[]> {
-    const config = await this.getIntegrationConfig(organizationId, provider);
-    if (!config) {
-      throw new NotFoundException(
-        `Integration config for ${provider} not found`,
-      );
-    }
+    const config = await this.resolveConfig(
+      organizationId,
+      provider,
+      credentials,
+    );
 
     const providerInstance = this.getProvider(provider);
     if (!providerInstance.getLists) {
@@ -437,7 +481,7 @@ export class TicketIntegrationService {
       );
     }
 
-    return providerInstance.getLists(parentId, config.config);
+    return providerInstance.getLists(parentId, config);
   }
 
   // ============================================
@@ -452,13 +496,13 @@ export class TicketIntegrationService {
     provider: ExternalTicketProvider,
     workspaceId: string,
     name: string,
+    credentials?: IntegrationCredentials,
   ): Promise<ExternalSpace> {
-    const config = await this.getIntegrationConfig(organizationId, provider);
-    if (!config) {
-      throw new NotFoundException(
-        `Integration config for ${provider} not found`,
-      );
-    }
+    const config = await this.resolveConfig(
+      organizationId,
+      provider,
+      credentials,
+    );
 
     const providerInstance = this.getProvider(provider);
     if (!providerInstance.createSpace) {
@@ -467,7 +511,7 @@ export class TicketIntegrationService {
       );
     }
 
-    return providerInstance.createSpace(name, workspaceId, config.config);
+    return providerInstance.createSpace(name, workspaceId, config);
   }
 
   /**
@@ -478,13 +522,13 @@ export class TicketIntegrationService {
     provider: ExternalTicketProvider,
     spaceId: string,
     name: string,
+    credentials?: IntegrationCredentials,
   ): Promise<ExternalFolder> {
-    const config = await this.getIntegrationConfig(organizationId, provider);
-    if (!config) {
-      throw new NotFoundException(
-        `Integration config for ${provider} not found`,
-      );
-    }
+    const config = await this.resolveConfig(
+      organizationId,
+      provider,
+      credentials,
+    );
 
     const providerInstance = this.getProvider(provider);
     if (!providerInstance.createFolder) {
@@ -493,7 +537,7 @@ export class TicketIntegrationService {
       );
     }
 
-    return providerInstance.createFolder(name, spaceId, config.config);
+    return providerInstance.createFolder(name, spaceId, config);
   }
 
   /**
@@ -504,13 +548,13 @@ export class TicketIntegrationService {
     provider: ExternalTicketProvider,
     folderId: string,
     name: string,
+    credentials?: IntegrationCredentials,
   ): Promise<ExternalList> {
-    const config = await this.getIntegrationConfig(organizationId, provider);
-    if (!config) {
-      throw new NotFoundException(
-        `Integration config for ${provider} not found`,
-      );
-    }
+    const config = await this.resolveConfig(
+      organizationId,
+      provider,
+      credentials,
+    );
 
     const providerInstance = this.getProvider(provider);
     if (!providerInstance.createList) {
@@ -519,7 +563,7 @@ export class TicketIntegrationService {
       );
     }
 
-    return providerInstance.createList(name, folderId, config.config);
+    return providerInstance.createList(name, folderId, config);
   }
 
   /**
@@ -530,13 +574,13 @@ export class TicketIntegrationService {
     provider: ExternalTicketProvider,
     spaceId: string,
     name: string,
+    credentials?: IntegrationCredentials,
   ): Promise<ExternalList> {
-    const config = await this.getIntegrationConfig(organizationId, provider);
-    if (!config) {
-      throw new NotFoundException(
-        `Integration config for ${provider} not found`,
-      );
-    }
+    const config = await this.resolveConfig(
+      organizationId,
+      provider,
+      credentials,
+    );
 
     const providerInstance = this.getProvider(provider);
     if (!providerInstance.createFolderlessList) {
@@ -545,7 +589,7 @@ export class TicketIntegrationService {
       );
     }
 
-    return providerInstance.createFolderlessList(name, spaceId, config.config);
+    return providerInstance.createFolderlessList(name, spaceId, config);
   }
 
   // ============================================

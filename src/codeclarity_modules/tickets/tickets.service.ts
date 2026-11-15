@@ -19,6 +19,7 @@ import { NVD } from "src/codeclarity_modules/knowledge/nvd/nvd.entity";
 import { NVDRepository } from "src/codeclarity_modules/knowledge/nvd/nvd.repository";
 import { OSV } from "src/codeclarity_modules/knowledge/osv/osv.entity";
 import { OSVRepository } from "src/codeclarity_modules/knowledge/osv/osv.repository";
+import { uniqueReferences } from "src/codeclarity_modules/results/vulnerabilities/services/reportGenerator";
 import {
   ReferenceInfo,
   SeverityInfo,
@@ -478,11 +479,15 @@ export class TicketsService {
   ): ReferenceInfo[] {
     if (nvdData?.references) {
       const refs = nvdData.references as { url: string; tags?: string[] }[];
-      return refs.map((r) => ({ url: r.url, tags: r.tags ?? [] }));
+      return uniqueReferences(
+        refs.map((r) => ({ url: r.url, tags: r.tags ?? [] })),
+      );
     }
     if (osvData?.references) {
       const refs = osvData.references as { url: string; type?: string }[];
-      return refs.map((r) => ({ url: r.url, tags: r.type ? [r.type] : [] }));
+      return uniqueReferences(
+        refs.map((r) => ({ url: r.url, tags: r.type ? [r.type] : [] })),
+      );
     }
     return [];
   }

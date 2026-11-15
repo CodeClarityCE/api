@@ -25,7 +25,9 @@ export class LicenseRepository {
   }
 
   async getAllLicenseData(): Promise<License[]> {
-    const licenses = await this.licenseRepository.find({});
+    const licenses = await this.licenseRepository.find({
+      order: { name: "ASC", id: "ASC" },
+    });
     return licenses;
   }
 }

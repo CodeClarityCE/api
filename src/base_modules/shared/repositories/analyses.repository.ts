@@ -6,7 +6,7 @@ import {
   Analysis,
   AnalysisStatus,
 } from "src/base_modules/analyses/analysis.entity";
-import { EntityNotFound, NotAuthorized } from "src/types/error.types";
+import { EntityNotFound } from "src/types/error.types";
 import { TypedPaginatedData } from "src/types/pagination.types";
 
 /**
@@ -126,7 +126,7 @@ export class AnalysesRepository {
 
   /**
    * Check if an analysis belongs to a project.
-   * @throws {NotAuthorized} if not.
+   * @throws {EntityNotFound} if not.
    */
   async doesAnalysesBelongToProject(
     analysisId: string,
@@ -140,7 +140,7 @@ export class AnalysesRepository {
       },
     });
     if (!belongs) {
-      throw new NotAuthorized();
+      throw new EntityNotFound();
     }
   }
 

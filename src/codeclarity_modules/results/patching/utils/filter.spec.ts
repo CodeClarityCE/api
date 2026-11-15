@@ -202,13 +202,11 @@ describe("filter", () => {
       });
     });
 
-    it("should include all filters in counts calculation (current implementation bug)", () => {
+    it("should include all filters in counts calculation", () => {
       const patches = [createMockPatchSummary(), createMockPatchSummary()];
 
       const [, counts] = filter(patches, undefined, ["full_patch"]);
 
-      // Note: Current implementation has a bug where it uses "filter in activeFiltersSafe"
-      // instead of "activeFiltersSafe.includes(filter)", so filters are not actually excluded
       expect(counts).toEqual({
         full_patch: 2,
         partial_patch: 2,

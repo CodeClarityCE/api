@@ -14,6 +14,7 @@ import { AuthenticatedUser, ROLE } from "../auth/auth.types";
 import { CombinedAuthGuard } from "../auth/guards/combined.guard";
 
 import { OrganizationLoggerService } from "./log/organizationLogger.service";
+import type { OrganizationMemberships } from "./memberships/organization.memberships.entity";
 import type { OrganizationCreateBody } from "./org.types";
 import type { Organization } from "./organization.entity";
 import { OrganizationsController } from "./organizations.controller";
@@ -30,6 +31,12 @@ describe("OrganizationsController", () => {
     created_on: new Date(),
     updated_on: new Date(),
   } as unknown as Organization;
+
+  const mockMembership = {
+    role: 0,
+    joined_on: new Date(),
+    organization: mockOrganization,
+  } as unknown as OrganizationMemberships;
 
   const mockAuthenticatedUser: AuthenticatedUser = new AuthenticatedUser(
     "test-user-id",
@@ -171,7 +178,7 @@ describe("OrganizationsController", () => {
   describe("getMany", () => {
     it("should return paginated organizations", async () => {
       const paginatedResponse = {
-        data: [mockOrganization],
+        data: [mockMembership],
         page: 0,
         entry_count: 1,
         entries_per_page: 10,
@@ -204,7 +211,7 @@ describe("OrganizationsController", () => {
 
     it("should use default pagination values when not provided", async () => {
       const paginatedResponse = {
-        data: [mockOrganization],
+        data: [mockMembership],
         page: 0,
         entry_count: 1,
         entries_per_page: 0,

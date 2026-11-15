@@ -7,7 +7,7 @@ import { KnowledgeStatusService } from "../../src/codeclarity_modules/knowledge/
 import { AddKnowledgeSourceOrigins1794441600000 as AddOrigins } from "../../src/migrations/knowledge/1794441600000-AddKnowledgeSourceOrigins";
 
 const connection = {
-  host: process.env["TEST_PG_HOST"] ?? "host.docker.internal",
+  host: process.env["TEST_PG_HOST"] ?? "localhost",
   port: parseInt(process.env["TEST_PG_PORT"] ?? "5432", 10),
   user: process.env["TEST_PG_USER"] ?? "postgres",
   password: process.env["TEST_PG_PASSWORD"] ?? "!ChangeMe!",

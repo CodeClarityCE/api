@@ -176,4 +176,45 @@ describe("AnalysesService.create against Postgres", () => {
       ).status,
     ).toBe("requested");
   });
+
+  it("plans every plugin of a template-based analyzer, added ones too", async () => {
+    const step = (name: string): Record<string, unknown> => ({
+      name,
+      version: "v1",
+      config: {},
+    });
+    // Saved from the JavaScript template with js-patching added, before the
+    // language configuration followed the workflow.
+    const analyzer = await dataSource.getRepository(Analyzer).save({
+      name: "JS + patching",
+      global: false,
+      description: "",
+      created_on: new Date(),
+      steps: [
+        [step("js-sbom")],
+        [step("vuln-finder"), step("license-finder")],
+        [step("js-patching")],
+      ],
+      supported_languages: ["javascript"],
+      language_config: {
+        javascript: { plugins: ["js-sbom", "vuln-finder", "license-finder"] },
+      },
+    } as unknown as Analyzer);
+
+    const analysisId = await service.create(
+      orgId,
+      projectId,
+      { ...body(), analyzer_id: analyzer.id },
+      user,
+    );
+
+    const analysis = await dataSource
+      .getRepository(Analysis)
+      .findOneByOrFail({ id: analysisId });
+    expect(analysis.steps.map((stage) => stage.map((s) => s.name))).toEqual([
+      ["js-sbom"],
+      ["vuln-finder", "license-finder"],
+      ["js-patching"],
+    ]);
+  });
 });

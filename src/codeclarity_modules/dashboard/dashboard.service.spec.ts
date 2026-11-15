@@ -409,15 +409,27 @@ describe("DashboardService", () => {
         getOne: jest.fn().mockResolvedValue({
           projects: [
             {
+              id: "project1",
               analyses: [
                 {
                   results: [
                     {
+                      plugin: "license-finder",
                       result: {
                         analysis_info: { stats: { license_dist: null } },
                       },
                     },
+                  ],
+                },
+              ],
+            },
+            {
+              id: "project2",
+              analyses: [
+                {
+                  results: [
                     {
+                      plugin: "license-finder",
                       result: {
                         analysis_info: { stats: { license_dist: { MIT: 2 } } },
                       },
@@ -495,7 +507,7 @@ describe("DashboardService", () => {
       expect(result).toHaveProperty("vulns");
       expect(result).toHaveProperty("severity_count");
       expect(Array.isArray(result.severity_count)).toBe(true);
-      expect(result.severity_count).toHaveLength(3);
+      expect(result.severity_count).toHaveLength(5);
     });
 
     it("should classify vulnerability severities correctly", async () => {

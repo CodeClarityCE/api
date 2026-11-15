@@ -73,16 +73,17 @@ export class VulnerabilitiesSortService {
         },
       );
     }
-    // else if (sortBySafe === 'dep_name') {
-    //     sorted = vulnerabilities.sort((a: VulnerabilityMerged, b: VulnerabilityMerged) => {
-    //         if ((a.Affected?.[0]?.AffectedDependency ?? '') > (b.Affected?.[0]?.AffectedDependency ?? ''))
-    //             return sortDirectionSafe === 'DESC' ? 1 : -1;
-    //         if ((a.Affected?.[0]?.AffectedDependency ?? '') < (b.Affected?.[0]?.AffectedDependency ?? ''))
-    //             return sortDirectionSafe === 'DESC' ? -1 : 1;
-    //         return 0;
-    //     });
-    // }
-    else if (sortBySafe === "dep_version") {
+    // Sort by the first affected dependency, which the list shows first.
+    else if (sortBySafe === "dep_name") {
+      sorted = vulnerabilities.sort(
+        (a: VulnerabilityMerged, b: VulnerabilityMerged) => {
+          const order = (a.Affected[0]?.AffectedDependency ?? "").localeCompare(
+            b.Affected[0]?.AffectedDependency ?? "",
+          );
+          return sortDirectionSafe === "DESC" ? -order : order;
+        },
+      );
+    } else if (sortBySafe === "dep_version") {
       sorted = vulnerabilities.sort(
         (a: VulnerabilityMerged, b: VulnerabilityMerged) => {
           const versionA = a.Affected?.[0]?.AffectedVersion ?? "0.0.0";

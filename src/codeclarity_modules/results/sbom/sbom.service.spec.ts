@@ -13,6 +13,7 @@ import { Result } from "../result.entity";
 import { AnalysisResultsService } from "../results.service";
 
 import { SBOMService } from "./sbom.service";
+import type { SbomDependency } from "./sbom.types";
 import { SbomUtilsService } from "./utils/utils";
 
 describe("SBOMService", () => {
@@ -290,6 +291,62 @@ describe("SBOMService", () => {
       );
     });
 
+    it("gives each dependency its package URL and license", async () => {
+      mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+      mockSbomUtilsService.getMergedSbomResults.mockResolvedValue({
+        mergedSbom: {
+          workspaces: {
+            default: {
+              dependencies: {
+                "@vue/shared": {
+                  "3.5.0": { Prod: true, ecosystem: "npm" },
+                },
+                "monolog/monolog": {
+                  "3.7.0": { Prod: true, ecosystem: "packagist" },
+                },
+                "left-pad": { "1.3.0": { Prod: true } },
+              },
+              start: { dependencies: [] },
+            },
+          },
+          analysis_info: mockSbomOutput.analysis_info,
+        },
+      });
+      mockPackageRepository.getPackageInfoWithoutFailing.mockImplementation(
+        (name: string) =>
+          Promise.resolve(
+            name === "left-pad"
+              ? null
+              : {
+                  latest_version: "9.9.9",
+                  license: name === "@vue/shared" ? "MIT" : "(MIT OR GPL-2.0)",
+                },
+          ),
+      );
+
+      const result = await service.getSbom(
+        "org-123",
+        "project-123",
+        "analysis-123",
+        mockUser,
+        { workspace: "default", sortBy: "name", sortDirection: "ASC" },
+      );
+
+      const byName = Object.fromEntries(
+        (result.data as SbomDependency[]).map((d) => [d.name, d]),
+      );
+      expect(byName["@vue/shared"]).toMatchObject({
+        purl: "pkg:npm/%40vue/shared@3.5.0",
+        license: "MIT",
+      });
+      expect(byName["monolog/monolog"]).toMatchObject({
+        purl: "pkg:composer/monolog/monolog@3.7.0",
+        license: "(MIT OR GPL-2.0)",
+      });
+      expect(byName["left-pad"]!.purl).toBe("pkg:npm/left-pad@1.3.0");
+      expect(byName["left-pad"]!.license).toBeUndefined();
+    });
+
     it("should handle active filters", async () => {
       mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
       mockSbomUtilsService.getSbomResult.mockResolvedValue(mockSbomOutput);
@@ -535,6 +592,7 @@ describe("SBOMService", () => {
       mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
       mockSbomUtilsService.getMergedSbomResults.mockResolvedValue({
         mergedSbom: mockWorkspacesOutput,
+        pluginResults: [{ plugin: "js-sbom", sbom: mockWorkspacesOutput }],
       });
 
       const result = await service.getWorkspaces(
@@ -547,6 +605,7 @@ describe("SBOMService", () => {
       expect(result).toEqual({
         workspaces: ["default", "workspace1"],
         package_manager: "npm",
+        package_managers: { default: "npm", workspace1: "npm" },
       });
       expect(analysisResultsService.checkAccess).toHaveBeenCalledWith(
         "org-123",
@@ -627,6 +686,73 @@ describe("SBOMService", () => {
       expect(sbomUtilsService.getMergedSbomResults).toHaveBeenCalledWith(
         "analysis-123",
       );
+    });
+
+    describe("root edges", () => {
+      // app -> express -> debug, and app -> debug directly too; ms only via debug.
+      const graphSbom = {
+        workspaces: {
+          default: {
+            dependencies: {
+              express: {
+                "4.16.0": { Dependencies: { debug: "2.6.9" }, Prod: true },
+              },
+              debug: {
+                "2.6.9": { Dependencies: { ms: "2.0.0" }, Prod: true },
+              },
+              ms: { "2.0.0": { Dependencies: {}, Prod: true } },
+            },
+            start: {
+              dependencies: [
+                { name: "express", version: "4.16.0" },
+                { name: "debug", version: "2.6.9" },
+              ],
+            },
+          },
+        },
+        analysis_info: mockSbomOutput.analysis_info,
+      };
+
+      async function graphOf(
+        dependency: string,
+      ): Promise<Record<string, string[]>> {
+        mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+        mockSbomUtilsService.getMergedSbomResults.mockResolvedValue({
+          mergedSbom: graphSbom,
+        });
+        const graph = await service.getDependencyGraph(
+          "org-123",
+          "project-123",
+          "analysis-123",
+          "default",
+          dependency,
+          mockUser,
+        );
+        return Object.fromEntries(
+          graph.map((node) => [node.id, [...(node.parentIds ?? [])].sort()]),
+        );
+      }
+
+      it("gives a transitive dependency no root edge", async () => {
+        const parents = await graphOf("ms@2.0.0");
+
+        expect(parents["ms@2.0.0"]).toEqual(["debug@2.6.9"]);
+      });
+
+      it("gives a direct dependency a root edge", async () => {
+        const parents = await graphOf("express@4.16.0");
+
+        expect(parents["express@4.16.0"]).toEqual(["__VIRTUAL_ROOT__"]);
+      });
+
+      it("keeps the root edge of a dependency that is also transitive", async () => {
+        const parents = await graphOf("debug@2.6.9");
+
+        expect(parents["debug@2.6.9"]).toEqual([
+          "__VIRTUAL_ROOT__",
+          "express@4.16.0",
+        ]);
+      });
     });
 
     it("should throw UnknownWorkspace for invalid workspace", async () => {

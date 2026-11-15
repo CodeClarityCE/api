@@ -166,8 +166,12 @@ export class LicensesService {
             ) ?? false,
           unable_to_infer:
             licenseId in (licensesWorkspaceInfo.NonSpdxLicensesDepMap ?? {}),
-          name: "",
-          description: "",
+          // An empty id means the knowledge base has no license for these dependencies.
+          name: licenseId === "" ? "Unknown license" : licenseId,
+          description:
+            licenseId === ""
+              ? "No license was found for these dependencies. Check their license by hand."
+              : "This license is not on the SPDX license list, so its terms are not known. Check it by hand.",
           deps_using_license: Array.from(new Set(depsUsingLicense)),
           license_category: "",
         };

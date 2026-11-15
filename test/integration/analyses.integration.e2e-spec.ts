@@ -1,4 +1,9 @@
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
+import {
+  createAnalysisWithPolicies,
+  leftoverRows,
+  useDeployedJoinTableKeys,
+} from "../utils/deletion-fixtures";
 import { testHelper, type TestUser } from "../utils/integration-test-helper";
 
 describe("Analyses Integration (e2e)", () => {
@@ -176,7 +181,7 @@ describe("Analyses Integration (e2e)", () => {
       expect(response.json().error_code).toBe("AnaylzerMissingConfigAttribute");
     });
 
-    it("should refuse an analysis for a project outside the organization", async () => {
+    it("should return 404 when creating an analysis for an unknown project", async () => {
       // Act
       const response = await testHelper.makeAuthenticatedRequest(
         "POST",
@@ -186,8 +191,8 @@ describe("Analyses Integration (e2e)", () => {
       );
 
       // Assert
-      expect(response.statusCode).toBe(403);
-      expect(response.json().error_code).toBe("NotAuthorized");
+      expect(response.statusCode).toBe(404);
+      expect(response.json().error_code).toBe("EntityNotFound");
     });
 
     it("should reject unauthenticated requests", async () => {
@@ -268,7 +273,7 @@ describe("Analyses Integration (e2e)", () => {
       expect(body.total_pages).toBe(2);
     });
 
-    it("should refuse a project outside the organization", async () => {
+    it("should return 404 for an unknown project", async () => {
       // Act
       const response = await testHelper.makeAuthenticatedRequest(
         "GET",
@@ -277,8 +282,19 @@ describe("Analyses Integration (e2e)", () => {
       );
 
       // Assert
-      expect(response.statusCode).toBe(403);
-      expect(response.json().error_code).toBe("NotAuthorized");
+      expect(response.statusCode).toBe(404);
+      expect(response.json().error_code).toBe("EntityNotFound");
+    });
+
+    it("should return 400 for a malformed project id", async () => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `/org/${adminUser.organization.id}/projects/not-a-uuid/analyses`,
+        adminUser.accessToken,
+      );
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error_code).toBe("ValidationFailed");
     });
   });
 
@@ -329,7 +345,18 @@ describe("Analyses Integration (e2e)", () => {
       expect(response.json().data.tag).toBe("v1.0.0");
     });
 
-    it("should refuse an analysis outside the project", async () => {
+    it("should return 400 for a malformed analysis id", async () => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `/org/${adminUser.organization.id}/projects/${projectId}/analyses/not-a-uuid`,
+        adminUser.accessToken,
+      );
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error_code).toBe("ValidationFailed");
+    });
+
+    it("should return 404 for an unknown analysis", async () => {
       // Act
       const response = await testHelper.makeAuthenticatedRequest(
         "GET",
@@ -338,8 +365,8 @@ describe("Analyses Integration (e2e)", () => {
       );
 
       // Assert
-      expect(response.statusCode).toBe(403);
-      expect(response.json().error_code).toBe("NotAuthorized");
+      expect(response.statusCode).toBe(404);
+      expect(response.json().error_code).toBe("EntityNotFound");
     });
   });
 
@@ -414,10 +441,49 @@ describe("Analyses Integration (e2e)", () => {
         `/org/${adminUser.organization.id}/projects/${projectId}/analyses/${analysisId}`,
         adminUser.accessToken,
       );
-      expect(getResponse.statusCode).toBe(403);
+      expect(getResponse.statusCode).toBe(404);
     });
 
-    it("should refuse to delete an analysis outside the project", async () => {
+    it("should delete an analysis with license and vulnerability policies attached", async () => {
+      await useDeployedJoinTableKeys();
+      const id = await createAnalysisWithPolicies(adminUser, projectId);
+      expect((await leftoverRows([id], projectId)).policyLinks).toBe(2);
+
+      const response = await testHelper.makeAuthenticatedRequest(
+        "DELETE",
+        `/org/${adminUser.organization.id}/projects/${projectId}/analyses/${id}`,
+        adminUser.accessToken,
+      );
+
+      expect(response.statusCode).toBe(200);
+      expect(await leftoverRows([id], projectId)).toMatchObject({
+        analyses: 0,
+        results: 0,
+        policyLinks: 0,
+      });
+    });
+
+    it("should batch-delete analyses with policies attached", async () => {
+      await useDeployedJoinTableKeys();
+      const id = await createAnalysisWithPolicies(adminUser, projectId);
+
+      const response = await testHelper.makeAuthenticatedRequest(
+        "POST",
+        `/org/${adminUser.organization.id}/projects/${projectId}/analyses/batch-delete`,
+        adminUser.accessToken,
+        { analysis_ids: [id] },
+      );
+
+      expect(response.statusCode).toBe(201);
+      expect(response.json().data.succeeded).toBe(1);
+      expect(await leftoverRows([id], projectId)).toMatchObject({
+        analyses: 0,
+        results: 0,
+        policyLinks: 0,
+      });
+    });
+
+    it("should return 404 when deleting an unknown analysis", async () => {
       // Act
       const response = await testHelper.makeAuthenticatedRequest(
         "DELETE",
@@ -426,8 +492,8 @@ describe("Analyses Integration (e2e)", () => {
       );
 
       // Assert
-      expect(response.statusCode).toBe(403);
-      expect(response.json().error_code).toBe("NotAuthorized");
+      expect(response.statusCode).toBe(404);
+      expect(response.json().error_code).toBe("EntityNotFound");
     });
   });
 
@@ -481,7 +547,7 @@ describe("Analyses Integration (e2e)", () => {
         `/org/${adminUser.organization.id}/projects/${projectId}/analyses/${analysisId}`,
         adminUser.accessToken,
       );
-      expect(verifyResponse.statusCode).toBe(403);
+      expect(verifyResponse.statusCode).toBe(404);
     });
 
     it("should handle multiple concurrent analyses", async () => {
@@ -517,6 +583,115 @@ describe("Analyses Integration (e2e)", () => {
       );
       expect(listResponse.statusCode).toBe(200);
       expect(listResponse.json().data).toHaveLength(3);
+    });
+  });
+
+  describe("Analyzers", () => {
+    const analyzersUrl = (): string =>
+      `/org/${adminUser.organization.id}/analyzers`;
+
+    it("refuses to delete an analyzer that has analyses, with a 409", async () => {
+      await testHelper.makeAuthenticatedRequest(
+        "POST",
+        `/org/${adminUser.organization.id}/projects/${projectId}/analyses`,
+        adminUser.accessToken,
+        { analyzer_id: analyzerId, branch: "main", config: {} },
+      );
+
+      const response = await testHelper.makeAuthenticatedRequest(
+        "DELETE",
+        `${analyzersUrl()}/${analyzerId}`,
+        adminUser.accessToken,
+      );
+
+      expect(response.statusCode).toBe(409);
+      expect(response.json().error_message).toBe(
+        "This analyzer has analyses, so it cannot be deleted.",
+      );
+      const still = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `${analyzersUrl()}/${analyzerId}`,
+        adminUser.accessToken,
+      );
+      expect(still.statusCode).toBe(200);
+    });
+
+    it("renames an older analyzer saved without plugins", async () => {
+      await testHelper
+        .getDataSource()
+        .query(`UPDATE analyzer SET steps = '[]' WHERE id = $1`, [analyzerId]);
+
+      const response = await testHelper.makeAuthenticatedRequest(
+        "PUT",
+        `${analyzersUrl()}/${analyzerId}`,
+        adminUser.accessToken,
+        {
+          name: "Renamed Analyzer",
+          description: "Analyzer for testing",
+          steps: [],
+        },
+      );
+
+      expect(response.statusCode).toBe(200);
+      const renamed = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `${analyzersUrl()}/${analyzerId}`,
+        adminUser.accessToken,
+      );
+      expect(renamed.json().data.name).toBe("Renamed Analyzer");
+    });
+
+    it("still refuses to empty the plugins of an analyzer", async () => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "PUT",
+        `${analyzersUrl()}/${analyzerId}`,
+        adminUser.accessToken,
+        {
+          name: "Test Analyzer",
+          description: "Analyzer for testing",
+          steps: [],
+        },
+      );
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it("lists analyzers in name order", async () => {
+      for (const name of ["Zeta Analyzer", "Alpha Analyzer"]) {
+        await testHelper.makeAuthenticatedRequest(
+          "POST",
+          analyzersUrl(),
+          adminUser.accessToken,
+          {
+            name,
+            description: "Analyzer for testing",
+            steps: [
+              [
+                {
+                  name: "js-sbom",
+                  version: "1.0.0",
+                  config: {},
+                  persistant_config: {},
+                },
+              ],
+            ],
+          },
+        );
+      }
+
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `${analyzersUrl()}?entries_per_page=100`,
+        adminUser.accessToken,
+      );
+
+      const names = (response.json().data as { name: string }[]).map(
+        (analyzer) => analyzer.name,
+      );
+      expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+      expect(names.indexOf("Alpha Analyzer")).toBeLessThan(
+        names.indexOf("Zeta Analyzer"),
+      );
     });
   });
 });
