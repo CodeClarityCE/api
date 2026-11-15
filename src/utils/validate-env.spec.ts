@@ -52,6 +52,41 @@ describe("validate-env", () => {
       expect(result.HOST).toBe("localhost");
     });
 
+    it("accepts a production config with no OAuth apps and no mail password", () => {
+      process.env["ENV"] = "prod";
+
+      const config = {
+        ENV: Environment.Production,
+        PORT: 3000,
+        HOST: "https://localhost/api",
+        GITHUB_AUTH_CLIENT_ID: "",
+        GITHUB_AUTH_CLIENT_SECRET: "",
+        GITLAB_AUTH_CLIENT_ID: "",
+        GITLAB_AUTH_CLIENT_SECRET: "",
+        GITLAB_AUTH_HOST: "https://gitlab.com",
+        GITHUB_AUTH_CALLBACK: "https://localhost/auth/github/callback",
+        GITLAB_AUTH_CALLBACK: "https://localhost/auth/gitlab/callback",
+        AMQP_ANALYSES_QUEUE: "api_request",
+        AMQP_PROTOCOL: "amqps",
+        AMQP_HOST: "rabbitmq",
+        AMQP_PORT: "5671",
+        AMQP_USER: "codeclarity",
+        AMQP_PASSWORD: "generated",
+        MAIL_HOST: "localhost",
+        MAIL_PORT: "465",
+        MAIL_AUTH_USER: "noreply@localhost",
+        MAIL_AUTH_PASSWORD: "",
+        MAIL_DEFAULT_FROM: "noreply@localhost",
+        COOKIE_SECRET: "generated",
+        GITHUB_CALLBACK: "https://localhost/api/auth/github/callback",
+        GITLAB_CALLBACK: "https://localhost/api/auth/gitlab/callback",
+        WEB_HOST: "https://localhost",
+        PLATFORM_NAME: "CodeClarity",
+      };
+
+      expect(validate(config).ENV).toBe(Environment.Production);
+    });
+
     it("should validate development environment config", () => {
       process.env["ENV"] = "dev";
 
