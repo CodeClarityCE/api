@@ -164,7 +164,9 @@ export class LicensePolicyService {
       .where("organization.id = :orgId", { orgId })
       .andWhere("policy.policy_type = :policyType", {
         policyType: PolicyType.LICENSE_POLICY,
-      });
+      })
+      .orderBy("policy.name", "ASC")
+      .addOrderBy("policy.id", "ASC");
 
     const fullCount = await queryBuilder.getCount();
 

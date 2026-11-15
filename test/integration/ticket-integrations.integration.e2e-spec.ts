@@ -174,4 +174,79 @@ describe("Ticket integrations (e2e)", () => {
 
     expect(response.statusCode).toBe(400);
   });
+
+  it("refuses credential checks from a member below admin", async () => {
+    const member = await testHelper.createTestUser({
+      email: "member@tickets.com",
+      role: MemberRole.USER,
+      organization: user.organization,
+    });
+
+    const response = await testHelper.makeAuthenticatedRequest(
+      "POST",
+      `${base}/CLICKUP/verify`,
+      member.accessToken,
+      { auth_method: "API_KEY", api_key: GOOD_KEY },
+    );
+
+    expect(response.statusCode).toBe(403);
+  });
+
+  it("refuses credential checks from outside the organisation", async () => {
+    const outsider = await testHelper.createTestUser({
+      email: "outsider@tickets.com",
+    });
+
+    const response = await testHelper.makeAuthenticatedRequest(
+      "POST",
+      `${base}/CLICKUP/verify`,
+      outsider.accessToken,
+      { auth_method: "API_KEY", api_key: GOOD_KEY },
+    );
+
+    expect(response.statusCode).toBe(403);
+  });
+
+  it.each([
+    [
+      "POST",
+      "clickup",
+      { auth_method: "API_KEY", api_key: GOOD_KEY, list_id: "l1" },
+    ],
+    ["DELETE", "CLICKUP", undefined],
+    ["PATCH", "CLICKUP/toggle?enabled=false", undefined],
+  ] as const)(
+    "refuses %s %s from a member below admin",
+    async (method, path, body) => {
+      const member = await testHelper.createTestUser({
+        email: "member@tickets.com",
+        role: MemberRole.USER,
+        organization: user.organization,
+      });
+
+      const response = await testHelper.makeAuthenticatedRequest(
+        method,
+        `${base}/${path}`,
+        member.accessToken,
+        body,
+      );
+
+      expect(response.statusCode).toBe(403);
+    },
+  );
+
+  it.each([
+    ["DELETE", "clickup"],
+    ["POST", "NOPE/test"],
+    ["PATCH", "clickup/toggle?enabled=true"],
+    ["GET", "jira-cloud/workspaces"],
+  ] as const)("rejects %s %s as a bad provider", async (method, path) => {
+    const response = await testHelper.makeAuthenticatedRequest(
+      method,
+      `${base}/${path}`,
+      user.accessToken,
+    );
+
+    expect(response.statusCode).toBe(400);
+  });
 });

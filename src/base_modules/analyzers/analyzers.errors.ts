@@ -7,6 +7,7 @@ export const errorMessages: Record<string, string> = {
   AnalyzerHasNoPlugins: "An analyzer needs at least one plugin.",
   AnalyzerDependencyMissing:
     "A plugin in the analyzer is missing a plugin it depends on.",
+  AnalyzerHasAnalyses: "This analyzer has analyses, so it cannot be deleted.",
 };
 export class AnalyzerDoesNotExist extends PublicAPIError {
   static errorCode = "AnalyzerDoesNotExist";
@@ -27,10 +28,12 @@ export class AnaylzerMissingConfigAttribute extends PublicAPIError {
   static errorMessage =
     errorMessages[AnaylzerMissingConfigAttribute.errorCode]!;
   static statusCode = 400;
-  constructor(cause?: unknown) {
+  constructor(missing?: { plugin: string; option: string }, cause?: unknown) {
     super(
       AnaylzerMissingConfigAttribute.errorCode,
-      AnaylzerMissingConfigAttribute.errorMessage,
+      missing
+        ? `The plugin "${missing.plugin}" needs the option "${missing.option}", which is missing.`
+        : AnaylzerMissingConfigAttribute.errorMessage,
       AnaylzerMissingConfigAttribute.statusCode,
       cause,
     );
@@ -61,6 +64,20 @@ export class AnalyzerDependencyMissing extends PublicAPIError {
       AnalyzerDependencyMissing.errorCode,
       `${plugin} needs ${missing.join(" and ")} in the same or an earlier stage.`,
       AnalyzerDependencyMissing.statusCode,
+      cause,
+    );
+  }
+}
+
+export class AnalyzerHasAnalyses extends PublicAPIError {
+  static errorCode = "AnalyzerHasAnalyses";
+  static errorMessage = errorMessages[AnalyzerHasAnalyses.errorCode]!;
+  static statusCode = 409;
+  constructor(cause?: unknown) {
+    super(
+      AnalyzerHasAnalyses.errorCode,
+      AnalyzerHasAnalyses.errorMessage,
+      AnalyzerHasAnalyses.statusCode,
       cause,
     );
   }

@@ -33,6 +33,10 @@ const installed: Plugin[] = [
     name: "js-patching",
     depends_on: ["js-sbom", "php-sbom", "vuln-finder"],
   },
+  { id: "6", name: "codeql", depends_on: [] },
+  // Hypothetical plugins that read only the JavaScript SBOM.
+  { id: "7", name: "npm-audit", depends_on: ["js-sbom"] },
+  { id: "8", name: "npm-report", depends_on: ["npm-audit"] },
 ];
 
 function step(name: string): Record<string, unknown> {
@@ -116,7 +120,9 @@ describe("Analyzer workflow rules (HTTP)", () => {
 
   beforeEach(() => {
     saveAnalyzer.mockReset().mockResolvedValue({ id: "a1" });
-    getAnalyzerById.mockReset().mockResolvedValue({ id: "a1" });
+    getAnalyzerById
+      .mockReset()
+      .mockResolvedValue({ id: "a1", steps: [[step("js-sbom")]] });
   });
 
   async function send(
@@ -233,6 +239,30 @@ describe("Analyzer workflow rules (HTTP)", () => {
       expect(saved().language_config).toEqual({
         javascript: { plugins: ["js-sbom", "vuln-finder"] },
         php: { plugins: ["php-sbom", "vuln-finder"] },
+      });
+    });
+
+    it("lists a plugin only under the languages whose SBOM it needs", async () => {
+      const res = await send("POST", {
+        ...body([
+          [step("js-sbom"), step("php-sbom"), step("codeql")],
+          [step("vuln-finder"), step("npm-audit")],
+          [step("npm-report")],
+        ]),
+        ...jsTemplate,
+      });
+      expect(res.status).toBe(201);
+      expect(saved().language_config).toEqual({
+        javascript: {
+          plugins: [
+            "js-sbom",
+            "codeql",
+            "vuln-finder",
+            "npm-audit",
+            "npm-report",
+          ],
+        },
+        php: { plugins: ["php-sbom", "codeql", "vuln-finder"] },
       });
     });
 

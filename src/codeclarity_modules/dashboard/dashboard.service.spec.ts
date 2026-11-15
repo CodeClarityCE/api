@@ -507,7 +507,7 @@ describe("DashboardService", () => {
       expect(result).toHaveProperty("vulns");
       expect(result).toHaveProperty("severity_count");
       expect(Array.isArray(result.severity_count)).toBe(true);
-      expect(result.severity_count).toHaveLength(3);
+      expect(result.severity_count).toHaveLength(5);
     });
 
     it("should classify vulnerability severities correctly", async () => {

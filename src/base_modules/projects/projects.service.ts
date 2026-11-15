@@ -478,10 +478,8 @@ export class ProjectService {
   /**
    * Bulk-delete projects of an org in bounded, throttled batches.
    *
-   * Replaces the per-project, per-row cascade (which overloaded the API/DB when
-   * run across many projects) with set-based bulk statements. Each batch removes
-   * analyses, policy links, results, files and the projects in one transaction.
-   * Each id gets an independent outcome so a single bad id never fails the call.
+   * Each batch removes analyses, policy links, results, files and projects in
+   * one transaction; each id gets its own outcome.
    *
    * @throws {NotAuthorized} if the caller is not at least a USER of the org
    * @param orgId The id of the org

@@ -392,6 +392,8 @@ export class DashboardService {
         { severity_class: "CRITICAL", count: 0 },
         { severity_class: "HIGH", count: 0 },
         { severity_class: "MEDIUM", count: 0 },
+        { severity_class: "LOW", count: 0 },
+        { severity_class: "NONE", count: 0 },
       ],
     };
 

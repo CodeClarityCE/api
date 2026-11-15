@@ -41,10 +41,6 @@ import {
   ClickUpUpdateTaskRequest,
 } from "./clickup.types";
 
-/**
- * ClickUp integration provider.
- * Supports both API key and OAuth authentication.
- */
 /** A non-2xx reply from the ClickUp API. */
 export class ClickUpApiError extends BadRequestException {
   constructor(
@@ -72,6 +68,7 @@ function connectionFailureMessage(error: unknown): string {
   return "ClickUp could not be reached. Try again later.";
 }
 
+/** ClickUp provider; supports API key and OAuth authentication. */
 @Injectable()
 export class ClickUpService implements ITicketIntegrationProvider {
   private readonly logger = new Logger(ClickUpService.name);

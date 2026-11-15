@@ -433,6 +433,36 @@ describe("VulnerabilitiesFilterService", () => {
       expect(counts["severity_medium"]).toBeDefined();
     });
 
+    it("counts each advertised filter on top of the active ones", () => {
+      const vulnerabilities = [
+        createMockVulnerability({
+          Severity: { ...createMockVulnerability().Severity, Severity: 9.5 },
+        }),
+        createMockVulnerability({
+          Severity: { ...createMockVulnerability().Severity, Severity: 5.0 },
+        }),
+      ];
+
+      const [, counts] = service.filter(vulnerabilities, "", [
+        "severity_critical",
+      ]);
+
+      expect(counts["severity_critical"]).toBe(1);
+      expect(counts["severity_medium"]).toBe(0);
+    });
+
+    it("does not advertise patch filters it cannot apply", () => {
+      const [, counts] = service.filter(
+        [createMockVulnerability()],
+        "",
+        undefined,
+      );
+
+      expect(Object.keys(counts)).not.toContain("patchable");
+      expect(Object.keys(counts)).not.toContain("partially_patchable");
+      expect(Object.keys(counts)).not.toContain("not_patchable");
+    });
+
     it("should handle empty vulnerability list", () => {
       const [filtered, counts] = service.filter([], "", undefined);
 

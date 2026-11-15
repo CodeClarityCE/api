@@ -29,10 +29,22 @@ import {
 import { deriveLanguages, hasLanguageConfig } from "./analyzer-languages";
 import {
   AnalyzerDependencyMissing,
+  AnalyzerHasAnalyses,
   AnalyzerHasNoPlugins,
 } from "./analyzers.errors";
 import { AnalyzersRepository } from "./analyzers.repository";
 import { findWorkflowProblem } from "./workflow-rules";
+
+type StepNames = { name: string }[][] | null | undefined;
+
+// Same plugin names in the same stages.
+function samePlugins(stored: StepNames, incoming: StepNames): boolean {
+  const layout = (steps: StepNames): string =>
+    JSON.stringify(
+      (steps ?? []).map((stage) => stage.map((step) => step.name)),
+    );
+  return layout(stored) === layout(incoming);
+}
 
 @Injectable()
 export class AnalyzersService {
@@ -66,11 +78,12 @@ export class AnalyzersService {
   }
 
   /** Lists every plugin of a template-based analyzer under its languages. */
-  private syncLanguages(analyzer: Analyzer): void {
+  private async syncLanguages(analyzer: Analyzer): Promise<void> {
     if (!hasLanguageConfig(analyzer.language_config)) return;
     const derived = deriveLanguages(
       analyzer.steps,
       analyzer.supported_languages,
+      await this.pluginsRepository.getAll(),
     );
     analyzer.supported_languages = derived.supported_languages;
     analyzer.language_config = derived.language_config;
@@ -112,7 +125,7 @@ export class AnalyzersService {
     if (analyzerData.language_config !== undefined) {
       analyzer.language_config = analyzerData.language_config;
     }
-    this.syncLanguages(analyzer);
+    await this.syncLanguages(analyzer);
     analyzer.logo = analyzerData.logo ?? "js";
     analyzer.global = false;
     analyzer.organization = organization;
@@ -151,9 +164,11 @@ export class AnalyzersService {
       user.userId,
       MemberRole.ADMIN,
     );
-    await this.assertRunnable(analyzerData.steps);
-
     const analyzer = await this.analyzersRepository.getAnalyzerById(analyzerId);
+    // An older analyzer saved before the rules existed can still be renamed.
+    if (!samePlugins(analyzer.steps, analyzerData.steps)) {
+      await this.assertRunnable(analyzerData.steps);
+    }
 
     // Update the properties of the analyzer with new data
     analyzer.name = analyzerData.name;
@@ -165,7 +180,7 @@ export class AnalyzersService {
     if (analyzerData.language_config) {
       analyzer.language_config = analyzerData.language_config;
     }
-    this.syncLanguages(analyzer);
+    await this.syncLanguages(analyzer);
     if (analyzerData.logo) {
       analyzer.logo = analyzerData.logo;
     }
@@ -308,6 +323,10 @@ export class AnalyzersService {
       analyzer: { id },
       status: In([ExperimentStatus.PENDING, ExperimentStatus.RUNNING]),
     });
+
+    if (await this.analyzersRepository.hasAnalyses(id)) {
+      throw new AnalyzerHasAnalyses();
+    }
 
     // Delete the analyzer from the database
     await this.analyzersRepository.deleteAnalyzer(id);

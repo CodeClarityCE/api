@@ -224,7 +224,10 @@ export class AnalysesService {
       for (const [key] of Object.entries(plugin_config)) {
         const config_element = config_structure[pluginName]?.[key];
         if (config_element?.required && !config[pluginName]?.[key]) {
-          throw new AnaylzerMissingConfigAttribute();
+          throw new AnaylzerMissingConfigAttribute({
+            plugin: pluginName,
+            option: key,
+          });
         }
       }
     }
@@ -898,7 +901,7 @@ export class AnalysesService {
       }
     }
 
-    // Plugins no language lists run everywhere, as in the dispatcher
+    // Plugins not listed under any language run for every language
     const languagePlugins = new Set(
       Object.values(languageConfig).flatMap((entry) => entry?.plugins ?? []),
     );

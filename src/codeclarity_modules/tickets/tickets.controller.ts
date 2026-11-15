@@ -7,6 +7,7 @@ import {
   HttpCode,
   Param,
   ParseBoolPipe,
+  ParseEnumPipe,
   ParseIntPipe,
   Patch,
   Post,
@@ -22,6 +23,8 @@ import {
 } from "@nestjs/swagger";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
+import { MembershipsRepository } from "src/base_modules/shared/repositories";
 import { VulnerabilityDetailsReport } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
 import { AuthUser } from "src/decorators/UserDecorator";
 import {
@@ -93,6 +96,9 @@ function getPerformerName(
   return `${performer.first_name} ${performer.last_name}`;
 }
 
+// Rejects an unknown or wrongly cased provider with a 400.
+const providerPipe = new ParseEnumPipe(ExternalTicketProvider);
+
 @ApiTags("Tickets")
 @Controller("org/:org_id/tickets")
 export class TicketsController {
@@ -100,7 +106,20 @@ export class TicketsController {
     private readonly ticketsService: TicketsService,
     private readonly ticketAutomationService: TicketAutomationService,
     private readonly ticketIntegrationService: TicketIntegrationService,
+    private readonly membershipsRepository: MembershipsRepository,
   ) {}
+
+  // Only org admins may manage or check integration credentials.
+  private async requireAdmin(
+    orgId: string,
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.ADMIN,
+    );
+  }
 
   @Post("")
   @ApiOperation({ summary: "Create a new ticket" })
@@ -449,10 +468,11 @@ export class TicketsController {
     description: "Integration configured successfully",
   })
   async configureClickUp(
-    @AuthUser() _user: AuthenticatedUser,
+    @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Body() body: ConfigureClickUpBody,
   ): Promise<NoDataResponse> {
+    await this.requireAdmin(org_id, user);
     const config: ClickUpConfig = {
       auth_method:
         body.auth_method === "OAUTH"
@@ -487,10 +507,11 @@ export class TicketsController {
   })
   @ApiResponse({ status: 200, description: "Integration removed successfully" })
   async removeIntegration(
-    @AuthUser() _user: AuthenticatedUser,
+    @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
-    @Param("provider") provider: ExternalTicketProvider,
+    @Param("provider", providerPipe) provider: ExternalTicketProvider,
   ): Promise<NoDataResponse> {
+    await this.requireAdmin(org_id, user);
     await this.ticketIntegrationService.deleteIntegrationConfig(
       org_id,
       provider,
@@ -553,11 +574,12 @@ export class TicketsController {
   })
   @ApiResponse({ status: 200, description: "Credentials checked" })
   async verifyCredentials(
-    @AuthUser() _user: AuthenticatedUser,
+    @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
-    @Param("provider") provider: ExternalTicketProvider,
+    @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Body() body: VerifyCredentialsBody,
   ): Promise<TypedResponse<ConnectionTestResult>> {
+    await this.requireAdmin(org_id, user);
     const result = await this.ticketIntegrationService.verifyCredentials(
       org_id,
       provider,
@@ -578,7 +600,7 @@ export class TicketsController {
   async testIntegration(
     @AuthUser() _user: AuthenticatedUser,
     @Param("org_id") org_id: string,
-    @Param("provider") provider: ExternalTicketProvider,
+    @Param("provider", providerPipe) provider: ExternalTicketProvider,
   ): Promise<TypedResponse<ConnectionTestResult>> {
     const result = await this.ticketIntegrationService.testConnection(
       org_id,
@@ -602,11 +624,12 @@ export class TicketsController {
   })
   @ApiResponse({ status: 200, description: "Integration toggled successfully" })
   async toggleIntegration(
-    @AuthUser() _user: AuthenticatedUser,
+    @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
-    @Param("provider") provider: ExternalTicketProvider,
+    @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Query("enabled", ParseBoolPipe) enabled: boolean,
   ): Promise<NoDataResponse> {
+    await this.requireAdmin(org_id, user);
     await this.ticketIntegrationService.toggleIntegration(
       org_id,
       provider,
@@ -636,7 +659,7 @@ export class TicketsController {
   async getWorkspaces(
     @AuthUser() _user: AuthenticatedUser,
     @Param("org_id") org_id: string,
-    @Param("provider") provider: ExternalTicketProvider,
+    @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem[]>> {
     const workspaces = await this.ticketIntegrationService.getWorkspaces(
@@ -662,7 +685,7 @@ export class TicketsController {
   async getSpaces(
     @AuthUser() _user: AuthenticatedUser,
     @Param("org_id") org_id: string,
-    @Param("provider") provider: ExternalTicketProvider,
+    @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Param("workspace_id") workspace_id: string,
     @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem[]>> {
@@ -690,7 +713,7 @@ export class TicketsController {
   async getFolders(
     @AuthUser() _user: AuthenticatedUser,
     @Param("org_id") org_id: string,
-    @Param("provider") provider: ExternalTicketProvider,
+    @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Param("space_id") space_id: string,
     @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem[]>> {
@@ -718,7 +741,7 @@ export class TicketsController {
   async getLists(
     @AuthUser() _user: AuthenticatedUser,
     @Param("org_id") org_id: string,
-    @Param("provider") provider: ExternalTicketProvider,
+    @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Param("parent_id") parent_id: string,
     @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem[]>> {
@@ -750,7 +773,7 @@ export class TicketsController {
   async createSpace(
     @AuthUser() _user: AuthenticatedUser,
     @Param("org_id") org_id: string,
-    @Param("provider") provider: ExternalTicketProvider,
+    @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Param("workspace_id") workspace_id: string,
     @Body() body: { name: string },
     @RequestCredentials() credentials?: IntegrationCredentials,
@@ -780,7 +803,7 @@ export class TicketsController {
   async createFolder(
     @AuthUser() _user: AuthenticatedUser,
     @Param("org_id") org_id: string,
-    @Param("provider") provider: ExternalTicketProvider,
+    @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Param("space_id") space_id: string,
     @Body() body: { name: string },
     @RequestCredentials() credentials?: IntegrationCredentials,
@@ -810,7 +833,7 @@ export class TicketsController {
   async createList(
     @AuthUser() _user: AuthenticatedUser,
     @Param("org_id") org_id: string,
-    @Param("provider") provider: ExternalTicketProvider,
+    @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Param("folder_id") folder_id: string,
     @Body() body: { name: string },
     @RequestCredentials() credentials?: IntegrationCredentials,
@@ -840,7 +863,7 @@ export class TicketsController {
   async createFolderlessList(
     @AuthUser() _user: AuthenticatedUser,
     @Param("org_id") org_id: string,
-    @Param("provider") provider: ExternalTicketProvider,
+    @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Param("space_id") space_id: string,
     @Body() body: { name: string },
     @RequestCredentials() credentials?: IntegrationCredentials,
@@ -899,7 +922,7 @@ export class TicketsController {
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") _org_id: string,
     @Param("ticket_id") ticket_id: string,
-    @Param("provider") provider: ExternalTicketProvider,
+    @Param("provider", providerPipe) provider: ExternalTicketProvider,
   ): Promise<TypedResponse<SyncResult>> {
     const link = await this.ticketIntegrationService.syncTicketToExternal(
       ticket_id,
@@ -958,7 +981,7 @@ export class TicketsController {
   async bulkSync(
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") _org_id: string,
-    @Param("provider") provider: ExternalTicketProvider,
+    @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Body() body: { ticket_ids: string[] },
   ): Promise<TypedResponse<BulkSyncResult>> {
     const result = await this.ticketIntegrationService.bulkSyncTickets(

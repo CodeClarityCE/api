@@ -141,6 +141,7 @@ describe("AnalyzersService", () => {
             doesAnalyzerBelongToOrg: jest.fn(),
             getManyAnalyzers: jest.fn(),
             deleteAnalyzer: jest.fn(),
+            hasAnalyses: jest.fn().mockResolvedValue(false),
           },
         },
         {
