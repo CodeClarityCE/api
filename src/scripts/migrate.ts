@@ -1,4 +1,5 @@
 import * as dotenv from "dotenv";
+import type { DataSource } from "typeorm";
 
 import { CodeClarityLogger } from "../services/logger.service";
 
@@ -96,7 +97,7 @@ async function main(): Promise<void> {
     : {};
 
   // Imported late so the datasources read the admin credentials set above.
-  const loaders: Record<Database, () => Promise<MigrationTarget>> = {
+  const loaders: Record<Database, () => Promise<DataSource>> = {
     codeclarity: async () =>
       (await import("../datasources/codeclarity.datasource"))
         .CodeClarityDataSource,
@@ -107,10 +108,16 @@ async function main(): Promise<void> {
     config: async () =>
       (await import("../datasources/config.datasource")).ConfigDataSource,
   };
-  const open = (db: Database): Promise<MigrationTarget> => loaders[db]();
+  // Dev migrates the _test copies with PG_DB_NAME_SUFFIX=_test.
+  const suffix = process.env["PG_DB_NAME_SUFFIX"] ?? "";
+  const open = async (db: Database): Promise<MigrationTarget> => {
+    const source = await loaders[db]();
+    if (suffix) source.setOptions({ database: `${db}${suffix}` });
+    return source;
+  };
 
   await migrate(databases, { open, roles });
-  logger.log("Migrations applied", { databases });
+  logger.log("Migrations applied", { databases, suffix });
 }
 
 if (require.main === module) {
