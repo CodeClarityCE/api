@@ -52,5 +52,6 @@ WORKDIR /home/${USERNAME}/app
 COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/dist ./dist
 COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/node_modules ./node_modules
 COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/package.json ./package.json
-# Run migrations then start the API (ENV must be set e.g. via .env.api -> ENV=prod)
-CMD ["/bin/sh", "-c", "node dist/scripts/run-migrations.js && node dist/main"]
+# Serve requests only; the migrate job runs `node dist/scripts/migrate.js` first
+# (ENV must be set, e.g. via .env.api -> ENV=prod)
+CMD ["node", "dist/main"]
