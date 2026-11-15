@@ -103,7 +103,7 @@ class Install {
     );
   }
 
-  // Knowledge first, then config, as run-migrations.ts does.
+  // Knowledge first, then config, as the migrate job does.
   async migrate(
     keep: (migration: MigrationClass) => boolean = () => true,
   ): Promise<void> {

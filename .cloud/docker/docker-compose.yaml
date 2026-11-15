@@ -1,53 +1,87 @@
 services:
-    api:
-        build:
-            context: ../../api
-            dockerfile: .cloud/docker/Dockerfile
-            target: api-dev
-        image: codeclarityce/api-dev:latest
-        restart: always
-        command: pnpm run start:debug
-        env_file:
-            - ../../.cloud/env/.env.dev
-        environment:
-            - PNPM_STORE_DIR=/pnpm/store
-        volumes:
-            - ../../api:/app
-            # Container-managed node_modules. The repo root is a pnpm workspace, so a
-            # host `pnpm install` re-links api/node_modules into the repo-root
-            # .pnpm store (../../../node_modules/.pnpm) which doesn't exist inside
-            # /app. This anonymous volume shadows the host node_modules so the
-            # container does its own standalone install with valid local symlinks.
-            - /app/node_modules
-            - ../../.cloud/env:/app/env
-            - ../../private:/private
-            - ../../scripts:/scripts
-            - pnpm-store:/pnpm/store
-            # Per-container pnpm settings (allowBuilds + minimumReleaseAge=0).
-            # Kept OUT of api/ root so the host's workspace install isn't tricked
-            # into treating api/ as a standalone sub-workspace.
-            - ../../api/.cloud/docker/pnpm-workspace.yaml:/app/pnpm-workspace.yaml:ro
-        ports:
-            - 9229:9229
-            - 3000:3000
-        depends_on:
-            rabbitmq:
-                condition: service_healthy
-            db:
-                condition: service_started
-            adminer:
-                condition: service_started
-        deploy:
-            resources:
-                limits:
-                    cpus: '4'
-                    memory: 4G
-                reservations:
-                    cpus: '2'
-                    memory: 4G
-        extra_hosts:
-            - "host.docker.internal:host-gateway"
+  api:
+    build:
+      context: ../../api
+      dockerfile: .cloud/docker/Dockerfile
+      target: api-dev
+    image: codeclarityce/api-dev:latest
+    restart: always
+    command: pnpm run start:debug
+    env_file:
+      - ../../.cloud/env/.env.dev
+    environment:
+      - PNPM_STORE_DIR=/pnpm/store
+    volumes:
+      - ../../api:/app
+      # Container-managed node_modules. The repo root is a pnpm workspace, so a
+      # host `pnpm install` re-links api/node_modules into the repo-root
+      # .pnpm store (../../../node_modules/.pnpm) which doesn't exist inside
+      # /app. This volume shadows the host node_modules so the container
+      # does its own standalone install with valid local symlinks. Shared
+      # with the migrate job, which installs first.
+      - api_node_modules:/app/node_modules
+      - ../../.cloud/env:/app/env
+      - ../../private:/private
+      - ../../scripts:/scripts
+      - pnpm-store:/pnpm/store
+      # Per-container pnpm settings (allowBuilds + minimumReleaseAge=0).
+      # Kept OUT of api/ root so the host's workspace install isn't tricked
+      # into treating api/ as a standalone sub-workspace.
+      - ../../api/.cloud/docker/pnpm-workspace.yaml:/app/pnpm-workspace.yaml:ro
+    ports:
+      - 9229:9229
+      - 3000:3000
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+      db:
+        condition: service_started
+      adminer:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4G
+        reservations:
+          cpus: "2"
+          memory: 4G
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # One-shot job: applies pending migrations to every database (or the ones
+  # named after `run --rm migrate`), straight on Postgres, then exits.
+  migrate:
+    build:
+      context: ../../api
+      dockerfile: .cloud/docker/Dockerfile
+      target: api-dev
+    image: codeclarityce/api-dev:latest
+    restart: "no"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - pnpm install && exec pnpm run migrate "$$@"
+      - migrate
+    env_file:
+      - ../../.cloud/env/.env.dev
+    environment:
+      - PNPM_STORE_DIR=/pnpm/store
+      - PG_DB_HOST=db
+      - PG_DB_PORT=5432
+    volumes:
+      - ../../api:/app
+      - api_node_modules:/app/node_modules
+      - ../../.cloud/env:/app/env
+      - pnpm-store:/pnpm/store
+      - ../../api/.cloud/docker/pnpm-workspace.yaml:/app/pnpm-workspace.yaml:ro
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
-    pnpm-store:
-        external: true
+  pnpm-store:
+    external: true
+  api_node_modules:
