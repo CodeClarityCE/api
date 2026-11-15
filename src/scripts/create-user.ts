@@ -1,5 +1,4 @@
 import { isEmail } from "class-validator";
-import * as dotenv from "dotenv";
 import type { DataSource, EntityManager } from "typeorm";
 
 import { hashPassword } from "../base_modules/auth/password";
@@ -10,6 +9,8 @@ import {
 import { Organization } from "../base_modules/organizations/organization.entity";
 import { User } from "../base_modules/users/users.entity";
 import { CodeClarityLogger } from "../services/logger.service";
+
+import { runScript, withCodeClarity } from "./run-script";
 
 import "reflect-metadata";
 
@@ -139,33 +140,14 @@ export function parseArgs(
 }
 
 async function main(): Promise<void> {
-  dotenv.config({
-    path: `env/.env.${process.env["ENV"] ?? "dev"}`,
-    quiet: true,
-  });
   const input = parseArgs(process.argv.slice(2), process.env);
-
-  // Imported late so the datasource reads the env file loaded above.
-  const { CodeClarityDataSource } =
-    await import("../datasources/codeclarity.datasource");
-  await CodeClarityDataSource.initialize();
-  try {
-    const outcome = await createUser(CodeClarityDataSource, input);
-    logger.log(`User ${input.email}: ${outcome}`, {
-      email: input.email,
-      outcome,
-    });
-  } finally {
-    await CodeClarityDataSource.destroy();
-  }
-}
-
-if (require.main === module) {
-  main().catch((error: unknown) => {
-    logger.error(
-      "create-user failed",
-      error instanceof Error ? error : String(error),
-    );
-    process.exit(1);
+  const outcome = await withCodeClarity((dataSource) =>
+    createUser(dataSource, input),
+  );
+  logger.log(`User ${input.email}: ${outcome}`, {
+    email: input.email,
+    outcome,
   });
 }
+
+runScript(module, "create-user", main);

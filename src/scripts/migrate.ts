@@ -1,7 +1,8 @@
-import * as dotenv from "dotenv";
 import type { DataSource } from "typeorm";
 
 import { CodeClarityLogger } from "../services/logger.service";
+
+import { runScript } from "./run-script";
 
 import "reflect-metadata";
 
@@ -76,10 +77,6 @@ export async function migrate(
 
 // Connects as PG_DB_ADMIN_USER when set, then SETs each database's owning role.
 async function main(): Promise<void> {
-  dotenv.config({
-    path: `env/.env.${process.env["ENV"] ?? "dev"}`,
-    quiet: true,
-  });
   const databases = selectDatabases(process.argv.slice(2));
 
   const useAdmin = !!process.env["PG_DB_ADMIN_USER"];
@@ -120,12 +117,4 @@ async function main(): Promise<void> {
   logger.log("Migrations applied", { databases, suffix });
 }
 
-if (require.main === module) {
-  main().catch((error: unknown) => {
-    logger.error(
-      "Migrations failed",
-      error instanceof Error ? error : String(error),
-    );
-    process.exit(1);
-  });
-}
+runScript(module, "migrate", main);
