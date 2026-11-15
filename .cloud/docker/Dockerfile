@@ -46,6 +46,8 @@ RUN pnpm prune --prod
 FROM node:26.10.0-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS api
 ARG USERNAME
 RUN adduser -D ${USERNAME}
+# `docker compose run --rm api create-user ...` runs this.
+COPY --chmod=755 .cloud/docker/create-user /usr/local/bin/create-user
 USER ${USERNAME}
 RUN mkdir /home/${USERNAME}/private
 WORKDIR /home/${USERNAME}/app
