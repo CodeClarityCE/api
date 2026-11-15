@@ -27,9 +27,9 @@ import { CannotPerformActionOnSocialAccount } from "../users/users.errors";
 import { RegistrationNotVerified, WrongCredentials } from "./auth.errors";
 import {
   CONST_JWT_TOKEN_EXPIRES_IN,
-  CONST_PASSWORD_SALT_ROUNDS,
   CONST_REFRESH_JWT_TOKEN_EXPIRES_IN,
 } from "./constants";
+import { hashPassword } from "./password";
 
 @Injectable()
 export class AuthService {
@@ -355,9 +355,7 @@ export class AuthService {
    * @returns the hashed password
    */
   async hashPassword(password: string): Promise<string> {
-    const saltRounds = CONST_PASSWORD_SALT_ROUNDS;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-    return hashedPassword;
+    return hashPassword(password);
   }
 
   /**

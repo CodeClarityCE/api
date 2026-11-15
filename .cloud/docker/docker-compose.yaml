@@ -36,6 +36,10 @@ services:
         condition: service_completed_successfully
       default-analyzer:
         condition: service_completed_successfully
+      dev-user:
+        condition: service_completed_successfully
+      migrate-test:
+        condition: service_completed_successfully
       rabbitmq:
         condition: service_healthy
       db:
@@ -102,6 +106,69 @@ services:
     environment:
       - PG_DB_HOST=db
       - PG_DB_PORT=5432
+    volumes:
+      - ../../api:/app
+      - api_node_modules:/app/node_modules
+      - ../../.cloud/env:/app/env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # Dev-only one-shot job: migrates the _test databases that the umbrella's
+  # test-databases job creates. Reuses the migrate job's install.
+  migrate-test:
+    build:
+      context: ../../api
+      dockerfile: .cloud/docker/Dockerfile
+      target: api-dev
+    image: codeclarityce/api-dev:latest
+    restart: "no"
+    entrypoint:
+      - node_modules/.bin/ts-node
+      - -r
+      - tsconfig-paths/register
+      - src/scripts/migrate.ts
+      - codeclarity
+      - knowledge
+      - config
+    env_file:
+      - ../../.cloud/env/.env.dev
+    environment:
+      - PG_DB_HOST=db
+      - PG_DB_PORT=5432
+      - PG_DB_NAME_SUFFIX=_test
+    volumes:
+      - ../../api:/app
+      - api_node_modules:/app/node_modules
+      - ../../.cloud/env:/app/env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      test-databases:
+        condition: service_completed_successfully
+
+  # Dev-only one-shot job: creates the default developer account unless a user
+  # with that email exists. Reuses the migrate job's install.
+  dev-user:
+    build:
+      context: ../../api
+      dockerfile: .cloud/docker/Dockerfile
+      target: api-dev
+    image: codeclarityce/api-dev:latest
+    restart: "no"
+    entrypoint:
+      - node_modules/.bin/ts-node
+      - -r
+      - tsconfig-paths/register
+      - src/scripts/create-user.ts
+    env_file:
+      - ../../.cloud/env/.env.dev
+    environment:
+      - PG_DB_HOST=db
+      - PG_DB_PORT=5432
+      - CREATE_USER_EMAIL=john.doe@codeclarity.io
+      - CREATE_USER_PASSWORD=ThisIs4Str0ngP4ssW0rd?
+      - CREATE_USER_NAME=John Doe
     volumes:
       - ../../api:/app
       - api_node_modules:/app/node_modules
