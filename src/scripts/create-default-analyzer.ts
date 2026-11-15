@@ -1,9 +1,10 @@
-import * as dotenv from "dotenv";
 import type { Repository } from "typeorm";
 
 import type { Analyzer } from "../base_modules/analyzers/analyzer.entity";
 import { AnalyzerTemplatesService } from "../base_modules/analyzers/analyzer-templates.service";
 import { CodeClarityLogger } from "../services/logger.service";
+
+import { runScript, withCodeClarity } from "./run-script";
 
 import "reflect-metadata";
 
@@ -39,37 +40,17 @@ export async function createDefaultAnalyzer(
 }
 
 async function main(): Promise<void> {
-  dotenv.config({
-    path: `env/.env.${process.env["ENV"] ?? "dev"}`,
-    quiet: true,
-  });
-  // Imported late so the datasource reads the env loaded above.
-  const { CodeClarityDataSource } =
-    await import("../datasources/codeclarity.datasource");
   const { Analyzer } =
     await import("../base_modules/analyzers/analyzer.entity");
-  await CodeClarityDataSource.initialize();
-  try {
-    const created = await createDefaultAnalyzer(
-      CodeClarityDataSource.getRepository(Analyzer),
-    );
-    logger.log(
-      created
-        ? "Created the default analyzer"
-        : "Default analyzer already exists",
-      { name: DEFAULT_ANALYZER_NAME },
-    );
-  } finally {
-    await CodeClarityDataSource.destroy();
-  }
+  const created = await withCodeClarity((dataSource) =>
+    createDefaultAnalyzer(dataSource.getRepository(Analyzer)),
+  );
+  logger.log(
+    created
+      ? "Created the default analyzer"
+      : "Default analyzer already exists",
+    { name: DEFAULT_ANALYZER_NAME },
+  );
 }
 
-if (require.main === module) {
-  main().catch((error: unknown) => {
-    logger.error(
-      "Creating the default analyzer failed",
-      error instanceof Error ? error : String(error),
-    );
-    process.exit(1);
-  });
-}
+runScript(module, "create-default-analyzer", main);
