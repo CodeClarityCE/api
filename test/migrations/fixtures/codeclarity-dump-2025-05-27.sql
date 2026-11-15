@@ -1,4 +1,4 @@
--- Schema of deployment/dump/codeclarity.dump (archive created 2025-05-27 11:51:55 UTC, pg_dump 17.5),
+-- Schema of the codeclarity dev dump that setup used to restore (archive created 2025-05-27 11:51:55 UTC, pg_dump 17.5),
 -- taken from its table of contents. Same as pg_restore --schema-only without owners.
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
