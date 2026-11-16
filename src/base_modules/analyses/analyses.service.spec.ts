@@ -114,6 +114,8 @@ describe("AnalysesService", () => {
   beforeEach(async () => {
     publisher = new InMemoryAnalysisPublisher();
     consumers = new InMemoryConsumerProbe();
+    consumers.consumers.set("step1", 1);
+    consumers.consumers.set("step2", 1);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AnalysesService,
@@ -326,6 +328,31 @@ describe("AnalysesService", () => {
       ).rejects.toMatchObject({
         error_code: "AnalyzerUnavailable",
         error_message: "Needs CodeQL, which is off on this instance.",
+      });
+      expect(analysesRepository.saveAnalysis).not.toHaveBeenCalled();
+      expect(publisher.published).toEqual([]);
+    });
+
+    it("refuses an analyzer whose plugin is down, saving and queuing nothing", async () => {
+      consumers.consumers.set("step2", 0);
+      jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
+      jest
+        .spyOn(projectsRepository, "doesProjectBelongToOrg")
+        .mockResolvedValue();
+      jest
+        .spyOn(analyzersRepository, "getAnalyzerById")
+        .mockResolvedValue(mockAnalyzer as any);
+
+      await expect(
+        service.create(
+          "org-123",
+          "project-123",
+          mockAnalysisCreateBody,
+          mockUser,
+        ),
+      ).rejects.toMatchObject({
+        error_code: "AnalyzerUnavailable",
+        error_message: "step2 is temporarily down. Try again shortly.",
       });
       expect(analysesRepository.saveAnalysis).not.toHaveBeenCalled();
       expect(publisher.published).toEqual([]);

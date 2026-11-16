@@ -23,13 +23,20 @@ const DEFAULT_OPTIONS: PluginAvailabilityOptions = { cacheMs: 5_000 };
 
 type Steps = readonly (readonly { name: string }[])[];
 
+function listOf(names: string[]): string {
+  return names.length === 1
+    ? names[0]!
+    : `${names.slice(0, -1).join(", ")} and ${names.at(-1)!}`;
+}
+
 function offMessage(components: string[]): string {
-  const names =
-    components.length === 1
-      ? components[0]!
-      : `${components.slice(0, -1).join(", ")} and ${components.at(-1)!}`;
   const verb = components.length === 1 ? "is" : "are";
-  return `Needs ${names}, which ${verb} off on this instance.`;
+  return `Needs ${listOf(components)}, which ${verb} off on this instance.`;
+}
+
+function downMessage(plugins: string[]): string {
+  const verb = plugins.length === 1 ? "is" : "are";
+  return `${listOf(plugins)} ${verb} temporarily down. Try again shortly.`;
 }
 
 /**
@@ -44,6 +51,8 @@ export class PluginAvailabilityService {
     string,
     { at: number; state: Promise<PluginState> }
   >();
+  // Default plugins last seen down, so each outage is logged once
+  private readonly down = new Set<string>();
 
   constructor(
     private readonly probe: ConsumerProbe,
@@ -73,8 +82,14 @@ export class PluginAvailabilityService {
     const off = plugins
       .filter((_, i) => states[i] === "off")
       .map((plugin) => OPTIONAL_COMPONENTS[plugin] ?? plugin);
-    if (off.length === 0) return { state: "available" };
-    return { state: "off", components: off, message: offMessage(off) };
+    if (off.length > 0) {
+      return { state: "off", components: off, message: offMessage(off) };
+    }
+    const down = plugins.filter((_, i) => states[i] === "down");
+    if (down.length > 0) {
+      return { state: "down", plugins: down, message: downMessage(down) };
+    }
+    return { state: "available" };
   }
 
   /**
@@ -100,8 +115,20 @@ export class PluginAvailabilityService {
       });
       return "available";
     }
-    if (consumers > 0) return "available";
-    // Only an optional component can be off; a stopped default plugin is not.
-    return plugin in OPTIONAL_COMPONENTS ? "off" : "available";
+    // Only an optional component can be off; a stopped default plugin is down.
+    if (consumers === 0 && plugin in OPTIONAL_COMPONENTS) return "off";
+    const state = consumers > 0 ? "available" : "down";
+    this.noteTransition(plugin, state);
+    return state;
+  }
+
+  /** Warns the operator when a default plugin stops, and says when it is back. */
+  private noteTransition(plugin: string, state: "available" | "down"): void {
+    if (state === "down" && !this.down.has(plugin)) {
+      this.down.add(plugin);
+      this.logger.warn("A plugin that should run is down", { plugin });
+    } else if (state === "available" && this.down.delete(plugin)) {
+      this.logger.log("A plugin that was down is back", { plugin });
+    }
   }
 }
