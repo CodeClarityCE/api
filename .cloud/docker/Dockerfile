@@ -46,11 +46,14 @@ RUN pnpm prune --prod
 FROM node:26.10.0-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS api
 ARG USERNAME
 RUN adduser -D ${USERNAME}
+# `docker compose run --rm api create-user ...` runs this.
+COPY --chmod=755 .cloud/docker/create-user /usr/local/bin/create-user
 USER ${USERNAME}
 RUN mkdir /home/${USERNAME}/private
 WORKDIR /home/${USERNAME}/app
 COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/dist ./dist
 COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/node_modules ./node_modules
 COPY --chown=${USERNAME}:${USERNAME} --from=api-build /app/package.json ./package.json
-# Run migrations then start the API (ENV must be set e.g. via .env.api -> ENV=prod)
-CMD ["/bin/sh", "-c", "node dist/scripts/run-migrations.js && node dist/main"]
+# Serve requests only; the migrate job runs `node dist/scripts/migrate.js` first
+# (ENV must be set, e.g. via .env.api -> ENV=prod)
+CMD ["node", "dist/main"]

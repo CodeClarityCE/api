@@ -1,6 +1,6 @@
 # Makefile template derivated from https://github.com/dunglas/symfony-docker/blob/main/docs/makefile.md
 .DEFAULT_GOAL = help
-.PHONY        = help build build-prod up down logs migrate migrate-codeclarity migrate-knowledge migrate-plugins migrate-config
+.PHONY        = help build build-prod up down logs migrate
 
 ## —— 🦉 CodeClarity's backend 🦉 ——————————————————————————————————————————————
 help: ## Outputs this help screen
@@ -22,16 +22,8 @@ down: ## Stops the Docker images
 logs: ## Show compose logs
 	@cd ../.cloud/scripts && sh logs.sh api
 
-migrate: migrate-codeclarity migrate-knowledge migrate-plugins migrate-config ## Run all database migrations
+migrate: ## Run all database migrations in the migrate job
+	@$(MAKE) -C .. migrate
 
-migrate-codeclarity: ## Run codeclarity DB migrations
-	pnpm migration:run:codeclarity
-
-migrate-knowledge: ## Run knowledge DB migrations
-	pnpm migration:run:knowledge
-
-migrate-plugins: ## Run plugins DB migrations
-	pnpm migration:run:plugins
-
-migrate-config: ## Run config DB migrations
-	pnpm migration:run:config
+migrate-%: ## Run one database's migrations in the migrate job
+	@$(MAKE) -C .. migrate-$*
