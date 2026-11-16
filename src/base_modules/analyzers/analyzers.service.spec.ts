@@ -12,8 +12,8 @@ import { AuthenticatedUser, ROLE } from "../auth/auth.types";
 import { OrganizationLoggerService } from "../organizations/log/organizationLogger.service";
 import { ActionType } from "../organizations/log/orgAuditLog.types";
 import { MemberRole } from "../organizations/memberships/orgMembership.types";
-import { InMemoryConsumerProbe } from "../plugin-availability/consumer-probe";
 import { PluginAvailabilityService } from "../plugin-availability/plugin-availability.service";
+import { InMemoryConsumerProbe } from "../plugin-availability/testing/in-memory-consumer-probe";
 import { PluginsRepository } from "../plugins/plugin.repository";
 import {
   MembershipsRepository,
@@ -112,7 +112,9 @@ describe("AnalyzersService", () => {
         AnalyzersService,
         {
           provide: PluginAvailabilityService,
-          useValue: new PluginAvailabilityService(consumers, { cacheMs: 0 }),
+          useValue: Object.assign(new PluginAvailabilityService(consumers), {
+            cacheMs: 0,
+          }),
         },
         {
           provide: getRepositoryToken(Experiment, "codeclarity"),

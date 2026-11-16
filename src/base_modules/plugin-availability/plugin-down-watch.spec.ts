@@ -2,9 +2,9 @@ import { CodeClarityLogger } from "src/services/logger.service";
 
 import type { PluginsRepository } from "../plugins/plugin.repository";
 
-import { InMemoryConsumerProbe } from "./consumer-probe";
 import { PluginAvailabilityService } from "./plugin-availability.service";
 import { PluginDownWatch } from "./plugin-down-watch";
+import { InMemoryConsumerProbe } from "./testing/in-memory-consumer-probe";
 
 const DOWN = "A plugin that should run is down";
 
@@ -27,7 +27,9 @@ describe("PluginDownWatch", () => {
     probe.consumers.set("vuln-finder", 1);
     const plugins = { getAll } as unknown as PluginsRepository;
     watch = new PluginDownWatch(
-      new PluginAvailabilityService(probe, { cacheMs: 0 }),
+      Object.assign(new PluginAvailabilityService(probe), {
+        cacheMs: 0,
+      }),
       plugins,
     );
     warn = jest.spyOn(CodeClarityLogger.prototype, "warn");

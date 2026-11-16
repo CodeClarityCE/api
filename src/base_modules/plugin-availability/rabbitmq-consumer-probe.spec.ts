@@ -2,16 +2,22 @@ import { type ConfigService } from "@nestjs/config";
 import * as amqp from "amqplib";
 import { EventEmitter } from "events";
 
-import { RabbitMqConsumerProbe } from "./rabbitmq-consumer-probe";
+import {
+  PROBE_TIMEOUT_MS,
+  RabbitMqConsumerProbe,
+} from "./rabbitmq-consumer-probe";
 
 jest.mock("amqplib", () => ({ connect: jest.fn() }));
 
 /** A broker whose queues have the consumer counts set in `queues`. */
 class FakeConnection extends EventEmitter {
   queues = new Map<string, number>();
+  /** When set, queue checks never answer. */
+  hang = false;
   createChannel = jest.fn(async () =>
     Object.assign(new EventEmitter(), {
       checkQueue: jest.fn(async (queue: string) => {
+        if (this.hang) return new Promise(() => undefined);
         const consumers = this.queues.get(queue);
         if (consumers === undefined) {
           throw Object.assign(new Error(`NOT_FOUND - no queue '${queue}'`), {
@@ -66,5 +72,40 @@ describe("RabbitMqConsumerProbe", () => {
   it("fails when the broker cannot be reached", async () => {
     connect.mockReset().mockRejectedValue(new Error("ECONNREFUSED"));
     await expect(probe.count("js-sbom")).rejects.toThrow("ECONNREFUSED");
+  });
+
+  describe("against a broker that does not answer", () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it("gives up on a connect that hangs", async () => {
+      connect.mockReset().mockReturnValue(new Promise(() => undefined));
+      const failed = expect(probe.count("js-sbom")).rejects.toThrow(
+        "timed out",
+      );
+      await jest.advanceTimersByTimeAsync(PROBE_TIMEOUT_MS);
+      await failed;
+    });
+
+    it("gives up on a queue check that hangs", async () => {
+      connection.hang = true;
+      const failed = expect(probe.count("js-sbom")).rejects.toThrow(
+        "timed out",
+      );
+      await jest.advanceTimersByTimeAsync(PROBE_TIMEOUT_MS);
+      await failed;
+    });
+
+    it("connects again after a connect timed out", async () => {
+      connect.mockReset().mockReturnValueOnce(new Promise(() => undefined));
+      const failed = expect(probe.count("js-sbom")).rejects.toThrow(
+        "timed out",
+      );
+      await jest.advanceTimersByTimeAsync(PROBE_TIMEOUT_MS);
+      await failed;
+      connect.mockResolvedValue(connection);
+      connection.queues.set("dispatcher_js-sbom", 1);
+      await expect(probe.count("js-sbom")).resolves.toBe(1);
+    });
   });
 });

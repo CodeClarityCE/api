@@ -1,8 +1,8 @@
 import { CodeClarityLogger } from "src/services/logger.service";
 
-import { InMemoryConsumerProbe } from "./consumer-probe";
 import { AnalyzerUnavailable } from "./plugin-availability.errors";
 import { PluginAvailabilityService } from "./plugin-availability.service";
+import { InMemoryConsumerProbe } from "./testing/in-memory-consumer-probe";
 
 function steps(...stages: string[][]): { name: string }[][] {
   return stages.map((stage) => stage.map((name) => ({ name })));
@@ -24,7 +24,9 @@ describe("PluginAvailabilityService", () => {
       probe.consumers.set(plugin, 1);
     }
     probe.consumers.set("license-finder", 2);
-    service = new PluginAvailabilityService(probe, { cacheMs: 0 });
+    service = Object.assign(new PluginAvailabilityService(probe), {
+      cacheMs: 0,
+    });
   });
 
   it("says an analyzer of running plugins is available", async () => {
@@ -147,7 +149,9 @@ describe("PluginAvailabilityService", () => {
   });
 
   it("asks the broker once per plugin within the cache period", async () => {
-    const cached = new PluginAvailabilityService(probe, { cacheMs: 60_000 });
+    const cached = Object.assign(new PluginAvailabilityService(probe), {
+      cacheMs: 60_000,
+    });
     await cached.ofAnalyzer(codeqlAnalyzer);
     probe.consumers.set("codeql", 1);
     await expect(cached.ofAnalyzer(codeqlAnalyzer)).resolves.toMatchObject({

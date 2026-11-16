@@ -13,8 +13,8 @@ import { AnaylzerMissingConfigAttribute } from "../analyzers/analyzers.errors";
 import { AnalyzersRepository } from "../analyzers/analyzers.repository";
 import { AuthenticatedUser, ROLE } from "../auth/auth.types";
 import { MemberRole } from "../organizations/memberships/orgMembership.types";
-import { InMemoryConsumerProbe } from "../plugin-availability/consumer-probe";
 import { PluginAvailabilityService } from "../plugin-availability/plugin-availability.service";
+import { InMemoryConsumerProbe } from "../plugin-availability/testing/in-memory-consumer-probe";
 import { ProjectMemberService } from "../projects/projectMember.service";
 import {
   MembershipsRepository,
@@ -122,7 +122,9 @@ describe("AnalysesService", () => {
         { provide: AnalysisPublisher, useValue: publisher },
         {
           provide: PluginAvailabilityService,
-          useValue: new PluginAvailabilityService(consumers, { cacheMs: 0 }),
+          useValue: Object.assign(new PluginAvailabilityService(consumers), {
+            cacheMs: 0,
+          }),
         },
         {
           provide: ProjectMemberService,

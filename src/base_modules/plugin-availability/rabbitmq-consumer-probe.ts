@@ -9,6 +9,20 @@ import { ConsumerProbe } from "./consumer-probe";
 // The broker's reply code for a queue that does not exist
 const NOT_FOUND = 404;
 
+// How long a connect or queue check may take before the count fails
+export const PROBE_TIMEOUT_MS = 2_000;
+
+function withTimeout<T>(work: Promise<T>, what: string): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`${what} timed out`)),
+      PROBE_TIMEOUT_MS,
+    );
+  });
+  return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
+}
+
 /**
  * Counts consumers with a passive queue check over one long-lived connection,
  * reopened on the next count after it drops.
@@ -30,7 +44,10 @@ export class RabbitMqConsumerProbe
     const channel = await connection.createChannel();
     channel.on("error", () => undefined);
     try {
-      const queue = await channel.checkQueue(`dispatcher_${plugin}`);
+      const queue = await withTimeout(
+        channel.checkQueue(`dispatcher_${plugin}`),
+        "RabbitMQ queue check",
+      );
       return queue.consumerCount;
     } catch (err) {
       if ((err as { code?: number }).code === NOT_FOUND) return 0;
@@ -52,10 +69,17 @@ export class RabbitMqConsumerProbe
   }
 
   private open(): Promise<amqp.ChannelModel> {
-    this.connection ??= this.connect().catch((err: unknown) => {
-      this.connection = undefined;
-      throw err;
-    });
+    if (!this.connection) {
+      const connecting = this.connect();
+      this.connection = withTimeout(connecting, "RabbitMQ connect").catch(
+        (err: unknown) => {
+          this.connection = undefined;
+          // Close a connection that only arrives after the timeout
+          connecting.then((late) => late.close()).catch(() => undefined);
+          throw err;
+        },
+      );
+    }
     return this.connection;
   }
 
@@ -65,7 +89,7 @@ export class RabbitMqConsumerProbe
       `${get("AMQP_PROTOCOL")}://${get("AMQP_USER")}:${
         process.env["AMQP_PASSWORD"]
       }@${get("AMQP_HOST")}:${get("AMQP_PORT")}`,
-      buildAmqpSocketOptions(),
+      { ...buildAmqpSocketOptions(), timeout: PROBE_TIMEOUT_MS },
     );
     const forget = (): void => {
       this.connection = undefined;

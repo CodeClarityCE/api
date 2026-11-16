@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 
 import { CodeClarityLogger } from "src/services/logger.service";
 
@@ -9,17 +9,6 @@ import type {
   AnalyzerAvailability,
   PluginState,
 } from "./plugin-availability.types";
-
-export type { AnalyzerAvailability, PluginState };
-
-export interface PluginAvailabilityOptions {
-  /** How long a plugin's consumer count is reused before the broker is asked again. */
-  cacheMs: number;
-}
-
-export const PLUGIN_AVAILABILITY_OPTIONS = Symbol("PluginAvailabilityOptions");
-
-const DEFAULT_OPTIONS: PluginAvailabilityOptions = { cacheMs: 5_000 };
 
 type Steps = readonly (readonly { name: string }[])[];
 
@@ -46,7 +35,8 @@ function downMessage(plugins: string[]): string {
 @Injectable()
 export class PluginAvailabilityService {
   private readonly logger = CodeClarityLogger.forService("PluginAvailability");
-  private readonly options: PluginAvailabilityOptions;
+  /** How long a plugin's consumer count is reused before the broker is asked again. */
+  cacheMs = 5_000;
   private readonly cache = new Map<
     string,
     { at: number; state: Promise<PluginState> }
@@ -54,20 +44,13 @@ export class PluginAvailabilityService {
   // Default plugins last seen down, so each outage is logged once
   private readonly down = new Set<string>();
 
-  constructor(
-    private readonly probe: ConsumerProbe,
-    @Optional()
-    @Inject(PLUGIN_AVAILABILITY_OPTIONS)
-    options?: PluginAvailabilityOptions,
-  ) {
-    this.options = options ?? DEFAULT_OPTIONS;
-  }
+  constructor(private readonly probe: ConsumerProbe) {}
 
   /** The state of one plugin; a broker that cannot be asked never blocks it. */
   pluginState(plugin: string): Promise<PluginState> {
     const now = Date.now();
     const cached = this.cache.get(plugin);
-    if (cached && now - cached.at < this.options.cacheMs) return cached.state;
+    if (cached && now - cached.at < this.cacheMs) return cached.state;
     const state = this.probeState(plugin);
     this.cache.set(plugin, { at: now, state });
     return state;
@@ -108,6 +91,7 @@ export class PluginAvailabilityService {
     try {
       consumers = await this.probe.count(plugin);
     } catch (err) {
+      // Fail open: a broker that cannot be asked counts as available
       this.cache.delete(plugin);
       this.logger.warn("Could not count a plugin's consumers", {
         plugin,
