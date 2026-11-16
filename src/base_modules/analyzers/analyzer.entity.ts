@@ -11,6 +11,7 @@ import {
 
 import { type Analysis, StageBase } from "../analyses/analysis.entity";
 import type { Organization } from "../organizations/organization.entity";
+import type { AnalyzerAvailability } from "../plugin-availability/plugin-availability.types";
 import type { User } from "../users/users.entity";
 
 @Entity()
@@ -90,6 +91,19 @@ export class Analyzer {
   })
   @Expose()
   logo!: string;
+
+  // Set when read through the service, never stored
+  @ApiProperty({
+    description: "Whether the analyzer can run on this instance, and why not",
+    example: {
+      state: "off",
+      components: ["CodeQL"],
+      message: "Needs CodeQL, which is off on this instance.",
+    },
+    required: false,
+  })
+  @Expose()
+  availability?: AnalyzerAvailability;
 
   // Foreign keys
   @OneToMany("Analysis", "analyzer")

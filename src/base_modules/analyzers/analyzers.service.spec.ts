@@ -12,6 +12,8 @@ import { AuthenticatedUser, ROLE } from "../auth/auth.types";
 import { OrganizationLoggerService } from "../organizations/log/organizationLogger.service";
 import { ActionType } from "../organizations/log/orgAuditLog.types";
 import { MemberRole } from "../organizations/memberships/orgMembership.types";
+import { InMemoryConsumerProbe } from "../plugin-availability/consumer-probe";
+import { PluginAvailabilityService } from "../plugin-availability/plugin-availability.service";
 import { PluginsRepository } from "../plugins/plugin.repository";
 import {
   MembershipsRepository,
@@ -100,10 +102,18 @@ describe("AnalyzersService", () => {
     filter_count: {},
   };
 
+  let consumers: InMemoryConsumerProbe;
+
   beforeEach(async () => {
+    consumers = new InMemoryConsumerProbe();
+    consumers.consumers.set("step1", 1);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AnalyzersService,
+        {
+          provide: PluginAvailabilityService,
+          useValue: new PluginAvailabilityService(consumers, { cacheMs: 0 }),
+        },
         {
           provide: getRepositoryToken(Experiment, "codeclarity"),
           useValue: { exists: jest.fn().mockResolvedValue(false) },
@@ -484,6 +494,65 @@ describe("AnalyzersService", () => {
         "analyzer-123",
         "org-123",
       );
+    });
+  });
+
+  describe("availability", () => {
+    const codeqlAnalyzer = {
+      ...mockAnalyzer,
+      id: "analyzer-codeql",
+      steps: [[{ name: "step1" }, { name: "codeql" }]],
+    } as unknown as Analyzer;
+    const offWithCodeql = {
+      state: "off",
+      components: ["CodeQL"],
+      message: "Needs CodeQL, which is off on this instance.",
+    };
+
+    beforeEach(() => {
+      jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
+      jest
+        .spyOn(analyzersRepository, "doesAnalyzerBelongToOrg")
+        .mockResolvedValue();
+    });
+
+    it("lists each analyzer with whether it can run here", async () => {
+      jest.spyOn(analyzersRepository, "getManyAnalyzers").mockResolvedValue({
+        ...mockPaginatedAnalyzers,
+        data: [{ ...mockAnalyzer }, { ...codeqlAnalyzer }],
+      });
+
+      const result = await service.getMany(
+        "org-123",
+        { currentPage: 0, entriesPerPage: 10 },
+        mockUser,
+      );
+
+      expect(result.data.map((analyzer) => analyzer.availability)).toEqual([
+        { state: "available" },
+        offWithCodeql,
+      ]);
+    });
+
+    it("says one analyzer needs CodeQL while it is off", async () => {
+      jest
+        .spyOn(analyzersRepository, "getAnalyzerById")
+        .mockResolvedValue({ ...codeqlAnalyzer });
+
+      const result = await service.get("org-123", "analyzer-codeql", mockUser);
+
+      expect(result.availability).toEqual(offWithCodeql);
+    });
+
+    it("says it is available once CodeQL listens", async () => {
+      consumers.consumers.set("codeql", 1);
+      jest
+        .spyOn(analyzersRepository, "getAnalyzerById")
+        .mockResolvedValue({ ...codeqlAnalyzer });
+
+      const result = await service.get("org-123", "analyzer-codeql", mockUser);
+
+      expect(result.availability).toEqual({ state: "available" });
     });
   });
 

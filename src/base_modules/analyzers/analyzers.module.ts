@@ -5,6 +5,7 @@ import { Analyzer } from "src/base_modules/analyzers/analyzer.entity";
 import { Experiment } from "src/codeclarity_modules/experiments/experiment.entity";
 
 import { OrganizationsModule } from "../organizations/organizations.module";
+import { PluginAvailabilityModule } from "../plugin-availability/plugin-availability.module";
 import { PluginModule } from "../plugins/plugin.module";
 
 import { AnalyzerTemplatesService } from "./analyzer-templates.service";
@@ -20,6 +21,7 @@ import { AnalyzersService } from "./analyzers.service";
   imports: [
     OrganizationsModule, // For OrganizationLoggerService
     PluginModule, // For the dependency rules of a workflow
+    PluginAvailabilityModule, // For whether an analyzer can run here
     TypeOrmModule.forFeature([Analyzer, Experiment], "codeclarity"),
   ],
   exports: [AnalyzersService, AnalyzersRepository, AnalyzerTemplatesService],
