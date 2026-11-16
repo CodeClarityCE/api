@@ -673,9 +673,8 @@ describe("ProjectService", () => {
   describe("batchDelete", () => {
     const analysesRepo = () =>
       service["repos"].analyses as jest.Mocked<AnalysesRepository>;
-    const resultsRepo = () =>
-      service["repos"].results as jest.Mocked<AnalysisResultsRepository>;
     const fileRepo = () => service["repos"].file as jest.Mocked<FileRepository>;
+    const mockManager = { tx: true };
 
     beforeEach(() => {
       jest
@@ -689,14 +688,13 @@ describe("ProjectService", () => {
         .fn()
         .mockResolvedValue(undefined);
       (projectsRepository as any).deleteByIds = jest.fn().mockResolvedValue(0);
+      (projectsRepository as any).runInTransaction = jest.fn(
+        (work: (m: unknown) => Promise<unknown>) => work(mockManager),
+      );
       (analysesRepo().getAnalysisIdsByProjectIds as any) = jest
         .fn()
         .mockResolvedValue([]);
-      (analysesRepo().cancelByIds as any) = jest.fn().mockResolvedValue(0);
       (analysesRepo().deleteByIds as any) = jest.fn().mockResolvedValue(0);
-      (resultsRepo().deleteByAnalysisIds as any) = jest
-        .fn()
-        .mockResolvedValue(0);
       (fileRepo().deleteByProjectIds as any) = jest.fn().mockResolvedValue(0);
     });
 
@@ -715,7 +713,7 @@ describe("ProjectService", () => {
       expect((projectsRepository as any).deleteByIds).not.toHaveBeenCalled();
     });
 
-    it("cancels in-flight analyses then bulk-deletes owned projects", async () => {
+    it("bulk-deletes owned projects in one transaction", async () => {
       (projectsRepository as any).getProjectsByIdsAndOrg.mockResolvedValue([
         { id: "p1", added_by: { id: "someone" } },
         { id: "p2", added_by: { id: "someone" } },
@@ -732,16 +730,21 @@ describe("ProjectService", () => {
 
       expect(res.succeeded).toBe(2);
       expect(res.failed).toBe(0);
-      expect(analysesRepo().cancelByIds).toHaveBeenCalledWith(["a1"]);
-      expect(resultsRepo().deleteByAnalysisIds).toHaveBeenCalledWith(["a1"]);
-      expect(analysesRepo().deleteByIds).toHaveBeenCalledWith(["a1"]);
+      expect(analysesRepo().deleteByIds).toHaveBeenCalledWith(
+        ["a1"],
+        mockManager,
+      );
+      expect(fileRepo().deleteByProjectIds).toHaveBeenCalledWith(
+        ["p1", "p2"],
+        mockManager,
+      );
       expect(
         (projectsRepository as any).detachFromOrganization,
-      ).toHaveBeenCalledWith(mockOrgId, ["p1", "p2"]);
-      expect((projectsRepository as any).deleteByIds).toHaveBeenCalledWith([
-        "p1",
-        "p2",
-      ]);
+      ).toHaveBeenCalledWith(mockOrgId, ["p1", "p2"], mockManager);
+      expect((projectsRepository as any).deleteByIds).toHaveBeenCalledWith(
+        ["p1", "p2"],
+        mockManager,
+      );
     });
 
     it("denies a USER deleting a project they did not import", async () => {

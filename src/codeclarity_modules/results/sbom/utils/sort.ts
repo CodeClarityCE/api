@@ -45,14 +45,11 @@ function sort(
     sortBySafe = sortBy;
   }
 
-  if (
-    sortDirection === null ||
-    sortDirection === undefined ||
-    (sortDirection !== "DESC" && sortDirection !== "ASC")
-  ) {
+  const direction = sortDirection?.toUpperCase();
+  if (direction !== "DESC" && direction !== "ASC") {
     sortDirectionSafe = DEFAULT_SORT_DIRECTION;
   } else {
-    sortDirectionSafe = sortDirection;
+    sortDirectionSafe = direction;
   }
 
   if (sortBySafe in mapping) {
@@ -182,8 +179,8 @@ function sort(
       const bRecord = b as unknown as Record<string, unknown>;
       const aVal = (aRecord[sortBySafe] as string | undefined) ?? "";
       const bVal = (bRecord[sortBySafe] as string | undefined) ?? "";
-      if (aVal > bVal) return sortDirectionSafe === "DESC" ? 1 : -1;
-      if (aVal < bVal) return sortDirectionSafe === "DESC" ? -1 : 1;
+      if (aVal > bVal) return sortDirectionSafe === "DESC" ? -1 : 1;
+      if (aVal < bVal) return sortDirectionSafe === "DESC" ? 1 : -1;
       return 0;
     });
   }

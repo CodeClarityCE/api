@@ -19,13 +19,32 @@ import {
 } from "src/types/pagination.types";
 
 import { OrganizationLoggerService } from "../organizations/log/organizationLogger.service";
+import { PluginsRepository } from "../plugins/plugin.repository";
 import {
   MembershipsRepository,
   OrganizationsRepository,
   UsersRepository,
 } from "../shared/repositories";
 
+import { deriveLanguages, hasLanguageConfig } from "./analyzer-languages";
+import {
+  AnalyzerDependencyMissing,
+  AnalyzerHasAnalyses,
+  AnalyzerHasNoPlugins,
+} from "./analyzers.errors";
 import { AnalyzersRepository } from "./analyzers.repository";
+import { findWorkflowProblem } from "./workflow-rules";
+
+type StepNames = { name: string }[][] | null | undefined;
+
+// Same plugin names in the same stages.
+function samePlugins(stored: StepNames, incoming: StepNames): boolean {
+  const layout = (steps: StepNames): string =>
+    JSON.stringify(
+      (steps ?? []).map((stage) => stage.map((step) => step.name)),
+    );
+  return layout(stored) === layout(incoming);
+}
 
 @Injectable()
 export class AnalyzersService {
@@ -35,9 +54,40 @@ export class AnalyzersService {
     private readonly organizationsRepository: OrganizationsRepository,
     private readonly usersRepository: UsersRepository,
     private readonly analyzersRepository: AnalyzersRepository,
+    private readonly pluginsRepository: PluginsRepository,
     @InjectRepository(Experiment, "codeclarity")
     private readonly experimentRepository: Repository<Experiment>,
   ) {}
+
+  /**
+   * Throws unless every plugin of the workflow can run.
+   * @throws {AnalyzerHasNoPlugins} If the workflow has no plugins
+   * @throws {AnalyzerDependencyMissing} If a plugin lacks a dependency
+   */
+  private async assertRunnable(
+    steps: AnalyzerCreateBody["steps"],
+  ): Promise<void> {
+    const problem = findWorkflowProblem(
+      steps,
+      await this.pluginsRepository.getAll(),
+    );
+    if (problem?.kind === "no-plugins") throw new AnalyzerHasNoPlugins();
+    if (problem?.kind === "missing-dependency") {
+      throw new AnalyzerDependencyMissing(problem.plugin, problem.missing);
+    }
+  }
+
+  /** Lists every plugin of a template-based analyzer under its languages. */
+  private async syncLanguages(analyzer: Analyzer): Promise<void> {
+    if (!hasLanguageConfig(analyzer.language_config)) return;
+    const derived = deriveLanguages(
+      analyzer.steps,
+      analyzer.supported_languages,
+      await this.pluginsRepository.getAll(),
+    );
+    analyzer.supported_languages = derived.supported_languages;
+    analyzer.language_config = derived.language_config;
+  }
 
   /**
    * Create a new analyzer in the specified organization.
@@ -56,6 +106,7 @@ export class AnalyzersService {
       user.userId,
       MemberRole.ADMIN,
     );
+    await this.assertRunnable(analyzerData.steps);
 
     const creator = await this.usersRepository.getUserById(user.userId);
     const organization =
@@ -74,6 +125,7 @@ export class AnalyzersService {
     if (analyzerData.language_config !== undefined) {
       analyzer.language_config = analyzerData.language_config;
     }
+    await this.syncLanguages(analyzer);
     analyzer.logo = analyzerData.logo ?? "js";
     analyzer.global = false;
     analyzer.organization = organization;
@@ -112,8 +164,11 @@ export class AnalyzersService {
       user.userId,
       MemberRole.ADMIN,
     );
-
     const analyzer = await this.analyzersRepository.getAnalyzerById(analyzerId);
+    // An older analyzer saved before the rules existed can still be renamed.
+    if (!samePlugins(analyzer.steps, analyzerData.steps)) {
+      await this.assertRunnable(analyzerData.steps);
+    }
 
     // Update the properties of the analyzer with new data
     analyzer.name = analyzerData.name;
@@ -125,6 +180,7 @@ export class AnalyzersService {
     if (analyzerData.language_config) {
       analyzer.language_config = analyzerData.language_config;
     }
+    await this.syncLanguages(analyzer);
     if (analyzerData.logo) {
       analyzer.logo = analyzerData.logo;
     }
@@ -267,6 +323,10 @@ export class AnalyzersService {
       analyzer: { id },
       status: In([ExperimentStatus.PENDING, ExperimentStatus.RUNNING]),
     });
+
+    if (await this.analyzersRepository.hasAnalyses(id)) {
+      throw new AnalyzerHasAnalyses();
+    }
 
     // Delete the analyzer from the database
     await this.analyzersRepository.deleteAnalyzer(id);

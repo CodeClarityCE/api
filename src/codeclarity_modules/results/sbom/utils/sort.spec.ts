@@ -440,10 +440,9 @@ describe("sort", () => {
 
       const result = sort(dependencies, "name", "ASC");
 
-      // String sort logic is inverted: ASC behaves like DESC
-      expect(result[0]!.name).toBe("zebra");
+      expect(result[0]!.name).toBe("apple");
       expect(result[1]!.name).toBe("banana");
-      expect(result[2]!.name).toBe("apple");
+      expect(result[2]!.name).toBe("zebra");
     });
 
     it("should sort by string fields in descending order", () => {
@@ -455,10 +454,9 @@ describe("sort", () => {
 
       const result = sort(dependencies, "name", "DESC");
 
-      // String sort logic is inverted: DESC behaves like ASC
-      expect(result[0]!.name).toBe("apple");
+      expect(result[0]!.name).toBe("zebra");
       expect(result[1]!.name).toBe("banana");
-      expect(result[2]!.name).toBe("zebra");
+      expect(result[2]!.name).toBe("apple");
     });
 
     it("should handle null/undefined string values", () => {
@@ -470,10 +468,10 @@ describe("sort", () => {
 
       const result = sort(dependencies, "name", "ASC");
 
-      // String comparison: null/undefined coerced to empty string, come after 'zebra' in inverted ASC
-      expect(result[0]!.name).toBe("zebra");
-      expect(result[1]!.name).toBeNull();
-      expect(result[2]!.name).toBeUndefined();
+      // Null and undefined compare as empty strings, so they come first.
+      expect(result[0]!.name).toBeNull();
+      expect(result[1]!.name).toBeUndefined();
+      expect(result[2]!.name).toBe("zebra");
     });
 
     it("should handle package_manager field", () => {
@@ -488,10 +486,9 @@ describe("sort", () => {
 
       const result = sort(dependencies, "package_manager", "ASC");
 
-      // String sort logic is inverted: ASC behaves like DESC
-      expect((result[0] as any).package_manager).toBe("yarn");
+      expect((result[0] as any).package_manager).toBe("npm");
       expect((result[1] as any).package_manager).toBe("pnpm");
-      expect((result[2] as any).package_manager).toBe("npm");
+      expect((result[2] as any).package_manager).toBe("yarn");
     });
   });
 
@@ -502,12 +499,12 @@ describe("sort", () => {
         createMockDependency({ name: "apple" }),
       ];
 
-      const resultDesc = sort(dependencies, "name", "desc");
-      const resultAsc = sort(dependencies, "name", "asc");
+      // Sorting is in place, so each call gets its own copy.
+      const resultDesc = sort([...dependencies], "name", "desc");
+      const resultAsc = sort([...dependencies], "name", "asc");
 
-      // Should use default DESC behavior for invalid case
       expect(resultDesc[0]!.name).toBe("zebra");
-      expect(resultAsc[0]!.name).toBe("zebra");
+      expect(resultAsc[0]!.name).toBe("apple");
     });
 
     it("should handle empty string sort field", () => {

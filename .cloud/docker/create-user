@@ -1,0 +1,4 @@
+#!/bin/sh
+# Creates a verified user who owns a personal organization: create-user --email ... --name ...
+# (password from --password or CREATE_USER_PASSWORD; --reset-password replaces an existing one).
+cd /home/codeclarity/app && exec node dist/scripts/create-user.js "$@"

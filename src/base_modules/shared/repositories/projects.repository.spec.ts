@@ -2,11 +2,7 @@ import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 
 import { Project } from "src/base_modules/projects/project.entity";
-import {
-  EntityNotFound,
-  NotAuthorized,
-  ProjectDoesNotExist,
-} from "src/types/error.types";
+import { EntityNotFound, ProjectDoesNotExist } from "src/types/error.types";
 
 import { ProjectsRepository } from "./projects.repository";
 
@@ -236,14 +232,14 @@ describe("ProjectsRepository", () => {
       });
     });
 
-    it("should throw NotAuthorized when project does not belong to organization", async () => {
+    it("should throw EntityNotFound when project does not belong to organization", async () => {
       // Arrange
       mockProjectRepository.exists.mockResolvedValue(false);
 
       // Act & Assert
       await expect(
         projectsRepository.doesProjectBelongToOrg("project-123", "wrong-org"),
-      ).rejects.toThrow(NotAuthorized);
+      ).rejects.toThrow(EntityNotFound);
     });
   });
 

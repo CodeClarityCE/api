@@ -201,7 +201,9 @@ describe("LicenseRepository", () => {
 
       expect(result).toEqual(licenses);
       expect(result).toHaveLength(3);
-      expect(mockRepository.find).toHaveBeenCalledWith({});
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        order: { name: "ASC", id: "ASC" },
+      });
       expect(mockRepository.find).toHaveBeenCalledTimes(1);
     });
 
@@ -212,7 +214,9 @@ describe("LicenseRepository", () => {
 
       expect(result).toEqual([]);
       expect(result).toHaveLength(0);
-      expect(mockRepository.find).toHaveBeenCalledWith({});
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        order: { name: "ASC", id: "ASC" },
+      });
     });
 
     it("should handle repository errors gracefully", async () => {
@@ -222,7 +226,9 @@ describe("LicenseRepository", () => {
       await expect(licenseRepository.getAllLicenseData()).rejects.toThrow(
         "Database connection failed",
       );
-      expect(mockRepository.find).toHaveBeenCalledWith({});
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        order: { name: "ASC", id: "ASC" },
+      });
     });
 
     it("should handle large number of licenses", async () => {

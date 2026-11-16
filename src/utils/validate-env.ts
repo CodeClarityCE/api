@@ -6,6 +6,7 @@ import {
   IsNotEmpty,
   IsNumber,
   IsOptional,
+  IsString,
   validateSync,
   ValidationError,
 } from "class-validator";
@@ -48,29 +49,33 @@ class EnvironmentVariables {
 
   // Github oauth
   /**
-   * The client ID for GitHub OAuth.
+   * The client ID for GitHub OAuth. Optional: GitHub sign-in needs it.
    */
-  @IsNotEmpty()
-  GITHUB_AUTH_CLIENT_ID!: string;
+  @IsOptional()
+  @IsString()
+  GITHUB_AUTH_CLIENT_ID?: string;
 
   /**
    * The client secret for GitHub OAuth.
    */
-  @IsNotEmpty()
-  GITHUB_AUTH_CLIENT_SECRET!: string;
+  @IsOptional()
+  @IsString()
+  GITHUB_AUTH_CLIENT_SECRET?: string;
 
   // Gitlab oauth
   /**
-   * The client ID for GitLab OAuth.
+   * The client ID for GitLab OAuth. Optional: GitLab sign-in needs it.
    */
-  @IsNotEmpty()
-  GITLAB_AUTH_CLIENT_ID!: string;
+  @IsOptional()
+  @IsString()
+  GITLAB_AUTH_CLIENT_ID?: string;
 
   /**
    * The client secret for GitLab OAuth.
    */
-  @IsNotEmpty()
-  GITLAB_AUTH_CLIENT_SECRET!: string;
+  @IsOptional()
+  @IsString()
+  GITLAB_AUTH_CLIENT_SECRET?: string;
 
   /**
    * The hostname or IP address of the GitLab instance.
@@ -162,10 +167,11 @@ class EnvironmentVariables {
   MAIL_AUTH_USER!: string;
 
   /**
-   * The password for authentication with the mail server.
+   * The password for the mail server. Optional: login works without mail.
    */
-  @IsNotEmpty()
-  MAIL_AUTH_PASSWORD!: string;
+  @IsOptional()
+  @IsString()
+  MAIL_AUTH_PASSWORD?: string;
 
   /**
    * The default "from" email address.

@@ -271,6 +271,25 @@ describe("ReportGenerator Services", () => {
 
   describe("OSVReportGenerator", () => {
     describe("genReport", () => {
+      it("lists each reference URL once, keeping every type", async () => {
+        const url = "https://github.com/advisories/GHSA-1234";
+        const result = await osvReportGenerator.genReport(
+          mockVulnerability,
+          "NPM",
+          mockDependency,
+          {
+            ...mockOSV,
+            references: [
+              { type: "ADVISORY", url },
+              { type: "WEB", url },
+            ],
+          },
+          mockNVD,
+        );
+
+        expect(result.references).toEqual([{ url, tags: ["ADVISORY", "WEB"] }]);
+      });
+
       it("should generate a report from OSV data", async () => {
         const result = await osvReportGenerator.genReport(
           mockVulnerability,
@@ -509,6 +528,29 @@ describe("ReportGenerator Services", () => {
         expect(
           result.vulnerability_info.version_info.affected_versions_string,
         ).toBe(">= 1.0.0 < 1.0.1");
+      });
+
+      it("lists each reference URL once", async () => {
+        const url = "https://github.com/advisories/GHSA-1234";
+        const result = await nvdReportGenerator.genReport(
+          mockVulnerability,
+          "NPM",
+          mockDependency,
+          mockOSV,
+          {
+            ...mockNVD,
+            references: [
+              { url, source: "nvd@nist.gov" },
+              { url: "https://example.com/fix" },
+              { url, source: "security@example.com" },
+            ],
+          },
+        );
+
+        expect(result.references.map((r) => r.url)).toEqual([
+          url,
+          "https://example.com/fix",
+        ]);
       });
 
       it("should throw error when NVD item is undefined", async () => {

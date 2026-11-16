@@ -48,9 +48,6 @@ export class VulnerabilitiesFilterService {
       "owasp_top_10_2021_a9",
       "owasp_top_10_2021_a10",
       "owasp_uncategorized",
-      "patchable",
-      "partially_patchable",
-      "not_patchable",
       "severity_critical",
       "severity_high",
       "severity_medium",
@@ -67,7 +64,7 @@ export class VulnerabilitiesFilterService {
     if (searchKey === null || searchKey === undefined) {
       searchkeySafe = "";
     } else {
-      searchkeySafe = searchKey;
+      searchkeySafe = searchKey.trim();
     }
 
     if (activeFilters === null || activeFilters === undefined) {
@@ -87,10 +84,14 @@ export class VulnerabilitiesFilterService {
       const searchKeyLower = searchkeySafe.toLocaleLowerCase();
 
       for (const vulnerability of vulnerabilities) {
-        const matchesDependency = vulnerability.Affected.some((affected) =>
-          affected.AffectedDependency?.toLocaleLowerCase().includes(
-            searchKeyLower,
-          ),
+        const matchesDependency = vulnerability.Affected.some(
+          (affected) =>
+            affected.AffectedDependency?.toLocaleLowerCase().includes(
+              searchKeyLower,
+            ) ||
+            affected.AffectedVersion?.toLocaleLowerCase().includes(
+              searchKeyLower,
+            ),
         );
         const matchesId =
           vulnerability.Vulnerability?.toLocaleLowerCase().includes(
@@ -260,12 +261,10 @@ export class VulnerabilitiesFilterService {
 
     const counts: Record<string, number> = {};
     for (const filter of possibleFilters) {
-      if (filter in activeFiltersSafe) continue;
-      const filters = [filter];
-      for (const filter of activeFiltersSafe) {
-        filters.push(filter);
-      }
-      counts[filter] = filterByOptions(filteredBySearchKey, filters).length;
+      counts[filter] = filterByOptions(filteredBySearchKey, [
+        filter,
+        ...activeFiltersSafe,
+      ]).length;
     }
 
     const filteredByOptions = filterByOptions(

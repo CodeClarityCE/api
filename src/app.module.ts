@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { APP_PIPE } from "@nestjs/core";
 
 import { AuthModule } from "./base_modules/auth/auth.module";
 import { BaseModule } from "./base_modules/base.module";
@@ -7,6 +8,7 @@ import { SharedRepositoriesModule } from "./base_modules/shared/shared.module";
 import { CodeClarityModule } from "./codeclarity_modules/codeclarity.module";
 import { EnterpriseModule } from "./enterprise_modules/enterprise.module";
 import { MetricsModule } from "./metrics/metrics.module";
+import { IdParamPipe } from "./pipes/id-param.pipe";
 import { validate } from "./utils/validate-env";
 
 const ENV = process.env["ENV"];
@@ -41,5 +43,7 @@ export { defaultOptions } from "./datasources/base-options";
     // Module for exposing Prometheus metrics
     MetricsModule,
   ],
+  // Malformed ids in the route get a 400 on every controller.
+  providers: [{ provide: APP_PIPE, useClass: IdParamPipe }],
 })
 export class AppModule {}

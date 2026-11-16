@@ -3,7 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 
 import { Project } from "src/base_modules/projects/project.entity";
-import { NotAuthorized } from "src/types/error.types";
+import { EntityNotFound } from "src/types/error.types";
 
 @Injectable()
 export class ProjectMemberService {
@@ -29,7 +29,7 @@ export class ProjectMemberService {
       where: { id: projectId, organizations: { id: orgId } },
     });
     if (!project) {
-      throw new NotAuthorized();
+      throw new EntityNotFound();
     }
   }
 }

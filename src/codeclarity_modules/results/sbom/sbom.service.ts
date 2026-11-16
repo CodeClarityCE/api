@@ -15,7 +15,10 @@ import {
   AnalysisStats,
   newAnalysisStats,
 } from "src/codeclarity_modules/results/sbom/sbom_stats.types";
-import { SbomUtilsService } from "src/codeclarity_modules/results/sbom/utils/utils";
+import {
+  SbomUtilsService,
+  sharedPackageManager,
+} from "src/codeclarity_modules/results/sbom/utils/utils";
 import { StatusResponse } from "src/codeclarity_modules/results/status.types";
 import { paginate } from "src/codeclarity_modules/results/utils/utils";
 import { PaginatedResponse } from "src/types/apiResponses.types";
@@ -59,6 +62,27 @@ function getLanguageFromEcosystem(ecosystem: string | undefined): string {
   if (ecosystem === "packagist") return "php";
   if (ecosystem === "pypi") return "python";
   return "javascript";
+}
+
+const PURL_TYPES: Record<string, string> = {
+  npm: "npm",
+  packagist: "composer",
+  pypi: "pypi",
+  cargo: "cargo",
+};
+
+/** The package URL of a dependency, e.g. pkg:npm/%40vue/shared@3.5.0 */
+export function packageUrl(
+  name: string,
+  version: string,
+  ecosystem: string | undefined,
+): string {
+  const type = PURL_TYPES[ecosystem ?? "npm"] ?? "generic";
+  const path = (type === "pypi" ? name.toLowerCase().replace(/_/g, "-") : name)
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/");
+  return `pkg:${type}/${path}@${encodeURIComponent(version)}`;
 }
 
 @Injectable()
@@ -230,6 +254,11 @@ export class SBOMService {
         sbomDependency.is_transitive_count =
           (version.Transitive ?? version.transitive) ? 1 : 0;
         if (version.ecosystem) sbomDependency.ecosystem = version.ecosystem;
+        sbomDependency.purl = packageUrl(
+          dep_key,
+          version_key,
+          version.ecosystem,
+        );
         if (version.source_plugin)
           sbomDependency.source_plugin = version.source_plugin;
 
@@ -316,12 +345,23 @@ export class SBOMService {
     );
 
     // Get merged SBOM results from all supported plugins
-    const { mergedSbom } =
+    const { mergedSbom, pluginResults } =
       await this.sbomUtilsService.getMergedSbomResults(analysisId);
+
+    // Each workspace takes the manager of the plugins that found it.
+    const packageManagers: Record<string, string> = {};
+    for (const workspace of Object.keys(mergedSbom.workspaces)) {
+      packageManagers[workspace] = sharedPackageManager(
+        pluginResults
+          .map(({ sbom }) => sbom)
+          .filter((sbom) => workspace in sbom.workspaces),
+      );
+    }
 
     return {
       workspaces: Object.keys(mergedSbom.workspaces),
       package_manager: mergedSbom.analysis_info.package_manager,
+      package_managers: packageManagers,
     };
   }
 
@@ -431,22 +471,6 @@ export class SBOMService {
       throw new EntityNotFound(
         `Dependency ${dependency} not found in workspace ${workspace}`,
       );
-    }
-
-    // If the target node is a direct dependency and does not already have the virtual root as a parent, add it
-    if (
-      virtualRoot &&
-      !targetNode.parentIds?.includes(SBOMService.VIRTUAL_ROOT_ID)
-    ) {
-      // Add virtual root as parent
-      targetNode.parentIds = Array.from(
-        new Set([...(targetNode.parentIds ?? []), SBOMService.VIRTUAL_ROOT_ID]),
-      );
-      // Add target node as child of virtual root if not already present
-      virtualRoot.childrenIds ??= [];
-      if (!virtualRoot.childrenIds.includes(targetNode.id)) {
-        virtualRoot.childrenIds.push(targetNode.id);
-      }
     }
 
     // Find only the paths that contain the target dependency
@@ -599,14 +623,10 @@ export class SBOMService {
     // Find all parents for this node
     const parents = this.findParentDependencies(nodeId, dependenciesMap);
 
-    if (parents.length > 0) {
-      node.parentIds = parents;
-    } else if (isRoot) {
-      node.parentIds = [virtualRootId];
-      virtualRootNode.childrenIds!.push(nodeId);
-    } else {
-      // Orphaned node - make it a child of virtual root
-      node.parentIds = [virtualRootId];
+    node.parentIds = parents;
+    // Direct dependencies hang off the root; so do orphans, to keep one tree.
+    if (isRoot || parents.length === 0) {
+      node.parentIds = [...parents, virtualRootId];
       virtualRootNode.childrenIds!.push(nodeId);
     }
 
@@ -700,6 +720,7 @@ export class SBOMService {
     }
 
     sbomDependency.newest_release = pack.latest_version;
+    if (pack.license) sbomDependency.license = pack.license;
 
     try {
       const versionInfo = await this.packageRepository.getVersionInfo(

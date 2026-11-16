@@ -8,7 +8,7 @@ import { CreateKnowledgeBaseline1754600000000 as KnowledgeBaseline } from "../..
 import { CreateKnowledgeSourceSync1794182400000 as SourceSync } from "../../src/migrations/knowledge/1794182400000-CreateKnowledgeSourceSync";
 
 const connection = {
-  host: process.env["TEST_PG_HOST"] ?? "host.docker.internal",
+  host: process.env["TEST_PG_HOST"] ?? "localhost",
   port: parseInt(process.env["TEST_PG_PORT"] ?? "5432", 10),
   user: process.env["TEST_PG_USER"] ?? "postgres",
   password: process.env["TEST_PG_PASSWORD"] ?? "!ChangeMe!",
@@ -103,7 +103,7 @@ class Install {
     );
   }
 
-  // Knowledge first, then config, as run-migrations.ts does.
+  // Knowledge first, then config, as the migrate job does.
   async migrate(
     keep: (migration: MigrationClass) => boolean = () => true,
   ): Promise<void> {

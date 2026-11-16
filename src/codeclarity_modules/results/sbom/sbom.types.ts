@@ -53,6 +53,9 @@ export class SbomDependency {
   // Deprecation information
   @Expose() deprecated?: boolean;
   @Expose() deprecated_message?: string;
+  // Package URL (purl) and the license recorded for the package
+  @Expose() purl?: string;
+  @Expose() license?: string;
 }
 
 export interface DependencyDetails {
@@ -155,4 +158,6 @@ export interface GraphOutput {
 export interface WorkspacesOutput {
   workspaces: string[];
   package_manager: string;
+  /** Package manager of each workspace, keyed by workspace */
+  package_managers: Record<string, string>;
 }

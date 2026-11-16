@@ -31,9 +31,9 @@ describe("PluginModule", () => {
       expect(controllers).toHaveLength(1);
     });
 
-    it("should not export any providers by default", () => {
+    it("exports the plugins repository for the analyzer rules", () => {
       const exports = Reflect.getMetadata("exports", PluginModule);
-      expect(exports).toBeUndefined();
+      expect(exports).toEqual([PluginsRepository]);
     });
   });
 

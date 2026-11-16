@@ -199,10 +199,13 @@ describe("Main.ts Bootstrap Configuration and Testing", () => {
     });
 
     it("should configure validation pipe correctly", () => {
-      const mainContent = readFileSync(join(__dirname, "main.ts"), "utf8");
+      const globalsContent = readFileSync(
+        join(__dirname, "app.globals.ts"),
+        "utf8",
+      );
 
-      expect(mainContent).toContain("stopAtFirstError: true");
-      expect(mainContent).toContain("ValidationFailed(errors)");
+      expect(globalsContent).toContain("stopAtFirstError: true");
+      expect(globalsContent).toContain("ValidationFailed(errors)");
     });
   });
 
@@ -222,21 +225,36 @@ describe("Main.ts Bootstrap Configuration and Testing", () => {
   });
 
   describe("Middleware and Interceptor Configuration", () => {
-    it("should configure global pipes, filters, and interceptors", () => {
+    it("should apply the global handlers from app.globals.ts", () => {
       const mainContent = readFileSync(join(__dirname, "main.ts"), "utf8");
 
-      expect(mainContent).toContain("useGlobalPipes");
-      expect(mainContent).toContain("useGlobalFilters");
-      expect(mainContent).toContain("useGlobalInterceptors");
-      expect(mainContent).toContain("ErrorFilter");
-      expect(mainContent).toContain("ResponseBodyInterceptor");
-      expect(mainContent).toContain("ClassSerializerInterceptor");
+      expect(mainContent).toContain(
+        'import { useGlobalHandlers } from "./app.globals"',
+      );
+      expect(mainContent).toContain("useGlobalHandlers(app);");
+    });
+
+    it("should configure global pipes, filters, and interceptors", () => {
+      const globalsContent = readFileSync(
+        join(__dirname, "app.globals.ts"),
+        "utf8",
+      );
+
+      expect(globalsContent).toContain("useGlobalPipes");
+      expect(globalsContent).toContain("useGlobalFilters");
+      expect(globalsContent).toContain("useGlobalInterceptors");
+      expect(globalsContent).toContain("ErrorFilter");
+      expect(globalsContent).toContain("ResponseBodyInterceptor");
+      expect(globalsContent).toContain("ClassSerializerInterceptor");
     });
 
     it("should configure serializer with excludeExtraneousValues", () => {
-      const mainContent = readFileSync(join(__dirname, "main.ts"), "utf8");
+      const globalsContent = readFileSync(
+        join(__dirname, "app.globals.ts"),
+        "utf8",
+      );
 
-      expect(mainContent).toContain("excludeExtraneousValues: true");
+      expect(globalsContent).toContain("excludeExtraneousValues: true");
     });
   });
 
@@ -273,14 +291,23 @@ describe("Main.ts Bootstrap Configuration and Testing", () => {
 
       // Core NestJS imports
       expect(mainContent).toContain(
-        'import { NestFactory, Reflector } from "@nestjs/core"',
+        'import { NestFactory } from "@nestjs/core"',
       );
       expect(mainContent).toContain("FastifyAdapter");
       expect(mainContent).toContain("NestFastifyApplication");
       expect(mainContent).toContain('"@nestjs/platform-fastify"');
-      expect(mainContent).toContain(
-        'import { ClassSerializerInterceptor, ValidationPipe } from "@nestjs/common"',
+
+      // The global handlers' imports live in app.globals.ts
+      const globalsContent = readFileSync(
+        join(__dirname, "app.globals.ts"),
+        "utf8",
       );
+      expect(globalsContent).toContain(
+        'import { Reflector } from "@nestjs/core"',
+      );
+      expect(globalsContent).toContain("ClassSerializerInterceptor,");
+      expect(globalsContent).toContain("ValidationPipe,");
+      expect(globalsContent).toContain('} from "@nestjs/common"');
       expect(mainContent).toContain(
         'import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger"',
       );
@@ -290,13 +317,18 @@ describe("Main.ts Bootstrap Configuration and Testing", () => {
       const mainContent = readFileSync(join(__dirname, "main.ts"), "utf8");
 
       expect(mainContent).toContain('import { AppModule } from "./app.module"');
-      expect(mainContent).toContain(
+
+      const globalsContent = readFileSync(
+        join(__dirname, "app.globals.ts"),
+        "utf8",
+      );
+      expect(globalsContent).toContain(
         'import { ErrorFilter } from "./filters/ExceptionFilter"',
       );
-      expect(mainContent).toContain(
+      expect(globalsContent).toContain(
         'import { ResponseBodyInterceptor } from "./interceptors/ResponseBodyInterceptor"',
       );
-      expect(mainContent).toContain(
+      expect(globalsContent).toContain(
         'import { ValidationFailed } from "./types/error.types"',
       );
     });
@@ -484,12 +516,15 @@ describe("Main.ts Bootstrap Configuration and Testing", () => {
 
   describe("Middleware Registration Order", () => {
     it("should configure middleware registration in bootstrap function", () => {
-      const mainContent = readFileSync(join(__dirname, "main.ts"), "utf8");
+      const globalsContent = readFileSync(
+        join(__dirname, "app.globals.ts"),
+        "utf8",
+      );
 
       // Check order of middleware registration in source code
-      const pipeIndex = mainContent.indexOf("useGlobalPipes");
-      const filterIndex = mainContent.indexOf("useGlobalFilters");
-      const interceptorIndex = mainContent.indexOf("useGlobalInterceptors");
+      const pipeIndex = globalsContent.indexOf("useGlobalPipes");
+      const filterIndex = globalsContent.indexOf("useGlobalFilters");
+      const interceptorIndex = globalsContent.indexOf("useGlobalInterceptors");
 
       expect(pipeIndex).toBeGreaterThan(-1);
       expect(filterIndex).toBeGreaterThan(-1);

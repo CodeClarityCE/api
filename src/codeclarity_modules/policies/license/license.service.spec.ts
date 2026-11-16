@@ -8,6 +8,7 @@ import {
   OrganizationsRepository,
   UsersRepository,
 } from "src/base_modules/shared/repositories";
+import { EntityNotFound } from "src/types/error.types";
 
 import { Policy, PolicyType } from "../policy.entity";
 
@@ -72,6 +73,8 @@ describe("LicensePolicyService", () => {
     where: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
     getCount: jest.fn(),
+    orderBy: jest.fn().mockReturnThis(),
+    addOrderBy: jest.fn().mockReturnThis(),
     skip: jest.fn().mockReturnThis(),
     take: jest.fn().mockReturnThis(),
     getMany: jest.fn(),
@@ -173,7 +176,7 @@ describe("LicensePolicyService", () => {
       // Act & Assert
       await expect(
         service.create("org-123", mockLicensePolicyCreateBody, mockUser),
-      ).rejects.toThrow("EntityNotFound");
+      ).rejects.toThrow(EntityNotFound);
     });
 
     it("should throw error when user not found", async () => {
@@ -187,7 +190,7 @@ describe("LicensePolicyService", () => {
       // Act & Assert
       await expect(
         service.create("org-123", mockLicensePolicyCreateBody, mockUser),
-      ).rejects.toThrow("EntityNotFound");
+      ).rejects.toThrow(EntityNotFound);
     });
 
     it("should require ADMIN role", async () => {
@@ -305,7 +308,7 @@ describe("LicensePolicyService", () => {
       // Act & Assert
       await expect(
         service.get("org-123", "non-existent", mockUser),
-      ).rejects.toThrow("EntityNotFound");
+      ).rejects.toBeInstanceOf(EntityNotFound);
     });
 
     it("should require USER role for read access", async () => {

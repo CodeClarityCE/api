@@ -12,6 +12,7 @@ import { AuthenticatedUser, ROLE } from "../auth/auth.types";
 import { OrganizationLoggerService } from "../organizations/log/organizationLogger.service";
 import { ActionType } from "../organizations/log/orgAuditLog.types";
 import { MemberRole } from "../organizations/memberships/orgMembership.types";
+import { PluginsRepository } from "../plugins/plugin.repository";
 import {
   MembershipsRepository,
   OrganizationsRepository,
@@ -140,7 +141,12 @@ describe("AnalyzersService", () => {
             doesAnalyzerBelongToOrg: jest.fn(),
             getManyAnalyzers: jest.fn(),
             deleteAnalyzer: jest.fn(),
+            hasAnalyses: jest.fn().mockResolvedValue(false),
           },
+        },
+        {
+          provide: PluginsRepository,
+          useValue: { getAll: jest.fn().mockResolvedValue([]) },
         },
       ],
     }).compile();
