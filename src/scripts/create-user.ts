@@ -26,11 +26,20 @@ export interface NewUser {
   resetPassword?: boolean;
 }
 
-// Splits "Jane Q Roe" into first "Jane Q" and last "Roe".
-function splitName(name: string): { first: string; last: string } {
+// Splits "Jane Q Roe" into first "Jane Q" and last "Roe", within signup's limits.
+export function splitName(name: string): { first: string; last: string } {
   const words = name.trim().split(/\s+/);
   const last = words.length > 1 ? (words.pop() ?? "") : "";
-  return { first: words.join(" "), last };
+  const first = words.join(" ");
+  if (!first || !last) {
+    throw new Error(
+      `name must be a first and a last name, like "Jane Roe" (got "${name}")`,
+    );
+  }
+  if (first.length > 25)
+    throw new Error("first name must be 1 to 25 characters");
+  if (last.length > 50) throw new Error("last name must be 1 to 50 characters");
+  return { first, last };
 }
 
 // A free handle from the name, padded to the 5 characters signup requires.
@@ -136,6 +145,7 @@ export function parseArgs(
     throw new Error("password must be 10 to 75 characters");
   }
   if (!name) throw new Error("name is required");
+  splitName(name);
   return { email, password, name, resetPassword };
 }
 
