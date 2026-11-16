@@ -36,6 +36,7 @@ import { AnalysisStartMessageCreate } from "src/types/rabbitMqMessages.types";
 
 import { AnaylzerMissingConfigAttribute } from "../analyzers/analyzers.errors";
 import { AnalyzersRepository } from "../analyzers/analyzers.repository";
+import { PluginAvailabilityService } from "../plugin-availability/plugin-availability.service";
 import {
   MembershipsRepository,
   OrganizationsRepository,
@@ -75,8 +76,10 @@ interface AnalysisConfigInput {
 export class AnalysesService {
   private readonly logger = CodeClarityLogger.forService("Analyses");
 
+  // eslint-disable-next-line max-params
   constructor(
     private readonly analysisPublisher: AnalysisPublisher,
+    private readonly pluginAvailability: PluginAvailabilityService,
     private readonly membershipsRepository: MembershipsRepository,
     private readonly usersRepository: UsersRepository,
     private readonly organizationsRepository: OrganizationsRepository,
@@ -96,6 +99,7 @@ export class AnalysesService {
    * @throws {NotAuthorized} In case the user is not allowed to perform the action on the org
    * @throws {AnalyzerDoesNotExist} In case the referenced analyzer does not exist on the org
    * @throws {AnaylzerMissingConfigAttribute} In case config options required by the analyzer were not provided
+   * @throws {AnalyzerUnavailable} In case a plugin of the analyzer cannot run on this instance
    * @param orgId The id of the organization to which the project belongs
    * @param projectId The id of the project on which the analysis should be performed
    * @param analysisData The analysis create body supplied by the user
@@ -125,6 +129,9 @@ export class AnalysesService {
     const analyzer = await this.analyzersRepository.getAnalyzerById(
       analysisData.analyzer_id,
     );
+
+    // Refuse before anything is saved or queued, with the reason the UI shows
+    await this.pluginAvailability.assertAvailable(analyzer.steps);
 
     // Fetch the project details using the project ID
     const project = await this.projectsRepository.getProjectById(projectId, {
