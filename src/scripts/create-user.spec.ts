@@ -55,6 +55,39 @@ describe("create-user arguments", () => {
       ["--email", "jane@example.com", "--password", "Correct-Horse-42!"],
       "name is required",
     ],
+    [
+      [
+        "--email",
+        "jane@example.com",
+        "--password",
+        "Correct-Horse-42!",
+        "--name",
+        "jane@example.com",
+      ],
+      "name must be a first and a last name",
+    ],
+    [
+      [
+        "--email",
+        "jane@example.com",
+        "--password",
+        "Correct-Horse-42!",
+        "--name",
+        `${"J".repeat(26)} Roe`,
+      ],
+      "first name must be 1 to 25 characters",
+    ],
+    [
+      [
+        "--email",
+        "jane@example.com",
+        "--password",
+        "Correct-Horse-42!",
+        "--name",
+        `Jane ${"R".repeat(51)}`,
+      ],
+      "last name must be 1 to 50 characters",
+    ],
     [["--admin"], "Unknown option --admin"],
   ])("rejects %j", (argv, message) => {
     expect(() => parseArgs(argv, {})).toThrow(message);

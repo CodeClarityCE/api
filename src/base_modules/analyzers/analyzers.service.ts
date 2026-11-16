@@ -19,6 +19,7 @@ import {
 } from "src/types/pagination.types";
 
 import { OrganizationLoggerService } from "../organizations/log/organizationLogger.service";
+import { PluginAvailabilityService } from "../plugin-availability/plugin-availability.service";
 import { PluginsRepository } from "../plugins/plugin.repository";
 import {
   MembershipsRepository,
@@ -55,6 +56,7 @@ export class AnalyzersService {
     private readonly usersRepository: UsersRepository,
     private readonly analyzersRepository: AnalyzersRepository,
     private readonly pluginsRepository: PluginsRepository,
+    private readonly pluginAvailability: PluginAvailabilityService,
     @InjectRepository(Experiment, "codeclarity")
     private readonly experimentRepository: Repository<Experiment>,
   ) {}
@@ -75,6 +77,14 @@ export class AnalyzersService {
     if (problem?.kind === "missing-dependency") {
       throw new AnalyzerDependencyMissing(problem.plugin, problem.missing);
     }
+  }
+
+  /** Sets whether the analyzer can run on this instance right now. */
+  private async withAvailability(analyzer: Analyzer): Promise<Analyzer> {
+    analyzer.availability = await this.pluginAvailability.ofAnalyzer(
+      analyzer.steps,
+    );
+    return analyzer;
   }
 
   /** Lists every plugin of a template-based analyzer under its languages. */
@@ -218,7 +228,9 @@ export class AnalyzersService {
     // Verify that the specified analyzer belongs to the organization
     await this.analyzersRepository.doesAnalyzerBelongToOrg(id, orgId);
 
-    return this.analyzersRepository.getAnalyzerById(id);
+    return this.withAvailability(
+      await this.analyzersRepository.getAnalyzerById(id),
+    );
   }
 
   /**
@@ -247,7 +259,7 @@ export class AnalyzersService {
     // Verify that the specified analyzer belongs to the organization
     await this.analyzersRepository.doesAnalyzerBelongToOrg(analyzer.id, orgId);
 
-    return analyzer;
+    return this.withAvailability(analyzer);
   }
 
   /**
@@ -289,11 +301,15 @@ export class AnalyzersService {
     }
 
     // Retrieve the paginated list of analyzers from the specified organization
-    return this.analyzersRepository.getManyAnalyzers(
+    const page = await this.analyzersRepository.getManyAnalyzers(
       orgId,
       currentPage,
       entriesPerPage,
     );
+    await Promise.all(
+      page.data.map((analyzer) => this.withAvailability(analyzer)),
+    );
+    return page;
   }
 
   /**

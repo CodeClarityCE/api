@@ -9,6 +9,7 @@ import { SbomModule } from "src/codeclarity_modules/results/sbom/sbom.module";
 import { VulnerabilitiesModule } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.module";
 
 import { AnalyzersModule } from "../analyzers/analyzers.module";
+import { PluginAvailabilityModule } from "../plugin-availability/plugin-availability.module";
 
 import { AnalysesController } from "./analyses.controller";
 import { AnalysesRepository } from "./analyses.repository";
@@ -20,6 +21,7 @@ import { RabbitMqAnalysisPublisher } from "./rabbitmq-analysis-publisher";
 @Module({
   imports: [
     AnalyzersModule,
+    PluginAvailabilityModule,
     forwardRef(() => ResultsModule),
     forwardRef(() => SbomModule),
     forwardRef(() => LicenseModule),
