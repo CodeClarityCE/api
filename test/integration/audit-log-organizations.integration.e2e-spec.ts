@@ -1,4 +1,7 @@
+import { Email } from "../../src/base_modules/email/email.entity";
 import { EmailService } from "../../src/base_modules/email/email.service";
+import { Invitation } from "../../src/base_modules/organizations/invitations/invitation.entity";
+import { OrganizationMemberships } from "../../src/base_modules/organizations/memberships/organization.memberships.entity";
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import { auditEntries, readAuditLog } from "../utils/audit-log";
 import { testHelper, type TestUser } from "../utils/integration-test-helper";
@@ -67,12 +70,55 @@ describe("Audit log of organization actions (e2e)", () => {
     );
   }
 
-  // Invitee follows the join link from the captured invite email.
-  function join(token: string, emailDigest: string): Promise<any> {
-    return request(invitee, "POST", `/org/${owner.organization.id}/join`, {
+  // Someone follows the join link from the captured invite email.
+  function join(
+    token: string,
+    emailDigest: string,
+    as: TestUser = invitee,
+    orgId: string = owner.organization.id,
+  ): Promise<any> {
+    return request(as, "POST", `/org/${orgId}/join`, {
       token,
       email_digest: emailDigest,
     });
+  }
+
+  function invitationRow(token: string): Promise<Invitation | null> {
+    return testHelper
+      .getDataSource()
+      .getRepository(Invitation)
+      .findOneBy({ token_digest: token });
+  }
+
+  // The invitee's membership in the inviting organization, if any.
+  function inviteeMembership(): Promise<OrganizationMemberships | null> {
+    return testHelper
+      .getDataSource()
+      .getRepository(OrganizationMemberships)
+      .findOneBy({
+        user: { id: invitee.user.id },
+        organization: { id: owner.organization.id },
+      });
+  }
+
+  // Raw SQL, since the entity types ttl as never null.
+  async function setInvitationTtl(
+    token: string,
+    ttl: Date | null,
+  ): Promise<void> {
+    await testHelper
+      .getDataSource()
+      .query("UPDATE invitation SET ttl = $1 WHERE token_digest = $2", [
+        ttl,
+        token,
+      ]);
+  }
+
+  // Nothing changed: the invitation stays and nobody joined.
+  async function expectRefusedJoin(token: string): Promise<void> {
+    expect(await invitationRow(token)).not.toBeNull();
+    expect(await inviteeMembership()).toBeNull();
+    expect(await auditEntries(owner, "OrganizationMemberJoined")).toEqual([]);
   }
 
   describe("creating an organization", () => {
@@ -162,6 +208,78 @@ describe("Audit log of organization actions (e2e)", () => {
 
       expect(response.statusCode).toBe(404);
       expect(await auditEntries(owner, "OrganizationMemberJoined")).toEqual([]);
+    });
+
+    it("makes the invitee a member with the invited role and removes the invitation", async () => {
+      await inviteInvitee();
+      const [invite] = sentInvites;
+
+      const response = await join(invite!.inviteToken, invite!.userEmailDigest);
+
+      expect(response.statusCode).toBe(201);
+      expect((await inviteeMembership())?.role).toBe(MemberRole.ADMIN);
+      expect(await invitationRow(invite!.inviteToken)).toBeNull();
+      expect(
+        await testHelper
+          .getDataSource()
+          .getRepository(Email)
+          .findOneBy({ token_digest: invite!.inviteToken }),
+      ).toBeNull();
+    });
+
+    it("refuses an expired invitation with InvitationInvalidOrExpired", async () => {
+      await inviteInvitee();
+      const [invite] = sentInvites;
+      await setInvitationTtl(invite!.inviteToken, new Date(Date.now() - 1000));
+
+      const response = await join(invite!.inviteToken, invite!.userEmailDigest);
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error_code).toBe("InvitationInvalidOrExpired");
+      await expectRefusedJoin(invite!.inviteToken);
+    });
+
+    it("treats an invitation without a ttl as expired", async () => {
+      await inviteInvitee();
+      const [invite] = sentInvites;
+      await setInvitationTtl(invite!.inviteToken, null);
+
+      const response = await join(invite!.inviteToken, invite!.userEmailDigest);
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error_code).toBe("InvitationInvalidOrExpired");
+      await expectRefusedJoin(invite!.inviteToken);
+    });
+
+    it("refuses someone other than the invitee with NotAuthorized", async () => {
+      await inviteInvitee();
+      const [invite] = sentInvites;
+
+      const response = await join(
+        invite!.inviteToken,
+        invite!.userEmailDigest,
+        member,
+      );
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json().error_code).toBe("NotAuthorized");
+      await expectRefusedJoin(invite!.inviteToken);
+    });
+
+    it("refuses a link naming another organization with EntityNotFound", async () => {
+      await inviteInvitee();
+      const [invite] = sentInvites;
+
+      const response = await join(
+        invite!.inviteToken,
+        invite!.userEmailDigest,
+        invitee,
+        invitee.organization.id,
+      );
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json().error_code).toBe("EntityNotFound");
+      await expectRefusedJoin(invite!.inviteToken);
     });
   });
 

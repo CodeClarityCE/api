@@ -301,13 +301,17 @@ export class OrganizationsController {
   @APIDocNoDataResponseDecorator()
   @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
   @ApiErrorDecorator({ statusCode: 400, errors: [InvitationInvalidOrExpired] })
+  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
+  @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
   @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
   @Post(":organization_id/join")
   async joinOrg(
     @AuthUser() user: AuthenticatedUser,
+    @Param("organization_id") organization_id: string,
     @Body() joinOrgBody: JoinOrgCreateBody,
   ): Promise<NoDataResponse> {
     await this.organizationsService.joinOrg(
+      organization_id,
       joinOrgBody.token,
       joinOrgBody.email_digest,
       user,
@@ -325,10 +329,12 @@ export class OrganizationsController {
   @Get(":organization_id/org_info_invitee")
   async inviteeInfo(
     @AuthUser() user: AuthenticatedUser,
+    @Param("organization_id") organization_id: string,
     @Query("token") token: string,
     @Query("user_email_hash") user_email_hash: string,
   ): Promise<TypedResponse<OrganizationInfoForInvitee>> {
     const info = await this.organizationsService.getInviteeInfo(
+      organization_id,
       token,
       user_email_hash,
       user,

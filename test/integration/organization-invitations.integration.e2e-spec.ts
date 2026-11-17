@@ -67,11 +67,12 @@ describe("Organization invitations (e2e)", () => {
     user: TestUser,
     token: string,
     digest: string,
+    orgId: string = owner.organization.id,
   ): Promise<any> {
     const query = new URLSearchParams({ token, user_email_hash: digest });
     return testHelper.makeAuthenticatedRequest(
       "GET",
-      `/org/${owner.organization.id}/org_info_invitee?${query.toString()}`,
+      `/org/${orgId}/org_info_invitee?${query.toString()}`,
       user.accessToken,
     );
   }
@@ -122,6 +123,33 @@ describe("Organization invitations (e2e)", () => {
 
       expect(response.statusCode).toBe(403);
       expect(response.json().error_code).toBe("NotAuthorized");
+    });
+
+    it("answers InvitationInvalidOrExpired once the invitation has expired", async () => {
+      const { token, digest } = await invite();
+      await testHelper
+        .getDataSource()
+        .getRepository(Invitation)
+        .update({ token_digest: token }, { ttl: new Date(Date.now() - 1000) });
+
+      const response = await inviteeInfo(invitee, token, digest);
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error_code).toBe("InvitationInvalidOrExpired");
+    });
+
+    it("answers EntityNotFound for a link naming another organization", async () => {
+      const { token, digest } = await invite();
+
+      const response = await inviteeInfo(
+        invitee,
+        token,
+        digest,
+        invitee.organization.id,
+      );
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json().error_code).toBe("EntityNotFound");
     });
   });
 });
