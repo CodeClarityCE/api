@@ -110,6 +110,10 @@ describe("Error reports (e2e)", () => {
     });
 
     expect(response.statusCode).toBe(413);
+    expect(response.json()).toMatchObject({
+      error_code: "PayloadTooLarge",
+      error_message: "Error report is over 16 KB",
+    });
     expect(errorSpy).not.toHaveBeenCalled();
   });
 
@@ -153,7 +157,9 @@ describe("Error reports (e2e)", () => {
       expect((await report(body)).statusCode).toBe(204);
     }
 
-    expect((await report(body)).statusCode).toBe(429);
+    const limited = await report(body);
+    expect(limited.statusCode).toBe(429);
+    expect(limited.json()).toMatchObject({ error_code: "TooManyRequests" });
     expect((await report(body, other.accessToken)).statusCode).toBe(204);
   });
 

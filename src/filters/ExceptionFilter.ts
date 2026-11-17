@@ -9,6 +9,12 @@ import { FastifyReply } from "fastify";
 import { Status } from "src/types/apiResponses.types";
 import { PrivateAPIError, PublicAPIError } from "src/types/error.types";
 
+// Error codes for HttpException statuses that have a clear meaning to clients.
+const HTTP_EXCEPTION_CODES: Partial<Record<number, string>> = {
+  413: "PayloadTooLarge",
+  429: "TooManyRequests",
+};
+
 /**
  * The goal of this filter is to filter the information we expose to users in case of an exception
  * Additionally we change the error body to underscore/snake case
@@ -50,6 +56,7 @@ export class ErrorFilter implements ExceptionFilter {
       // Check if the exception is an instance of HttpException
       const error: HttpException = exception;
       status = error.getStatus();
+      errorCode = HTTP_EXCEPTION_CODES[status] ?? errorCode;
       message = error.message;
       console.error("[HttpException]", error);
     } else {
