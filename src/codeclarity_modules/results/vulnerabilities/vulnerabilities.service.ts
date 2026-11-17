@@ -10,20 +10,12 @@ import { OSVRepository } from "src/codeclarity_modules/knowledge/osv/osv.reposit
 import { VulnerabilityPolicyService } from "src/codeclarity_modules/policies/vulnerability/vulnerability.service";
 import { Dependency } from "src/codeclarity_modules/results/sbom/sbom.types";
 import { StatusResponse } from "src/codeclarity_modules/results/status.types";
-import {
-  isCriticalSeverity,
-  isHighSeverity,
-  isLowSeverity,
-  isMediumSeverity,
-  isNoneSeverity,
-  paginate,
-} from "src/codeclarity_modules/results/utils/utils";
+import { paginate } from "src/codeclarity_modules/results/utils/utils";
 import {
   AffectedVuln,
   ConflictFlag,
   KnowledgeSnapshot,
   MaliciousPackageAdvisory,
-  newVulnerabilityAnalysisStats,
   Output as VulnsOutput,
   Source,
   Vulnerability,
@@ -40,13 +32,8 @@ import { SbomUtilsService } from "../sbom/utils/utils";
 
 import { VulnerabilitiesFilterService } from "./utils/filter.service";
 import { VulnerabilitiesSortService } from "./utils/sort.service";
+import { computeVulnerabilityStats } from "./utils/stats";
 import { VulnerabilitiesUtilsService } from "./utils/utils.service";
-
-/** SBOM dependency, where PHP SBOMs write lowercase role flags */
-interface EnhancedDependency extends Dependency {
-  direct?: boolean;
-  transitive?: boolean;
-}
 
 /** NVD vulnerability description entry */
 interface NvdDescription {
@@ -68,29 +55,6 @@ interface VulnFinderConfig {
 /** Analysis config record type */
 interface AnalysisConfig {
   "vuln-finder"?: VulnFinderConfig;
-}
-
-/** Map OWASP category ID to stats property name */
-const OWASP_STATS_MAP: Record<string, keyof VulnerabilityAnalysisStats> = {
-  "1345": "number_of_owasp_top_10_2021_a1",
-  "1346": "number_of_owasp_top_10_2021_a2",
-  "1347": "number_of_owasp_top_10_2021_a3",
-  "1348": "number_of_owasp_top_10_2021_a4",
-  "1349": "number_of_owasp_top_10_2021_a5",
-  "1352": "number_of_owasp_top_10_2021_a6",
-  "1353": "number_of_owasp_top_10_2021_a7",
-  "1354": "number_of_owasp_top_10_2021_a8",
-  "1355": "number_of_owasp_top_10_2021_a9",
-  "1356": "number_of_owasp_top_10_2021_a10",
-};
-
-/** Convert discrete CIA impact string to continuous value */
-function getContinuousFromDiscreteCIA(metric: string): number {
-  if (metric === "COMPLETE") return 1.0; // CVSS 2
-  if (metric === "PARTIAL") return 0.5; // CVSS 2
-  if (metric === "HIGH") return 1.0; // CVSS 3
-  if (metric === "LOW") return 0.5; // CVSS 3
-  return 0.0;
 }
 
 /** Check if conflict flag indicates no conflict (including empty string from malformed data) */
@@ -172,152 +136,14 @@ export class VulnerabilitiesService {
       ecosystem_filter,
     );
 
-    const wBeforeStats: VulnerabilityAnalysisStats =
-      newVulnerabilityAnalysisStats();
-    const wStats: VulnerabilityAnalysisStats = newVulnerabilityAnalysisStats();
-
-    let sumSeverity = 0;
-    let countseverity = 0;
-    let maxSeverity = 0;
-    let sumConfidentiality = 0;
-    let countConfidentiality = 0;
-    let sumIntegrity = 0;
-    let countIntegrity = 0;
-    let sumAvailability = 0;
-    let countAvailability = 0;
-    const encounteredDeps = new Set<string>();
-    // const encounteredDevDeps = new Set<string>();
-    const encounteredVulns = new Set<string>();
-
-    wStats.number_of_issues = findingsArray.length;
-    for (const finding of findingsArray) {
-      if (finding.Severity !== null) {
-        sumConfidentiality += getContinuousFromDiscreteCIA(
-          finding.Severity.ConfidentialityImpact,
-        );
-        countConfidentiality += 1;
-      }
-      if (finding.Severity !== null) {
-        sumAvailability += getContinuousFromDiscreteCIA(
-          finding.Severity.AvailabilityImpact,
-        );
-        countAvailability += 1;
-      }
-      if (finding.Severity !== null) {
-        sumIntegrity += getContinuousFromDiscreteCIA(
-          finding.Severity.IntegrityImpact,
-        );
-        countIntegrity += 1;
-      }
-
-      if (finding.Severity !== null) {
-        sumSeverity += finding.Severity.Severity;
-        countseverity += 1;
-      }
-      if (finding.Severity !== null) {
-        if (finding.Severity.Severity > maxSeverity)
-          maxSeverity = finding.Severity.Severity;
-      }
-
-      encounteredDeps.add(finding.AffectedDependency);
-
-      // Only count unique vulnerabilities
-      if (!encounteredVulns.has(finding.VulnerabilityId)) {
-        this.incrementOwaspStats(wStats, finding.Weaknesses);
-        this.incrementSeverityStats(wStats, finding.Severity);
-      }
-
-      encounteredVulns.add(finding.VulnerabilityId);
-    }
-
-    this.countDependencyRoles(
-      wStats,
+    const wStats = computeVulnerabilityStats(
       findingsArray,
       mergedSbom.workspaces[workspace]!.dependencies,
     );
-
-    wStats.number_of_vulnerable_dependencies = encounteredDeps.size;
-    wStats.max_severity = maxSeverity;
-    wStats.mean_severity = countseverity > 0 ? sumSeverity / countseverity : 0;
-    wStats.mean_availability_impact =
-      countAvailability > 0 ? sumAvailability / countAvailability : 0;
-    wStats.mean_confidentiality_impact =
-      countConfidentiality > 0 ? sumConfidentiality / countConfidentiality : 0;
-    wStats.mean_integrity_impact =
-      countIntegrity > 0 ? sumIntegrity / countIntegrity : 0;
-
-    sumSeverity = 0;
-    countseverity = 0;
-    maxSeverity = 0;
-    sumConfidentiality = 0;
-    countConfidentiality = 0;
-    sumIntegrity = 0;
-    countIntegrity = 0;
-    sumAvailability = 0;
-    countAvailability = 0;
-    const beforeEncounteredDeps = new Set<string>();
-    const beforeEncounteredVulns = new Set<string>();
-
-    wBeforeStats.number_of_issues = findingsArrayPrevious.length;
-    for (const finding of findingsArrayPrevious) {
-      if (finding.Severity !== null) {
-        sumConfidentiality += getContinuousFromDiscreteCIA(
-          finding.Severity.ConfidentialityImpact,
-        );
-        countConfidentiality += 1;
-      }
-      if (finding.Severity !== null) {
-        sumAvailability += getContinuousFromDiscreteCIA(
-          finding.Severity.AvailabilityImpact,
-        );
-        countAvailability += 1;
-      }
-      if (finding.Severity !== null) {
-        sumIntegrity += getContinuousFromDiscreteCIA(
-          finding.Severity.IntegrityImpact,
-        );
-        countIntegrity += 1;
-      }
-
-      if (finding.Severity !== null) {
-        sumSeverity += finding.Severity.Severity;
-        countseverity += 1;
-      }
-      if (finding.Severity !== null) {
-        if (finding.Severity.Severity > maxSeverity)
-          maxSeverity = finding.Severity.Severity;
-      }
-      beforeEncounteredDeps.add(finding.AffectedDependency);
-
-      // Only count unique vulnerabilities, as for the current scan
-      if (!beforeEncounteredVulns.has(finding.VulnerabilityId)) {
-        this.incrementOwaspStats(wBeforeStats, finding.Weaknesses);
-        this.incrementSeverityStats(wBeforeStats, finding.Severity);
-      }
-
-      beforeEncounteredVulns.add(finding.VulnerabilityId);
-    }
-
-    this.countDependencyRoles(
-      wBeforeStats,
+    const wBeforeStats = computeVulnerabilityStats(
       findingsArrayPrevious,
       dependencyMapPrevious,
     );
-
-    wBeforeStats.number_of_vulnerable_dependencies = beforeEncounteredDeps.size;
-    wStats.number_of_vulnerable_dependencies = encounteredDeps.size;
-    wBeforeStats.number_of_vulnerabilities = beforeEncounteredVulns.size;
-    wStats.number_of_vulnerabilities = encounteredVulns.size;
-
-    wBeforeStats.max_severity = maxSeverity;
-    wBeforeStats.mean_severity =
-      countseverity > 0 ? sumSeverity / countseverity : 0;
-    wBeforeStats.mean_availability_impact =
-      countAvailability > 0 ? sumAvailability / countAvailability : 0;
-    wBeforeStats.mean_confidentiality_impact =
-      countConfidentiality > 0 ? sumConfidentiality / countConfidentiality : 0;
-    wBeforeStats.mean_integrity_impact =
-      countIntegrity > 0 ? sumIntegrity / countIntegrity : 0;
 
     wStats.number_of_vulnerabilities_diff =
       wStats.number_of_vulnerabilities - wBeforeStats.number_of_vulnerabilities;
@@ -873,68 +699,6 @@ export class VulnerabilitiesService {
       });
     }
     return { findings: [], dependencies: {} };
-  }
-
-  /** Count each vulnerable dependency version by its role in the SBOM. */
-  private countDependencyRoles(
-    stats: VulnerabilityAnalysisStats,
-    findings: Vulnerability[],
-    dependencies: Record<string, Record<string, Dependency>>,
-  ): void {
-    const counted = new Set<string>();
-    for (const finding of findings) {
-      const name = finding.AffectedDependency;
-      const version = finding.AffectedVersion;
-      const key = `${name}@${version}`;
-      if (counted.has(key)) continue;
-      counted.add(key);
-
-      const dependency = dependencies[name]?.[version] as
-        EnhancedDependency | undefined;
-      if (!dependency) continue;
-      // PHP SBOMs use lowercase keys.
-      if (dependency.Direct ?? dependency.direct)
-        stats.number_of_direct_vulnerabilities += 1;
-      if (dependency.Transitive ?? dependency.transitive)
-        stats.number_of_transitive_vulnerabilities += 1;
-    }
-  }
-
-  /**
-   * Increment OWASP Top 10 stats based on weakness information
-   */
-  private incrementOwaspStats(
-    stats: VulnerabilityAnalysisStats,
-    weaknesses: { OWASPTop10Id: string }[] | undefined,
-  ): void {
-    if (!weaknesses || weaknesses.length === 0) return;
-
-    for (const weakness of weaknesses) {
-      const statKey = OWASP_STATS_MAP[weakness.OWASPTop10Id];
-      if (statKey) {
-        stats[statKey] += 1;
-      }
-    }
-  }
-
-  /**
-   * Increment severity distribution stats based on severity value
-   */
-  private incrementSeverityStats(
-    stats: VulnerabilityAnalysisStats,
-    severity: { Severity: number } | null | undefined,
-  ): void {
-    if (severity === null || severity === undefined) {
-      stats.number_of_none += 1;
-      return;
-    }
-
-    const severityValue = severity.Severity;
-    if (isNoneSeverity(severityValue)) stats.number_of_none += 1;
-    else if (isLowSeverity(severityValue)) stats.number_of_low += 1;
-    else if (isMediumSeverity(severityValue)) stats.number_of_medium += 1;
-    else if (isHighSeverity(severityValue)) stats.number_of_high += 1;
-    else if (isCriticalSeverity(severityValue)) stats.number_of_critical += 1;
   }
 
   /**
