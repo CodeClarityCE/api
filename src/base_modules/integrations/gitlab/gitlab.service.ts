@@ -8,6 +8,8 @@ import {
   LinkGitlabPatchBody,
 } from "src/base_modules/integrations/gitlab/gitlabIntegration.types";
 import { GitlabIntegrationToken } from "src/base_modules/integrations/Token";
+import { OrganizationLoggerService } from "src/base_modules/organizations/log/organizationLogger.service";
+import { ActionType } from "src/base_modules/organizations/log/orgAuditLog.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
 import {
   IntegrationsRepository,
@@ -29,6 +31,7 @@ import {
 } from "src/types/error.types";
 
 import { VCSIntegrationMetaData } from "../integration.types";
+import { describeIntegration } from "../integrationAuditLog";
 import {
   Integration,
   IntegrationProvider,
@@ -47,6 +50,7 @@ export class GitlabIntegrationService {
     private readonly organizationsRepository: OrganizationsRepository,
     private readonly integrationsRepository: IntegrationsRepository,
     private readonly usersRepository: UsersRepository,
+    private readonly organizationLoggerService: OrganizationLoggerService,
   ) {}
 
   /**
@@ -207,6 +211,13 @@ export class GitlabIntegrationService {
 
     organization.integrations?.push(addedIntegration);
     await this.organizationsRepository.saveOrganization(organization);
+
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.OrganizationIntegrationAdded,
+      `The User linked the ${describeIntegration(addedIntegration)} to the organization.`,
+      orgId,
+      user.userId,
+    );
 
     return addedIntegration.id;
   }

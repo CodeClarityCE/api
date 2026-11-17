@@ -2,6 +2,8 @@ import { Injectable } from "@nestjs/common";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { Integration } from "src/base_modules/integrations/integrations.entity";
+import { OrganizationLoggerService } from "src/base_modules/organizations/log/organizationLogger.service";
+import { ActionType } from "src/base_modules/organizations/log/orgAuditLog.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
 import { TypedPaginatedResponse } from "src/types/apiResponses.types";
 import { NotAMember, NotAuthorized } from "src/types/error.types";
@@ -15,6 +17,7 @@ import {
   OrganizationsRepository,
 } from "../shared/repositories";
 
+import { describeIntegration } from "./integrationAuditLog";
 import { IntegrationsRepository } from "./integrations.repository";
 
 @Injectable()
@@ -23,6 +26,7 @@ export class IntegrationsService {
     private readonly membershipsRepository: MembershipsRepository,
     private readonly organizationsRepository: OrganizationsRepository,
     private readonly integrationRepository: IntegrationsRepository,
+    private readonly organizationLoggerService: OrganizationLoggerService,
   ) {}
 
   /**
@@ -136,9 +140,16 @@ export class IntegrationsService {
         throw new NotAuthorized();
       }
 
-      throw new Error("Method not implemented.");
-      // Delete integration
-      // await this.integrationsRepo.delete(integrationId);
+      const integration =
+        await this.integrationRepository.getIntegrationById(integrationId);
+      await this.integrationRepository.deleteIntegration(integrationId);
+
+      await this.organizationLoggerService.addAuditLog(
+        ActionType.OrganizationIntegrationDeleted,
+        `The User removed the ${describeIntegration(integration)} from the organization.`,
+        orgId,
+        user.userId,
+      );
     } catch (err) {
       // Handle specific errors appropriately.
       if (err instanceof NotAMember) {

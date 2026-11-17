@@ -25,18 +25,11 @@ import {
   NotAuthorized,
 } from "src/types/error.types";
 
-import { OrganizationsRepository } from "../shared/repositories";
-
-import { IntegrationsRepository } from "./integrations.repository";
 import { IntegrationsService } from "./integrations.service";
 
 @Controller("org/:org_id/integrations")
 export class IntegrationsController {
-  constructor(
-    private readonly organizationsRepository: OrganizationsRepository,
-    private readonly integrationsRepository: IntegrationsRepository,
-    private readonly integrationsService: IntegrationsService,
-  ) {}
+  constructor(private readonly integrationsService: IntegrationsService) {}
 
   @ApiTags("Integrations")
   @APIDocTypedPaginatedResponseDecorator(Integration)
@@ -63,22 +56,16 @@ export class IntegrationsController {
   @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
   @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
   @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
-  async unlinkGithub(
-    @AuthUser() _user: AuthenticatedUser,
+  async unlinkIntegration(
+    @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("integration_id") integration_id: string,
   ): Promise<NoDataResponse> {
-    const organization = await this.organizationsRepository.getOrganizationById(
+    await this.integrationsService.removeIntegration(
       org_id,
-      {
-        integrations: true,
-      },
+      user,
+      integration_id,
     );
-    if (!organization) {
-      throw new EntityNotFound();
-    }
-
-    await this.integrationsRepository.deleteIntegration(integration_id);
     return {};
   }
 }

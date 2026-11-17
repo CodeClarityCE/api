@@ -1,5 +1,6 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 
+import { OrganizationLoggerService } from "src/base_modules/organizations/log/organizationLogger.service";
 import {
   IntegrationsRepository,
   MembershipsRepository,
@@ -151,6 +152,10 @@ describe("GitlabIntegrationService", () => {
         {
           provide: UsersRepository,
           useValue: mockUsersRepository,
+        },
+        {
+          provide: OrganizationLoggerService,
+          useValue: { addAuditLog: jest.fn() },
         },
       ],
     }).compile();
