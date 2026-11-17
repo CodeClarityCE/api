@@ -915,12 +915,15 @@ export class TicketsController {
     description: "External links retrieved successfully",
   })
   async getExternalLinks(
-    @AuthUser() _user: AuthenticatedUser,
-    @Param("org_id") _org_id: string,
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
     @Param("ticket_id") ticket_id: string,
   ): Promise<TypedResponse<TicketExternalLinkFrontend[]>> {
-    const links =
-      await this.ticketIntegrationService.getExternalLinks(ticket_id);
+    await this.requireMember(org_id, user);
+    const links = await this.ticketIntegrationService.getExternalLinks(
+      org_id,
+      ticket_id,
+    );
     const linksFrontend: TicketExternalLinkFrontend[] = links.map((l) => ({
       id: l.id,
       provider: l.provider,
@@ -944,11 +947,13 @@ export class TicketsController {
   @ApiResponse({ status: 200, description: "Ticket synced successfully" })
   async syncTicket(
     @AuthUser() user: AuthenticatedUser,
-    @Param("org_id") _org_id: string,
+    @Param("org_id") org_id: string,
     @Param("ticket_id") ticket_id: string,
     @Param("provider", providerPipe) provider: ExternalTicketProvider,
   ): Promise<TypedResponse<SyncResult>> {
+    await this.requireMember(org_id, user);
     const link = await this.ticketIntegrationService.syncTicketToExternal(
+      org_id,
       ticket_id,
       provider,
       user.userId,
@@ -976,13 +981,15 @@ export class TicketsController {
   @ApiResponse({ status: 200, description: "Ticket unlinked successfully" })
   async unlinkTicket(
     @AuthUser() user: AuthenticatedUser,
-    @Param("org_id") _org_id: string,
+    @Param("org_id") org_id: string,
     @Param("ticket_id") ticket_id: string,
     @Param("link_id") link_id: string,
     @Query("delete_external", new DefaultValuePipe(false), ParseBoolPipe)
     delete_external: boolean,
   ): Promise<NoDataResponse> {
+    await this.requireMember(org_id, user);
     await this.ticketIntegrationService.unlinkTicket(
+      org_id,
       ticket_id,
       link_id,
       delete_external,
@@ -1004,11 +1011,13 @@ export class TicketsController {
   @ApiResponse({ status: 200, description: "Bulk sync completed" })
   async bulkSync(
     @AuthUser() user: AuthenticatedUser,
-    @Param("org_id") _org_id: string,
+    @Param("org_id") org_id: string,
     @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Body() body: { ticket_ids: string[] },
   ): Promise<TypedResponse<BulkSyncResult>> {
+    await this.requireMember(org_id, user);
     const result = await this.ticketIntegrationService.bulkSyncTickets(
+      org_id,
       body.ticket_ids,
       provider,
       user.userId,
@@ -1051,11 +1060,13 @@ export class TicketsController {
   })
   async syncFromExternal(
     @AuthUser() user: AuthenticatedUser,
-    @Param("org_id") _org_id: string,
+    @Param("org_id") org_id: string,
     @Param("ticket_id") ticket_id: string,
     @Param("link_id") link_id: string,
   ): Promise<TypedResponse<SyncFromExternalResult>> {
+    await this.requireMember(org_id, user);
     const result = await this.ticketIntegrationService.syncFromExternal(
+      org_id,
       ticket_id,
       link_id,
       user.userId,
@@ -1093,10 +1104,12 @@ export class TicketsController {
   })
   async bulkSyncFromExternal(
     @AuthUser() user: AuthenticatedUser,
-    @Param("org_id") _org_id: string,
+    @Param("org_id") org_id: string,
     @Body() body: { ticket_ids: string[] },
   ): Promise<TypedResponse<BulkSyncFromExternalResult>> {
+    await this.requireMember(org_id, user);
     const result = await this.ticketIntegrationService.bulkSyncFromExternal(
+      org_id,
       body.ticket_ids,
       user.userId,
     );
