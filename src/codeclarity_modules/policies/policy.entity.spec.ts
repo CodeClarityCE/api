@@ -68,9 +68,9 @@ describe("Policy Entity", () => {
     policy.policy_type = PolicyType.LICENSE_POLICY;
     expect(policy.policy_type).toBe(PolicyType.LICENSE_POLICY);
 
-    // Test DEP_UPGRADE_POLICY
-    policy.policy_type = PolicyType.DEP_UPGRADE_POLICY;
-    expect(policy.policy_type).toBe(PolicyType.DEP_UPGRADE_POLICY);
+    // Test VULNERABILITY_POLICY
+    policy.policy_type = PolicyType.VULNERABILITY_POLICY;
+    expect(policy.policy_type).toBe(PolicyType.VULNERABILITY_POLICY);
   });
 
   it("should handle content as string array", () => {
@@ -182,20 +182,6 @@ describe("Policy Entity", () => {
     expect(policy.content).toContain("MIT");
     expect(policy.default).toBe(true);
   });
-
-  it("should create dependency upgrade policy correctly", () => {
-    policy.name = "Conservative Upgrade Policy";
-    policy.description = "Only allow minor and patch upgrades";
-    policy.policy_type = PolicyType.DEP_UPGRADE_POLICY;
-    policy.content = ["minor", "patch"];
-    policy.default = false;
-
-    expect(policy.policy_type).toBe(PolicyType.DEP_UPGRADE_POLICY);
-    expect(policy.content).toContain("minor");
-    expect(policy.content).toContain("patch");
-    expect(policy.content).not.toContain("major");
-    expect(policy.default).toBe(false);
-  });
 });
 
 describe("PolicyFrontend Interface", () => {
@@ -233,33 +219,34 @@ describe("PolicyFrontend Interface", () => {
       content: ["MIT"],
     };
 
-    const depPolicyFrontend: PolicyFrontend = {
+    const vulnerabilityPolicyFrontend: PolicyFrontend = {
       id: "policy-2",
-      name: "Dependency Policy",
-      description: "Dependency policy",
-      policy_type: PolicyType.DEP_UPGRADE_POLICY,
+      name: "Vulnerability Policy",
+      description: "Vulnerability policy",
+      policy_type: PolicyType.VULNERABILITY_POLICY,
       default: false,
       created_by: "user-2",
       created_on: new Date(),
-      content: ["major", "minor"],
+      content: ["CVE-2021-23337"],
     };
 
     expect(licensePolicyFrontend.policy_type).toBe(PolicyType.LICENSE_POLICY);
-    expect(depPolicyFrontend.policy_type).toBe(PolicyType.DEP_UPGRADE_POLICY);
+    expect(vulnerabilityPolicyFrontend.policy_type).toBe(
+      PolicyType.VULNERABILITY_POLICY,
+    );
   });
 });
 
 describe("PolicyType Enum", () => {
   it("should have correct enum values", () => {
     expect(PolicyType.LICENSE_POLICY).toBe("LICENSE_POLICY");
-    expect(PolicyType.DEP_UPGRADE_POLICY).toBe("DEP_UPGRADE_POLICY");
+    expect(PolicyType.VULNERABILITY_POLICY).toBe("VULNERABILITY_POLICY");
   });
 
-  it("should have exactly three policy types", () => {
+  it("should have exactly two policy types", () => {
     const policyTypes = Object.values(PolicyType);
-    expect(policyTypes).toHaveLength(3);
+    expect(policyTypes).toHaveLength(2);
     expect(policyTypes).toContain("LICENSE_POLICY");
-    expect(policyTypes).toContain("DEP_UPGRADE_POLICY");
     expect(policyTypes).toContain("VULNERABILITY_POLICY");
   });
 });
