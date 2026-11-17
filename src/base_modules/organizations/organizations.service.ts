@@ -4,8 +4,13 @@ import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { Email, EmailType } from "src/base_modules/email/email.entity";
 import { Invitation } from "src/base_modules/organizations/invitations/invitation.entity";
 import { InviteCreateBody } from "src/base_modules/organizations/invitations/orgInvitation.types";
+import { ActionType } from "src/base_modules/organizations/log/orgAuditLog.types";
 import { OrganizationMemberships } from "src/base_modules/organizations/memberships/organization.memberships.entity";
-import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
+import {
+  getTextualRepOfMemberRole,
+  isMemberRoleLessThan,
+  MemberRole,
+} from "src/base_modules/organizations/memberships/orgMembership.types";
 import {
   OrganizationCreateBody,
   OrganizationInfoForInvitee,
@@ -19,7 +24,13 @@ import {
   UsersRepository,
 } from "src/base_modules/shared/repositories";
 import { TeamMember } from "src/base_modules/users/teamMember.types";
-import { EntityNotFound } from "src/types/error.types";
+import {
+  CannotRevokeOwnMembership,
+  EntityNotFound,
+  NotAMember,
+  NotAuthorized,
+  PersonalOrgCannotBeModified,
+} from "src/types/error.types";
 import {
   PaginationConfig,
   PaginationUserSuppliedConf,
@@ -31,6 +42,8 @@ import { genRandomString, hash } from "src/utils/crypto";
 import { EmailRepository } from "../email/email.repository";
 import { EmailService } from "../email/email.service";
 
+import { OrganizationLoggerService } from "./log/organizationLogger.service";
+
 @Injectable()
 export class OrganizationsService {
   constructor(
@@ -40,6 +53,7 @@ export class OrganizationsService {
     private readonly usersRepository: UsersRepository,
     private readonly emailRepository: EmailRepository,
     private readonly invitationsRepository: InvitationsRepository,
+    private readonly organizationLoggerService: OrganizationLoggerService,
   ) {}
 
   /**
@@ -76,6 +90,13 @@ export class OrganizationsService {
     membership.user = creator;
     membership.organization = organization;
     await this.membershipsRepository.saveMembership(membership);
+
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.OrganizationCreated,
+      `The User created the organization ${organization.name}.`,
+      organization.id,
+      user.userId,
+    );
 
     return organization.id;
   }
@@ -270,6 +291,13 @@ export class OrganizationsService {
       inviter: inviter,
       orgId: org.id,
     });
+
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.OrganizationMemberInvited,
+      `The User invited ${invitedUser.email} to join the organization as ${getTextualRepOfMemberRole(inviteBody.role)}.`,
+      orgId,
+      user.userId,
+    );
   }
 
   /**
@@ -302,11 +330,34 @@ export class OrganizationsService {
    * @param user The authenticated user
    */
   async revokeInvitation(
-    _orgId: string,
-    _invitationId: string,
-    _user: AuthenticatedUser,
+    orgId: string,
+    invitationId: string,
+    user: AuthenticatedUser,
   ): Promise<void> {
-    throw new Error("Method not implemented.");
+    // Same role as sending an invitation.
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.OWNER,
+    );
+
+    const org = await this.organizationsRepository.getOrganizationById(orgId);
+    if (org.personal) {
+      throw new PersonalOrgCannotBeModified();
+    }
+
+    const invitation = await this.invitationsRepository.getInvitationBy(
+      { id: invitationId, organization: { id: orgId } },
+      { user: true },
+    );
+    await this.invitationsRepository.deleteInvitation(invitation);
+
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.OrganizationInvitationRevoked,
+      `The User revoked the invitation of ${invitation.user.email} to join the organization.`,
+      orgId,
+      user.userId,
+    );
   }
 
   /**
@@ -371,7 +422,7 @@ export class OrganizationsService {
   async joinOrg(
     inviteToken: string,
     emailDigest: string,
-    _user: AuthenticatedUser,
+    user: AuthenticatedUser,
   ): Promise<void> {
     const invitation = await this.invitationsRepository.getInvitationBy(
       {
@@ -401,6 +452,13 @@ export class OrganizationsService {
       emailDigest,
     );
     await this.emailRepository.deleteMail(mail);
+
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.OrganizationMemberJoined,
+      `The User ${invitation.user.email} joined the organization as ${getTextualRepOfMemberRole(invitation.role)}.`,
+      invitation.organization.id,
+      user.userId,
+    );
   }
 
   /**
@@ -466,11 +524,56 @@ export class OrganizationsService {
    * @param user The authenticated user
    */
   async revokeOrgMemberShip(
-    _orgId: string,
-    _user_id_to_remove: string,
-    _user: AuthenticatedUser,
+    orgId: string,
+    user_id_to_remove: string,
+    user: AuthenticatedUser,
   ): Promise<void> {
-    throw new Error("Method not implemented.");
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.ADMIN,
+    );
+    if (user_id_to_remove === user.userId) {
+      throw new CannotRevokeOwnMembership();
+    }
+
+    const org = await this.organizationsRepository.getOrganizationById(orgId);
+    if (org.personal) {
+      throw new PersonalOrgCannotBeModified();
+    }
+
+    let membership: OrganizationMemberships;
+    try {
+      membership =
+        await this.membershipsRepository.getMembershipByOrganizationAndUser(
+          orgId,
+          user_id_to_remove,
+          { user: true },
+        );
+    } catch (err) {
+      if (err instanceof EntityNotFound) {
+        throw new NotAMember();
+      }
+      throw err;
+    }
+
+    // An admin cannot remove someone with a higher role, such as an owner.
+    const actor = await this.membershipsRepository.getMembershipRole(
+      orgId,
+      user.userId,
+    );
+    if (isMemberRoleLessThan(actor.role, membership.role)) {
+      throw new NotAuthorized();
+    }
+
+    await this.membershipsRepository.removeMemberships([membership]);
+
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.OrganizationMembershipRevoked,
+      `The User revoked the membership of ${membership.user.email}.`,
+      orgId,
+      user.userId,
+    );
   }
 
   /**
@@ -484,7 +587,21 @@ export class OrganizationsService {
    * @param user The authenticated user
    */
   async leaveOrg(orgId: string, user: AuthenticatedUser): Promise<void> {
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.USER,
+    );
+    const leaver = await this.usersRepository.getUserById(user.userId, {});
+
     await this.membershipsRepository.leaveOrganization(user.userId, orgId);
+
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.OrganizationUserLeft,
+      `The User ${leaver.email} left the organization.`,
+      orgId,
+      user.userId,
+    );
   }
 
   /**
