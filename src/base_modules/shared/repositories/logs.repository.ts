@@ -45,12 +45,7 @@ export class LogsRepository {
     if (searchKey) {
       query.andWhere(
         new Brackets((qb) => {
-          for (const field of [
-            "blame_on_email",
-            "description",
-            "action",
-            "action_class",
-          ]) {
+          for (const field of AUDIT_LOG_SEARCH_FIELDS) {
             qb.orWhere(`log.${field} ILIKE :searchKey`, {
               searchKey: `%${searchKey}%`,
             });
@@ -84,6 +79,14 @@ export const AUDIT_LOG_SORT_FIELDS = [
   "action",
   "blame_on_email",
   "created_on",
+] as const;
+
+/** Columns the audit log search key is matched against. */
+export const AUDIT_LOG_SEARCH_FIELDS = [
+  "blame_on_email",
+  "description",
+  "action",
+  "action_class",
 ] as const;
 
 export type AuditLogSortField = (typeof AUDIT_LOG_SORT_FIELDS)[number];
