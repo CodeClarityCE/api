@@ -7,6 +7,7 @@ import { AuthModule } from "../base_modules/auth/auth.module";
 import { EmailModule } from "../base_modules/email/email.module";
 import { FileModule } from "../base_modules/file/file.module";
 import { IntegrationsModule } from "../base_modules/integrations/integrations.module";
+import { LogsModule } from "../base_modules/logs/logs.module";
 import { NotificationsModule } from "../base_modules/notifications/notifications.module";
 import { OrganizationsModule } from "../base_modules/organizations/organizations.module";
 import { PluginModule } from "../base_modules/plugins/plugin.module";
@@ -27,6 +28,7 @@ import { UsersModule } from "../base_modules/users/users.module";
     AnalyzersModule,
     ApiKeysModule,
     OrganizationsModule,
+    LogsModule,
   ],
 })
 export class BaseModule {}
