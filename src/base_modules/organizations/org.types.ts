@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Expose } from "class-transformer";
-import { IsDefined, IsNotEmpty, Length } from "class-validator";
+import { IsDefined, IsNotEmpty, IsString, Length } from "class-validator";
 
 import { User } from "src/base_modules/users/users.entity";
 
@@ -86,6 +86,16 @@ export class JoinOrgCreateBody {
   @ApiProperty()
   @IsNotEmpty()
   email_digest!: string;
+}
+
+export class InviteeInfoQuery {
+  @IsString()
+  @IsNotEmpty()
+  token!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  user_email_hash!: string;
 }
 
 export class OrganizationSettingsUpdateBody {

@@ -19,6 +19,7 @@ import { Log } from "src/base_modules/organizations/log/log.entity";
 import { OrganizationLoggerService } from "src/base_modules/organizations/log/organizationLogger.service";
 import { OrganizationAuditLog } from "src/base_modules/organizations/log/orgAuditLog.types";
 import {
+  InviteeInfoQuery,
   JoinOrgCreateBody,
   OrganizationCreateBody,
   OrganizationInfoForInvitee,
@@ -51,6 +52,7 @@ import {
   NotAuthorized,
   PersonalOrgCannotBeModified,
   UserDoesNotExist,
+  ValidationFailed,
 } from "src/types/error.types";
 import { SortDirection } from "src/types/sort.types";
 
@@ -322,7 +324,10 @@ export class OrganizationsController {
   @ApiTags("Organizations")
   @APIDocNoDataResponseDecorator()
   @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
-  @ApiErrorDecorator({ statusCode: 400, errors: [InvitationInvalidOrExpired] })
+  @ApiErrorDecorator({
+    statusCode: 400,
+    errors: [InvitationInvalidOrExpired, ValidationFailed],
+  })
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
   @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
   @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
@@ -330,13 +335,12 @@ export class OrganizationsController {
   async inviteeInfo(
     @AuthUser() user: AuthenticatedUser,
     @Param("organization_id") organization_id: string,
-    @Query("token") token: string,
-    @Query("user_email_hash") user_email_hash: string,
+    @Query() query: InviteeInfoQuery,
   ): Promise<TypedResponse<OrganizationInfoForInvitee>> {
     const info = await this.organizationsService.getInviteeInfo(
       organization_id,
-      token,
-      user_email_hash,
+      query.token,
+      query.user_email_hash,
       user,
     );
 
