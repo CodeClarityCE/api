@@ -147,7 +147,7 @@ describe("Audit log of organization actions (e2e)", () => {
       expect(await auditEntries(owner, "OrganizationMemberJoined")).toEqual([
         expect.objectContaining({
           action_class: "Organization",
-          action_severity: 1,
+          action_severity: 2,
           blame_on_email: "invitee@orgaudit.com",
           description: expect.stringContaining("invitee@orgaudit.com"),
         }),
@@ -177,7 +177,7 @@ describe("Audit log of organization actions (e2e)", () => {
       expect(await auditEntries(owner, "OrganizationUserLeft")).toEqual([
         expect.objectContaining({
           action_class: "Organization",
-          action_severity: 1,
+          action_severity: 2,
           blame_on_email: "member@orgaudit.com",
           description: expect.stringContaining("member@orgaudit.com"),
         }),
@@ -263,7 +263,7 @@ describe("Audit log of organization actions (e2e)", () => {
       ).toEqual([
         expect.objectContaining({
           action_class: "Organization",
-          action_severity: 1,
+          action_severity: 2,
           blame_on_email: "owner@orgaudit.com",
           description: expect.stringContaining("invitee@orgaudit.com"),
         }),

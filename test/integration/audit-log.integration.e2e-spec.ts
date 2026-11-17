@@ -95,7 +95,7 @@ describe("Audit log (e2e)", () => {
       expect(await auditEntries(admin, "AnalysisDeleted")).toEqual([
         expect.objectContaining({
           action_class: "Analysis",
-          action_severity: 1,
+          action_severity: 2,
           blame_on_email: "member@audit.com",
           description: expect.stringContaining("widget"),
         }),
@@ -117,7 +117,7 @@ describe("Audit log (e2e)", () => {
       expect(response.statusCode).toBe(201);
       expect(await auditEntries(admin, "AnalysisDeleted")).toEqual([
         expect.objectContaining({
-          action_severity: 1,
+          action_severity: 2,
           blame_on_email: "member@audit.com",
           description: expect.stringMatching(/2 analyses.*widget/),
         }),
@@ -180,6 +180,26 @@ describe("Audit log (e2e)", () => {
 
       expect(response.statusCode).toBe(403);
       expect(await auditEntries(admin, "AnalyzerDelete")).toEqual([]);
+    });
+  });
+
+  describe("severity by impact", () => {
+    it("ranks deletions above creates and starts", async () => {
+      const projectId = await createProject(admin, "ranked");
+      await createAnalysisWithPolicies(admin, projectId);
+
+      const response = await request(admin, "DELETE", `/projects/${projectId}`);
+      expect(response.statusCode).toBe(200);
+
+      const severities = Object.fromEntries(
+        (await readAuditLog(admin)).map((e) => [e.action, e.action_severity]),
+      );
+      expect(severities).toEqual({
+        ProjectCreate: 0,
+        AnalyzerCreate: 0,
+        AnalysisStarted: 0,
+        ProjectDelete: 2,
+      });
     });
   });
 

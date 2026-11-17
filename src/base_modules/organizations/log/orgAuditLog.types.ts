@@ -111,19 +111,21 @@ export interface OrganizationAuditLogUpdate extends OrganizationAuditLogCreate {
 /*              Miscellaneous               */
 /********************************************/
 
+// Creates, starts and updates rank Low; deletions, membership and
+// integration changes rank higher.
 export const actionTypeSeverityMapping = new Map<ActionType, ActionSeverity>([
-  [ActionType.AnalyzerCreate, ActionSeverity.High],
+  [ActionType.AnalyzerCreate, ActionSeverity.Low],
   [ActionType.AnalyzerDelete, ActionSeverity.High],
-  [ActionType.AnalyzerUpdate, ActionSeverity.High],
+  [ActionType.AnalyzerUpdate, ActionSeverity.Low],
   [ActionType.ProjectCreate, ActionSeverity.Low],
   [ActionType.ProjectUpdate, ActionSeverity.Low],
-  [ActionType.ProjectDelete, ActionSeverity.Low],
+  [ActionType.ProjectDelete, ActionSeverity.High],
   [ActionType.AnalysisStarted, ActionSeverity.Low],
-  [ActionType.AnalysisDeleted, ActionSeverity.Medium],
+  [ActionType.AnalysisDeleted, ActionSeverity.High],
   [ActionType.AnalysisFailed, ActionSeverity.Medium],
-  [ActionType.OrganizationUserLeft, ActionSeverity.Medium],
-  [ActionType.OrganizationMemberJoined, ActionSeverity.Medium],
-  [ActionType.OrganizationInvitationRevoked, ActionSeverity.Medium],
+  [ActionType.OrganizationUserLeft, ActionSeverity.High],
+  [ActionType.OrganizationMemberJoined, ActionSeverity.High],
+  [ActionType.OrganizationInvitationRevoked, ActionSeverity.High],
   [ActionType.OrganizationMemberInvited, ActionSeverity.High],
   [ActionType.OrganizationMembershipRevoked, ActionSeverity.High],
   [ActionType.OrganizationIntegrationAdded, ActionSeverity.Critical],
