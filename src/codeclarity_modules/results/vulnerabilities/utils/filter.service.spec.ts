@@ -540,7 +540,7 @@ describe("VulnerabilitiesFilterService", () => {
       ).toEqual(["full-critical"]);
     });
 
-    it("counts each patch type, adding up to the rows that have one", () => {
+    it("counts each patch type; with one type per row they add up to the rows that have one", () => {
       const rows = [...patched, withPatch("unknown", [undefined])];
       const [, counts] = service.filter(rows, "", ["patch_full"]);
 
@@ -559,6 +559,29 @@ describe("VulnerabilitiesFilterService", () => {
       expect(ids(service.filter([row], "", ["patch_full"])[0])).toEqual([
         "mixed",
       ]);
+    });
+
+    it("counts a row with a patchable and an unpatchable dependency under both", () => {
+      const rows = [withPatch("mixed", [PatchType.Full, PatchType.None])];
+      const [, counts] = service.filter(rows, "", []);
+
+      expect(counts["patch_full"]).toBe(1);
+      expect(counts["patch_none"]).toBe(1);
+      expect(counts["patch_full"]! + counts["patch_none"]!).toBe(2);
+    });
+
+    it("leaves a dependency without a patch type out of Not patchable", () => {
+      // A PHP dependency in a mixed analysis has no patch type: it was not checked, not found unpatchable.
+      const rows = [
+        withPatch("js", [PatchType.None]),
+        withPatch("php", [undefined]),
+        withPatch("both", [PatchType.Full, undefined]),
+      ];
+      const [filtered, counts] = service.filter(rows, "", ["patch_none"]);
+
+      expect(ids(filtered)).toEqual(["js"]);
+      expect(counts["patch_none"]).toBe(1);
+      expect(counts["patch_full"]).toBe(1);
     });
 
     it("returns nothing and counts 0 when patching did not run", () => {
