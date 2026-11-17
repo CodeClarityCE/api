@@ -8,7 +8,7 @@ import type { FastifyRequest } from "fastify";
 
 export const MAX_ERROR_REPORT_BYTES = 16 * 1024;
 
-/** Rejects an error report whose body is over 16 KB with 413. */
+/** Rejects an error report whose body is over MAX_ERROR_REPORT_BYTES with 413. */
 @Injectable()
 export class ErrorReportSizeGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
@@ -18,7 +18,9 @@ export class ErrorReportSizeGuard implements CanActivate {
       ? header
       : Buffer.byteLength(JSON.stringify(request.body ?? ""));
     if (size > MAX_ERROR_REPORT_BYTES) {
-      throw new PayloadTooLargeException("Error report is over 16 KB");
+      throw new PayloadTooLargeException(
+        `Error report is over ${MAX_ERROR_REPORT_BYTES / 1024} KB`,
+      );
     }
     return true;
   }

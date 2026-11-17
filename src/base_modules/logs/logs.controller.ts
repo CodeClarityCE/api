@@ -12,6 +12,7 @@ import { ErrorReportDto } from "./error-report.dto";
 import { ErrorReportSizeGuard } from "./error-report-size.guard";
 
 // The only context keys an error report may carry into the logs.
+// Keep in sync with ALLOWED_FIELDS in frontend/src/utils/logger.ts.
 const ALLOWED_FIELDS = [
   "route",
   "component",
