@@ -597,16 +597,17 @@ export class TicketIntegrationService {
   // ============================================
 
   /**
-   * Sync a ticket to an external provider
+   * Sync a ticket of the organization to an external provider
    */
   async syncTicketToExternal(
+    organizationId: string,
     ticketId: string,
     provider: ExternalTicketProvider,
     userId?: string,
   ): Promise<TicketExternalLink> {
-    // Get ticket with organization
+    // A ticket of another organization is not found
     const ticket = await this.ticketRepository.findOne({
-      where: { id: ticketId },
+      where: { id: ticketId, organization: { id: organizationId } },
       relations: { organization: true, project: true, external_links: true },
     });
 
@@ -826,13 +827,17 @@ export class TicketIntegrationService {
    * Unlink a ticket from an external provider
    */
   async unlinkTicket(
+    organizationId: string,
     ticketId: string,
     linkId: string,
     deleteExternal = false,
     userId?: string,
   ): Promise<void> {
     const externalLink = await this.externalLinkRepository.findOne({
-      where: { id: linkId, ticket: { id: ticketId } },
+      where: {
+        id: linkId,
+        ticket: { id: ticketId, organization: { id: organizationId } },
+      },
       relations: { ticket: { organization: true } },
     });
 
@@ -892,9 +897,18 @@ export class TicketIntegrationService {
   }
 
   /**
-   * Get external links for a ticket
+   * Get external links for a ticket of the organization
    */
-  async getExternalLinks(ticketId: string): Promise<TicketExternalLink[]> {
+  async getExternalLinks(
+    organizationId: string,
+    ticketId: string,
+  ): Promise<TicketExternalLink[]> {
+    const exists = await this.ticketRepository.exists({
+      where: { id: ticketId, organization: { id: organizationId } },
+    });
+    if (!exists) {
+      throw new NotFoundException(`Ticket ${ticketId} not found`);
+    }
     return this.externalLinkRepository.find({
       where: { ticket: { id: ticketId } },
       order: { synced_on: "DESC" },
@@ -905,6 +919,7 @@ export class TicketIntegrationService {
    * Bulk sync tickets to external provider
    */
   async bulkSyncTickets(
+    organizationId: string,
     ticketIds: string[],
     provider: ExternalTicketProvider,
     userId?: string,
@@ -916,7 +931,12 @@ export class TicketIntegrationService {
 
     for (const ticketId of ticketIds) {
       try {
-        await this.syncTicketToExternal(ticketId, provider, userId);
+        await this.syncTicketToExternal(
+          organizationId,
+          ticketId,
+          provider,
+          userId,
+        );
         results.synced.push(ticketId);
       } catch (error) {
         results.failed.push({
@@ -934,6 +954,7 @@ export class TicketIntegrationService {
    * Fetches the current status from the external system and updates the local ticket if changed
    */
   async syncFromExternal(
+    organizationId: string,
     ticketId: string,
     linkId: string,
     userId?: string,
@@ -945,7 +966,10 @@ export class TicketIntegrationService {
     externalStatus?: string;
   }> {
     const externalLink = await this.externalLinkRepository.findOne({
-      where: { id: linkId, ticket: { id: ticketId } },
+      where: {
+        id: linkId,
+        ticket: { id: ticketId, organization: { id: organizationId } },
+      },
       relations: { ticket: { organization: true } },
     });
 
@@ -1084,6 +1108,7 @@ export class TicketIntegrationService {
    * Bulk sync tickets from external providers
    */
   async bulkSyncFromExternal(
+    organizationId: string,
     ticketIds: string[],
     userId?: string,
   ): Promise<{
@@ -1108,7 +1133,7 @@ export class TicketIntegrationService {
     for (const ticketId of ticketIds) {
       try {
         // Get all external links for this ticket
-        const links = await this.getExternalLinks(ticketId);
+        const links = await this.getExternalLinks(organizationId, ticketId);
 
         if (links.length === 0) {
           results.unchanged.push(ticketId);
@@ -1117,7 +1142,12 @@ export class TicketIntegrationService {
 
         // Sync from the first (most recent) link
         const link = links[0]!;
-        const result = await this.syncFromExternal(ticketId, link.id, userId);
+        const result = await this.syncFromExternal(
+          organizationId,
+          ticketId,
+          link.id,
+          userId,
+        );
 
         if (result.updated && result.oldStatus && result.newStatus) {
           results.updated.push({
