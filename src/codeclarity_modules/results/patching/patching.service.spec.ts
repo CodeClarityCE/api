@@ -538,6 +538,26 @@ describe("PatchingService", () => {
       ).rejects.toThrow(UnknownWorkspace);
     });
 
+    it.each(["constructor", "__proto__", "toString"])(
+      "treats the inherited key %s as an unknown workspace",
+      async (workspace) => {
+        mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+        mockPatchingUtilsService.getPatchingResult.mockResolvedValue(
+          mockPatchesOutput,
+        );
+
+        await expect(
+          service.getStats(
+            "org-123",
+            "project-123",
+            "analysis-123",
+            mockUser,
+            workspace,
+          ),
+        ).rejects.toThrow(UnknownWorkspace);
+      },
+    );
+
     it("should handle access check failure", async () => {
       const accessError = new Error("Access denied");
       mockAnalysisResultsService.checkAccess.mockRejectedValue(accessError);

@@ -135,10 +135,10 @@ export class PatchingService {
 
     const patchesOutput: PatchesOutput =
       await this.patchingUtilsService.getPatchingResult(analysisId);
-    const patches = patchesOutput.workspaces[workspace];
-    if (!patches) {
+    if (!Object.hasOwn(patchesOutput.workspaces, workspace)) {
       throw new UnknownWorkspace();
     }
+    const patches = patchesOutput.workspaces[workspace]!;
 
     const before = await this.vulnerabilitiesUtilsService.getFindingsData(
       analysisId,
@@ -146,7 +146,9 @@ export class PatchingService {
     );
     const { mergedSbom } =
       await this.sbomUtilsService.getMergedSbomResults(analysisId);
-    const dependencies = mergedSbom.workspaces[workspace]?.dependencies ?? {};
+    const dependencies = Object.hasOwn(mergedSbom.workspaces, workspace)
+      ? (mergedSbom.workspaces[workspace]?.dependencies ?? {})
+      : {};
 
     return toPatchingStats(
       computeVulnerabilityStats(before, dependencies),
