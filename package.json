@@ -45,6 +45,7 @@
     "@nestjs/passport": "12.0.0",
     "@nestjs/platform-fastify": "12.3.3",
     "@nestjs/swagger": "12.1.0",
+    "@nestjs/throttler": "6.7.1",
     "@nestjs/typeorm": "12.0.2",
     "@prometheus-io/client": "0.16.1",
     "amqplib": "2.2.1",
