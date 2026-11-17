@@ -83,6 +83,13 @@ export class GithubIntegrationService {
     linkGithubCreate: LinkGithubCreateBody,
     user: AuthenticatedUser,
   ): Promise<string> {
+    // Only an org admin may link a token, checked before anything else.
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.ADMIN,
+    );
+
     if (linkGithubCreate.token_type !== GithubTokenType.CLASSIC_TOKEN) {
       throw new IntegrationWrongTokenType();
     }

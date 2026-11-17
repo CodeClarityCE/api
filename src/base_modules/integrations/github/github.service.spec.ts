@@ -43,6 +43,7 @@ describe("GithubIntegrationService", () => {
   let organizationsRepository: jest.Mocked<OrganizationsRepository>;
   let membershipsRepository: MembershipsRepository;
   let integrationsRepository: jest.Mocked<IntegrationsRepository>;
+  let organizationLoggerService: jest.Mocked<OrganizationLoggerService>;
 
   const mockAuthenticatedUser: AuthenticatedUser = new AuthenticatedUser(
     "test-user-id",
@@ -137,6 +138,7 @@ describe("GithubIntegrationService", () => {
     organizationsRepository = module.get(OrganizationsRepository);
     membershipsRepository = module.get(MembershipsRepository);
     integrationsRepository = module.get(IntegrationsRepository);
+    organizationLoggerService = module.get(OrganizationLoggerService);
   });
 
   it("should be defined", () => {
@@ -268,7 +270,61 @@ describe("GithubIntegrationService", () => {
       ).rejects.toThrow(IntegrationWrongTokenType);
     });
 
+    it("checks that the caller is an org admin", async () => {
+      organizationsRepository.getOrganizationById.mockResolvedValue({
+        ...mockOrganization,
+        integrations: [],
+      });
+      githubTokenService.getClassicTokenExpiryRemote.mockResolvedValue([
+        false,
+        undefined,
+      ]);
+      usersRepository.getUserById.mockResolvedValue(mockUser);
+      integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
+
+      await service.addGithubIntegration(
+        orgId,
+        linkGithubCreate,
+        mockAuthenticatedUser,
+      );
+
+      expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
+        orgId,
+        mockAuthenticatedUser.userId,
+        MemberRole.ADMIN,
+      );
+      expect(organizationLoggerService.addAuditLog).toHaveBeenCalledTimes(1);
+    });
+
+    it("refuses a caller below admin or outside the org before doing anything", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockRejectedValue(new NotAuthorized());
+
+      await expect(
+        service.addGithubIntegration(
+          orgId,
+          linkGithubCreate,
+          mockAuthenticatedUser,
+        ),
+      ).rejects.toThrow(NotAuthorized);
+
+      expect(
+        organizationsRepository.getOrganizationById,
+      ).not.toHaveBeenCalled();
+      expect(
+        githubTokenService.getClassicTokenExpiryRemote,
+      ).not.toHaveBeenCalled();
+      expect(
+        githubTokenService.validateClassicTokenPermissions,
+      ).not.toHaveBeenCalled();
+      expect(integrationsRepository.saveIntegration).not.toHaveBeenCalled();
+      expect(organizationsRepository.saveOrganization).not.toHaveBeenCalled();
+      expect(organizationLoggerService.addAuditLog).not.toHaveBeenCalled();
+    });
+
     it("should throw EntityNotFound when organization does not exist", async () => {
+      jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
       organizationsRepository.getOrganizationById.mockResolvedValue(
         null as any,
       );
