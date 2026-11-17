@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { EntityManager, Repository } from "typeorm";
 
 import { Organization } from "src/base_modules/organizations/organization.entity";
 import { EntityNotFound } from "src/types/error.types";
@@ -38,9 +38,24 @@ export class OrganizationsRepository {
 
   /**
    * Delete an organization by its ID.
+   * @param manager Runs the delete in the caller's transaction when given.
    */
-  async deleteOrganization(organizationId: string): Promise<void> {
-    await this.organizationRepository.delete(organizationId);
+  async deleteOrganization(
+    organizationId: string,
+    manager?: EntityManager,
+  ): Promise<void> {
+    const repo =
+      manager?.getRepository(Organization) ?? this.organizationRepository;
+    await repo.delete({ id: organizationId });
+  }
+
+  /**
+   * Run work in one database transaction; it rolls back if work throws.
+   */
+  async runInTransaction<T>(
+    work: (manager: EntityManager) => Promise<T>,
+  ): Promise<T> {
+    return this.organizationRepository.manager.transaction(work);
   }
 
   /**
