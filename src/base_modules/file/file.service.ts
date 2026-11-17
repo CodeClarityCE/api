@@ -255,7 +255,7 @@ export class FileService {
     const added_by = await this.usersRepository.getUserById(user.userId);
 
     // Retrieve the file by ID and the user who added it
-    const file = await this.fileRepository.getById(file_id, added_by);
+    const file = await this.fileRepository.getById(file_id, added_by.id);
 
     // Define the file path
     // Use the current user's ID for the folder path
