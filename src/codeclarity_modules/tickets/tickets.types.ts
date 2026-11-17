@@ -343,8 +343,6 @@ export interface IntegrationConfigSummary {
   created_on: Date;
   updated_on?: Date | undefined;
   has_config: boolean;
-  workspace_name?: string | undefined;
-  list_name?: string | undefined;
 }
 
 export interface IntegrationHierarchyItem {
