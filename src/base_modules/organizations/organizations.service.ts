@@ -628,7 +628,7 @@ export class OrganizationsService {
   }
 
   /**
-   * Delete an organization
+   * Delete an organization; only an owner may
    * @throws {NotAuthorized}
    * @throws {PersonalOrgCannotBeModified} A user cannot delete a personal organization
    * @throws {EntityNotFound} In case the organization no longer exists
@@ -640,13 +640,20 @@ export class OrganizationsService {
     await this.membershipsRepository.hasRequiredRole(
       orgId,
       user.userId,
-      MemberRole.USER,
+      MemberRole.OWNER,
     );
+    const org = await this.organizationsRepository.getOrganizationById(orgId);
+    if (org.personal) {
+      throw new PersonalOrgCannotBeModified();
+    }
 
     const memberships =
       await this.membershipsRepository.getMembershipsByOrganizationId(orgId);
-    await this.membershipsRepository.removeMemberships(memberships);
-    await this.organizationsRepository.deleteOrganization(orgId);
+    // A failed delete keeps every membership.
+    await this.organizationsRepository.runInTransaction(async (manager) => {
+      await this.membershipsRepository.removeMemberships(memberships, manager);
+      await this.organizationsRepository.deleteOrganization(orgId, manager);
+    });
   }
 
   /**

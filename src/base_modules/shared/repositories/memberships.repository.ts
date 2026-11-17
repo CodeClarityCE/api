@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { EntityManager, Repository } from "typeorm";
 
 import {
   MemberRole,
@@ -43,11 +43,16 @@ export class MembershipsRepository {
 
   /**
    * Remove multiple memberships from the database.
+   * @param manager Runs the removal in the caller's transaction when given.
    */
   async removeMemberships(
     memberships: OrganizationMemberships[],
+    manager?: EntityManager,
   ): Promise<void> {
-    await this.membershipRepository.remove(memberships);
+    const repo =
+      manager?.getRepository(OrganizationMemberships) ??
+      this.membershipRepository;
+    await repo.remove(memberships);
   }
 
   /**
