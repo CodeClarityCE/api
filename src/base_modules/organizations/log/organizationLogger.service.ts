@@ -14,6 +14,7 @@ import {
 } from "src/base_modules/shared/repositories";
 import { AUDIT_LOG_SORT_FIELDS } from "src/base_modules/shared/repositories/logs.repository";
 import {
+  PaginationConfig,
   PaginationUserSuppliedConf,
   TypedPaginatedData,
 } from "src/types/pagination.types";
@@ -86,10 +87,14 @@ export class OrganizationLoggerService {
       MemberRole.ADMIN,
     );
 
+    const paginationConfig: PaginationConfig = {
+      maxEntriesPerPage: 100,
+      defaultEntriesPerPage: 10,
+    };
     const requested = paginationUserSuppliedConf.entriesPerPage;
     const entriesPerPage = requested
-      ? Math.min(100, Math.max(1, requested))
-      : 10;
+      ? Math.min(paginationConfig.maxEntriesPerPage, Math.max(1, requested))
+      : paginationConfig.defaultEntriesPerPage;
     const currentPage = Math.max(
       0,
       paginationUserSuppliedConf.currentPage ?? 0,
