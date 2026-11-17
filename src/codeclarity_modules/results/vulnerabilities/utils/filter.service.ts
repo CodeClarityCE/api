@@ -9,6 +9,7 @@ import {
 } from "src/codeclarity_modules/results/utils/utils";
 import {
   ConflictFlag,
+  PatchType,
   VulnerabilityMerged,
 } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
 
@@ -24,6 +25,13 @@ const OWASP_FILTER_MAP: Record<string, string> = {
   owasp_top_10_2021_a8: "1354",
   owasp_top_10_2021_a9: "1355",
   owasp_top_10_2021_a10: "1356",
+};
+
+/** Patch status filters, each keeping the rows with that patch type. */
+const PATCH_FILTER_MAP: Record<string, PatchType> = {
+  patch_full: PatchType.Full,
+  patch_partial: PatchType.Partial,
+  patch_none: PatchType.None,
 };
 
 @Injectable()
@@ -59,6 +67,7 @@ export class VulnerabilitiesFilterService {
       "hide_correct_matching",
       "hide_incorrect_matching",
       "hide_possibly_incorrect_matching",
+      ...Object.keys(PATCH_FILTER_MAP),
     ];
 
     if (searchKey === null || searchKey === undefined) {
@@ -239,6 +248,22 @@ export class VulnerabilitiesFilterService {
       return true;
     }
 
+    /** Patch filters combine with OR: a row passes when an affected dependency has any selected patch type. */
+    function passesPatchFilter(
+      vulnerability: VulnerabilityMerged,
+      filters: string[],
+    ): boolean {
+      const wanted = filters
+        .map((filter) => PATCH_FILTER_MAP[filter])
+        .filter((type) => type !== undefined);
+      if (wanted.length === 0) return true;
+      return vulnerability.Affected.some(
+        (affected) =>
+          affected.PatchType !== undefined &&
+          wanted.includes(affected.PatchType),
+      );
+    }
+
     function filterByOptions(
       vulnerabilities: VulnerabilityMerged[],
       filters: string[],
@@ -250,6 +275,7 @@ export class VulnerabilitiesFilterService {
         if (!passesSeverityFilter(vulnerability, filters)) continue;
         if (!passesImpactFilter(vulnerability, filters)) continue;
         if (!passesConflictFilter(vulnerability, filters)) continue;
+        if (!passesPatchFilter(vulnerability, filters)) continue;
 
         toReturn.push(vulnerability);
       }
@@ -261,9 +287,14 @@ export class VulnerabilitiesFilterService {
 
     const counts: Record<string, number> = {};
     for (const filter of possibleFilters) {
+      // A patch count ignores the other patch filters, which would widen it.
+      const others =
+        filter in PATCH_FILTER_MAP
+          ? activeFiltersSafe.filter((active) => !(active in PATCH_FILTER_MAP))
+          : activeFiltersSafe;
       counts[filter] = filterByOptions(filteredBySearchKey, [
         filter,
-        ...activeFiltersSafe,
+        ...others,
       ]).length;
     }
 
