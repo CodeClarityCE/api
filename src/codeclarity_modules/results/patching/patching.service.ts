@@ -1,21 +1,25 @@
 import { Injectable } from "@nestjs/common";
+import { validRange } from "semver";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import {
+  ManifestUpgrade,
   Output as PatchesOutput,
+  PatchedManifestData,
   PatchInfo,
   PatchingAnalysisStats,
+  SemVer,
   Workspace,
 } from "src/codeclarity_modules/results/patching/patching.types";
 import {
-  AnalysisInfo as SbomAnalysisInfo,
   Output as SbomOutput,
+  WorkSpaceDependency,
 } from "src/codeclarity_modules/results/sbom/sbom.types";
 import {
   StatusError,
   StatusResponse,
 } from "src/codeclarity_modules/results/status.types";
-import { UnknownWorkspace } from "src/types/error.types";
+import { UnknownWorkspace, Unsupported } from "src/types/error.types";
 
 import { AnalysisResultsService } from "../results.service";
 import { SbomUtilsService } from "../sbom/utils/utils";
@@ -63,7 +67,7 @@ export class PatchingService {
 
     const patchesOutput: PatchesOutput =
       await this.patchingUtilsService.getPatchingResult(analysisId);
-    if (!(workspace in patchesOutput.workspaces)) {
+    if (!Object.hasOwn(patchesOutput.workspaces, workspace)) {
       throw new UnknownWorkspace();
     }
 
@@ -76,7 +80,7 @@ export class PatchingService {
     analysisId: string,
     user: AuthenticatedUser,
     workspace: string,
-  ): Promise<SbomAnalysisInfo | Record<string, never>> {
+  ): Promise<PatchedManifestData> {
     await this.analysisResultsService.checkAccess(
       orgId,
       projectId,
@@ -86,24 +90,50 @@ export class PatchingService {
 
     const patchesOutput: PatchesOutput =
       await this.patchingUtilsService.getPatchingResult(analysisId);
-    const sbomOutput: SbomOutput =
-      await this.sbomUtilsService.getSbomResult(analysisId);
-
-    if (!(workspace in patchesOutput.workspaces)) {
-      throw new UnknownWorkspace();
-    }
+    // The patches describe npm packages, so only the JavaScript dependency list applies.
+    const sbomOutput: SbomOutput = await this.sbomUtilsService.getSbomResult(
+      analysisId,
+      ["js-sbom"],
+    );
 
     if (
-      sbomOutput.analysis_info.package_manager === "NPM" ||
-      sbomOutput.analysis_info.package_manager === "YARN" ||
-      sbomOutput.analysis_info.package_manager === "PNPM"
+      !Object.hasOwn(patchesOutput.workspaces, workspace) ||
+      !Object.hasOwn(sbomOutput.workspaces ?? {}, workspace)
     ) {
-      return sbomOutput.analysis_info;
+      throw new UnknownWorkspace();
+    }
+    const patches = patchesOutput.workspaces[workspace]!;
+    const sbomWorkspace = sbomOutput.workspaces[workspace]!;
+
+    const packageManager = sbomOutput.analysis_info.package_manager;
+    if (!JS_PACKAGE_MANAGERS.has(packageManager)) {
+      throw new Unsupported();
     }
 
-    // Add other languages / package managers here
-
-    return {};
+    const dependencies = manifestUpgrades(
+      sbomWorkspace.start.dependencies ?? [],
+      patches.patches ?? {},
+    );
+    const devDependencies = manifestUpgrades(
+      sbomWorkspace.start.dev_dependencies ?? [],
+      patches.dev_patches ?? {},
+    );
+    return {
+      patched_manifest: { dependencies, devDependencies },
+      patched_manifest_raw: JSON.stringify(
+        {
+          dependencies: upgradedConstraints(dependencies),
+          devDependencies: upgradedConstraints(devDependencies),
+        },
+        null,
+        2,
+      ),
+      other_info: {
+        package_manager: packageManager,
+        relative_package_file:
+          workspace === "." ? "package.json" : `${workspace}/package.json`,
+      },
+    };
   }
 
   async getStats(
@@ -176,6 +206,56 @@ export class PatchingService {
       stage_end: patchesOutput.analysis_info.analysis_end_time,
     };
   }
+}
+
+const JS_PACKAGE_MANAGERS = new Set(["NPM", "YARN", "PNPM"]);
+
+/** Each direct dependency with the upgrade its patch suggests, if it has one. */
+function manifestUpgrades(
+  direct: WorkSpaceDependency[],
+  patches: Record<string, PatchInfo>,
+): Record<string, ManifestUpgrade> {
+  const upgrades: Record<string, ManifestUpgrade> = {};
+  for (const dependency of direct) {
+    const patch = patches[`${dependency.name}@${dependency.version}`];
+    const upgradable = patch !== undefined && patch.IsPatchable !== "NONE";
+    upgrades[dependency.name] = {
+      original_constraint: dependency.constraint,
+      vulnerable: patch !== undefined,
+      patch_type: patch?.IsPatchable ?? null,
+      upgrade_to: upgradable ? semverString(patch.Update) : null,
+      potential_breaking_changes:
+        upgradable && patch.PotentiallyBreaking === true,
+    };
+  }
+  return upgrades;
+}
+
+function semverString(version: SemVer): string {
+  const base = `${version.Major}.${version.Minor}.${version.Patch}`;
+  return version.PreReleaseTag ? `${base}-${version.PreReleaseTag}` : base;
+}
+
+/**
+ * The manifest constraints after upgrading; a ^ or ~ range keeps its operator.
+ * Only registry ranges are rewritten: git, file, workspace, url and tag specs stay as written.
+ * An npm alias is left out, since the SBOM names the real package, not the declared key.
+ */
+function upgradedConstraints(
+  upgrades: Record<string, ManifestUpgrade>,
+): Record<string, string> {
+  const constraints: Record<string, string> = {};
+  for (const [name, upgrade] of Object.entries(upgrades)) {
+    const original = upgrade.original_constraint;
+    if (original.startsWith("npm:")) continue;
+    if (upgrade.upgrade_to === null || validRange(original) === null) {
+      constraints[name] = original;
+      continue;
+    }
+    const operator = /^[\^~]\d/.test(original) ? original[0] : "";
+    constraints[name] = `${operator}${upgrade.upgrade_to}`;
+  }
+  return constraints;
 }
 
 /** One vulnerability in one installed dependency version, as the vulnerabilities tab matches them. */

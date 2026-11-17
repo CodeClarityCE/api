@@ -2,7 +2,7 @@ import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
-import { UnknownWorkspace } from "src/types/error.types";
+import { UnknownWorkspace, Unsupported } from "src/types/error.types";
 
 import { Result } from "../result.entity";
 import { AnalysisResultsService } from "../results.service";
@@ -20,7 +20,6 @@ describe("PatchingService", () => {
   let service: PatchingService;
   let analysisResultsService: AnalysisResultsService;
   let patchingUtilsService: PatchingUtilsService;
-  let sbomUtilsService: SbomUtilsService;
 
   const mockUser = new AuthenticatedUser("user-123", [ROLE.USER], true);
 
@@ -36,12 +35,6 @@ describe("PatchingService", () => {
       private_errors: [],
       analysis_start_time: "2024-01-01T00:00:00Z",
       analysis_end_time: "2024-01-01T01:00:00Z",
-    },
-  };
-
-  const mockSbomOutput = {
-    analysis_info: {
-      package_manager: "NPM",
     },
   };
 
@@ -101,7 +94,6 @@ describe("PatchingService", () => {
     );
     patchingUtilsService =
       module.get<PatchingUtilsService>(PatchingUtilsService);
-    sbomUtilsService = module.get<SbomUtilsService>(SbomUtilsService);
 
     jest.clearAllMocks();
   });
@@ -159,91 +151,231 @@ describe("PatchingService", () => {
   });
 
   describe("getPatchedManifest", () => {
-    it("should return analysis info for npm package manager", async () => {
-      mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
-      mockPatchingUtilsService.getPatchingResult.mockResolvedValue(
-        mockPatchesOutput,
-      );
-      mockSbomUtilsService.getSbomResult.mockResolvedValue(mockSbomOutput);
-
-      const result = await service.getPatchedManifest(
+    const semver = (version: string): Record<string, unknown> => {
+      const [Major, Minor, Patch] = version.split(".").map(Number);
+      return { Major, Minor, Patch, PreReleaseTag: "", MetaData: "" };
+    };
+    const patch = (
+      IsPatchable: string,
+      update: string,
+      PotentiallyBreaking = false,
+    ): Record<string, unknown> => ({
+      TopLevelVulnerable: true,
+      IsPatchable,
+      Patchable: [],
+      Unpatchable: [],
+      Introduced: [],
+      Patches: {},
+      Update: semver(update),
+      PotentiallyBreaking,
+    });
+    const patchesOutput = {
+      ...mockPatchesOutput,
+      workspaces: {
+        ".": {
+          patches: {
+            "lodash@4.17.4": patch("FULL", "4.17.21"),
+            "axios@0.18.0": patch("NONE", "0.0.0"),
+          },
+          dev_patches: {
+            "mocha@5.2.0": patch("PARTIAL", "10.2.0", true),
+          },
+        },
+      },
+    };
+    const sbom = (packageManager: string): Record<string, unknown> => ({
+      workspaces: {
+        ".": {
+          dependencies: {},
+          start: {
+            dependencies: [
+              { name: "lodash", version: "4.17.4", constraint: "^4.17.4" },
+              { name: "axios", version: "0.18.0", constraint: "0.18.0" },
+              { name: "express", version: "4.18.2", constraint: "~4.18.0" },
+            ],
+            dev_dependencies: [
+              { name: "mocha", version: "5.2.0", constraint: "5.2.0" },
+            ],
+          },
+        },
+      },
+      analysis_info: {
+        package_manager: packageManager,
+        working_directory: "/private/org/projects/p/main",
+        lock_file_path: "/private/org/projects/p/main/package-lock.json",
+      },
+    });
+    const manifest = (): ReturnType<PatchingService["getPatchedManifest"]> =>
+      service.getPatchedManifest(
         "org-123",
         "project-123",
         "analysis-123",
         mockUser,
-        "default",
+        ".",
       );
 
-      expect(result).toEqual(mockSbomOutput.analysis_info);
+    beforeEach(() => {
+      mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+      mockPatchingUtilsService.getPatchingResult.mockResolvedValue(
+        patchesOutput,
+      );
+    });
+
+    it("lists each npm direct dependency with its upgrade", async () => {
+      mockSbomUtilsService.getSbomResult.mockResolvedValue(sbom("NPM"));
+
+      const result = await manifest();
+
+      expect(result.patched_manifest.dependencies).toEqual({
+        lodash: {
+          original_constraint: "^4.17.4",
+          vulnerable: true,
+          patch_type: "FULL",
+          upgrade_to: "4.17.21",
+          potential_breaking_changes: false,
+        },
+        axios: {
+          original_constraint: "0.18.0",
+          vulnerable: true,
+          patch_type: "NONE",
+          upgrade_to: null,
+          potential_breaking_changes: false,
+        },
+        express: {
+          original_constraint: "~4.18.0",
+          vulnerable: false,
+          patch_type: null,
+          upgrade_to: null,
+          potential_breaking_changes: false,
+        },
+      });
       expect(analysisResultsService.checkAccess).toHaveBeenCalledWith(
         "org-123",
         "project-123",
         "analysis-123",
         mockUser,
       );
-      expect(patchingUtilsService.getPatchingResult).toHaveBeenCalledWith(
+    });
+
+    it("lists dev dependencies with their own patches", async () => {
+      mockSbomUtilsService.getSbomResult.mockResolvedValue(sbom("YARN"));
+
+      const result = await manifest();
+
+      expect(result.patched_manifest.devDependencies).toEqual({
+        mocha: {
+          original_constraint: "5.2.0",
+          vulnerable: true,
+          patch_type: "PARTIAL",
+          upgrade_to: "10.2.0",
+          potential_breaking_changes: true,
+        },
+      });
+    });
+
+    it("writes the upgraded dependency blocks as JSON text", async () => {
+      mockSbomUtilsService.getSbomResult.mockResolvedValue(sbom("PNPM"));
+
+      const result = await manifest();
+
+      expect(JSON.parse(result.patched_manifest_raw)).toEqual({
+        dependencies: {
+          lodash: "^4.17.21",
+          axios: "0.18.0",
+          express: "~4.18.0",
+        },
+        devDependencies: { mocha: "10.2.0" },
+      });
+    });
+
+    /** One direct dependency pkg@1.0.0 declared as constraint, fully patched to 2.0.0. */
+    const declaredAs = async (
+      name: string,
+      constraint: string,
+    ): Promise<Record<string, string>> => {
+      mockPatchingUtilsService.getPatchingResult.mockResolvedValue({
+        ...mockPatchesOutput,
+        workspaces: {
+          ".": { patches: { [`${name}@1.0.0`]: patch("FULL", "2.0.0") } },
+        },
+      });
+      mockSbomUtilsService.getSbomResult.mockResolvedValue({
+        workspaces: {
+          ".": {
+            dependencies: {},
+            start: { dependencies: [{ name, version: "1.0.0", constraint }] },
+          },
+        },
+        analysis_info: { package_manager: "NPM" },
+      });
+      const result = await manifest();
+      return (
+        JSON.parse(result.patched_manifest_raw) as {
+          dependencies: Record<string, string>;
+        }
+      ).dependencies;
+    };
+
+    it.each([
+      ["git", "git+https://github.com/user/pkg.git#v1.0.0"],
+      ["GitHub shorthand", "github:user/pkg"],
+      ["user/repo", "user/pkg#main"],
+      ["file", "file:../pkg"],
+      ["link", "link:../pkg"],
+      ["workspace", "workspace:^1.0.0"],
+      ["tarball url", "https://example.com/pkg-1.0.0.tgz"],
+      ["dist-tag", "latest"],
+    ])("keeps a %s spec as written", async (_kind, constraint) => {
+      expect(await declaredAs("pkg", constraint)).toEqual({ pkg: constraint });
+    });
+
+    it.each([
+      ["^1.0.0", "^2.0.0"],
+      ["~1.0.0", "~2.0.0"],
+      ["1.0.0", "2.0.0"],
+      [">=1.0.0 <2.0.0", "2.0.0"],
+      ["1.x", "2.0.0"],
+    ])("rewrites the registry range %s", async (constraint, upgraded) => {
+      expect(await declaredAs("pkg", constraint)).toEqual({ pkg: upgraded });
+    });
+
+    it("leaves an npm alias out instead of adding its real name", async () => {
+      expect(
+        await declaredAs("string-width", "npm:string-width@^4.2.0"),
+      ).toEqual({});
+    });
+
+    it("reads the js-sbom result, not the newest SBOM", async () => {
+      mockSbomUtilsService.getSbomResult.mockResolvedValue(sbom("NPM"));
+
+      await manifest();
+
+      expect(mockSbomUtilsService.getSbomResult).toHaveBeenCalledWith(
         "analysis-123",
-      );
-      expect(sbomUtilsService.getSbomResult).toHaveBeenCalledWith(
-        "analysis-123",
+        ["js-sbom"],
       );
     });
 
-    it("should return analysis info for yarn package manager", async () => {
-      const yarnSbomOutput = {
-        analysis_info: {
-          package_manager: "YARN",
-        },
-      };
+    it("names the manifest relative to the project and no server path", async () => {
+      mockSbomUtilsService.getSbomResult.mockResolvedValue(sbom("NPM"));
 
-      mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
-      mockPatchingUtilsService.getPatchingResult.mockResolvedValue(
-        mockPatchesOutput,
-      );
-      mockSbomUtilsService.getSbomResult.mockResolvedValue(yarnSbomOutput);
+      const result = await manifest();
 
-      const result = await service.getPatchedManifest(
-        "org-123",
-        "project-123",
-        "analysis-123",
-        mockUser,
-        "default",
-      );
-
-      expect(result).toEqual(yarnSbomOutput.analysis_info);
+      expect(result.other_info).toEqual({
+        package_manager: "NPM",
+        relative_package_file: "package.json",
+      });
+      expect(JSON.stringify(result)).not.toContain("/private/");
     });
 
-    it("should return empty object for unsupported package manager", async () => {
-      const unsupportedSbomOutput = {
-        analysis_info: {
-          package_manager: "MAVEN",
-        },
-      };
+    it("refuses an unsupported package manager", async () => {
+      mockSbomUtilsService.getSbomResult.mockResolvedValue(sbom("MAVEN"));
 
-      mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
-      mockPatchingUtilsService.getPatchingResult.mockResolvedValue(
-        mockPatchesOutput,
-      );
-      mockSbomUtilsService.getSbomResult.mockResolvedValue(
-        unsupportedSbomOutput,
-      );
-
-      const result = await service.getPatchedManifest(
-        "org-123",
-        "project-123",
-        "analysis-123",
-        mockUser,
-        "default",
-      );
-
-      expect(result).toEqual({});
+      await expect(manifest()).rejects.toThrow(Unsupported);
     });
 
     it("should throw UnknownWorkspace for invalid workspace", async () => {
-      mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
-      mockPatchingUtilsService.getPatchingResult.mockResolvedValue(
-        mockPatchesOutput,
-      );
+      mockSbomUtilsService.getSbomResult.mockResolvedValue(sbom("NPM"));
 
       await expect(
         service.getPatchedManifest(
@@ -252,6 +384,20 @@ describe("PatchingService", () => {
           "analysis-123",
           mockUser,
           "invalid-workspace",
+        ),
+      ).rejects.toThrow(UnknownWorkspace);
+    });
+
+    it("treats an inherited key as an unknown workspace", async () => {
+      mockSbomUtilsService.getSbomResult.mockResolvedValue(sbom("NPM"));
+
+      await expect(
+        service.getPatchedManifest(
+          "org-123",
+          "project-123",
+          "analysis-123",
+          mockUser,
+          "constructor",
         ),
       ).rejects.toThrow(UnknownWorkspace);
     });

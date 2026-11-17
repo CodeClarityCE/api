@@ -73,14 +73,18 @@ export class SbomUtilsService {
     return dependenciesArray;
   }
 
-  async getSbomResult(analysis_id: string): Promise<SBOMOutput> {
+  /** The newest SBOM result of the analysis among plugins (any SBOM plugin by default). */
+  async getSbomResult(
+    analysis_id: string,
+    plugins: string[] = ["js-sbom", "php-sbom"],
+  ): Promise<SBOMOutput> {
     const result = await this.resultRepository.findOne({
       relations: { analysis: true },
       where: {
         analysis: {
           id: analysis_id,
         },
-        plugin: In(["js-sbom", "php-sbom"]),
+        plugin: In(plugins),
       },
       order: NEWEST_RESULT_FIRST,
       cache: true,
