@@ -56,7 +56,9 @@ import { TicketsModule } from "./tickets/tickets.module";
           ],
           // Tests truncate tables, so they get their own database.
           database:
-            process.env["ENV"] === "test" ? "codeclarity_test" : "codeclarity",
+            process.env["ENV"] === "test"
+              ? (process.env["CODECLARITY_TEST_DB_NAME"] ?? "codeclarity_test")
+              : "codeclarity",
           migrations: ["dist/migrations/codeclarity/*.js"],
         };
       },

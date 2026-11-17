@@ -22,7 +22,10 @@ import {
 } from "../../src/base_modules/shared/repositories";
 import { User } from "../../src/base_modules/users/users.entity";
 import { Policy } from "../../src/codeclarity_modules/policies/policy.entity";
-import { openScratchDatabase } from "../utils/scratch-database";
+import {
+  closeScratchDatabase,
+  openScratchDatabase,
+} from "../utils/scratch-database";
 
 describe("AnalysesService.create against Postgres", () => {
   let dataSource: DataSource;
@@ -38,7 +41,7 @@ describe("AnalysesService.create against Postgres", () => {
   });
 
   afterAll(async () => {
-    await dataSource?.destroy();
+    await closeScratchDatabase(dataSource);
   });
 
   beforeEach(async () => {
