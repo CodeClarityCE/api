@@ -27,6 +27,7 @@ import { TeamMember } from "src/base_modules/users/teamMember.types";
 import {
   CannotRevokeOwnMembership,
   EntityNotFound,
+  InvitationInvalidOrExpired,
   NotAMember,
   NotAuthorized,
   PersonalOrgCannotBeModified,
@@ -412,30 +413,26 @@ export class OrganizationsService {
 
   /**
    * Join an organization via an invitation
-   * @throws {InvitationInvalidOrExpired}
-   * @throws {InternalError}
+   * @throws {EntityNotFound} If no invitation of this organization matches
+   * @throws {InvitationInvalidOrExpired} If the invitation has expired
+   * @throws {NotAuthorized} If the signed-in user is not the invitee
    *
+   * @param orgId The organization id from the join link
    * @param inviteToken The invitation token
    * @param emailDigest The user's email digest
    * @param user The authenticated user
    */
   async joinOrg(
+    orgId: string,
     inviteToken: string,
     emailDigest: string,
     user: AuthenticatedUser,
   ): Promise<void> {
-    const invitation = await this.invitationsRepository.getInvitationBy(
-      {
-        token_digest: inviteToken,
-        user_email_digest: emailDigest,
-      },
-      {
-        organization: {
-          organizationMemberships: true,
-          created_by: true,
-        },
-        user: true,
-      },
+    const invitation = await this.validInvitation(
+      orgId,
+      inviteToken,
+      emailDigest,
+      user,
     );
 
     const membership = new OrganizationMemberships();
@@ -463,35 +460,28 @@ export class OrganizationsService {
 
   /**
    * Get the organization an invitation is for, as seen by the invitee
-   * @throws {EntityNotFound} If no invitation matches the token and digest
+   * @throws {EntityNotFound} If no invitation of this organization matches
+   * @throws {InvitationInvalidOrExpired} If the invitation has expired
    * @throws {NotAuthorized} If the signed-in user is not the invitee
    *
+   * @param orgId The organization id from the join link
    * @param inviteToken The invitation token
    * @param emailDigest The user's email digest
    * @param user The authenticated user
    */
   async getInviteeInfo(
+    orgId: string,
     inviteToken: string,
     emailDigest: string,
     user: AuthenticatedUser,
   ): Promise<OrganizationInfoForInvitee> {
     const info = new OrganizationInfoForInvitee();
-    const invitation = await this.invitationsRepository.getInvitationBy(
-      {
-        token_digest: inviteToken,
-        user_email_digest: emailDigest,
-      },
-      {
-        organization: {
-          organizationMemberships: true,
-          created_by: true,
-        },
-        user: true,
-      },
+    const invitation = await this.validInvitation(
+      orgId,
+      inviteToken,
+      emailDigest,
+      user,
     );
-    if (invitation.user.id !== user.userId) {
-      throw new NotAuthorized();
-    }
 
     info.id = invitation.id;
     info.name = invitation.organization.name;
@@ -506,6 +496,42 @@ export class OrganizationsService {
     info.role = invitation.role;
 
     return info;
+  }
+
+  /**
+   * Finds an invitation the signed-in user may accept now.
+   * @throws {EntityNotFound} If no invitation of this organization matches
+   * @throws {InvitationInvalidOrExpired} If the invitation has expired
+   * @throws {NotAuthorized} If the signed-in user is not the invitee
+   */
+  private async validInvitation(
+    orgId: string,
+    inviteToken: string,
+    emailDigest: string,
+    user: AuthenticatedUser,
+  ): Promise<Invitation> {
+    const invitation = await this.invitationsRepository.getInvitationBy(
+      {
+        token_digest: inviteToken,
+        user_email_digest: emailDigest,
+        organization: { id: orgId },
+      },
+      {
+        organization: {
+          organizationMemberships: true,
+          created_by: true,
+        },
+        user: true,
+      },
+    );
+    // A missing ttl counts as expired.
+    if (!invitation.ttl || invitation.ttl.getTime() <= Date.now()) {
+      throw new InvitationInvalidOrExpired();
+    }
+    if (invitation.user.id !== user.userId) {
+      throw new NotAuthorized();
+    }
+    return invitation;
   }
 
   /**
