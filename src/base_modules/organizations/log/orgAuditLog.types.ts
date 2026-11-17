@@ -23,13 +23,14 @@ export enum ActionClassType {
 }
 
 export enum ActionType {
-  SampleCreate = "SampleCreate",
   ProjectCreate = "ProjectCreate",
   ProjectUpdate = "ProjectUpdate",
   ProjectDelete = "ProjectDelete",
   AnalyzerCreate = "AnalyzerCreate",
   AnalyzerUpdate = "AnalyzerUpdate",
   AnalyzerDelete = "AnalyzerDelete",
+  AnalysisStarted = "AnalysisStarted",
+  AnalysisDeleted = "AnalysisDeleted",
   AnalysisFailed = "AnalysisFailed",
   OrganizationUserLeft = "OrganizationUserLeft",
   OrganizationCreated = "OrganizationCreated",
@@ -110,17 +111,21 @@ export interface OrganizationAuditLogUpdate extends OrganizationAuditLogCreate {
 /*              Miscellaneous               */
 /********************************************/
 
+// Creates, starts and updates rank Low; deletions, membership and
+// integration changes rank higher.
 export const actionTypeSeverityMapping = new Map<ActionType, ActionSeverity>([
-  [ActionType.AnalyzerCreate, ActionSeverity.High],
+  [ActionType.AnalyzerCreate, ActionSeverity.Low],
   [ActionType.AnalyzerDelete, ActionSeverity.High],
-  [ActionType.AnalyzerUpdate, ActionSeverity.High],
+  [ActionType.AnalyzerUpdate, ActionSeverity.Low],
   [ActionType.ProjectCreate, ActionSeverity.Low],
   [ActionType.ProjectUpdate, ActionSeverity.Low],
-  [ActionType.ProjectDelete, ActionSeverity.Low],
+  [ActionType.ProjectDelete, ActionSeverity.High],
+  [ActionType.AnalysisStarted, ActionSeverity.Low],
+  [ActionType.AnalysisDeleted, ActionSeverity.High],
   [ActionType.AnalysisFailed, ActionSeverity.Medium],
-  [ActionType.OrganizationUserLeft, ActionSeverity.Low],
-  [ActionType.OrganizationMemberJoined, ActionSeverity.Medium],
-  [ActionType.OrganizationInvitationRevoked, ActionSeverity.Medium],
+  [ActionType.OrganizationUserLeft, ActionSeverity.High],
+  [ActionType.OrganizationMemberJoined, ActionSeverity.High],
+  [ActionType.OrganizationInvitationRevoked, ActionSeverity.High],
   [ActionType.OrganizationMemberInvited, ActionSeverity.High],
   [ActionType.OrganizationMembershipRevoked, ActionSeverity.High],
   [ActionType.OrganizationIntegrationAdded, ActionSeverity.Critical],
@@ -144,6 +149,8 @@ export const actionTypeClassMapping = new Map<ActionType, ActionClassType>([
   [ActionType.ProjectCreate, ActionClassType.Project],
   [ActionType.ProjectUpdate, ActionClassType.Project],
   [ActionType.ProjectDelete, ActionClassType.Project],
+  [ActionType.AnalysisStarted, ActionClassType.Analysis],
+  [ActionType.AnalysisDeleted, ActionClassType.Analysis],
   [ActionType.AnalysisFailed, ActionClassType.Analysis],
   [ActionType.OrganizationUserLeft, ActionClassType.Organization],
   [ActionType.OrganizationMemberJoined, ActionClassType.Organization],

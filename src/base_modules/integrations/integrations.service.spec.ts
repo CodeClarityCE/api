@@ -7,6 +7,7 @@ import {
 import { NotAMember, NotAuthorized } from "src/types/error.types";
 
 import { AuthenticatedUser, ROLE } from "../auth/auth.types";
+import { OrganizationLoggerService } from "../organizations/log/organizationLogger.service";
 import { MemberRole } from "../organizations/memberships/orgMembership.types";
 
 import {
@@ -77,7 +78,12 @@ describe("IntegrationsService", () => {
           useValue: {
             getVCSIntegrations: jest.fn(),
             getIntegrationById: jest.fn(),
+            deleteIntegration: jest.fn(),
           },
+        },
+        {
+          provide: OrganizationLoggerService,
+          useValue: { addAuditLog: jest.fn() },
         },
       ],
     }).compile();
@@ -316,17 +322,21 @@ describe("IntegrationsService", () => {
   });
 
   describe("removeIntegration", () => {
-    it("should throw not implemented error for valid requests", async () => {
+    it("should delete the integration for valid requests", async () => {
       // Arrange
       jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
       jest
         .spyOn(organizationsRepository, "doesIntegrationBelongToOrg")
         .mockResolvedValue(true);
+      jest
+        .spyOn(integrationsRepository, "getIntegrationById")
+        .mockResolvedValue(mockIntegration);
 
       // Act & Assert
-      await expect(
-        service.removeIntegration("org-123", mockUser, "integration-123"),
-      ).rejects.toThrow("Method not implemented.");
+      await service.removeIntegration("org-123", mockUser, "integration-123");
+      expect(integrationsRepository.deleteIntegration).toHaveBeenCalledWith(
+        "integration-123",
+      );
       expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
         "org-123",
         "user-123",

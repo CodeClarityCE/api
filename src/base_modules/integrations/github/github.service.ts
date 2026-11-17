@@ -11,6 +11,8 @@ import {
   Integration,
   IntegrationProvider,
 } from "src/base_modules/integrations/integrations.entity";
+import { OrganizationLoggerService } from "src/base_modules/organizations/log/organizationLogger.service";
+import { ActionType } from "src/base_modules/organizations/log/orgAuditLog.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
 import {
   IntegrationsRepository,
@@ -31,6 +33,7 @@ import {
   NotAuthorized,
 } from "src/types/error.types";
 
+import { describeIntegration } from "../integrationAuditLog";
 import { GithubIntegrationToken } from "../Token";
 
 import { CONST_GITHUB_TOKEN_VALIDATION_TTL_SECONDS } from "./constants";
@@ -56,6 +59,7 @@ export class GithubIntegrationService {
     private readonly usersRepository: UsersRepository,
     private readonly organizationsRepository: OrganizationsRepository,
     private readonly integrationsRepository: IntegrationsRepository,
+    private readonly organizationLoggerService: OrganizationLoggerService,
   ) {}
 
   /**
@@ -139,6 +143,13 @@ export class GithubIntegrationService {
     organization.integrations?.push(addedIntegration);
     await this.organizationsRepository.saveOrganization(organization);
 
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.OrganizationIntegrationAdded,
+      `The User linked the ${describeIntegration(addedIntegration)} to the organization.`,
+      orgId,
+      user.userId,
+    );
+
     return addedIntegration.id;
   }
 
@@ -204,6 +215,13 @@ export class GithubIntegrationService {
     await this.integrationsRepository.saveIntegration(integration);
     // The previous token must not be served from the validation cache.
     this.validatedTokens.delete(integrationId);
+
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.OrganizationIntegrationUpdated,
+      `The User replaced the token of the ${describeIntegration(integration)}.`,
+      orgId,
+      user.userId,
+    );
   }
 
   /**

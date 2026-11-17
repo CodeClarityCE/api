@@ -200,6 +200,25 @@ describe("ExceptionFilter", () => {
       });
     });
 
+    describe("HttpException error codes", () => {
+      it.each([
+        [413, "PayloadTooLarge"],
+        [429, "TooManyRequests"],
+      ])("names a %i answer %s", (status, code) => {
+        filter.catch(new HttpException("Refused", status), mockArgumentsHost);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(status);
+        expect(mockResponse.send).toHaveBeenCalledWith(
+          JSON.stringify({
+            status_code: status,
+            status: Status.Failure,
+            error_code: code,
+            error_message: "Refused",
+          }),
+        );
+      });
+    });
+
     describe("FastifyError handling", () => {
       it("should handle FastifyError with 4xx status code", () => {
         const fastifyError = new Error("Request entity too large");

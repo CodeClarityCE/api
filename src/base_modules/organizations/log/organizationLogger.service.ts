@@ -12,7 +12,9 @@ import {
   MembershipsRepository,
   UsersRepository,
 } from "src/base_modules/shared/repositories";
+import { AUDIT_LOG_SORT_FIELDS } from "src/base_modules/shared/repositories/logs.repository";
 import {
+  PaginationConfig,
   PaginationUserSuppliedConf,
   TypedPaginatedData,
 } from "src/types/pagination.types";
@@ -72,20 +74,12 @@ export class OrganizationLoggerService {
    */
   async getAuditLogs(
     organizationId: string,
-    _paginationUserSuppliedConf: PaginationUserSuppliedConf,
+    paginationUserSuppliedConf: PaginationUserSuppliedConf,
     user: AuthenticatedUser,
-    _searchKey?: string,
-    _sortBy?: string,
-    _sortDirection?: SortDirection,
+    searchKey?: string,
+    sortBy?: string,
+    sortDirection?: SortDirection,
   ): Promise<TypedPaginatedData<Log>> {
-    // enum AllowedOrderBy {
-    //     SEVERITY = 'action_severity',
-    //     CLASS = 'action_class',
-    //     TYPE = 'action',
-    //     BLAME = 'blame_on_email',
-    //     CREATED_ON = 'created_on'
-    // }
-
     // Only owners and admins can view audit logs
     await this.membershipsRepository.hasRequiredRole(
       organizationId,
@@ -93,78 +87,29 @@ export class OrganizationLoggerService {
       MemberRole.ADMIN,
     );
 
-    // const paginationConfig: PaginationConfig = {
-    //     maxEntriesPerPage: 100,
-    //     defaultEntriesPerPage: 10
-    // };
-
-    // let entriesPerPage = paginationConfig.defaultEntriesPerPage;
-    // let currentPage = 0;
-
-    // if (paginationUserSuppliedConf.entriesPerPage)
-    //     entriesPerPage = Math.min(
-    //         paginationConfig.maxEntriesPerPage,
-    //         paginationUserSuppliedConf.entriesPerPage
-    //     );
-
-    // if (paginationUserSuppliedConf.currentPage)
-    //     currentPage = Math.max(0, paginationUserSuppliedConf.currentPage);
-
-    // let sortByKey: SortField<OrganizationAuditLog> | undefined = undefined;
-    // let searchCriteria: ComplexSearchCriteria<OrganizationAuditLog> | undefined = undefined;
-
-    // if (sortBy) {
-    //     if (sortBy === AllowedOrderBy.SEVERITY) sortByKey = 'action_severity';
-    //     else if (sortBy === AllowedOrderBy.CLASS) sortByKey = 'action_class';
-    //     else if (sortBy === AllowedOrderBy.TYPE) sortByKey = 'action';
-    //     else if (sortBy === AllowedOrderBy.BLAME) sortByKey = 'blame_on_email';
-    //     else if (sortBy === AllowedOrderBy.CREATED_ON) sortByKey = 'created_on';
-    // }
-
-    // if (searchKey) {
-    //     searchCriteria = {
-    //         junction: 'OR',
-    //         criteria: [
-    //             { field: 'blame_on_email', value: searchKey, operator: 'like' },
-    //             { field: 'description', value: searchKey, operator: 'like' },
-    //             { field: 'action', value: searchKey, operator: 'like' },
-    //             { field: 'action_class', value: searchKey, operator: 'like' }
-    //         ]
-    //     };
-    // }
-
-    // const logRepository = CodeclarityDB.getRepository(Log);
-    // const logsQueryBuilder = await logRepository
-    //     .createQueryBuilder('log')
-    //     .where('log.organization_id = :organizationId', { organizationId })
-    //     .orderBy(sortByKey ? `log.${sortByKey}` : 'log.created_on', sortDirection || 'DESC');
-
-    // const fullCount = await logsQueryBuilder.getCount();
-
-    // const logs = await logsQueryBuilder
-    //     .skip(currentPage * entriesPerPage)
-    //     .take(entriesPerPage)
-    //     .getMany();
-
-    // return {
-    //     data: logs,
-    //     page: currentPage,
-    //     entry_count: logs.length,
-    //     entries_per_page: entriesPerPage,
-    //     total_entries: fullCount,
-    //     total_pages: Math.ceil(fullCount / entriesPerPage),
-    //     matching_count: fullCount, // once you apply filters this needs to change
-    //     filter_count: {}
-    // };
-    return {
-      data: [],
-      page: 0,
-      entry_count: 0,
-      entries_per_page: 0,
-      total_entries: 0,
-      total_pages: 0,
-      matching_count: 0,
-      filter_count: {},
+    const paginationConfig: PaginationConfig = {
+      maxEntriesPerPage: 100,
+      defaultEntriesPerPage: 10,
     };
+    const requested = paginationUserSuppliedConf.entriesPerPage;
+    const entriesPerPage = requested
+      ? Math.min(paginationConfig.maxEntriesPerPage, Math.max(1, requested))
+      : paginationConfig.defaultEntriesPerPage;
+    const currentPage = Math.max(
+      0,
+      paginationUserSuppliedConf.currentPage ?? 0,
+    );
+
+    // Unknown sort keys fall back to newest first
+    const sortField = AUDIT_LOG_SORT_FIELDS.find((field) => field === sortBy);
+
+    return await this.logsRepository.getOrganizationLogs(
+      organizationId,
+      currentPage,
+      entriesPerPage,
+      searchKey,
+      sortField,
+      sortDirection,
+    );
   }
 }
