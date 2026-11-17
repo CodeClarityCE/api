@@ -150,6 +150,13 @@ export class GitlabIntegrationService {
     linkGitlabCreate: LinkGitlabCreateBody,
     user: AuthenticatedUser,
   ): Promise<string> {
+    // Only an org admin may link a token, checked before anything else.
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.ADMIN,
+    );
+
     if (linkGitlabCreate.token_type !== GitlabTokenType.PERSONAL_ACCESS_TOKEN) {
       throw new IntegrationWrongTokenType();
     }
