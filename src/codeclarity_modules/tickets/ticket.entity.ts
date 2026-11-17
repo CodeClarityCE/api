@@ -148,7 +148,8 @@ export class Ticket {
   // Foreign keys
   @ApiProperty()
   @Expose()
-  @ManyToOne("Project", "tickets")
+  // A ticket belongs to its project and is deleted with it.
+  @ManyToOne("Project", "tickets", { onDelete: "CASCADE" })
   project!: Relation<Project>;
 
   @ManyToOne("Organization", "tickets")
@@ -166,7 +167,8 @@ export class Ticket {
 
   @ApiProperty()
   @Expose()
-  @ManyToOne("Analysis", { nullable: true })
+  // A ticket outlives the analysis that found it.
+  @ManyToOne("Analysis", { nullable: true, onDelete: "SET NULL" })
   source_analysis?: Relation<Analysis>;
 
   @OneToMany("TicketEvent", "ticket")
