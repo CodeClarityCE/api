@@ -110,15 +110,7 @@ describe("PatchingService", () => {
         "project-123",
         "analysis-123",
         mockUser,
-        {
-          workspace: "default",
-          page: 0,
-          entriesPerPage: 20,
-          sortBy: "name",
-          sortDirection: "asc",
-          activeFilters: undefined,
-          searchKey: undefined,
-        },
+        { workspace: "default" },
       );
 
       expect(result).toEqual(mockPatchesOutput.workspaces.default);
@@ -142,12 +134,6 @@ describe("PatchingService", () => {
       await expect(
         service.getPatches("org-123", "project-123", "analysis-123", mockUser, {
           workspace: "invalid-workspace",
-          page: 0,
-          entriesPerPage: 20,
-          sortBy: "name",
-          sortDirection: "asc",
-          activeFilters: undefined,
-          searchKey: undefined,
         }),
       ).rejects.toThrow(UnknownWorkspace);
     });
@@ -159,12 +145,6 @@ describe("PatchingService", () => {
       await expect(
         service.getPatches("org-123", "project-123", "analysis-123", mockUser, {
           workspace: "default",
-          page: 0,
-          entriesPerPage: 20,
-          sortBy: "name",
-          sortDirection: "asc",
-          activeFilters: undefined,
-          searchKey: undefined,
         }),
       ).rejects.toThrow("Access denied");
     });

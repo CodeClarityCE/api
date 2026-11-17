@@ -37,12 +37,6 @@ import { PatchingUtilsService } from "./utils/utils";
 /** Query options for patching list endpoint */
 export interface PatchingQueryOptions {
   workspace: string;
-  page?: number | undefined;
-  entriesPerPage?: number | undefined;
-  sortBy?: string | undefined;
-  sortDirection?: string | undefined;
-  activeFilters?: string | undefined;
-  searchKey?: string | undefined;
 }
 
 @Injectable()
@@ -70,15 +64,8 @@ export class PatchingService {
 
     const { workspace } = options;
 
-    // Query options (page, entriesPerPage, sortBy, sortDirection, activeFilters, searchKey)
-    // are available in options but currently unused - kept for future pagination support
-
     const patchesOutput: PatchesOutput =
       await this.patchingUtilsService.getPatchingResult(analysisId);
-    // const sbomOutput: SbomOutput = await getSbomResult(analysisId);
-    // const _vulnOutput: VulnsOuptut =
-    //     await this.vulnerabilitiesUtilsService.getVulnsResult(analysisId);
-
     if (!(workspace in patchesOutput.workspaces)) {
       throw new UnknownWorkspace();
     }
@@ -176,76 +163,6 @@ export class PatchingService {
       computeVulnerabilityStats(afterPatching(before, patches), dependencies),
     );
   }
-
-  // async getPatchTree(
-  //     orgId: string,
-  //     projectId: string,
-  //     analysisId: string,
-  //     user: AuthenticatedUser,
-  //     workspace: string
-  // ): Promise<{ [key: string]: PatchOccurenceInfo }> {
-  //     await this.analysisResultsService.checkAccess(orgId, projectId, analysisId, user);
-
-  //     const _patchesOutput: PatchesOutput = await getPatchingResult(analysisId);
-  //     const sbomOutput: SbomOutput = await getSbomResult(analysisId);
-
-  //     if (!(workspace in _patchesOutput.workspaces)) {
-  //         throw new UnknownWorkspace();
-  //     }
-
-  //     if (
-  //         sbomOutput.analysis_info.package_manager === 'NPM' ||
-  //         sbomOutput.analysis_info.package_manager === 'YARN' ||
-  //         sbomOutput.analysis_info.package_manager === 'PNPM'
-  //     ) {
-  //         return this.getPatchTreeJSEcosystem(_patchesOutput, workspace);
-  //     }
-
-  //     // Add other languages / package managers here
-
-  //     throw new Unsupported();
-  // }
-
-  // private async getPatchTreeJSEcosystem(
-  //     _patchesOutput: PatchesOutput,
-  //     workspace: string
-  // ): Promise<{ [key: string]: PatchOccurenceInfo }> {
-  //     const overall_paths: { [key: string]: PatchOccurenceInfo } = {};
-  //     // for (const [key, patch] of Object.entries(
-  //     //     _patchesOutput.workspaces[workspace].vulnerability_patch_info
-  //     // )) {
-  //     //     if (patch && patch.patches) {
-  //     //         const paths: string[][] = [];
-  //     //         const patched_paths: string[][] = [];
-  //     //         const unpatched_paths: string[][] = [];
-  //     //         const introduced_paths: string[][] = [];
-  //     //         for (const [, directDepPatchInfo] of Object.entries(patch.patches)) {
-  //     //             if ('patched_occurences' in directDepPatchInfo) {
-  //     //                 paths.push(...directDepPatchInfo['patched_occurences'].Paths);
-  //     //                 patched_paths.push(...directDepPatchInfo['patched_occurences'].Paths);
-  //     //             }
-  //     //             if ('unpatched_occurences' in directDepPatchInfo) {
-  //     //                 paths.push(...directDepPatchInfo['unpatched_occurences'].Paths);
-  //     //                 unpatched_paths.push(...directDepPatchInfo['unpatched_occurences'].Paths);
-  //     //             }
-  //     //             if ('introduced_occurences' in directDepPatchInfo) {
-  //     //                 paths.push(...directDepPatchInfo['introduced_occurences'].Paths);
-  //     //                 introduced_paths.push(...directDepPatchInfo['introduced_occurences'].Paths);
-  //     //             }
-  //     //         }
-  //     //         overall_paths[key] = {
-  //     //             affected_deps: patch.affected_deps,
-  //     //             vulnerability_id: key,
-  //     //             all_occurences: paths,
-  //     //             patched_occurences: patched_paths,
-  //     //             unpatched_occurences: unpatched_paths,
-  //     //             introduced_occurences: introduced_paths
-  //     //         };
-  //     //     }
-  //     // }
-
-  //     return overall_paths;
-  // }
 
   async getStatus(
     orgId: string,
