@@ -4,8 +4,6 @@ import { EntityManager, FindOptionsWhere, Repository } from "typeorm";
 
 import { File } from "src/base_modules/file/file.entity";
 
-import { User } from "../users/users.entity";
-
 /**
  * Injectable service to handle file operations using TypeORM.
  */
@@ -83,15 +81,15 @@ export class FileRepository {
    * Retrieves a file by its ID and the user who added it.
    *
    * @param fileId - The ID of the file to retrieve.
-   * @param addedBy - The user who added the file.
+   * @param addedById - The id of the user who added the file.
    * @returns The retrieved file.
    * @throws Will throw an error if the file is not found.
    */
-  async getById(fileId: string, addedBy: User): Promise<File> {
+  async getById(fileId: string, addedById: string): Promise<File> {
     const file = await this.fileRepository.findOne({
       where: {
         id: fileId,
-        added_by: addedBy,
+        added_by: { id: addedById },
       },
     });
     if (!file) {

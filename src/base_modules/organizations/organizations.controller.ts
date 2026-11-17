@@ -319,6 +319,8 @@ export class OrganizationsController {
   @APIDocNoDataResponseDecorator()
   @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
   @ApiErrorDecorator({ statusCode: 400, errors: [InvitationInvalidOrExpired] })
+  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
+  @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
   @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
   @Get(":organization_id/org_info_invitee")
   async inviteeInfo(

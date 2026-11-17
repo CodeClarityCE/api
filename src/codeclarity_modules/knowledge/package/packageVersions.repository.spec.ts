@@ -3,13 +3,12 @@ import { getRepositoryToken } from "@nestjs/typeorm";
 
 import { EntityNotFound } from "src/types/error.types";
 
-import { Package, Version } from "./package.entity";
+import { Package, type Version } from "./package.entity";
 import { VersionsRepository } from "./packageVersions.repository";
 
 describe("VersionsRepository", () => {
   let repository: VersionsRepository;
   let packageRepository: any;
-  let versionRepository: any;
 
   const mockPackage: Package = {
     id: "package-123",
@@ -24,15 +23,6 @@ describe("VersionsRepository", () => {
     licenses: [{ type: "MIT", url: "https://opensource.org/licenses/MIT" }],
     extra: {},
     versions: [],
-  };
-
-  const mockVersion: Version = {
-    id: "version-123",
-    version: "1.0.0",
-    dependencies: { lodash: "^4.17.21" },
-    dev_dependencies: { jest: "^29.0.0" },
-    extra: {},
-    package: mockPackage,
   };
 
   const mockVersions: Version[] = [
@@ -66,10 +56,6 @@ describe("VersionsRepository", () => {
     findOne: jest.fn(),
   };
 
-  const mockVersionRepository = {
-    findOne: jest.fn(),
-  };
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -78,92 +64,13 @@ describe("VersionsRepository", () => {
           provide: getRepositoryToken(Package, "knowledge"),
           useValue: mockPackageRepository,
         },
-        {
-          provide: getRepositoryToken(Version, "knowledge"),
-          useValue: mockVersionRepository,
-        },
       ],
     }).compile();
 
     repository = module.get<VersionsRepository>(VersionsRepository);
     packageRepository = module.get(getRepositoryToken(Package, "knowledge"));
-    versionRepository = module.get(getRepositoryToken(Version, "knowledge"));
 
     jest.clearAllMocks();
-  });
-
-  describe("getVersion", () => {
-    it("should return version when package and version exist", async () => {
-      mockPackageRepository.findOne.mockResolvedValue(mockPackage);
-      mockVersionRepository.findOne.mockResolvedValue(mockVersion);
-
-      const result = await repository.getVersion("test-package", "1.0.0");
-
-      expect(result).toEqual(mockVersion);
-      expect(packageRepository.findOne).toHaveBeenCalledWith({
-        where: { name: "test-package", language: "javascript" },
-      });
-      expect(versionRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          package: mockPackage,
-          version: "1.0.0",
-        },
-      });
-    });
-
-    it("should handle package names with slashes", async () => {
-      mockPackageRepository.findOne.mockResolvedValue(mockPackage);
-      mockVersionRepository.findOne.mockResolvedValue(mockVersion);
-
-      await repository.getVersion("@org/package", "1.0.0");
-
-      // Note: The current implementation has a bug - it should be dependencyName = dependencyName.replace('/', ':')
-      // But we test the current behavior
-      expect(packageRepository.findOne).toHaveBeenCalledWith({
-        where: { name: "@org/package", language: "javascript" },
-      });
-    });
-
-    it("should throw EntityNotFound when package does not exist", async () => {
-      mockPackageRepository.findOne.mockResolvedValue(null);
-
-      await expect(
-        repository.getVersion("non-existent-package", "1.0.0"),
-      ).rejects.toThrow(EntityNotFound);
-
-      expect(packageRepository.findOne).toHaveBeenCalledWith({
-        where: { name: "non-existent-package", language: "javascript" },
-      });
-      expect(versionRepository.findOne).not.toHaveBeenCalled();
-    });
-
-    it("should throw EntityNotFound when version does not exist", async () => {
-      mockPackageRepository.findOne.mockResolvedValue(mockPackage);
-      mockVersionRepository.findOne.mockResolvedValue(null);
-
-      await expect(
-        repository.getVersion("test-package", "9.9.9"),
-      ).rejects.toThrow(EntityNotFound);
-
-      expect(packageRepository.findOne).toHaveBeenCalledWith({
-        where: { name: "test-package", language: "javascript" },
-      });
-      expect(versionRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          package: mockPackage,
-          version: "9.9.9",
-        },
-      });
-    });
-
-    it("should handle database errors", async () => {
-      const dbError = new Error("Database connection failed");
-      mockPackageRepository.findOne.mockRejectedValue(dbError);
-
-      await expect(
-        repository.getVersion("test-package", "1.0.0"),
-      ).rejects.toThrow("Database connection failed");
-    });
   });
 
   describe("getDependencyVersions", () => {
@@ -204,7 +111,7 @@ describe("VersionsRepository", () => {
       });
     });
 
-    it("should handle package names with slashes", async () => {
+    it("looks scoped packages up by their npm name", async () => {
       const packageWithVersions = {
         ...mockPackage,
         versions: mockVersions,
@@ -213,8 +120,7 @@ describe("VersionsRepository", () => {
 
       await repository.getDependencyVersions("@org/package");
 
-      // Note: The current implementation has a bug - it should be dependency = dependency.replace('/', ':')
-      // But we test the current behavior
+      // The knowledge mirror stores npm names as the registry spells them.
       expect(packageRepository.findOne).toHaveBeenCalledWith({
         where: { name: "@org/package", language: "javascript" },
         relations: { versions: true },

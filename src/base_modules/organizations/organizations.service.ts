@@ -462,9 +462,9 @@ export class OrganizationsService {
   }
 
   /**
-   * Join an organization via an invitation
-   * @throws {InvitationInvalidOrExpired}
-   * @throws {InternalError}
+   * Get the organization an invitation is for, as seen by the invitee
+   * @throws {EntityNotFound} If no invitation matches the token and digest
+   * @throws {NotAuthorized} If the signed-in user is not the invitee
    *
    * @param inviteToken The invitation token
    * @param emailDigest The user's email digest
@@ -475,17 +475,11 @@ export class OrganizationsService {
     emailDigest: string,
     user: AuthenticatedUser,
   ): Promise<OrganizationInfoForInvitee> {
-    const invitee = await this.usersRepository.getUserById(user.userId, {});
-    if (!invitee) {
-      throw new EntityNotFound();
-    }
-
     const info = new OrganizationInfoForInvitee();
     const invitation = await this.invitationsRepository.getInvitationBy(
       {
         token_digest: inviteToken,
         user_email_digest: emailDigest,
-        user: invitee,
       },
       {
         organization: {
@@ -495,6 +489,9 @@ export class OrganizationsService {
         user: true,
       },
     );
+    if (invitation.user.id !== user.userId) {
+      throw new NotAuthorized();
+    }
 
     info.id = invitation.id;
     info.name = invitation.organization.name;
