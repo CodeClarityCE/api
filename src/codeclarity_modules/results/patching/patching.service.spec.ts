@@ -288,6 +288,74 @@ describe("PatchingService", () => {
       });
     });
 
+    /** One direct dependency pkg@1.0.0 declared as constraint, fully patched to 2.0.0. */
+    const declaredAs = async (
+      name: string,
+      constraint: string,
+    ): Promise<Record<string, string>> => {
+      mockPatchingUtilsService.getPatchingResult.mockResolvedValue({
+        ...mockPatchesOutput,
+        workspaces: {
+          ".": { patches: { [`${name}@1.0.0`]: patch("FULL", "2.0.0") } },
+        },
+      });
+      mockSbomUtilsService.getSbomResult.mockResolvedValue({
+        workspaces: {
+          ".": {
+            dependencies: {},
+            start: { dependencies: [{ name, version: "1.0.0", constraint }] },
+          },
+        },
+        analysis_info: { package_manager: "NPM" },
+      });
+      const result = await manifest();
+      return (
+        JSON.parse(result.patched_manifest_raw) as {
+          dependencies: Record<string, string>;
+        }
+      ).dependencies;
+    };
+
+    it.each([
+      ["git", "git+https://github.com/user/pkg.git#v1.0.0"],
+      ["GitHub shorthand", "github:user/pkg"],
+      ["user/repo", "user/pkg#main"],
+      ["file", "file:../pkg"],
+      ["link", "link:../pkg"],
+      ["workspace", "workspace:^1.0.0"],
+      ["tarball url", "https://example.com/pkg-1.0.0.tgz"],
+      ["dist-tag", "latest"],
+    ])("keeps a %s spec as written", async (_kind, constraint) => {
+      expect(await declaredAs("pkg", constraint)).toEqual({ pkg: constraint });
+    });
+
+    it.each([
+      ["^1.0.0", "^2.0.0"],
+      ["~1.0.0", "~2.0.0"],
+      ["1.0.0", "2.0.0"],
+      [">=1.0.0 <2.0.0", "2.0.0"],
+      ["1.x", "2.0.0"],
+    ])("rewrites the registry range %s", async (constraint, upgraded) => {
+      expect(await declaredAs("pkg", constraint)).toEqual({ pkg: upgraded });
+    });
+
+    it("leaves an npm alias out instead of adding its real name", async () => {
+      expect(
+        await declaredAs("string-width", "npm:string-width@^4.2.0"),
+      ).toEqual({});
+    });
+
+    it("reads the js-sbom result, not the newest SBOM", async () => {
+      mockSbomUtilsService.getSbomResult.mockResolvedValue(sbom("NPM"));
+
+      await manifest();
+
+      expect(mockSbomUtilsService.getSbomResult).toHaveBeenCalledWith(
+        "analysis-123",
+        ["js-sbom"],
+      );
+    });
+
     it("names the manifest relative to the project and no server path", async () => {
       mockSbomUtilsService.getSbomResult.mockResolvedValue(sbom("NPM"));
 
@@ -316,6 +384,20 @@ describe("PatchingService", () => {
           "analysis-123",
           mockUser,
           "invalid-workspace",
+        ),
+      ).rejects.toThrow(UnknownWorkspace);
+    });
+
+    it("treats an inherited key as an unknown workspace", async () => {
+      mockSbomUtilsService.getSbomResult.mockResolvedValue(sbom("NPM"));
+
+      await expect(
+        service.getPatchedManifest(
+          "org-123",
+          "project-123",
+          "analysis-123",
+          mockUser,
+          "constructor",
         ),
       ).rejects.toThrow(UnknownWorkspace);
     });

@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { validRange } from "semver";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import {
@@ -66,7 +67,7 @@ export class PatchingService {
 
     const patchesOutput: PatchesOutput =
       await this.patchingUtilsService.getPatchingResult(analysisId);
-    if (!(workspace in patchesOutput.workspaces)) {
+    if (!Object.hasOwn(patchesOutput.workspaces, workspace)) {
       throw new UnknownWorkspace();
     }
 
@@ -89,14 +90,20 @@ export class PatchingService {
 
     const patchesOutput: PatchesOutput =
       await this.patchingUtilsService.getPatchingResult(analysisId);
-    const sbomOutput: SbomOutput =
-      await this.sbomUtilsService.getSbomResult(analysisId);
+    // The patches describe npm packages, so only the JavaScript dependency list applies.
+    const sbomOutput: SbomOutput = await this.sbomUtilsService.getSbomResult(
+      analysisId,
+      ["js-sbom"],
+    );
 
-    const patches = patchesOutput.workspaces[workspace];
-    const sbomWorkspace = sbomOutput.workspaces?.[workspace];
-    if (!patches || !sbomWorkspace) {
+    if (
+      !Object.hasOwn(patchesOutput.workspaces, workspace) ||
+      !Object.hasOwn(sbomOutput.workspaces ?? {}, workspace)
+    ) {
       throw new UnknownWorkspace();
     }
+    const patches = patchesOutput.workspaces[workspace]!;
+    const sbomWorkspace = sbomOutput.workspaces[workspace]!;
 
     const packageManager = sbomOutput.analysis_info.package_manager;
     if (!JS_PACKAGE_MANAGERS.has(packageManager)) {
@@ -229,19 +236,23 @@ function semverString(version: SemVer): string {
   return version.PreReleaseTag ? `${base}-${version.PreReleaseTag}` : base;
 }
 
-/** The manifest constraints after upgrading; a ^ or ~ range keeps its operator. */
+/**
+ * The manifest constraints after upgrading; a ^ or ~ range keeps its operator.
+ * Only registry ranges are rewritten: git, file, workspace, url and tag specs stay as written.
+ * An npm alias is left out, since the SBOM names the real package, not the declared key.
+ */
 function upgradedConstraints(
   upgrades: Record<string, ManifestUpgrade>,
 ): Record<string, string> {
   const constraints: Record<string, string> = {};
   for (const [name, upgrade] of Object.entries(upgrades)) {
-    if (upgrade.upgrade_to === null) {
-      constraints[name] = upgrade.original_constraint;
+    const original = upgrade.original_constraint;
+    if (original.startsWith("npm:")) continue;
+    if (upgrade.upgrade_to === null || validRange(original) === null) {
+      constraints[name] = original;
       continue;
     }
-    const operator = /^[\^~]\d/.test(upgrade.original_constraint)
-      ? upgrade.original_constraint[0]
-      : "";
+    const operator = /^[\^~]\d/.test(original) ? original[0] : "";
     constraints[name] = `${operator}${upgrade.upgrade_to}`;
   }
   return constraints;
