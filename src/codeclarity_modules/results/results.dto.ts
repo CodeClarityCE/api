@@ -1,5 +1,12 @@
 import { Transform } from "class-transformer";
-import { IsInt, IsOptional, IsString, Min } from "class-validator";
+import {
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
+} from "class-validator";
 
 /**
  * Path parameters for analysis-related endpoints
@@ -13,6 +20,24 @@ export class AnalysisParamsDto {
 
   @IsString()
   analysis_id!: string;
+}
+
+/**
+ * Query parameters for reading one result of an analysis by plugin type
+ */
+export class ResultByTypeQuery {
+  @IsUUID()
+  org_id!: string;
+
+  @IsUUID()
+  project_id!: string;
+
+  @IsUUID()
+  analysis_id!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  type!: string;
 }
 
 /**

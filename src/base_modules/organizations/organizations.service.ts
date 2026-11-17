@@ -351,7 +351,7 @@ export class OrganizationsService {
       { id: invitationId, organization: { id: orgId } },
       { user: true },
     );
-    await this.invitationsRepository.deleteInvitation(invitation);
+    await this.invitationsRepository.deleteInvitation(invitation.id);
 
     await this.organizationLoggerService.addAuditLog(
       ActionType.OrganizationInvitationRevoked,
@@ -442,13 +442,13 @@ export class OrganizationsService {
     membership.user = invitation.user;
 
     await this.membershipsRepository.saveMembership(membership);
-    await this.invitationsRepository.deleteInvitation(invitation);
+    await this.invitationsRepository.deleteInvitation(invitation.id);
 
     const mail = await this.emailRepository.getActivationMail(
       inviteToken,
       emailDigest,
     );
-    await this.emailRepository.deleteMail(mail);
+    await this.emailRepository.deleteMail(mail.id);
 
     await this.organizationLoggerService.addAuditLog(
       ActionType.OrganizationMemberJoined,

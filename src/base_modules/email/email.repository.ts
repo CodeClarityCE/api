@@ -78,13 +78,13 @@ export class EmailRepository {
   }
 
   /**
-   * Deletes a given Email entity from the database by its primary key.
+   * Deletes an Email from the database by its id.
    *
-   * @param mail - The Email entity to delete.
+   * @param mailId - The id of the email to delete.
    * @returns A Promise that resolves once the deletion is complete.
    */
-  async deleteMail(mail: Email): Promise<void> {
-    await this.emailRepository.delete(mail);
+  async deleteMail(mailId: string): Promise<void> {
+    await this.emailRepository.delete({ id: mailId });
   }
 
   /**

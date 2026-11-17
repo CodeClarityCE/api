@@ -1,3 +1,4 @@
+import { Email } from "../../src/base_modules/email/email.entity";
 import { EmailService } from "../../src/base_modules/email/email.service";
 import { Invitation } from "../../src/base_modules/organizations/invitations/invitation.entity";
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
@@ -77,6 +78,32 @@ describe("Organization invitations (e2e)", () => {
     );
   }
 
+  // Raw SQL, since the entities type these columns as never null.
+  async function clearNullableColumns(token: string): Promise<void> {
+    const db = testHelper.getDataSource();
+    await db.query(
+      "UPDATE invitation SET created_on = NULL WHERE token_digest = $1",
+      [token],
+    );
+    await db.query("UPDATE email SET ttl = NULL WHERE token_digest = $1", [
+      token,
+    ]);
+  }
+
+  function invitationRow(token: string): Promise<Invitation | null> {
+    return testHelper
+      .getDataSource()
+      .getRepository(Invitation)
+      .findOneBy({ token_digest: token });
+  }
+
+  function emailRow(token: string): Promise<Email | null> {
+    return testHelper
+      .getDataSource()
+      .getRepository(Email)
+      .findOneBy({ token_digest: token });
+  }
+
   describe("GET /org/:id/org_info_invitee", () => {
     it("shows the invitee the organization they are invited to", async () => {
       const { token, digest } = await invite();
@@ -150,6 +177,62 @@ describe("Organization invitations (e2e)", () => {
 
       expect(response.statusCode).toBe(404);
       expect(response.json().error_code).toBe("EntityNotFound");
+    });
+
+    it.each(["token", "user_email_hash"])(
+      "answers ValidationFailed without %s",
+      async (missing) => {
+        const { token, digest } = await invite();
+        const query = new URLSearchParams({ token, user_email_hash: digest });
+        query.delete(missing);
+
+        const response = await testHelper.makeAuthenticatedRequest(
+          "GET",
+          `/org/${owner.organization.id}/org_info_invitee?${query.toString()}`,
+          invitee.accessToken,
+        );
+
+        expect(response.statusCode).toBe(400);
+        expect(response.json().error_code).toBe("ValidationFailed");
+      },
+    );
+  });
+
+  describe("removing an invitation", () => {
+    it("revoking deletes the row even when created_on and ttl are null", async () => {
+      const { token } = await invite();
+      const { id } = (await invitationRow(token))!;
+      await testHelper
+        .getDataSource()
+        .query(
+          "UPDATE invitation SET created_on = NULL, ttl = NULL WHERE id = $1",
+          [id],
+        );
+
+      const response = await testHelper.makeAuthenticatedRequest(
+        "DELETE",
+        `/org/${owner.organization.id}/invitations/${id}`,
+        owner.accessToken,
+      );
+
+      expect(response.statusCode).toBe(200);
+      expect(await invitationRow(token)).toBeNull();
+    });
+
+    it("joining deletes the invitation and its email even when their nullable dates are null", async () => {
+      const { token, digest } = await invite();
+      await clearNullableColumns(token);
+
+      const response = await testHelper.makeAuthenticatedRequest(
+        "POST",
+        `/org/${owner.organization.id}/join`,
+        invitee.accessToken,
+        { token, email_digest: digest },
+      );
+
+      expect(response.statusCode).toBe(201);
+      expect(await invitationRow(token)).toBeNull();
+      expect(await emailRow(token)).toBeNull();
     });
   });
 });
