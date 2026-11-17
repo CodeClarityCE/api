@@ -1,6 +1,6 @@
 import type { CVSS2, CVSS3, CVSS31 } from "../../knowledge/cvss.types";
 import type { OwaspTop10Info } from "../../knowledge/owasp/owasp.types";
-import type { PatchInfo, PatchSummary } from "../patching/patching.types";
+import type { PatchInfo } from "../patching/patching.types";
 import type { ParsedGitUrl, StatusError } from "../sbom/sbom.types";
 
 export interface VulnSourceInfo {
@@ -79,19 +79,6 @@ export interface ReferenceInfo {
 
 export interface OtherInfo {
   package_manager: string;
-}
-
-export interface VulnerabilityDetails {
-  vulnerability_info: VulnerabilityInfo;
-  dependency_info?: DependencyInfo;
-  severities: SeverityInfo;
-  owasp_top_10: OwaspInfo | null;
-  weaknesses: WeaknessInfo[];
-  patch: PatchSummary;
-  common_consequences: Record<string, CommonConsequencesInfo[]>;
-  references: ReferenceInfo[];
-  location: string[];
-  other: OtherInfo;
 }
 
 export interface Output {

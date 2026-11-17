@@ -50,26 +50,6 @@ interface AnalysisInfo {
   self_managed_workspace_name: string;
 }
 
-// Types from patching2.types.ts (processed/API response types)
-
-export interface PatchSummary {
-  affected_deps: string[];
-  affected_dep_name: string;
-  occurance_count: number;
-  patchable_occurances_count: number;
-  unpatchable_occurances_count: number;
-  vulnerability_id: string;
-  introduction_type: string;
-  patch_type: string;
-  vulnerability_info: VulnerabilitySummary;
-  patches: Record<string, unknown>;
-}
-
-export interface VulnerabilitySummary {
-  Severity: string;
-  Weaknesses?: string[];
-}
-
 export interface PatchingAnalysisStats {
   before_patch_number_of_issues: number;
   before_patch_number_of_vulnerabilities: number;
