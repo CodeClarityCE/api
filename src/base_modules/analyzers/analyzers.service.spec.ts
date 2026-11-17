@@ -759,6 +759,9 @@ describe("AnalyzersService", () => {
       jest
         .spyOn(analyzersRepository, "doesAnalyzerBelongToOrg")
         .mockResolvedValue();
+      jest
+        .spyOn(analyzersRepository, "getAnalyzerById")
+        .mockResolvedValue({ name: "JS" } as any);
       jest.spyOn(analyzersRepository, "deleteAnalyzer").mockResolvedValue();
 
       // Act

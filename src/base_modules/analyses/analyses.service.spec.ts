@@ -12,6 +12,7 @@ import { NotAuthorized } from "src/types/error.types";
 import { AnaylzerMissingConfigAttribute } from "../analyzers/analyzers.errors";
 import { AnalyzersRepository } from "../analyzers/analyzers.repository";
 import { AuthenticatedUser, ROLE } from "../auth/auth.types";
+import { OrganizationLoggerService } from "../organizations/log/organizationLogger.service";
 import { MemberRole } from "../organizations/memberships/orgMembership.types";
 import { PluginAvailabilityService } from "../plugin-availability/plugin-availability.service";
 import { InMemoryConsumerProbe } from "../plugin-availability/testing/in-memory-consumer-probe";
@@ -214,6 +215,10 @@ describe("AnalysesService", () => {
             getScheduledAnalysesByProjectId: jest.fn(),
             getAllByAnalysisId: jest.fn(),
           },
+        },
+        {
+          provide: OrganizationLoggerService,
+          useValue: { addAuditLog: jest.fn() },
         },
         {
           provide: LanguageDetectionService,
@@ -803,6 +808,10 @@ describe("AnalysesService", () => {
       jest
         .spyOn(analysesRepository, "doesAnalysesBelongToProject")
         .mockResolvedValue();
+      jest.spyOn(analysesRepository, "getAnalysisById").mockResolvedValue({
+        project: { name: "widget" },
+        analyzer: { name: "JS" },
+      } as any);
       jest.spyOn(analysesRepository, "deleteByIds").mockResolvedValue(1);
 
       await service.delete("org-123", "project-123", "analysis-123", mockUser);

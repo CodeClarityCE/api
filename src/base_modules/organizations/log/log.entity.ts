@@ -10,40 +10,11 @@ import {
 
 import type { Organization } from "../organization.entity";
 
-export enum ActionSeverity {
-  Critical = 3,
-  High = 2,
-  Medium = 1,
-  Low = 0,
-}
-
-export enum ActionClassType {
-  Project = "Project",
-  Analyzer = "Analyzer",
-  Analysis = "Analysis",
-  Organization = "Organization",
-  Unkown = "Unkown",
-}
-
-export enum ActionType {
-  SampleCreate = "SampleCreate",
-  ProjectCreate = "ProjectCreate",
-  ProjectUpdate = "ProjectUpdate",
-  ProjectDelete = "ProjectDelete",
-  AnalyzerCreate = "AnalyzerCreate",
-  AnalyzerUpdate = "AnalyzerUpdate",
-  AnalyzerDelete = "AnalyzerDelete",
-  AnalysisFailed = "AnalysisFailed",
-  OrganizationUserLeft = "OrganizationUserLeft",
-  OrganizationCreated = "OrganizationCreated",
-  OrganizationMembershipRevoked = "OrganizationMembershipRevoked",
-  OrganizationInvitationRevoked = "OrganizationInvitationRevoked",
-  OrganizationMemberJoined = "OrganizationMemberJoined",
-  OrganizationMemberInvited = "OrganizationMemberInvited",
-  OrganizationIntegrationAdded = "OrganizationIntegrationAdded",
-  OrganizationIntegrationUpdated = "OrganizationIntegrationUpdated",
-  OrganizationIntegrationDeleted = "OrganizationIntegrationDeleted",
-}
+import type {
+  ActionClassType,
+  ActionSeverity,
+  ActionType,
+} from "./orgAuditLog.types";
 
 @Entity()
 export class Log {
@@ -52,21 +23,17 @@ export class Log {
   @Expose()
   id!: string;
 
-  @Column()
+  @Column("integer")
   @ApiProperty()
   @Expose()
   action_severity!: ActionSeverity;
 
-  @Column({
-    length: 25,
-  })
+  @Column("varchar", { length: 25 })
   @ApiProperty()
   @Expose()
   action_class!: ActionClassType;
 
-  @Column({
-    length: 50,
-  })
+  @Column("varchar", { length: 50 })
   @ApiProperty()
   @Expose()
   action!: ActionType;

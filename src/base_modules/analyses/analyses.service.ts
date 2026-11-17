@@ -13,6 +13,8 @@ import {
   AnalysisRun,
 } from "src/base_modules/analyses/analysis.types";
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import { OrganizationLoggerService } from "src/base_modules/organizations/log/organizationLogger.service";
+import { ActionType } from "src/base_modules/organizations/log/orgAuditLog.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
 import {
   BatchItemResult,
@@ -92,6 +94,7 @@ export class AnalysesService {
     private readonly analysesRepository: AnalysesRepository,
     @InjectRepository(Policy, "codeclarity")
     private policyRepository: Repository<Policy>,
+    private readonly organizationLoggerService: OrganizationLoggerService,
   ) {}
 
   /**
@@ -297,6 +300,13 @@ export class AnalysesService {
         project_id: projectId,
       });
     }
+
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.AnalysisStarted,
+      `The User started an analysis of project ${project.name} with analyzer ${analyzer.name}.`,
+      orgId,
+      user.userId,
+    );
 
     // Return the ID of the created analysis as a confirmation
     return created_analysis.id;
@@ -527,7 +537,19 @@ export class AnalysesService {
     // (3) Check if the analysis belongs to the project
     await this.analysesRepository.doesAnalysesBelongToProject(id, projectId);
 
+    const analysis = await this.analysesRepository.getAnalysisById(id, {
+      project: true,
+      analyzer: true,
+    });
+
     await this.analysesRepository.deleteByIds([id]);
+
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.AnalysisDeleted,
+      `The User deleted an analysis of project ${analysis.project.name} made with analyzer ${analysis.analyzer.name}.`,
+      orgId,
+      user.userId,
+    );
   }
 
   /**
@@ -600,6 +622,16 @@ export class AnalysesService {
     }
     if (toDelete.length > 0) {
       await this.analysesRepository.deleteByIds(toDelete);
+
+      // One aggregated audit log instead of one per analysis
+      const project = await this.projectsRepository.getProjectById(projectId);
+      const noun = toDelete.length === 1 ? "analysis" : "analyses";
+      await this.organizationLoggerService.addAuditLog(
+        ActionType.AnalysisDeleted,
+        `The User deleted ${toDelete.length} ${noun} of project ${project.name}.`,
+        orgId,
+        user.userId,
+      );
     }
 
     const results: BatchItemResult[] = [
