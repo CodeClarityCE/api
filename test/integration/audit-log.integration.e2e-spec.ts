@@ -61,6 +61,31 @@ describe("Audit log (e2e)", () => {
       ]);
     });
 
+    it("writes nothing for a scheduled analysis that does not run now", async () => {
+      const projectId = await createProject(admin, "widget");
+      const analyzer = await request(admin, "POST", "/analyzers", {
+        name: "Nightly",
+        description: "Analyzer for a scheduled run",
+        steps: [[{ name: "js-sbom", version: "1.0.0", config: {} }]],
+      });
+
+      const response = await request(
+        admin,
+        "POST",
+        `/projects/${projectId}/analyses`,
+        {
+          analyzer_id: analyzer.json().id,
+          branch: "main",
+          config: {},
+          schedule_type: "daily",
+          next_scheduled_run: new Date(Date.now() + 86_400_000).toISOString(),
+        },
+      );
+
+      expect(response.statusCode).toBe(201);
+      expect(await auditEntries(admin, "AnalysisStarted")).toEqual([]);
+    });
+
     it("writes nothing when the start is refused", async () => {
       const projectId = await createProject(admin, "widget");
       const outsider = await testHelper.createTestUser({

@@ -291,7 +291,8 @@ export class AnalysesService {
       orgId,
     );
 
-    // Scheduled analyses (daily/weekly) are triggered by the scheduler instead
+    // Scheduled analyses (daily/weekly) are started later by the scheduler,
+    // so only an immediate run is queued and recorded as started now.
     if (analysis.schedule_type === "once") {
       await this.publishStart({
         analysis_id: created_analysis.id,
@@ -299,14 +300,13 @@ export class AnalysesService {
         organization_id: orgId,
         project_id: projectId,
       });
+      await this.organizationLoggerService.addAuditLog(
+        ActionType.AnalysisStarted,
+        `The User started an analysis of project ${project.name} with analyzer ${analyzer.name}.`,
+        orgId,
+        user.userId,
+      );
     }
-
-    await this.organizationLoggerService.addAuditLog(
-      ActionType.AnalysisStarted,
-      `The User started an analysis of project ${project.name} with analyzer ${analyzer.name}.`,
-      orgId,
-      user.userId,
-    );
 
     // Return the ID of the created analysis as a confirmation
     return created_analysis.id;
