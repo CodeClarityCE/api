@@ -5,22 +5,13 @@ import ms from "ms";
 
 import {
   AuthenticatedUser,
-  GithubAuthenticatedUser,
-  GitlabAuthenticatedUser,
   TokenRefreshResponse,
   TokenResponse,
 } from "src/base_modules/auth/auth.types";
-import { GitlabIntegrationTokenService } from "src/base_modules/integrations/gitlab/gitlabToken.service";
 import { UsersRepository } from "src/base_modules/shared/repositories";
-import { SocialType } from "src/base_modules/users/user.types";
 import { User } from "src/base_modules/users/users.entity";
 import { UsersService } from "src/base_modules/users/users.service";
-import {
-  AlreadyExists,
-  EntityNotFound,
-  FailedToAuthenticateSocialAccount,
-  UserDoesNotExist,
-} from "src/types/error.types";
+import { EntityNotFound, UserDoesNotExist } from "src/types/error.types";
 
 import { CannotPerformActionOnSocialAccount } from "../users/users.errors";
 
@@ -35,7 +26,6 @@ import { hashPassword } from "./password";
 export class AuthService {
   constructor(
     private jwtService: JwtService,
-    private gitlabIntegrationTokenService: GitlabIntegrationTokenService,
     @Inject(forwardRef(() => UsersService))
     private userService: UsersService,
     private readonly usersRepository: UsersRepository,
@@ -89,62 +79,6 @@ export class AuthService {
       authenticatedUser!.activated,
     );
     return tokenResponse;
-  }
-
-  /**
-   * Authenticate with github OAuth sign-in. Creates an account if not exists, otherwise login.
-   * @throws {NotAuthenticated} In case an error happened during the authentication.
-   * @throws {FailedToAuthenticateSocialAccount} If an error happened during the registration.
-   * @throws {AlreadyExists} A user with that email is already registered.
-   * @param user The authenticated github user
-   * @returns a signed JWT token and refresh token
-   */
-  async authenticateGithubSocial(
-    user: GithubAuthenticatedUser,
-  ): Promise<TokenResponse> {
-    if (!user.email) {
-      throw new FailedToAuthenticateSocialAccount();
-    }
-
-    // Check if a user with said social id exists
-    const exists = await this.userService.existsSocialUser(
-      user.github_user_id,
-      SocialType.GITHUB,
-    );
-    if (exists) {
-      return await this.loginGithubSocial(user);
-    } else {
-      // If a user with said email already exists, it will throw
-      return await this.registerGithubSocial(user);
-    }
-  }
-
-  /**
-   * Authenticate with gitlab OAuth sign-in. Creates an account if not exists, otherwise login.
-   * @throws {FailedToAuthenticateSocialAccount} In case an error happened during the authentication.
-   * @throws {FailedToCreateSocialAccount} If an error happened during the registration.
-   * @throws {AlreadyExists} A user with that email is already registered.
-   * @param user The authenticated gitlab user
-   * @returns a signed JWT token and refresh token
-   */
-  async authenticateGitlabSocial(
-    user: GitlabAuthenticatedUser,
-  ): Promise<TokenResponse> {
-    if (!user.email) {
-      throw new FailedToAuthenticateSocialAccount();
-    }
-
-    // Check if a user with said social id exists
-    const exists = await this.userService.existsSocialUser(
-      user.gitlab_user_id,
-      SocialType.GITLAB,
-    );
-    if (exists) {
-      return await this.loginGitlabSocial(user);
-    } else {
-      // If a user with said email already exists, it will throw
-      return await this.registerGitlabSocial(user);
-    }
   }
 
   /**
@@ -223,130 +157,6 @@ export class AuthService {
       throw new EntityNotFound();
     }
     return user;
-  }
-
-  /**
-   * Login an account using the github Oauth login (if account exists)
-   * @throws {FailedToAuthenticateSocialAccount} In case an error happened during the authentication.
-   * @param authenticatedUser The authenticated github user
-   * @returns a signed JWT token but no refresh token
-   */
-  async loginGithubSocial(
-    githubUser: GithubAuthenticatedUser,
-  ): Promise<TokenResponse> {
-    if (!githubUser.email) {
-      throw new FailedToAuthenticateSocialAccount();
-    }
-
-    const user = await this.usersRepository.getUserByEmail(githubUser.email);
-    if (!user) {
-      throw new FailedToAuthenticateSocialAccount();
-    }
-    return await this.signJWT(user.id, ["ROLE_USER"], user.activated);
-  }
-
-  /**
-   * Login an account using the gitlab Oauth login (if account exists)
-   * @throws {FailedToAuthenticateSocialAccount} In case an error happened during the authentication.
-   * @param authenticatedUser The authenticated gitlab user
-   * @returns a signed JWT token but no refresh token
-   */
-  async loginGitlabSocial(
-    gitlabUser: GitlabAuthenticatedUser,
-  ): Promise<TokenResponse> {
-    if (!gitlabUser.email) {
-      throw new FailedToAuthenticateSocialAccount();
-    }
-
-    const user = await this.usersRepository.getUserByEmail(gitlabUser.email);
-    if (!user) {
-      throw new FailedToAuthenticateSocialAccount();
-    }
-    // Gitlab revokes the old token during re-authentication, so we need to replace the old revoked one
-    await this.gitlabIntegrationTokenService.updateOAuthTokenFromSignIn(
-      user,
-      gitlabUser.access_token,
-      gitlabUser.refresh_token,
-    );
-
-    return await this.signJWT(user.id, ["ROLE_USER"], user.activated);
-  }
-
-  /**
-   * Register an account using the github Oauth login
-   * @throws {AlreadyExists} In case an account with the same email already exists
-   * @throws {FailedToAuthenticateSocialAccount} If an error happened during the registration
-   * @param authenticatedUser The authenticated github user
-   * @returns a signed JWT token but no refresh token
-   */
-  async registerGithubSocial(
-    user: GithubAuthenticatedUser,
-  ): Promise<TokenResponse> {
-    if (!user.email) {
-      throw new FailedToAuthenticateSocialAccount();
-    }
-
-    try {
-      const existsUser = await this.userService.existsUserEmail(user.email);
-
-      if (existsUser) {
-        throw new AlreadyExists();
-      }
-
-      const id = await this.userService.registerSocial(
-        user.email,
-        user.access_token,
-        SocialType.GITHUB,
-        user.github_user_id,
-        user.avatar_url,
-        user.refresh_token,
-      );
-      return await this.signJWT(id, ["ROLE_USER"], false);
-    } catch (err) {
-      if (err instanceof AlreadyExists) {
-        throw err;
-      }
-      throw new FailedToAuthenticateSocialAccount(err);
-    }
-  }
-
-  /**
-   * Register an account using the gitlab Oauth login
-   * @throws {AlreadyExists} In case an account with the same email already exists
-   * @throws {FailedToAuthenticateSocialAccount} If an error happened during the registration
-   * @param authenticatedUser The authenticated gitlab user
-   * @returns a signed JWT token but no refresh token
-   */
-  async registerGitlabSocial(
-    user: GitlabAuthenticatedUser,
-  ): Promise<TokenResponse> {
-    if (!user.email) {
-      throw new FailedToAuthenticateSocialAccount();
-    }
-
-    try {
-      const existsUser = await this.userService.existsUserEmail(user.email);
-
-      if (existsUser) {
-        throw new AlreadyExists();
-      }
-
-      const id = await this.userService.registerSocial(
-        user.email,
-        user.access_token,
-        SocialType.GITLAB,
-        user.gitlab_user_id,
-        user.avatar_url,
-        user.refresh_token,
-        "https://gitlab.com",
-      ); // TODO: take from conf
-      return await this.signJWT(id, ["ROLE_USER"], false);
-    } catch (err) {
-      if (err instanceof AlreadyExists) {
-        throw err;
-      }
-      throw new FailedToAuthenticateSocialAccount(err);
-    }
   }
 
   /**

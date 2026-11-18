@@ -47,55 +47,6 @@ class EnvironmentVariables {
   @IsNotEmpty()
   HOST!: string;
 
-  // Github oauth
-  /**
-   * The client ID for GitHub OAuth. Optional: GitHub sign-in needs it.
-   */
-  @IsOptional()
-  @IsString()
-  GITHUB_AUTH_CLIENT_ID?: string;
-
-  /**
-   * The client secret for GitHub OAuth.
-   */
-  @IsOptional()
-  @IsString()
-  GITHUB_AUTH_CLIENT_SECRET?: string;
-
-  // Gitlab oauth
-  /**
-   * The client ID for GitLab OAuth. Optional: GitLab sign-in needs it.
-   */
-  @IsOptional()
-  @IsString()
-  GITLAB_AUTH_CLIENT_ID?: string;
-
-  /**
-   * The client secret for GitLab OAuth.
-   */
-  @IsOptional()
-  @IsString()
-  GITLAB_AUTH_CLIENT_SECRET?: string;
-
-  /**
-   * The hostname or IP address of the GitLab instance.
-   */
-  @IsNotEmpty()
-  GITLAB_AUTH_HOST!: string;
-
-  // Authentication
-  /**
-   * The callback URL for GitHub authentication.
-   */
-  @IsNotEmpty()
-  GITHUB_AUTH_CALLBACK!: string;
-
-  /**
-   * The callback URL for GitLab authentication.
-   */
-  @IsNotEmpty()
-  GITLAB_AUTH_CALLBACK!: string;
-
   // AMQP
   /**
    * The name of the queue to connect to.
@@ -185,18 +136,6 @@ class EnvironmentVariables {
    */
   @IsNotEmpty()
   COOKIE_SECRET!: string;
-
-  /**
-   * The callback URL for GitHub authentication (again).
-   */
-  @IsNotEmpty()
-  GITHUB_CALLBACK!: string;
-
-  /**
-   * The callback URL for GitLab authentication (again).
-   */
-  @IsNotEmpty()
-  GITLAB_CALLBACK!: string;
 
   /**
    * The hostname or IP address of the web server.

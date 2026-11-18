@@ -107,10 +107,6 @@ describe("GitlabIntegrationService", () => {
     const mockGitlabIntegrationTokenService = {
       validatePersonalAccessTokenPermissions: jest.fn(),
       getPersonalAccessTokenExpiryRemote: jest.fn(),
-      validateOAuthAccessTokenPermissions: jest.fn(),
-      getOAuthTokenExpiryRemote: jest.fn(),
-      refreshOAuthToken: jest.fn(),
-      updateOAuthTokenFromSignIn: jest.fn(),
     };
 
     const mockOrganizationsRepository = {

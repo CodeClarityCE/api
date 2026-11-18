@@ -34,15 +34,17 @@ describe("GitHub and GitLab sign-in routes (e2e)", () => {
     expect(response.statusCode).toBe(404);
   });
 
-  it("answers 404 to completing a social account setup", async () => {
+  // POST /users/:email (resend the registration email) now matches this path.
+  it("no longer completes a social account setup", async () => {
     const response = await testHelper.makeAuthenticatedRequest(
       "POST",
       "/users/complete_social_setup",
       user.accessToken,
-      { first_name: "Ada", last_name: "Lovelace", handle: "ada" },
+      { first_name: "Ada", last_name: "Lovelace", handle: "adalovelace" },
     );
 
-    expect(response.statusCode).toBe(404);
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error_code).toBe("ValidationFailed");
   });
 
   it("still signs in with a password", async () => {

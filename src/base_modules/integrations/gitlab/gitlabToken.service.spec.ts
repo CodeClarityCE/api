@@ -7,8 +7,6 @@ import {
   IntegrationTokenRetrievalFailed,
 } from "src/types/error.types";
 
-import type { User } from "../../users/users.entity";
-
 import { GitlabIntegrationTokenService } from "./gitlabToken.service";
 
 // Mock fetch globally
@@ -16,19 +14,6 @@ global.fetch = jest.fn();
 
 describe("GitlabIntegrationTokenService", () => {
   let service: GitlabIntegrationTokenService;
-
-  const mockUser: User = {
-    id: "test-user-id",
-    email: "test@example.com",
-    first_name: "Test",
-    last_name: "User",
-    activated: true,
-    registration_verified: true,
-    password: "hashed-password",
-    created_on: new Date(),
-    integrations: [],
-    analyses: [],
-  } as any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -405,42 +390,6 @@ describe("GitlabIntegrationTokenService", () => {
       );
 
       expect(result).toEqual([false, undefined]);
-    });
-  });
-
-  describe("getOAuthTokenExpiryRemote", () => {
-    it("should throw Error for unimplemented method", async () => {
-      await expect(
-        service.getOAuthTokenExpiryRemote("test-token"),
-      ).rejects.toThrow("Method not implemented.");
-    });
-  });
-
-  describe("validateOAuthAccessTokenPermissions", () => {
-    it("should throw Error for unimplemented method", async () => {
-      await expect(
-        service.validateOAuthAccessTokenPermissions("test-token", {}),
-      ).rejects.toThrow("Method not implemented.");
-    });
-  });
-
-  describe("refreshOAuthToken", () => {
-    it("should throw Error for unimplemented method", async () => {
-      await expect(
-        service.refreshOAuthToken("refresh-token", "integration-id"),
-      ).rejects.toThrow("Method not implemented.");
-    });
-  });
-
-  describe("updateOAuthTokenFromSignIn", () => {
-    it("should throw Error for unimplemented method", async () => {
-      await expect(
-        service.updateOAuthTokenFromSignIn(
-          mockUser,
-          "new-access-token",
-          "new-refresh-token",
-        ),
-      ).rejects.toThrow("Method not implemented.");
     });
   });
 });
