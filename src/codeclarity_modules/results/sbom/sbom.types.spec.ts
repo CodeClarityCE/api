@@ -554,6 +554,11 @@ describe("SBOM Types", () => {
         workspaces: ["default", "frontend", "backend"],
         package_manager: "npm",
         package_managers: { default: "npm", frontend: "npm", backend: "npm" },
+        ecosystem_package_managers: {
+          default: { npm: "npm" },
+          frontend: { npm: "npm" },
+          backend: { npm: "npm" },
+        },
       };
 
       expect(workspacesOutput.workspaces).toEqual([
@@ -569,6 +574,7 @@ describe("SBOM Types", () => {
         workspaces: [],
         package_manager: "npm",
         package_managers: {},
+        ecosystem_package_managers: {},
       };
 
       expect(workspacesOutput.workspaces).toEqual([]);

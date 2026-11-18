@@ -118,6 +118,7 @@ describe("SbomUtilsService", () => {
   beforeEach(async () => {
     const mockResultRepository = {
       findOne: jest.fn(),
+      find: jest.fn(),
     };
 
     const mockVulnerabilitiesUtilsService = {
@@ -559,6 +560,74 @@ describe("SbomUtilsService", () => {
           mockSBOM,
         ),
       ).rejects.toThrow();
+    });
+  });
+
+  describe("a workspace with both npm and Composer dependencies", () => {
+    // A JS and a PHP SBOM that both name their root workspace ".".
+    const sbomWith = (
+      name: string,
+      version: string,
+      packageManager: string,
+    ): SBOMOutput => {
+      const sbom = createMockSBOMOutput();
+      sbom.analysis_info.package_manager = packageManager;
+      sbom.workspaces = {
+        ".": {
+          dependencies: {
+            [name]: {
+              [version]: {
+                ...sbom.workspaces[mockWorkspace]!.dependencies[
+                  "test-package"
+                ]!["1.0.0"]!,
+                Key: `${name}@${version}`,
+              },
+            },
+          },
+          start: { dependencies: [{ name, version, constraint: version }] },
+        },
+      };
+      return sbom;
+    };
+
+    beforeEach(() => {
+      resultRepository.find.mockResolvedValue([
+        {
+          ...createMockResult(sbomWith("lodash", "4.17.20", "NPM")),
+          plugin: "js-sbom",
+        },
+        {
+          ...createMockResult(sbomWith("monolog/monolog", "2.9.1", "COMPOSER")),
+          plugin: "php-sbom",
+        },
+      ] as Result[]);
+      packageRepository.getVersionInfo.mockRejectedValue(new Error("missing"));
+      vulnerabilitiesUtilsService.getVulnsResult.mockResolvedValue({
+        workspaces: { ".": { Vulnerabilities: [] } },
+      } as any);
+    });
+
+    it("gives each dependency the package manager of the SBOM that found it", async () => {
+      const { mergedSbom } = await service.getMergedSbomResults(mockAnalysisId);
+
+      const composer = await service.getDependencyData(
+        mockAnalysisId,
+        ".",
+        "monolog/monolog",
+        "2.9.1",
+        mergedSbom,
+      );
+      const npm = await service.getDependencyData(
+        mockAnalysisId,
+        ".",
+        "lodash",
+        "4.17.20",
+        mergedSbom,
+      );
+
+      expect(mergedSbom.analysis_info.package_manager).toBe("multi-language");
+      expect(composer.package_manager).toBe("COMPOSER");
+      expect(npm.package_manager).toBe("NPM");
     });
   });
 

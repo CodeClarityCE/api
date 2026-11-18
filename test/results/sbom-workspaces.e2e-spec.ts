@@ -155,5 +155,8 @@ describe("Workspaces of an SBOM", () => {
     const result = await workspacesOf(analysisId);
 
     expect(result.package_managers).toEqual({ ".": "multi-language" });
+    expect(result.ecosystem_package_managers).toEqual({
+      ".": { npm: "NPM", packagist: "composer" },
+    });
   });
 });
