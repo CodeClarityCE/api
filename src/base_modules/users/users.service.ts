@@ -253,7 +253,7 @@ export class UsersService {
    */
   async confirmRegistration(token: string, userIdHash: string): Promise<void> {
     const activationTokenhash = await hash(token, {});
-    const mail = await this.emailRepository.getActivationMail(
+    const mail = await this.emailRepository.findRegistrationMail(
       activationTokenhash,
       userIdHash,
     );

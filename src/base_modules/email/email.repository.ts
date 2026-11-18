@@ -3,7 +3,6 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { MoreThan, Repository } from "typeorm";
 
 import { Email, EmailType } from "src/base_modules/email/email.entity";
-import { EntityNotFound } from "src/types/error.types";
 
 @Injectable() // Marking the class as a NestJS injectable service
 export class EmailRepository {
@@ -40,31 +39,26 @@ export class EmailRepository {
   }
 
   /**
-   * Retrieves an activation email by its token hash and user ID hash.
+   * Retrieves the unexpired registration confirmation email for this token and user digest, if any.
    *
-   * @param activationTokenhash - The hash of the activation token associated with the email.
-   * @param userIdHash - The hash of the user ID associated with the email.
-   * @returns A Promise that resolves to the retrieved Email entity.
-   * @throws EntityNotFound if no activation email is found matching the criteria.
+   * @param tokenDigest - The digest of the token sent in the confirmation link.
+   * @param userIdDigest - The digest of the user id sent in the confirmation link.
    */
-  async getActivationMail(
-    activationTokenhash: string,
-    userIdHash: string,
-  ): Promise<Email> {
-    const mail = await this.emailRepository.findOne({
+  async findRegistrationMail(
+    tokenDigest: string,
+    userIdDigest: string,
+  ): Promise<Email | null> {
+    return this.emailRepository.findOne({
       where: {
-        token_digest: activationTokenhash,
-        user_id_digest: userIdHash,
+        email_type: EmailType.USERS_REGISTRATION_VERIFICATION,
+        token_digest: tokenDigest,
+        user_id_digest: userIdDigest,
+        ttl: MoreThan(new Date()),
       },
       relations: {
-        user: true, // Including the related user entity in the result
+        user: true,
       },
     });
-
-    if (!mail) {
-      throw new EntityNotFound(); // Throwing an error if no matching activation email is found
-    }
-    return mail;
   }
 
   /**

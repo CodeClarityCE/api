@@ -495,10 +495,14 @@ export class OrganizationsService {
     await this.membershipsRepository.saveMembership(membership);
     await this.invitationsRepository.deleteInvitation(invitation.id);
 
-    const mail = await this.emailRepository.getActivationMail(
+    const mail = await this.emailRepository.findInviteMail(
       inviteToken,
       emailDigest,
     );
+    // A join whose invite email row is missing answers EntityNotFound.
+    if (!mail) {
+      throw new EntityNotFound();
+    }
     await this.emailRepository.deleteMail(mail.id);
 
     await this.organizationLoggerService.addAuditLog(

@@ -189,7 +189,7 @@ describe("UsersService", () => {
           useValue: {
             getMailByType: jest.fn(),
             saveMail: jest.fn(),
-            getActivationMail: jest.fn(),
+            findRegistrationMail: jest.fn(),
             removeMail: jest.fn(),
           },
         },
@@ -488,7 +488,7 @@ describe("UsersService", () => {
         user: { ...mockUser, activated: false, registration_verified: false },
       };
       jest
-        .spyOn(emailRepository, "getActivationMail")
+        .spyOn(emailRepository, "findRegistrationMail")
         .mockResolvedValue(mailWithUser);
       jest
         .spyOn(usersRepository, "saveUser")
@@ -498,7 +498,7 @@ describe("UsersService", () => {
       await service.confirmRegistration("token", "userIdHash");
 
       expect(crypto.hash).toHaveBeenCalledWith("token", {});
-      expect(emailRepository.getActivationMail).toHaveBeenCalledWith(
+      expect(emailRepository.findRegistrationMail).toHaveBeenCalledWith(
         "hashed-token",
         "userIdHash",
       );
@@ -510,8 +510,8 @@ describe("UsersService", () => {
 
     it("should throw AccountRegistrationVerificationTokenInvalidOrExpired when mail not found", async () => {
       jest
-        .spyOn(emailRepository, "getActivationMail")
-        .mockResolvedValue(null as any);
+        .spyOn(emailRepository, "findRegistrationMail")
+        .mockResolvedValue(null);
 
       await expect(
         service.confirmRegistration("token", "userIdHash"),
