@@ -542,7 +542,7 @@ export class AnalysesService {
       analyzer: true,
     });
 
-    await this.analysesRepository.deleteByIds([id]);
+    await this.cancelAndDelete([id]);
 
     await this.organizationLoggerService.addAuditLog(
       ActionType.AnalysisDeleted,
@@ -595,8 +595,8 @@ export class AnalysesService {
   /**
    * Bulk-delete analyses of a project using set-based statements.
    *
-   * In-flight analyses are cancelled first (so workers stop), then their result
-   * blobs and the analyses themselves are removed in bulk. Ids not belonging to
+   * In-flight analyses are cancelled, then their result blobs and the analyses
+   * themselves are removed, all in one transaction. Ids not belonging to
    * the project are reported as `not_found`.
    *
    * @throws {NotAuthorized} if the caller is not at least a USER of the org
@@ -616,12 +616,8 @@ export class AnalysesService {
     );
 
     const toDelete = [...cancellable, ...skipped];
-    if (cancellable.length > 0) {
-      // Stop any in-flight work before the rows disappear.
-      await this.analysesRepository.cancelByIds(cancellable);
-    }
     if (toDelete.length > 0) {
-      await this.analysesRepository.deleteByIds(toDelete);
+      await this.cancelAndDelete(toDelete);
 
       // One aggregated audit log instead of one per analysis
       const project = await this.projectsRepository.getProjectById(projectId);
@@ -643,6 +639,14 @@ export class AnalysesService {
       succeeded: toDelete.length,
       failed: notFound.length,
     };
+  }
+
+  /** Cancels the running analyses among `ids`, then deletes all of them, in one transaction. */
+  private async cancelAndDelete(ids: string[]): Promise<void> {
+    await this.analysesRepository.runInTransaction(async (manager) => {
+      await this.analysesRepository.cancelByIds(ids, manager);
+      await this.analysesRepository.deleteByIds(ids, manager);
+    });
   }
 
   /**

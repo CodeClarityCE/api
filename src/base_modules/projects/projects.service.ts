@@ -571,8 +571,8 @@ export class ProjectService {
   }
 
   /**
-   * Remove projects with their analyses, policy links, results and files, and
-   * detach them from the org, in one transaction: all or nothing.
+   * Cancel running analyses, then remove projects with their analyses, policy
+   * links, results and files, and detach them from the org, all or nothing.
    */
   private async deleteProjectRows(
     orgId: string,
@@ -583,6 +583,7 @@ export class ProjectService {
         projectIds,
         manager,
       );
+      await this.repos.analyses.cancelByIds(analysisIds, manager);
       await this.repos.analyses.deleteByIds(analysisIds, manager);
       await this.repos.file.deleteByProjectIds(projectIds, manager);
       await this.repos.projects.detachFromOrganization(

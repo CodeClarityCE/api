@@ -1,7 +1,11 @@
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import {
+  analysisStatuses,
   createAnalysisWithPolicies,
+  failAnalysisDeletes,
   leftoverRows,
+  markAnalysesRunning,
+  recordDeletedAnalysisStatuses,
   useDeployedJoinTableKeys,
 } from "../utils/deletion-fixtures";
 import { testHelper, type TestUser } from "../utils/integration-test-helper";
@@ -494,6 +498,70 @@ describe("Analyses Integration (e2e)", () => {
       // Assert
       expect(response.statusCode).toBe(404);
       expect(response.json().error_code).toBe("EntityNotFound");
+    });
+  });
+
+  describe("Deleting a running analysis", () => {
+    let analysisId: string;
+    let recorder: Awaited<ReturnType<typeof recordDeletedAnalysisStatuses>>;
+
+    beforeEach(async () => {
+      analysisId = await createAnalysisWithPolicies(adminUser, projectId);
+      await markAnalysesRunning([analysisId]);
+      recorder = await recordDeletedAnalysisStatuses();
+    });
+
+    afterEach(async () => {
+      await recorder.stop();
+    });
+
+    const deleteOne = () =>
+      testHelper.makeAuthenticatedRequest(
+        "DELETE",
+        `/org/${adminUser.organization.id}/projects/${projectId}/analyses/${analysisId}`,
+        adminUser.accessToken,
+      );
+
+    const deleteInBulk = () =>
+      testHelper.makeAuthenticatedRequest(
+        "POST",
+        `/org/${adminUser.organization.id}/projects/${projectId}/analyses/batch-delete`,
+        adminUser.accessToken,
+        { analysis_ids: [analysisId] },
+      );
+
+    it("cancels the analysis before deleting it", async () => {
+      expect((await deleteOne()).statusCode).toBe(200);
+      expect(await recorder.statuses()).toEqual({ [analysisId]: "cancelled" });
+    });
+
+    it("cancels the analysis before deleting it in a bulk delete", async () => {
+      expect((await deleteInBulk()).statusCode).toBe(201);
+      expect(await recorder.statuses()).toEqual({ [analysisId]: "cancelled" });
+    });
+
+    it("leaves the analysis running when the delete fails", async () => {
+      const allowDeletes = await failAnalysisDeletes();
+      try {
+        expect((await deleteOne()).statusCode).toBe(500);
+      } finally {
+        await allowDeletes();
+      }
+      expect(await analysisStatuses([analysisId])).toEqual({
+        [analysisId]: "started",
+      });
+    });
+
+    it("leaves the analysis running when a bulk delete fails", async () => {
+      const allowDeletes = await failAnalysisDeletes();
+      try {
+        expect((await deleteInBulk()).statusCode).toBe(500);
+      } finally {
+        await allowDeletes();
+      }
+      expect(await analysisStatuses([analysisId])).toEqual({
+        [analysisId]: "started",
+      });
     });
   });
 

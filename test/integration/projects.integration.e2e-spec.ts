@@ -1,9 +1,12 @@
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import {
+  analysisStatuses,
   createAnalysisWithPolicies,
   createProject,
   failProjectDeletes,
   leftoverRows,
+  markAnalysesRunning,
+  recordDeletedAnalysisStatuses,
   useDeployedJoinTableKeys,
 } from "../utils/deletion-fixtures";
 import { testHelper, type TestUser } from "../utils/integration-test-helper";
@@ -512,6 +515,85 @@ describe("Projects Integration (e2e)", () => {
         policyLinks: 2,
         orgLinks: 1,
         projects: 1,
+      });
+    });
+  });
+
+  describe("Deleting a project with a running analysis", () => {
+    let projectId: string;
+    let analysisId: string;
+    let recorder: Awaited<ReturnType<typeof recordDeletedAnalysisStatuses>>;
+
+    beforeEach(async () => {
+      projectId = await createProject(adminUser, "Project being analysed");
+      analysisId = await createAnalysisWithPolicies(adminUser, projectId);
+      await markAnalysesRunning([analysisId]);
+      recorder = await recordDeletedAnalysisStatuses();
+    });
+
+    afterEach(async () => {
+      await recorder.stop();
+    });
+
+    it("cancels the analysis before deleting it", async () => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "DELETE",
+        `/org/${adminUser.organization.id}/projects/${projectId}`,
+        adminUser.accessToken,
+      );
+
+      expect(response.statusCode).toBe(200);
+      expect(await recorder.statuses()).toEqual({ [analysisId]: "cancelled" });
+      expect((await leftoverRows([analysisId], projectId)).projects).toBe(0);
+    });
+
+    it("cancels the analysis before deleting it in a bulk delete", async () => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "POST",
+        `/org/${adminUser.organization.id}/projects/batch-delete`,
+        adminUser.accessToken,
+        { project_ids: [projectId] },
+      );
+
+      expect(response.statusCode).toBe(201);
+      expect(response.json().data.succeeded).toBe(1);
+      expect(await recorder.statuses()).toEqual({ [analysisId]: "cancelled" });
+    });
+
+    it("leaves the analysis running when the delete fails", async () => {
+      const allowDeletes = await failProjectDeletes();
+      try {
+        const response = await testHelper.makeAuthenticatedRequest(
+          "DELETE",
+          `/org/${adminUser.organization.id}/projects/${projectId}`,
+          adminUser.accessToken,
+        );
+        expect(response.statusCode).toBe(500);
+      } finally {
+        await allowDeletes();
+      }
+
+      expect(await analysisStatuses([analysisId])).toEqual({
+        [analysisId]: "started",
+      });
+    });
+
+    it("leaves the analysis running when a bulk delete fails", async () => {
+      const allowDeletes = await failProjectDeletes();
+      try {
+        const response = await testHelper.makeAuthenticatedRequest(
+          "POST",
+          `/org/${adminUser.organization.id}/projects/batch-delete`,
+          adminUser.accessToken,
+          { project_ids: [projectId] },
+        );
+        expect(response.statusCode).toBe(500);
+      } finally {
+        await allowDeletes();
+      }
+
+      expect(await analysisStatuses([analysisId])).toEqual({
+        [analysisId]: "started",
       });
     });
   });

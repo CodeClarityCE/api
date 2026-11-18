@@ -212,6 +212,8 @@ describe("AnalysesService", () => {
             doesAnalysesBelongToProject: jest.fn(),
             getAnalysisByProjectId: jest.fn(),
             deleteByIds: jest.fn(),
+            cancelByIds: jest.fn(),
+            runInTransaction: jest.fn(),
             getScheduledAnalysesByProjectId: jest.fn(),
             getAllByAnalysisId: jest.fn(),
           },
@@ -800,6 +802,28 @@ describe("AnalysesService", () => {
   });
 
   describe("delete", () => {
+    const mockManager = { tx: true } as any;
+    let calls: string[];
+
+    beforeEach(() => {
+      calls = [];
+      jest
+        .spyOn(analysesRepository, "runInTransaction")
+        .mockImplementation((work: any) => work(mockManager));
+      jest
+        .spyOn(analysesRepository, "cancelByIds")
+        .mockImplementation(async () => {
+          calls.push("cancel");
+          return 1;
+        });
+      jest
+        .spyOn(analysesRepository, "deleteByIds")
+        .mockImplementation(async () => {
+          calls.push("delete");
+          return 1;
+        });
+    });
+
     it("should delete the analysis once it belongs to the project", async () => {
       jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
       jest
@@ -812,7 +836,6 @@ describe("AnalysesService", () => {
         project: { name: "widget" },
         analyzer: { name: "JS" },
       } as any);
-      jest.spyOn(analysesRepository, "deleteByIds").mockResolvedValue(1);
 
       await service.delete("org-123", "project-123", "analysis-123", mockUser);
 
@@ -824,9 +847,15 @@ describe("AnalysesService", () => {
       expect(
         analysesRepository.doesAnalysesBelongToProject,
       ).toHaveBeenCalledWith("analysis-123", "project-123");
-      expect(analysesRepository.deleteByIds).toHaveBeenCalledWith([
-        "analysis-123",
-      ]);
+      expect(analysesRepository.cancelByIds).toHaveBeenCalledWith(
+        ["analysis-123"],
+        mockManager,
+      );
+      expect(analysesRepository.deleteByIds).toHaveBeenCalledWith(
+        ["analysis-123"],
+        mockManager,
+      );
+      expect(calls).toEqual(["cancel", "delete"]);
     });
 
     it("should not delete an analysis outside the project", async () => {
@@ -842,6 +871,40 @@ describe("AnalysesService", () => {
         service.delete("org-123", "project-123", "analysis-123", mockUser),
       ).rejects.toThrow(NotAuthorized);
       expect(analysesRepository.deleteByIds).not.toHaveBeenCalled();
+    });
+
+    it("should cancel and delete a bulk delete in one transaction", async () => {
+      jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
+      jest
+        .spyOn(projectsRepository, "doesProjectBelongToOrg")
+        .mockResolvedValue();
+      jest
+        .spyOn(projectsRepository, "getProjectById")
+        .mockResolvedValue({ name: "widget" } as any);
+      jest.spyOn(service as any, "partitionAnalyses").mockResolvedValue({
+        cancellable: ["running-1"],
+        skipped: ["done-1"],
+        notFound: [],
+      });
+
+      const res = await service.batchDelete(
+        "org-123",
+        "project-123",
+        ["running-1", "done-1"],
+        mockUser,
+      );
+
+      expect(res.succeeded).toBe(2);
+      expect(analysesRepository.runInTransaction).toHaveBeenCalledTimes(1);
+      expect(analysesRepository.cancelByIds).toHaveBeenCalledWith(
+        ["running-1", "done-1"],
+        mockManager,
+      );
+      expect(analysesRepository.deleteByIds).toHaveBeenCalledWith(
+        ["running-1", "done-1"],
+        mockManager,
+      );
+      expect(calls).toEqual(["cancel", "delete"]);
     });
   });
 
