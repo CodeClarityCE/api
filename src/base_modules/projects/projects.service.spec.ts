@@ -28,6 +28,7 @@ import { MemberRole } from "../organizations/memberships/orgMembership.types";
 
 import type { Project } from "./project.entity";
 import type { ProjectImportBody } from "./project.types";
+import { ProjectRowsService } from "./project-rows.service";
 import { ProjectMemberService } from "./projectMember.service";
 import { ProjectService } from "./projects.service";
 import type { RepositoryCache } from "./repositoryCache.entity";
@@ -62,6 +63,7 @@ describe("ProjectService", () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProjectService,
+        ProjectRowsService,
         {
           provide: OrganizationLoggerService,
           useValue: { addAuditLog: jest.fn().mockResolvedValue(null) },

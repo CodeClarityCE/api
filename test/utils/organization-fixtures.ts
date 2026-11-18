@@ -248,7 +248,7 @@ export async function rowsLeft(
       orgId,
     ),
     auditLogs: await count(
-      `SELECT count(*) n FROM log WHERE organization_id = $1 OR "organizationId" = $1`,
+      `SELECT count(*) n FROM log WHERE organization_id = $1 OR "organizationId"::text = $1`,
       orgId,
     ),
     defaultOrgUsers: await count(

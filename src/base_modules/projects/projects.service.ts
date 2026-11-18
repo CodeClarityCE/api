@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { existsSync } from "fs";
-import { mkdir, rm } from "fs/promises";
+import { mkdir } from "fs/promises";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { IntegrationProvider as IntegrationProviderEntity } from "src/base_modules/integrations/integrations.entity";
@@ -45,6 +44,8 @@ import {
   UsersRepository,
 } from "../shared/repositories";
 
+import { ProjectRowsService } from "./project-rows.service";
+
 /** A GitHub repository already resolved through an integration */
 export interface ResolvedGithubRepo {
   /** Canonical url (GitHub's html_url) */
@@ -74,6 +75,7 @@ export class ProjectService {
     private readonly organizationLoggerService: OrganizationLoggerService,
     private readonly githubRepositoriesService: GithubRepositoriesService,
     private readonly gitlabRepositoriesService: GitlabRepositoriesService,
+    private readonly projectRows: ProjectRowsService,
     usersRepository: UsersRepository,
     organizationsRepository: OrganizationsRepository,
     membershipsRepository: MembershipsRepository,
@@ -464,8 +466,8 @@ export class ProjectService {
       }
     }
 
-    await this.deleteProjectRows(orgId, [id]);
-    await this.removeProjectFolder(orgId, id);
+    await this.projectRows.deleteRows(orgId, [id]);
+    await this.projectRows.removeFolders(orgId, [id]);
 
     await this.organizationLoggerService.addAuditLog(
       ActionType.ProjectDelete,
@@ -546,11 +548,11 @@ export class ProjectService {
     for (let i = 0; i < deletableIds.length; i += batchSize) {
       const batch = deletableIds.slice(i, i + batchSize);
 
-      await this.deleteProjectRows(orgId, batch);
+      await this.projectRows.deleteRows(orgId, batch);
 
       // Folders go only after the rows are gone for good
+      await this.projectRows.removeFolders(orgId, batch);
       for (const projectId of batch) {
-        await this.removeProjectFolder(orgId, projectId);
         results.push({ id: projectId, status: "deleted" });
       }
     }
@@ -568,49 +570,5 @@ export class ProjectService {
 
     const failed = results.filter((r) => r.status !== "deleted").length;
     return { results, succeeded: deletedCount, failed };
-  }
-
-  /**
-   * Cancel running analyses, then remove projects with their analyses, policy
-   * links, results and files, and detach them from the org, all or nothing.
-   */
-  private async deleteProjectRows(
-    orgId: string,
-    projectIds: string[],
-  ): Promise<void> {
-    await this.repos.projects.runInTransaction(async (manager) => {
-      const analysisIds = await this.repos.analyses.getAnalysisIdsByProjectIds(
-        projectIds,
-        manager,
-      );
-      await this.repos.analyses.cancelByIds(analysisIds, manager);
-      await this.repos.analyses.deleteByIds(analysisIds, manager);
-      await this.repos.file.deleteByProjectIds(projectIds, manager);
-      await this.repos.projects.detachFromOrganization(
-        orgId,
-        projectIds,
-        manager,
-      );
-      await this.repos.projects.deleteByIds(projectIds, manager);
-    });
-  }
-
-  /** Remove a deleted project's download folder, if any. */
-  private async removeProjectFolder(
-    orgId: string,
-    projectId: string,
-  ): Promise<void> {
-    const downloadPath = process.env["DOWNLOAD_PATH"] ?? "/private";
-    const filePath = validateAndJoinPath(
-      downloadPath,
-      orgId,
-      "projects",
-      projectId,
-    );
-    // Path is validated using validateAndJoinPath to prevent traversal attacks
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
-    if (existsSync(filePath)) {
-      await rm(filePath, { recursive: true, force: true });
-    }
   }
 }

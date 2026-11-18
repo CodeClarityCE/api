@@ -42,8 +42,10 @@ import { genRandomString, hash } from "src/utils/crypto";
 
 import { EmailRepository } from "../email/email.repository";
 import { EmailService } from "../email/email.service";
+import { ProjectRowsService } from "../projects/project-rows.service";
 
 import { OrganizationLoggerService } from "./log/organizationLogger.service";
+import { OrganizationTeardown } from "./organization-teardown";
 
 @Injectable()
 export class OrganizationsService {
@@ -55,6 +57,8 @@ export class OrganizationsService {
     private readonly emailRepository: EmailRepository,
     private readonly invitationsRepository: InvitationsRepository,
     private readonly organizationLoggerService: OrganizationLoggerService,
+    private readonly teardown: OrganizationTeardown,
+    private readonly projectRows: ProjectRowsService,
   ) {}
 
   /**
@@ -628,7 +632,7 @@ export class OrganizationsService {
   }
 
   /**
-   * Delete an organization; only an owner may
+   * Delete an organization with everything it owns; only an owner may
    * @throws {NotAuthorized}
    * @throws {PersonalOrgCannotBeModified} A user cannot delete a personal organization
    * @throws {EntityNotFound} In case the organization no longer exists
@@ -649,11 +653,19 @@ export class OrganizationsService {
 
     const memberships =
       await this.membershipsRepository.getMembershipsByOrganizationId(orgId);
-    // A failed delete keeps every membership.
-    await this.organizationsRepository.runInTransaction(async (manager) => {
-      await this.membershipsRepository.removeMemberships(memberships, manager);
-      await this.organizationsRepository.deleteOrganization(orgId, manager);
-    });
+    // All or nothing: a failed delete keeps every row and membership.
+    const projectIds = await this.organizationsRepository.runInTransaction(
+      async (manager) => {
+        const deleted = await this.teardown.deleteContents(orgId, manager);
+        await this.membershipsRepository.removeMemberships(
+          memberships,
+          manager,
+        );
+        await this.organizationsRepository.deleteOrganization(orgId, manager);
+        return deleted;
+      },
+    );
+    await this.projectRows.removeFolders(orgId, projectIds);
   }
 
   /**
