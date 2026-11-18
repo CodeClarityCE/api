@@ -8,6 +8,7 @@ import { BaseVCSTokenService } from "../base/baseVCSTokenService";
 import {
   hasRequiredScopes,
   parseTokenExpiry,
+  validateNotExpired,
 } from "../utils/tokenValidation.utils";
 
 @Injectable()
@@ -65,14 +66,13 @@ export class GitlabIntegrationTokenService extends BaseVCSTokenService {
       throw new Error("gitlabInstanceUrl is required");
     }
 
-    const response = await fetch(`${gitlabInstanceUrl}/api/v4/admin/token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "PRIVATE-TOKEN": token,
+    // Any token may read its own details; the admin token API needs an admin.
+    const response = await fetch(
+      `${gitlabInstanceUrl}/api/v4/personal_access_tokens/self`,
+      {
+        headers: { "PRIVATE-TOKEN": token },
       },
-      body: JSON.stringify({ token }),
-    });
+    );
 
     if (!response.ok) {
       const error = new Error(
@@ -89,6 +89,7 @@ export class GitlabIntegrationTokenService extends BaseVCSTokenService {
     if (data?.expires_at) {
       const date = parseTokenExpiry(data.expires_at);
       if (date) {
+        validateNotExpired(date);
         return [true, date];
       }
     }

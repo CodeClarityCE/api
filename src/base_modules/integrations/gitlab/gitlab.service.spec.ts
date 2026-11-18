@@ -11,6 +11,7 @@ import {
 import {
   DuplicateIntegration,
   EntityNotFound,
+  IntegrationInstanceUrlChanged,
   IntegrationInvalidToken,
   IntegrationTokenExpired,
   IntegrationTokenMissingPermissions,
@@ -491,22 +492,26 @@ describe("GitlabIntegrationService", () => {
       ).rejects.toThrow(IntegrationWrongTokenType);
     });
 
-    it("should throw Error for unimplemented method", async () => {
+    it("should refuse a different instance URL before asking GitLab", async () => {
       organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
         true,
       );
       jest
         .spyOn(membershipsRepository, "hasRequiredRole")
         .mockResolvedValue(undefined);
+      integrationsRepository.getIntegrationById.mockResolvedValue({
+        ...mockIntegration,
+      });
 
       await expect(
         service.modifyGitlabIntegration(
           "test-org-id",
           "test-integration-id",
-          linkGitlabPatchBody,
+          { ...linkGitlabPatchBody, gitlab_instance_url: "https://other.io" },
           mockAuthenticatedUser,
         ),
-      ).rejects.toThrow("Method not implemented.");
+      ).rejects.toThrow(IntegrationInstanceUrlChanged);
+      expect(integrationsRepository.saveIntegration).not.toHaveBeenCalled();
     });
   });
 

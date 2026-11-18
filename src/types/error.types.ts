@@ -81,6 +81,8 @@ export const errorMessages: Record<string, string> = {
     "You have an existing integration with the integration provider.",
   ProjectDoesNotExist: "The project referenced does not exist.",
   IntegrationWrongTokenType: "The token type is not supported.",
+  IntegrationInstanceUrlChanged:
+    "The integration's instance URL cannot be changed. Delete the integration and connect it again instead.",
   FailedToRetrieveReposFromProvider:
     "The provider could not be succesfully reached to retrieve the repositories.",
   IntegrationTokenRetrievalFailed:
@@ -413,6 +415,20 @@ export class IntegrationInvalidToken extends PublicAPIError {
       IntegrationInvalidToken.errorCode,
       IntegrationInvalidToken.errorMessage,
       IntegrationInvalidToken.statusCode,
+      cause,
+    );
+  }
+}
+
+export class IntegrationInstanceUrlChanged extends PublicAPIError {
+  static errorCode = "IntegrationInstanceUrlChanged";
+  static errorMessage = errorMessages[IntegrationInstanceUrlChanged.errorCode]!;
+  static statusCode = 400;
+  constructor(cause?: unknown) {
+    super(
+      IntegrationInstanceUrlChanged.errorCode,
+      IntegrationInstanceUrlChanged.errorMessage,
+      IntegrationInstanceUrlChanged.statusCode,
       cause,
     );
   }
