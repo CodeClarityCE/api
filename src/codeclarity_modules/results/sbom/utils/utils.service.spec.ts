@@ -321,6 +321,7 @@ describe("SbomUtilsService", () => {
         latest_version: "1.1.0",
         dependencies: { lodash: "^4.0.0" },
         dev_dependencies: { jest: "^29.0.0" },
+        direct: true,
         transitive: false,
         source: { type: "npm", url: "https://npmjs.com/package/test-package" },
         package_manager: "npm",
@@ -521,6 +522,134 @@ describe("SbomUtilsService", () => {
       );
 
       expect(result.transitive).toBe(true);
+    });
+
+    it("reports a dependency that is both direct and transitive as direct", async () => {
+      const mockSBOM = createMockSBOMOutput();
+      const dep =
+        mockSBOM.workspaces[mockWorkspace]!.dependencies[dependencyName]![
+          dependencyVersion
+        ]!;
+      dep.Direct = true;
+      dep.Transitive = true;
+
+      packageRepository.getVersionInfo.mockResolvedValue(
+        createMockPackageVersionInfo(),
+      );
+      vulnerabilitiesUtilsService.getVulnsResult.mockResolvedValue(
+        createMockVulnsOutput(),
+      );
+
+      const result = await service.getDependencyData(
+        mockAnalysisId,
+        mockWorkspace,
+        dependencyName,
+        dependencyVersion,
+        mockSBOM,
+      );
+
+      expect(result.direct).toBe(true);
+      expect(result.transitive).toBe(true);
+    });
+
+    it("reports a dependency missing from the workspace start as not direct", async () => {
+      const mockSBOM = createMockSBOMOutput();
+      mockSBOM.workspaces[mockWorkspace]!.start = {
+        dependencies: [
+          { name: dependencyName, version: "0.9.0", constraint: "^0.9.0" },
+        ],
+      };
+
+      packageRepository.getVersionInfo.mockResolvedValue(
+        createMockPackageVersionInfo(),
+      );
+      vulnerabilitiesUtilsService.getVulnsResult.mockResolvedValue(
+        createMockVulnsOutput(),
+      );
+
+      const result = await service.getDependencyData(
+        mockAnalysisId,
+        mockWorkspace,
+        dependencyName,
+        dependencyVersion,
+        mockSBOM,
+      );
+
+      expect(result.direct).toBe(false);
+    });
+
+    it("returns null dates when the knowledge base has no release time", async () => {
+      const packageInfo = createMockPackageVersionInfo();
+      packageInfo.time = undefined as unknown as Date;
+      packageInfo.versions[0]!.extra = { Engines: {} };
+
+      packageRepository.getVersionInfo.mockResolvedValue(packageInfo);
+      vulnerabilitiesUtilsService.getVulnsResult.mockResolvedValue(
+        createMockVulnsOutput(),
+      );
+
+      const result = await service.getDependencyData(
+        mockAnalysisId,
+        mockWorkspace,
+        dependencyName,
+        dependencyVersion,
+        createMockSBOMOutput(),
+      );
+
+      expect(result.release_date).toBeNull();
+      expect(result.lastest_release_date).toBeNull();
+    });
+
+    it("returns null dates when the package is not in the knowledge base", async () => {
+      packageRepository.getVersionInfo.mockRejectedValue(new Error("missing"));
+      vulnerabilitiesUtilsService.getVulnsResult.mockResolvedValue(
+        createMockVulnsOutput(),
+      );
+
+      const result = await service.getDependencyData(
+        mockAnalysisId,
+        mockWorkspace,
+        dependencyName,
+        dependencyVersion,
+        createMockSBOMOutput(),
+      );
+
+      expect(result.release_date).toBeNull();
+      expect(result.lastest_release_date).toBeNull();
+    });
+
+    it("reads a PHP version's release date from its lowercase time key", async () => {
+      const mockSBOM = createMockSBOMOutput();
+      mockSBOM.workspaces[mockWorkspace]!.dependencies[dependencyName]![
+        dependencyVersion
+      ] = {
+        ...mockSBOM.workspaces[mockWorkspace]!.dependencies[dependencyName]![
+          dependencyVersion
+        ]!,
+        ecosystem: "packagist",
+      } as never;
+      const packageInfo = createMockPackageVersionInfo();
+      packageInfo.versions[0]!.extra = { time: "2022-06-10T08:30:00+00:00" };
+
+      packageRepository.getVersionInfo.mockResolvedValue(packageInfo);
+      vulnerabilitiesUtilsService.getVulnsResult.mockResolvedValue(
+        createMockVulnsOutput(),
+      );
+
+      const result = await service.getDependencyData(
+        mockAnalysisId,
+        mockWorkspace,
+        dependencyName,
+        dependencyVersion,
+        mockSBOM,
+      );
+
+      expect(packageRepository.getVersionInfo).toHaveBeenCalledWith(
+        dependencyName,
+        dependencyVersion,
+        "php",
+      );
+      expect(result.release_date).toEqual(new Date("2022-06-10T08:30:00Z"));
     });
 
     it("should handle missing dependency in SBOM", async () => {

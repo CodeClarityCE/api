@@ -162,6 +162,7 @@ describe("SBOM Types", () => {
         latest_version: "1.1.0",
         dependencies: { dep1: "^1.0.0" },
         dev_dependencies: { "dev-dep": "^1.0.0" },
+        direct: true,
         transitive: false,
         source: {
           type: "npm",
@@ -214,6 +215,7 @@ describe("SBOM Types", () => {
         latest_version: "1.1.0",
         dependencies: {},
         dev_dependencies: {},
+        direct: true,
         transitive: false,
         package_manager: "npm",
         license: "MIT",

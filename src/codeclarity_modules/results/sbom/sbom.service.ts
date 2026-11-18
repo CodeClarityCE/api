@@ -16,6 +16,7 @@ import {
   newAnalysisStats,
 } from "src/codeclarity_modules/results/sbom/sbom_stats.types";
 import {
+  isDirectDependency,
   SbomUtilsService,
   sharedPackageManager,
 } from "src/codeclarity_modules/results/sbom/utils/utils";
@@ -238,11 +239,13 @@ export class SBOMService {
     for (const [dep_key, dep] of Object.entries(workspaceData.dependencies)) {
       for (const [version_key, depVersion] of Object.entries(dep)) {
         const version = depVersion as EnhancedDependency;
-        const is_direct = this.isDirectDependency(
+        const is_direct = isDirectDependency(
           dep_key,
           version_key,
           workspaceData.start,
-        );
+        )
+          ? 1
+          : 0;
 
         const sbomDependency: SbomDependency = new SbomDependency();
         sbomDependency.name = dep_key;
@@ -677,28 +680,6 @@ export class SBOMService {
     }
 
     return parents;
-  }
-
-  /**
-   * Check if a dependency is a direct dependency (in start dependencies)
-   */
-  private isDirectDependency(
-    depKey: string,
-    versionKey: string,
-    start: {
-      dependencies?: WorkSpaceDependency[];
-      dev_dependencies?: WorkSpaceDependency[];
-    },
-  ): number {
-    const checkDeps = (deps: WorkSpaceDependency[] | undefined): boolean => {
-      return (
-        deps?.some((d) => d.name === depKey && d.version === versionKey) ??
-        false
-      );
-    };
-    return checkDeps(start.dependencies) || checkDeps(start.dev_dependencies)
-      ? 1
-      : 0;
   }
 
   /**

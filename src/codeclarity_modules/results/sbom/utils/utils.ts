@@ -44,6 +44,17 @@ export function sharedPackageManager(sboms: SBOMOutput[]): string {
   return managers.size === 1 ? [...managers][0]! : MIXED_PACKAGE_MANAGERS;
 }
 
+/** Whether this name and version is listed in the workspace's start (direct) dependencies */
+export function isDirectDependency(
+  name: string,
+  version: string,
+  start: WorkSpaceData["start"],
+): boolean {
+  const listed = (deps: WorkSpaceDependency[] | undefined): boolean =>
+    deps?.some((d) => d.name === name && d.version === version) ?? false;
+  return listed(start.dependencies) || listed(start.dev_dependencies);
+}
+
 @Injectable()
 export class SbomUtilsService {
   constructor(
@@ -364,7 +375,9 @@ export class SbomUtilsService {
 
     const enginesExtra = version?.extra?.["Engines"] as
       Record<string, string> | undefined;
-    const timeExtra = version?.extra?.["Time"] as string | undefined;
+    // npm versions store the release time under "Time", PHP versions under "time"
+    const timeExtra = (version?.extra?.["Time"] ?? version?.extra?.["time"]) as
+      string | undefined;
 
     const dependency_details: DependencyDetails = {
       name: dependency_name,
@@ -372,14 +385,19 @@ export class SbomUtilsService {
       latest_version: package_version?.latest_version ?? dependency_version,
       dependencies: version?.dependencies ?? {},
       dev_dependencies: version?.dev_dependencies ?? {},
+      direct: isDirectDependency(
+        dependency_name,
+        dependency_version,
+        sbom.workspaces[workspace]!.start,
+      ),
       transitive: dependency.Transitive ?? enhancedDep.transitive ?? false,
       package_manager: sbom.analysis_info.package_manager,
       license: package_version?.license ?? "",
       engines: enginesExtra ?? {},
-      release_date: timeExtra ? new Date(timeExtra) : new Date(),
+      release_date: timeExtra ? new Date(timeExtra) : null,
       lastest_release_date: package_version?.time
         ? new Date(package_version.time)
-        : new Date(),
+        : null,
       vulnerabilities: [],
       severity_dist: {
         critical: 0,
