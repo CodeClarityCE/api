@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsEmail, IsNotEmpty } from "class-validator";
+import { IsEmail, IsNotEmpty, Length } from "class-validator";
 
 /** JWT payload structure for tokens */
 export interface JwtPayload {
@@ -72,16 +72,19 @@ export class TokenRefreshResponse {
 export class UserPasswordResetRequestBody {
   @ApiProperty({ description: "Email" })
   @IsNotEmpty()
+  @IsEmail()
   email!: string;
 }
 
 export class UserPasswordResetBody {
-  @ApiProperty({ description: "The new password." })
+  @ApiProperty({ description: "The new password (min: 10, max: 75)" })
   @IsNotEmpty()
+  @Length(10, 75)
   new_password!: string;
 
-  @ApiProperty({ description: "Password confirmation" })
+  @ApiProperty({ description: "Password confirmation (min: 10, max: 75)" })
   @IsNotEmpty()
+  @Length(10, 75)
   new_password_confirmation!: string;
 
   @ApiProperty({ description: "The token sent via email" })

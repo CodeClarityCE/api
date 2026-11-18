@@ -112,4 +112,17 @@ describe("EmailService invite emails", () => {
     );
     expect(sentText()).not.toContain("/email_action/unsubscribe");
   });
+
+  it("the password reset email says the link lasts 30 minutes", async () => {
+    await service.sendPasswordReset({
+      email: "user@example.com",
+      token: "reset-token",
+      userIdDigest: "digest",
+    });
+
+    expect(sentText()).toContain("this link will expire within 30 minutes.");
+    expect(sentText()).toContain(
+      "https://codeclarity.example/email_action/reset_password?token&#x3D;reset-token&amp;userid&#x3D;digest",
+    );
+  });
 });

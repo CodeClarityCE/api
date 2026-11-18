@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { MailerService } from "@nestjs-modules/mailer";
 
 import { INVITATION_LIFETIME_TEXT } from "src/base_modules/organizations/invitations/invitation.lifetime";
+import { PASSWORD_RESET_LIFETIME_TEXT } from "src/base_modules/users/password-reset.lifetime";
 import { User } from "src/base_modules/users/users.entity";
 
 /**
@@ -85,6 +86,7 @@ export class EmailService {
       template: "./password_reset",
       templateData: {
         reset_password_url: url,
+        reset_lifetime: PASSWORD_RESET_LIFETIME_TEXT,
         platform_name: this.platformName,
         web_host: this.webHost.split("//")[1],
       },

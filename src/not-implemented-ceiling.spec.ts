@@ -11,7 +11,7 @@ import { join } from "path";
 
 // The most "not implemented" lines production code in src/ may hold.
 // Lower it in the same PR that removes or builds a stub; never raise it.
-const CEILING = 2;
+const CEILING = 0;
 
 // Counts lines matching "not implemented" (any case) in the .ts files under
 // dir, skipping *.spec.ts. Same as:
