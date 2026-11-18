@@ -70,6 +70,7 @@ describe("LicensePolicyService", () => {
   // Mock query builder
   const mockQueryBuilder = {
     leftJoin: jest.fn().mockReturnThis(),
+    leftJoinAndSelect: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
     getCount: jest.fn(),
@@ -357,7 +358,7 @@ describe("LicensePolicyService", () => {
             default: false,
             content: ["MIT", "Apache-2.0"],
             created_on: new Date("2024-01-01"),
-            created_by: "",
+            created_by: "creator@example.com",
             policy_type: PolicyType.LICENSE_POLICY,
           },
         ],
@@ -498,14 +499,15 @@ describe("LicensePolicyService", () => {
   });
 
   describe("update", () => {
-    it("should throw not implemented error", async () => {
+    it("should throw EntityNotFound for an unknown policy", async () => {
       // Arrange
       jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
+      mockPolicyRepository.findOne.mockResolvedValue(null);
 
       // Act & Assert
       await expect(
         service.update("org-123", "policy-123", {}, mockUser),
-      ).rejects.toThrow("Method not implemented.");
+      ).rejects.toThrow(EntityNotFound);
       expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
         "org-123",
         "user-123",
@@ -533,14 +535,15 @@ describe("LicensePolicyService", () => {
   });
 
   describe("remove", () => {
-    it("should throw not implemented error", async () => {
+    it("should throw EntityNotFound for an unknown policy", async () => {
       // Arrange
       jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
+      mockPolicyRepository.findOne.mockResolvedValue(null);
 
       // Act & Assert
       await expect(
         service.remove("org-123", "policy-123", mockUser),
-      ).rejects.toThrow("Method not implemented.");
+      ).rejects.toThrow(EntityNotFound);
       expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
         "org-123",
         "user-123",

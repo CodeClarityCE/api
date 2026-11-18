@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
@@ -161,6 +161,7 @@ export class LicensePolicyService {
     const queryBuilder = this.policyRepository
       .createQueryBuilder("policy")
       .leftJoin("policy.organizations", "organization")
+      .leftJoinAndSelect("policy.created_by", "creator")
       .where("organization.id = :orgId", { orgId })
       .andWhere("policy.policy_type = :policyType", {
         policyType: PolicyType.LICENSE_POLICY,
@@ -184,7 +185,7 @@ export class LicensePolicyService {
         default: policy.default,
         content: policy.content,
         created_on: policy.created_on,
-        created_by: "",
+        created_by: policy.created_by?.email || "",
         policy_type: policy.policy_type,
       })),
     );
@@ -211,8 +212,8 @@ export class LicensePolicyService {
    */
   async update(
     orgId: string,
-    _licensePolicyId: string,
-    _update: LicensePolicyPatchBody,
+    licensePolicyId: string,
+    update: LicensePolicyPatchBody,
     user: AuthenticatedUser,
   ): Promise<void> {
     // Only owners and admins can update an policy to the org
@@ -221,20 +222,54 @@ export class LicensePolicyService {
       user.userId,
       MemberRole.ADMIN,
     );
-    throw new Error("Method not implemented.");
+
+    const policy = await this.findInOrg(orgId, licensePolicyId);
+
+    const changes: Partial<Policy> = {};
+    if (update.name !== undefined) changes.name = update.name;
+    if (update.description !== undefined)
+      changes.description = update.description;
+    if (update.licenses !== undefined) changes.content = update.licenses;
+    if (update.default !== undefined) changes.default = update.default;
+
+    await this.policyRepository.manager.transaction(async (manager) => {
+      const policies = manager.getRepository(Policy);
+      // One default license policy per organization
+      if (update.default === true) {
+        const defaults = await policies
+          .createQueryBuilder("policy")
+          .innerJoin("policy.organizations", "organization")
+          .where("organization.id = :orgId", { orgId })
+          .andWhere("policy.policy_type = :policyType", {
+            policyType: PolicyType.LICENSE_POLICY,
+          })
+          .andWhere("policy.default = true")
+          .andWhere("policy.id != :id", { id: policy.id })
+          .getMany();
+        if (defaults.length > 0) {
+          await policies.update(
+            { id: In(defaults.map((other) => other.id)) },
+            { default: false },
+          );
+        }
+      }
+      if (Object.keys(changes).length > 0) {
+        await policies.update(policy.id, changes as Record<string, unknown>);
+      }
+    });
   }
 
   /**
    * Remove an existing license policy
-   * @throws {EntityNotFound} if the dependency patch policy does not exist
+   * @throws {EntityNotFound} if the license policy does not exist
    *
    * @param orgId The id of the organization to which the policy belongs
-   * @param licensePolicyId The id of the dependency patch policy
+   * @param licensePolicyId The id of the license policy
    * @param user The authenticated user
    */
   async remove(
     orgId: string,
-    _licensePolicyId: string,
+    licensePolicyId: string,
     user: AuthenticatedUser,
   ): Promise<void> {
     // Only owners and admins can remove an policy to the org
@@ -243,6 +278,39 @@ export class LicensePolicyService {
       user.userId,
       MemberRole.ADMIN,
     );
-    throw new Error("Method not implemented.");
+
+    const policy = await this.findInOrg(orgId, licensePolicyId);
+
+    // Analyses keep their results; only their links to the policy go
+    await this.policyRepository.manager.transaction(async (manager) => {
+      await manager
+        .createQueryBuilder()
+        .delete()
+        .from("policy_analyses_analysis")
+        .where('"policyId" = :id', { id: policy.id })
+        .execute();
+      await manager
+        .createQueryBuilder()
+        .delete()
+        .from("organization_policies_policy")
+        .where('"policyId" = :id', { id: policy.id })
+        .execute();
+      await manager.getRepository(Policy).delete(policy.id);
+    });
+  }
+
+  // The organization's license policy with this id, or EntityNotFound
+  private async findInOrg(orgId: string, policyId: string): Promise<Policy> {
+    const policy = await this.policyRepository.findOne({
+      where: {
+        id: policyId,
+        policy_type: PolicyType.LICENSE_POLICY,
+        organizations: { id: orgId },
+      },
+    });
+    if (!policy) {
+      throw new EntityNotFound();
+    }
+    return policy;
   }
 }
