@@ -6,11 +6,13 @@ import {
 import { Test } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 
+import { AnalyzerLanguagesService } from "src/base_modules/analyzers/analyzer-languages.service";
 import { AnalyzersController } from "src/base_modules/analyzers/analyzers.controller";
 import { AnalyzersRepository } from "src/base_modules/analyzers/analyzers.repository";
 import { AnalyzersService } from "src/base_modules/analyzers/analyzers.service";
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
 import { OrganizationLoggerService } from "src/base_modules/organizations/log/organizationLogger.service";
+import { PluginAvailabilityService } from "src/base_modules/plugin-availability/plugin-availability.service";
 import type { Plugin } from "src/base_modules/plugins/plugin.entity";
 import { PluginsRepository } from "src/base_modules/plugins/plugin.repository";
 import {
@@ -28,11 +30,7 @@ const installed: Plugin[] = [
   { id: "2", name: "php-sbom", depends_on: [] },
   { id: "3", name: "vuln-finder", depends_on: ["js-sbom", "php-sbom"] },
   { id: "4", name: "license-finder", depends_on: ["js-sbom", "php-sbom"] },
-  {
-    id: "5",
-    name: "js-patching",
-    depends_on: ["js-sbom", "php-sbom", "vuln-finder"],
-  },
+  { id: "5", name: "js-patching", depends_on: ["js-sbom", "vuln-finder"] },
   { id: "6", name: "codeql", depends_on: [] },
   // Hypothetical plugins that read only the JavaScript SBOM.
   { id: "7", name: "npm-audit", depends_on: ["js-sbom"] },
@@ -57,6 +55,7 @@ describe("Analyzer workflow rules (HTTP)", () => {
       controllers: [AnalyzersController],
       providers: [
         AnalyzersService,
+        AnalyzerLanguagesService,
         {
           provide: getRepositoryToken(Experiment, "codeclarity"),
           useValue: {},
@@ -87,6 +86,10 @@ describe("Analyzer workflow rules (HTTP)", () => {
         {
           provide: PluginsRepository,
           useValue: { getAll: jest.fn().mockResolvedValue(installed) },
+        },
+        {
+          provide: PluginAvailabilityService,
+          useValue: { ofAnalyzer: jest.fn() },
         },
       ],
     }).compile();

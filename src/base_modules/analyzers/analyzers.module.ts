@@ -8,6 +8,7 @@ import { OrganizationsModule } from "../organizations/organizations.module";
 import { PluginAvailabilityModule } from "../plugin-availability/plugin-availability.module";
 import { PluginModule } from "../plugins/plugin.module";
 
+import { AnalyzerLanguagesService } from "./analyzer-languages.service";
 import { AnalyzerTemplatesService } from "./analyzer-templates.service";
 import {
   AnalyzersController,
@@ -24,8 +25,18 @@ import { AnalyzersService } from "./analyzers.service";
     PluginAvailabilityModule, // For whether an analyzer can run here
     TypeOrmModule.forFeature([Analyzer, Experiment], "codeclarity"),
   ],
-  exports: [AnalyzersService, AnalyzersRepository, AnalyzerTemplatesService],
-  providers: [AnalyzersService, AnalyzersRepository, AnalyzerTemplatesService],
+  exports: [
+    AnalyzersService,
+    AnalyzersRepository,
+    AnalyzerTemplatesService,
+    AnalyzerLanguagesService,
+  ],
+  providers: [
+    AnalyzersService,
+    AnalyzersRepository,
+    AnalyzerTemplatesService,
+    AnalyzerLanguagesService,
+  ],
   controllers: [
     AnalyzersController,
     AnalyzerTemplatesController,

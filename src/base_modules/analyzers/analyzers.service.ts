@@ -27,7 +27,7 @@ import {
   UsersRepository,
 } from "../shared/repositories";
 
-import { deriveLanguages, hasLanguageConfig } from "./analyzer-languages";
+import { AnalyzerLanguagesService } from "./analyzer-languages.service";
 import {
   AnalyzerDependencyMissing,
   AnalyzerHasAnalyses,
@@ -59,6 +59,7 @@ export class AnalyzersService {
     private readonly pluginAvailability: PluginAvailabilityService,
     @InjectRepository(Experiment, "codeclarity")
     private readonly experimentRepository: Repository<Experiment>,
+    private readonly analyzerLanguages: AnalyzerLanguagesService,
   ) {}
 
   /**
@@ -85,18 +86,6 @@ export class AnalyzersService {
       analyzer.steps,
     );
     return analyzer;
-  }
-
-  /** Lists every plugin of a template-based analyzer under its languages. */
-  private async syncLanguages(analyzer: Analyzer): Promise<void> {
-    if (!hasLanguageConfig(analyzer.language_config)) return;
-    const derived = deriveLanguages(
-      analyzer.steps,
-      analyzer.supported_languages,
-      await this.pluginsRepository.getAll(),
-    );
-    analyzer.supported_languages = derived.supported_languages;
-    analyzer.language_config = derived.language_config;
   }
 
   /**
@@ -135,7 +124,7 @@ export class AnalyzersService {
     if (analyzerData.language_config !== undefined) {
       analyzer.language_config = analyzerData.language_config;
     }
-    await this.syncLanguages(analyzer);
+    await this.analyzerLanguages.apply(analyzer);
     analyzer.logo = analyzerData.logo ?? "js";
     analyzer.global = false;
     analyzer.organization = organization;
@@ -190,7 +179,7 @@ export class AnalyzersService {
     if (analyzerData.language_config) {
       analyzer.language_config = analyzerData.language_config;
     }
-    await this.syncLanguages(analyzer);
+    await this.analyzerLanguages.apply(analyzer);
     if (analyzerData.logo) {
       analyzer.logo = analyzerData.logo;
     }
@@ -228,9 +217,9 @@ export class AnalyzersService {
     // Verify that the specified analyzer belongs to the organization
     await this.analyzersRepository.doesAnalyzerBelongToOrg(id, orgId);
 
-    return this.withAvailability(
-      await this.analyzersRepository.getAnalyzerById(id),
-    );
+    const analyzer = await this.analyzersRepository.getAnalyzerById(id);
+    await this.analyzerLanguages.refresh(analyzer);
+    return this.withAvailability(analyzer);
   }
 
   /**
@@ -259,6 +248,7 @@ export class AnalyzersService {
     // Verify that the specified analyzer belongs to the organization
     await this.analyzersRepository.doesAnalyzerBelongToOrg(analyzer.id, orgId);
 
+    await this.analyzerLanguages.refresh(analyzer);
     return this.withAvailability(analyzer);
   }
 
@@ -306,6 +296,7 @@ export class AnalyzersService {
       currentPage,
       entriesPerPage,
     );
+    await this.analyzerLanguages.refresh(...page.data);
     await Promise.all(
       page.data.map((analyzer) => this.withAvailability(analyzer)),
     );

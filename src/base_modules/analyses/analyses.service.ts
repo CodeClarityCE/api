@@ -12,6 +12,7 @@ import {
   AnalysisCreateBody,
   AnalysisRun,
 } from "src/base_modules/analyses/analysis.types";
+import { AnalyzerLanguagesService } from "src/base_modules/analyzers/analyzer-languages.service";
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { OrganizationLoggerService } from "src/base_modules/organizations/log/organizationLogger.service";
 import { ActionType } from "src/base_modules/organizations/log/orgAuditLog.types";
@@ -95,6 +96,7 @@ export class AnalysesService {
     @InjectRepository(Policy, "codeclarity")
     private policyRepository: Repository<Policy>,
     private readonly organizationLoggerService: OrganizationLoggerService,
+    private readonly analyzerLanguages: AnalyzerLanguagesService,
   ) {}
 
   /**
@@ -132,6 +134,9 @@ export class AnalysesService {
     const analyzer = await this.analyzersRepository.getAnalyzerById(
       analysisData.analyzer_id,
     );
+
+    // Bring a template-based analyzer's languages up to date; the dispatcher reads the saved row
+    await this.analyzerLanguages.refresh(analyzer);
 
     // Refuse before anything is saved or queued, with the reason the UI shows
     await this.pluginAvailability.assertAvailable(analyzer.steps);
