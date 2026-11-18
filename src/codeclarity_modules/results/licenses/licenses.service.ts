@@ -165,12 +165,7 @@ export class LicensesService {
             ) ?? false,
           unable_to_infer:
             licenseId in (licensesWorkspaceInfo.NonSpdxLicensesDepMap ?? {}),
-          // An empty id means the knowledge base has no license for these dependencies.
-          name: licenseId === "" ? "Unknown license" : licenseId,
-          description:
-            licenseId === ""
-              ? "No license was found for these dependencies. Check their license by hand."
-              : "This license is not on the SPDX license list, so its terms are not known. Check it by hand.",
+          ...nonSpdxLicenseText(licenseId),
           deps_using_license: Array.from(new Set(depsUsingLicense)),
           license_category: "",
         };
@@ -303,4 +298,34 @@ export class LicensesService {
       stage_end: licensesOutput.analysis_info.analysis_end_time,
     };
   }
+}
+
+// npm's way of pointing at a license file inside the package.
+const CUSTOM_LICENSE_PATTERN = /^SEE LICENSE IN\s+(.+)$/i;
+
+/** Name and description of a license id that is not on the SPDX list. */
+function nonSpdxLicenseText(licenseId: string): {
+  name: string;
+  description: string;
+} {
+  // An empty id means the knowledge base has no license for these dependencies.
+  if (licenseId === "") {
+    return {
+      name: "Unknown license",
+      description:
+        "No license was found for these dependencies. Check their license by hand.",
+    };
+  }
+  const file = CUSTOM_LICENSE_PATTERN.exec(licenseId.trim())?.[1];
+  if (file) {
+    return {
+      name: `Custom license (${file})`,
+      description: `This package gives its own license terms in ${file}. Check them by hand.`,
+    };
+  }
+  return {
+    name: licenseId,
+    description:
+      "This license is not on the SPDX license list, so its terms are not known. Check it by hand.",
+  };
 }
