@@ -7,6 +7,8 @@ import { TeamMember } from "../../users/teamMember.types";
 /*                  Enums                   */
 /********************************************/
 
+// The frontend copies ActionSeverity in frontend/src/codeclarity_components/organizations/audit_logs/AuditLog.ts.
+// The umbrella type-sync check (scripts/type-sync) fails CI when it lacks a value.
 export enum ActionSeverity {
   Critical = 3,
   High = 2,
@@ -14,6 +16,8 @@ export enum ActionSeverity {
   Low = 0,
 }
 
+// The frontend copies ActionClassType in frontend/src/codeclarity_components/organizations/audit_logs/AuditLog.ts.
+// The umbrella type-sync check (scripts/type-sync) fails CI when it lacks a value.
 export enum ActionClassType {
   Project = "Project",
   Analyzer = "Analyzer",
@@ -22,6 +26,8 @@ export enum ActionClassType {
   Unkown = "Unkown",
 }
 
+// The frontend copies ActionType in frontend/src/codeclarity_components/organizations/audit_logs/AuditLog.ts.
+// The umbrella type-sync check (scripts/type-sync) fails CI when it lacks a value.
 export enum ActionType {
   ProjectCreate = "ProjectCreate",
   ProjectUpdate = "ProjectUpdate",

@@ -12,6 +12,8 @@ import type { User } from "../../base_modules/users/users.entity";
 
 import type { Ticket } from "./ticket.entity";
 
+// The frontend copies TicketEventType in frontend/src/codeclarity_components/tickets/tickets.entity.ts.
+// The umbrella type-sync check (scripts/type-sync) fails CI when it lacks a value.
 export enum TicketEventType {
   CREATED = "CREATED",
   STATUS_CHANGED = "STATUS_CHANGED",

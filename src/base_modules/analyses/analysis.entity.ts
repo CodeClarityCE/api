@@ -18,6 +18,8 @@ import { Organization } from "../organizations/organization.entity";
 import { Project } from "../projects/project.entity";
 import { User } from "../users/users.entity";
 
+// The frontend copies AnalysisStatus in frontend/src/codeclarity_components/analyses/analysis.entity.ts.
+// The umbrella type-sync check (scripts/type-sync) fails CI when it lacks a value.
 export enum AnalysisStatus {
   REQUESTED = "requested",
   TRIGGERED = "triggered",
