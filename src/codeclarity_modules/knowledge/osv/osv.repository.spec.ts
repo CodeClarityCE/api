@@ -7,22 +7,6 @@ import { EntityNotFound } from "src/types/error.types";
 import { OSV } from "./osv.entity";
 import { OSVRepository } from "./osv.repository";
 
-// The query a CVE lookup sends, matching any alias and ordering results predictably.
-const cveLookup = (cve: string) => ({
-  where: {
-    cve_aliases: expect.objectContaining({
-      _type: "raw",
-      _objectLiteralParameters: { cve },
-    }),
-    retired_at: IsNull(),
-  },
-  order: {
-    kind: "DESC",
-    retired_at: { direction: "ASC", nulls: "FIRST" },
-    osv_id: "ASC",
-  },
-});
-
 describe("OSVRepository", () => {
   let osvRepository: OSVRepository;
   let mockRepository: jest.Mocked<Repository<OSV>>;
@@ -175,123 +159,6 @@ describe("OSVRepository", () => {
           where: { osv_id: ghsaId, retired_at: IsNull() },
         });
       }
-    });
-  });
-
-  describe("getVulnCVE", () => {
-    it("should return OSV vulnerability when found by CVE ID", async () => {
-      mockRepository.findOne.mockResolvedValue(mockOSV);
-
-      const result = await osvRepository.getVulnCVE("CVE-2021-44228");
-
-      expect(result).toEqual(mockOSV);
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        ...cveLookup("CVE-2021-44228"),
-      });
-      expect(mockRepository.findOne).toHaveBeenCalledTimes(1);
-    });
-
-    it("should throw EntityNotFound when CVE is not found", async () => {
-      mockRepository.findOne.mockResolvedValue(null);
-
-      await expect(
-        osvRepository.getVulnCVE("CVE-2023-NONEXISTENT"),
-      ).rejects.toThrow(EntityNotFound);
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        ...cveLookup("CVE-2023-NONEXISTENT"),
-      });
-    });
-
-    it("should handle repository errors gracefully", async () => {
-      const dbError = new Error("Database connection failed");
-      mockRepository.findOne.mockRejectedValue(dbError);
-
-      await expect(osvRepository.getVulnCVE("CVE-2021-44228")).rejects.toThrow(
-        "Database connection failed",
-      );
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        ...cveLookup("CVE-2021-44228"),
-      });
-    });
-
-    it("should handle different CVE ID formats", async () => {
-      const testCases = [
-        "CVE-2021-44228",
-        "CVE-2023-1234",
-        "CVE-1999-0001",
-        "CVE-2020-999999",
-      ];
-
-      for (const cveId of testCases) {
-        mockRepository.findOne.mockResolvedValue({ ...mockOSV, cve: cveId });
-
-        const result = await osvRepository.getVulnCVE(cveId);
-
-        expect(result.cve).toBe(cveId);
-        expect(mockRepository.findOne).toHaveBeenCalledWith({
-          ...cveLookup(cveId),
-        });
-      }
-    });
-  });
-
-  describe("getVulnByCVEIDWithoutFailing", () => {
-    it("should return OSV vulnerability when found", async () => {
-      mockRepository.findOne.mockResolvedValue(mockOSV);
-
-      const result =
-        await osvRepository.getVulnByCVEIDWithoutFailing("CVE-2021-44228");
-
-      expect(result).toEqual(mockOSV);
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        ...cveLookup("CVE-2021-44228"),
-      });
-    });
-
-    it("should return null when CVE is not found", async () => {
-      mockRepository.findOne.mockResolvedValue(null);
-
-      const result = await osvRepository.getVulnByCVEIDWithoutFailing(
-        "CVE-2023-NONEXISTENT",
-      );
-
-      expect(result).toBeNull();
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        ...cveLookup("CVE-2023-NONEXISTENT"),
-      });
-    });
-
-    it("should handle repository errors", async () => {
-      const dbError = new Error("Database connection failed");
-      mockRepository.findOne.mockRejectedValue(dbError);
-
-      await expect(
-        osvRepository.getVulnByCVEIDWithoutFailing("CVE-2021-44228"),
-      ).rejects.toThrow("Database connection failed");
-    });
-
-    it("should handle empty string CVE ID", async () => {
-      mockRepository.findOne.mockResolvedValue(null);
-
-      const result = await osvRepository.getVulnByCVEIDWithoutFailing("");
-
-      expect(result).toBeNull();
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        ...cveLookup(""),
-      });
-    });
-
-    it("should handle special characters in CVE ID", async () => {
-      const specialCveId = "CVE-2021-44228'\";DROP TABLE osv;--";
-      mockRepository.findOne.mockResolvedValue(null);
-
-      const result =
-        await osvRepository.getVulnByCVEIDWithoutFailing(specialCveId);
-
-      expect(result).toBeNull();
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        ...cveLookup(specialCveId),
-      });
     });
   });
 
@@ -502,19 +369,11 @@ describe("OSVRepository", () => {
       await expect(osvRepository.getVulnGHSA(undefined as any)).rejects.toThrow(
         EntityNotFound,
       );
-      await expect(osvRepository.getVulnCVE(undefined as any)).rejects.toThrow(
-        EntityNotFound,
-      );
-
-      const result1 = await osvRepository.getVulnByCVEIDWithoutFailing(
-        undefined as any,
-      );
-      const result2 = await osvRepository.getVulnByOSVIDWithoutFailing(
+      const result = await osvRepository.getVulnByOSVIDWithoutFailing(
         undefined as any,
       );
 
-      expect(result1).toBeNull();
-      expect(result2).toBeNull();
+      expect(result).toBeNull();
     });
 
     it("should handle null parameters gracefully", async () => {
@@ -523,19 +382,11 @@ describe("OSVRepository", () => {
       await expect(osvRepository.getVulnGHSA(null as any)).rejects.toThrow(
         EntityNotFound,
       );
-      await expect(osvRepository.getVulnCVE(null as any)).rejects.toThrow(
-        EntityNotFound,
-      );
-
-      const result1 = await osvRepository.getVulnByCVEIDWithoutFailing(
-        null as any,
-      );
-      const result2 = await osvRepository.getVulnByOSVIDWithoutFailing(
+      const result = await osvRepository.getVulnByOSVIDWithoutFailing(
         null as any,
       );
 
-      expect(result1).toBeNull();
-      expect(result2).toBeNull();
+      expect(result).toBeNull();
     });
 
     it("should handle OSV with null JSONB fields", async () => {
@@ -643,25 +494,6 @@ describe("OSVRepository", () => {
       });
       expect(mockRepository.findOne).toHaveBeenCalledTimes(3);
     });
-
-    it("should handle mixed CVE and OSV ID requests", async () => {
-      mockRepository.findOne.mockImplementation((options: any) => {
-        if (options.where?.cve_aliases) {
-          return Promise.resolve({ ...mockOSV, cve: "CVE-2021-44228" });
-        } else if (options.where?.osv_id) {
-          return Promise.resolve({ ...mockOSV, osv_id: options.where.osv_id });
-        }
-        return Promise.resolve(null);
-      });
-
-      const [cveResult, osvResult] = await Promise.all([
-        osvRepository.getVulnCVE("CVE-2021-44228"),
-        osvRepository.getVulnGHSA("GHSA-jfh8-c2jp-5v3q"),
-      ]);
-
-      expect(cveResult.cve).toBe("CVE-2021-44228");
-      expect(osvResult.osv_id).toBe("GHSA-jfh8-c2jp-5v3q");
-    });
   });
 
   describe("Service initialization", () => {
@@ -675,7 +507,6 @@ describe("OSVRepository", () => {
 
     it("should have all required methods", () => {
       expect(typeof osvRepository.getVulnGHSA).toBe("function");
-      expect(typeof osvRepository.getVulnCVE).toBe("function");
       expect(typeof osvRepository.getVulnByCVEIDWithoutFailing).toBe(
         "function",
       );

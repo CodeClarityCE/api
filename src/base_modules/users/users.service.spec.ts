@@ -519,48 +519,6 @@ describe("UsersService", () => {
     });
   });
 
-  describe("requestPasswordReset", () => {
-    it("should throw not implemented error", async () => {
-      await expect(
-        service.requestPasswordReset("test@example.com"),
-      ).rejects.toThrow("Method not implemented.");
-    });
-  });
-
-  describe("resetPassword", () => {
-    it("should throw not implemented error", async () => {
-      await expect(
-        service.resetPassword(
-          "token",
-          "userIdHash",
-          "newPassword",
-          "newPasswordConfirmation",
-        ),
-      ).rejects.toThrow("Method not implemented.");
-    });
-  });
-
-  describe("registerSocial", () => {
-    it("should throw not implemented error", async () => {
-      await expect(
-        service.registerSocial(
-          "test@example.com",
-          "accessToken",
-          "GITHUB" as any,
-          "socialId",
-        ),
-      ).rejects.toThrow("Method not implemented.");
-    });
-  });
-
-  describe("completeSocialAccountSetup", () => {
-    it("should throw not implemented error", async () => {
-      await expect(
-        service.completeSocialAccountSetup({} as any, mockAuthenticatedUser),
-      ).rejects.toThrow("Method not implemented.");
-    });
-  });
-
   describe("updatePassword", () => {
     it("should update password successfully", async () => {
       const userWithOldPassword = { ...mockUser, social: false };
@@ -783,30 +741,6 @@ describe("UsersService", () => {
       await expect(
         service.delete("test-user-id", mockAuthenticatedUser, "wrong-password"),
       ).rejects.toThrow(NotAuthorized);
-    });
-  });
-
-  describe("existsUser", () => {
-    it("should throw not implemented error", async () => {
-      await expect(service.existsUser("test-user-id")).rejects.toThrow(
-        "Method not implemented.",
-      );
-    });
-  });
-
-  describe("existsSocialUser", () => {
-    it("should throw not implemented error", async () => {
-      await expect(
-        service.existsSocialUser("socialId", "GITHUB" as any),
-      ).rejects.toThrow("Method not implemented.");
-    });
-  });
-
-  describe("existsUserEmail", () => {
-    it("should throw not implemented error", async () => {
-      await expect(service.existsUserEmail("test@example.com")).rejects.toThrow(
-        "Method not implemented.",
-      );
     });
   });
 });

@@ -2,6 +2,8 @@ import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { MailerService } from "@nestjs-modules/mailer";
 
+import { INVITATION_LIFETIME_TEXT } from "src/base_modules/organizations/invitations/invitation.lifetime";
+import { PASSWORD_RESET_LIFETIME_TEXT } from "src/base_modules/users/password-reset.lifetime";
 import { User } from "src/base_modules/users/users.entity";
 
 /**
@@ -84,6 +86,7 @@ export class EmailService {
       template: "./password_reset",
       templateData: {
         reset_password_url: url,
+        reset_lifetime: PASSWORD_RESET_LIFETIME_TEXT,
         platform_name: this.platformName,
         web_host: this.webHost.split("//")[1],
       },
@@ -96,8 +99,6 @@ export class EmailService {
    * @param params - Parameters for sending the email.
    * @param params.email - The recipient's email address.
    * @param params.inviteToken - The token used for joining the organization.
-   * @param params.blockOrgInvitesToken - The token used for blocking future invites from this organization.
-   * @param params.blockAllOrgInvitesToken - The token used for blocking all future invites.
    * @param params.userEmailDigest - The hashed user email.
    * @param params.organizationName - The name of the organization to which the user was invited.
    * @param params.inviter - The inviter's details.
@@ -106,8 +107,6 @@ export class EmailService {
   async sendOrganizationInvite({
     email,
     inviteToken,
-    blockOrgInvitesToken,
-    blockAllOrgInvitesToken,
     userEmailDigest,
     organizationName,
     inviter,
@@ -115,16 +114,12 @@ export class EmailService {
   }: {
     email: string;
     inviteToken: string;
-    blockOrgInvitesToken: string;
-    blockAllOrgInvitesToken: string;
     userEmailDigest: string;
     organizationName: string;
     inviter: User;
     orgId: string;
   }): Promise<void> {
     const url = `${this.webHost}/email_action/join_org?token=${inviteToken}&useremail=${userEmailDigest}&orgId=${orgId}`;
-    const orgInvitesBlockUrl = `${this.webHost}/email_action/unsubscribe/block_org_invites?token=${blockOrgInvitesToken}&useremail=${userEmailDigest}&orgId=${orgId}`;
-    const allOrgInvitesBlockUrl = `${this.webHost}/email_action/unsubscribe/block_all_org_invites?token=${blockAllOrgInvitesToken}&useremail=${userEmailDigest}`;
 
     await this.sendEmail({
       to: email,
@@ -135,8 +130,7 @@ export class EmailService {
         inviter_last_name: inviter.last_name,
         organization_name: organizationName,
         organization_invite_url: url,
-        organization_block_invites_url: orgInvitesBlockUrl,
-        block_all_invites_url: allOrgInvitesBlockUrl,
+        invitation_lifetime: INVITATION_LIFETIME_TEXT,
         platform_name: this.platformName,
         web_host: this.webHost.split("//")[1],
       },
@@ -149,7 +143,6 @@ export class EmailService {
    * @param params - Parameters for sending the email.
    * @param params.email - The recipient's email address.
    * @param params.inviteToken - The token used for joining the organization.
-   * @param params.blockEmailsToken - The token used for blocking all future invites to this email.
    * @param params.userEmailDigest - The hashed user email.
    * @param params.organizationName - The name of the organization to which the user was invited.
    * @param params.inviter - The inviter's details.
@@ -158,7 +151,6 @@ export class EmailService {
   async sendOrganizationInviteForNonUser({
     email,
     inviteToken,
-    blockEmailsToken,
     userEmailDigest,
     organizationName,
     inviter,
@@ -166,14 +158,12 @@ export class EmailService {
   }: {
     email: string;
     inviteToken: string;
-    blockEmailsToken: string;
     userEmailDigest: string;
     organizationName: string;
     inviter: User;
     orgId: string;
   }): Promise<void> {
     const url = `${this.webHost}/email_action/join_org?token=${inviteToken}&useremail=${userEmailDigest}&orgId=${orgId}`;
-    const unsubscribeUrl = `${this.webHost}/email_action/unsubscribe/block_all_emails?token=${blockEmailsToken}&useremail=${userEmailDigest}`;
     await this.sendEmail({
       to: email,
       subject: `${this.platformName} - Invited to join ${organizationName}`,
@@ -183,7 +173,7 @@ export class EmailService {
         inviter_last_name: inviter.last_name,
         organization_name: organizationName,
         organization_invite_url: url,
-        block_email_url: unsubscribeUrl,
+        invitation_lifetime: INVITATION_LIFETIME_TEXT,
         platform_name: this.platformName,
         web_host: this.webHost.split("//")[1],
       },

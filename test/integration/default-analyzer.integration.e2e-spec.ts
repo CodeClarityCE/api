@@ -17,7 +17,10 @@ import {
 } from "../../src/base_modules/shared/repositories";
 import { User } from "../../src/base_modules/users/users.entity";
 import { createDefaultAnalyzer } from "../../src/scripts/create-default-analyzer";
-import { openScratchDatabase } from "../utils/scratch-database";
+import {
+  closeScratchDatabase,
+  openScratchDatabase,
+} from "../utils/scratch-database";
 
 describe("create-default-analyzer job against Postgres", () => {
   let dataSource: DataSource;
@@ -28,7 +31,7 @@ describe("create-default-analyzer job against Postgres", () => {
   });
 
   afterAll(async () => {
-    await dataSource?.destroy();
+    await closeScratchDatabase(dataSource);
   });
 
   beforeEach(async () => {

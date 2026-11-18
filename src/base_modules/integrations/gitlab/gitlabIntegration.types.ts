@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Exclude, Expose, Type } from "class-transformer";
-import { IsEnum, IsNotEmpty, IsUrl } from "class-validator";
+import { IsEnum, IsNotEmpty, IsUrl, MaxLength } from "class-validator";
 
 import {
   AccessTokenBasedIntegration,
@@ -65,8 +65,9 @@ export class LinkGitlabCreateBody {
   @IsEnum(GitlabTokenType)
   token_type!: GitlabTokenType;
 
-  @ApiProperty()
+  @ApiProperty({ maxLength: 255 })
   @IsUrl({ require_protocol: true })
+  @MaxLength(255)
   gitlab_instance_url!: string;
 }
 
@@ -83,6 +84,7 @@ export class LinkGitlabPatchBody {
   token_type!: GitlabTokenType;
 
   @IsUrl()
+  @MaxLength(255)
   gitlab_instance_url!: string;
 }
 

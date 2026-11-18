@@ -81,6 +81,8 @@ export const errorMessages: Record<string, string> = {
     "You have an existing integration with the integration provider.",
   ProjectDoesNotExist: "The project referenced does not exist.",
   IntegrationWrongTokenType: "The token type is not supported.",
+  IntegrationInstanceUrlChanged:
+    "The integration's instance URL cannot be changed. Delete the integration and connect it again instead.",
   FailedToRetrieveReposFromProvider:
     "The provider could not be succesfully reached to retrieve the repositories.",
   IntegrationTokenRetrievalFailed:
@@ -89,15 +91,12 @@ export const errorMessages: Record<string, string> = {
     "The requested action cannot be performed because the token is not valid or has been revoked.",
   PersonalOrgCannotBeModified: "A personal org cannot be modified.",
   FailedToCreateApiKey: "Failed to generate the api key.",
-  FailedToAuthenticateSocialAccount: "Failed to authenticate social account.",
   InvitationExpired: "Invitation expired.",
   EmailAlreadyExists:
     "The requested user could not be created because a different user with the same email already exists.",
   AlreadyExists:
     "The requested entity could not be created because it already exists.",
   UserDoesNotExist: "The referenced user does not exists.",
-  UnsubscriptionTokenInvalidOrExpired:
-    "The unsubscription link is invalid or has expired.",
   NotAMember: "The user is not a member of the referenced organization.",
   CannotLeaveAsLastOwner:
     "You cannot leave the organization as the last owner.",
@@ -418,6 +417,20 @@ export class IntegrationInvalidToken extends PublicAPIError {
   }
 }
 
+export class IntegrationInstanceUrlChanged extends PublicAPIError {
+  static errorCode = "IntegrationInstanceUrlChanged";
+  static errorMessage = errorMessages[IntegrationInstanceUrlChanged.errorCode]!;
+  static statusCode = 400;
+  constructor(cause?: unknown) {
+    super(
+      IntegrationInstanceUrlChanged.errorCode,
+      IntegrationInstanceUrlChanged.errorMessage,
+      IntegrationInstanceUrlChanged.statusCode,
+      cause,
+    );
+  }
+}
+
 export class AccountNotActivated extends PublicAPIError {
   static errorCode = "AccountNotActivated";
   static errorMessage = errorMessages[AccountNotActivated.errorCode]!;
@@ -427,21 +440,6 @@ export class AccountNotActivated extends PublicAPIError {
       AccountNotActivated.errorCode,
       AccountNotActivated.errorMessage,
       AccountNotActivated.statusCode,
-      cause,
-    );
-  }
-}
-
-export class SocialConnectionTypeNotSupported extends PublicAPIError {
-  static errorCode = "SocialConnectionTypeNotSupported";
-  static errorMessage =
-    errorMessages[SocialConnectionTypeNotSupported.errorCode]!;
-  static statusCode = 400;
-  constructor(cause?: unknown) {
-    super(
-      SocialConnectionTypeNotSupported.errorCode,
-      SocialConnectionTypeNotSupported.errorMessage,
-      SocialConnectionTypeNotSupported.statusCode,
       cause,
     );
   }
@@ -470,21 +468,6 @@ export class FailedToCreateApiKey extends PublicAPIError {
       FailedToCreateApiKey.errorCode,
       FailedToCreateApiKey.errorMessage,
       FailedToCreateApiKey.statusCode,
-      cause,
-    );
-  }
-}
-
-export class FailedToAuthenticateSocialAccount extends PublicAPIError {
-  static errorCode = "FailedToCreateSocialAccount";
-  static errorMessage =
-    errorMessages[FailedToAuthenticateSocialAccount.errorCode]!;
-  static statusCode = 500;
-  constructor(cause?: unknown) {
-    super(
-      FailedToAuthenticateSocialAccount.errorCode,
-      FailedToAuthenticateSocialAccount.errorMessage,
-      FailedToAuthenticateSocialAccount.statusCode,
       cause,
     );
   }
@@ -541,21 +524,6 @@ export class UserDoesNotExist extends PublicAPIError {
       UserDoesNotExist.errorCode,
       UserDoesNotExist.errorMessage,
       UserDoesNotExist.statusCode,
-      cause,
-    );
-  }
-}
-
-export class UnsubscriptionTokenInvalidOrExpired extends PublicAPIError {
-  static errorCode = "UnsubscriptionTokenInvalidOrExpired";
-  static errorMessage =
-    errorMessages[UnsubscriptionTokenInvalidOrExpired.errorCode]!;
-  static statusCode = 400;
-  constructor(cause?: unknown) {
-    super(
-      UnsubscriptionTokenInvalidOrExpired.errorCode,
-      UnsubscriptionTokenInvalidOrExpired.errorMessage,
-      UnsubscriptionTokenInvalidOrExpired.statusCode,
       cause,
     );
   }
@@ -684,7 +652,7 @@ export class FailedToSendOrganizationInviteEmail extends PublicAPIError {
     super(
       FailedToSendOrganizationInviteEmail.errorCode,
       FailedToSendOrganizationInviteEmail.errorMessage,
-      EntityNotFound.statusCode,
+      FailedToSendOrganizationInviteEmail.statusCode,
       cause,
     );
   }

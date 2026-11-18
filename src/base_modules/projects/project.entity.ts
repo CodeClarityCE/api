@@ -39,7 +39,7 @@ export class Project {
   added_on!: Date;
 
   @Column({
-    length: 100,
+    length: 255,
     nullable: true,
   })
   service_domain!: string;

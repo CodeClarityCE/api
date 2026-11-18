@@ -79,7 +79,7 @@ export class Integration {
   @ApiProperty()
   @Expose()
   @Column({
-    length: 25,
+    length: 255,
   })
   service_domain!: string;
 

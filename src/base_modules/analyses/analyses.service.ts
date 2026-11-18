@@ -13,6 +13,8 @@ import {
   AnalysisRun,
 } from "src/base_modules/analyses/analysis.types";
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import { OrganizationLoggerService } from "src/base_modules/organizations/log/organizationLogger.service";
+import { ActionType } from "src/base_modules/organizations/log/orgAuditLog.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
 import {
   BatchItemResult,
@@ -92,6 +94,7 @@ export class AnalysesService {
     private readonly analysesRepository: AnalysesRepository,
     @InjectRepository(Policy, "codeclarity")
     private policyRepository: Repository<Policy>,
+    private readonly organizationLoggerService: OrganizationLoggerService,
   ) {}
 
   /**
@@ -288,7 +291,8 @@ export class AnalysesService {
       orgId,
     );
 
-    // Scheduled analyses (daily/weekly) are triggered by the scheduler instead
+    // Scheduled analyses (daily/weekly) are started later by the scheduler,
+    // so only an immediate run is queued and recorded as started now.
     if (analysis.schedule_type === "once") {
       await this.publishStart({
         analysis_id: created_analysis.id,
@@ -296,6 +300,12 @@ export class AnalysesService {
         organization_id: orgId,
         project_id: projectId,
       });
+      await this.organizationLoggerService.addAuditLog(
+        ActionType.AnalysisStarted,
+        `The User started an analysis of project ${project.name} with analyzer ${analyzer.name}.`,
+        orgId,
+        user.userId,
+      );
     }
 
     // Return the ID of the created analysis as a confirmation
@@ -527,7 +537,19 @@ export class AnalysesService {
     // (3) Check if the analysis belongs to the project
     await this.analysesRepository.doesAnalysesBelongToProject(id, projectId);
 
-    await this.analysesRepository.deleteByIds([id]);
+    const analysis = await this.analysesRepository.getAnalysisById(id, {
+      project: true,
+      analyzer: true,
+    });
+
+    await this.cancelAndDelete([id]);
+
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.AnalysisDeleted,
+      `The User deleted an analysis of project ${analysis.project.name} made with analyzer ${analysis.analyzer.name}.`,
+      orgId,
+      user.userId,
+    );
   }
 
   /**
@@ -573,8 +595,8 @@ export class AnalysesService {
   /**
    * Bulk-delete analyses of a project using set-based statements.
    *
-   * In-flight analyses are cancelled first (so workers stop), then their result
-   * blobs and the analyses themselves are removed in bulk. Ids not belonging to
+   * In-flight analyses are cancelled, then their result blobs and the analyses
+   * themselves are removed, all in one transaction. Ids not belonging to
    * the project are reported as `not_found`.
    *
    * @throws {NotAuthorized} if the caller is not at least a USER of the org
@@ -594,12 +616,18 @@ export class AnalysesService {
     );
 
     const toDelete = [...cancellable, ...skipped];
-    if (cancellable.length > 0) {
-      // Stop any in-flight work before the rows disappear.
-      await this.analysesRepository.cancelByIds(cancellable);
-    }
     if (toDelete.length > 0) {
-      await this.analysesRepository.deleteByIds(toDelete);
+      await this.cancelAndDelete(toDelete);
+
+      // One aggregated audit log instead of one per analysis
+      const project = await this.projectsRepository.getProjectById(projectId);
+      const noun = toDelete.length === 1 ? "analysis" : "analyses";
+      await this.organizationLoggerService.addAuditLog(
+        ActionType.AnalysisDeleted,
+        `The User deleted ${toDelete.length} ${noun} of project ${project.name}.`,
+        orgId,
+        user.userId,
+      );
     }
 
     const results: BatchItemResult[] = [
@@ -611,6 +639,14 @@ export class AnalysesService {
       succeeded: toDelete.length,
       failed: notFound.length,
     };
+  }
+
+  /** Cancels the running analyses among `ids`, then deletes all of them, in one transaction. */
+  private async cancelAndDelete(ids: string[]): Promise<void> {
+    await this.analysesRepository.runInTransaction(async (manager) => {
+      await this.analysesRepository.cancelByIds(ids, manager);
+      await this.analysesRepository.deleteByIds(ids, manager);
+    });
   }
 
   /**

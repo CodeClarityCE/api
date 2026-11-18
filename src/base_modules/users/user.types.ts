@@ -49,23 +49,6 @@ export class UserCreateBody {
   password_confirmation!: string;
 }
 
-export class UserCompleteSocialCreateBody {
-  @ApiProperty()
-  @IsNotEmpty()
-  @Length(1, 25)
-  first_name!: string;
-
-  @ApiProperty()
-  @IsNotEmpty()
-  @Length(1, 50)
-  last_name!: string;
-
-  @ApiProperty()
-  @IsNotEmpty()
-  @Length(5, 50)
-  handle!: string;
-}
-
 export class RegistrationConfirmationBody {
   @ApiProperty({ description: "The token sent via email" })
   @IsNotEmpty()
@@ -167,21 +150,6 @@ export class UserCreateSocial {
   social_id!: string;
   avatar_url!: string | undefined;
   created_on!: Date;
-}
-
-export class UserCompleteSocialCreate {
-  first_name!: string;
-  last_name!: string;
-  handle!: string;
-  setup_done!: boolean;
-}
-
-export class UserCreateSocialFull {
-  first_name!: string;
-  last_name!: string;
-  handle!: string;
-  email!: string;
-  setup_done!: boolean;
 }
 
 export abstract class SocialAccountSetupCreate {

@@ -32,13 +32,13 @@ export class InvitationsRepository {
   }
 
   /**
-   * Deletes an invitation from the database.
+   * Deletes an invitation from the database by its id.
    *
-   * @param invitation - The Invitation entity to be deleted.
+   * @param invitationId - The id of the invitation to delete.
    * @returns A Promise that resolves when the deletion is complete.
    */
-  async deleteInvitation(invitation: Invitation): Promise<void> {
-    await this.invitationRepository.delete(invitation);
+  async deleteInvitation(invitationId: string): Promise<void> {
+    await this.invitationRepository.delete({ id: invitationId });
   }
 
   /**

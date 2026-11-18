@@ -15,17 +15,14 @@ import type {
   DeleteAccountBody,
   RegistrationConfirmationBody,
   ResendAccountRegEmailBody,
-  UserCompleteSocialCreateBody,
   UserPasswordPatchBody,
   UserPatchBody,
 } from "./user.types";
 import { UsersController } from "./users.controller";
 import type { User } from "./users.entity";
 import {
-  CannotPerformActionOnNormalAccount,
   CannotPerformActionOnSocialAccount,
   FailedToSendAccountRegistrationVerificationEmail,
-  SetupAlreadyDone,
 } from "./users.errors";
 import { UsersService } from "./users.service";
 
@@ -209,63 +206,6 @@ describe("UsersController", () => {
       await expect(
         controller.deleteAccount(mockAuthenticatedUser, "other-user-id", body),
       ).rejects.toThrow(NotAuthorized);
-    });
-  });
-
-  describe("completeSocialAccountSetup", () => {
-    it("should complete social account setup successfully", async () => {
-      const setupData: UserCompleteSocialCreateBody = {
-        first_name: "Test",
-        last_name: "User",
-        handle: "testuser",
-      };
-
-      usersService.completeSocialAccountSetup.mockResolvedValue(
-        "completed-user-id",
-      );
-
-      const result = await controller.completeSocialAccountSetup(
-        mockAuthenticatedUser,
-        setupData,
-      );
-
-      expect(usersService.completeSocialAccountSetup).toHaveBeenCalledWith(
-        setupData,
-        mockAuthenticatedUser,
-      );
-      expect(result).toEqual({ id: "completed-user-id" });
-    });
-
-    it("should throw error for normal account", async () => {
-      const setupData: UserCompleteSocialCreateBody = {
-        first_name: "Test",
-        last_name: "User",
-        handle: "testuser",
-      };
-
-      usersService.completeSocialAccountSetup.mockRejectedValue(
-        new CannotPerformActionOnNormalAccount(),
-      );
-
-      await expect(
-        controller.completeSocialAccountSetup(mockAuthenticatedUser, setupData),
-      ).rejects.toThrow(CannotPerformActionOnNormalAccount);
-    });
-
-    it("should throw error when setup already done", async () => {
-      const setupData: UserCompleteSocialCreateBody = {
-        first_name: "Test",
-        last_name: "User",
-        handle: "testuser",
-      };
-
-      usersService.completeSocialAccountSetup.mockRejectedValue(
-        new SetupAlreadyDone(),
-      );
-
-      await expect(
-        controller.completeSocialAccountSetup(mockAuthenticatedUser, setupData),
-      ).rejects.toThrow(SetupAlreadyDone);
     });
   });
 

@@ -126,17 +126,32 @@ export async function leftoverRows(
 
 /** Makes every project delete fail until the returned function is called. */
 export async function failProjectDeletes(): Promise<() => Promise<void>> {
+  return failDeletesOn("project");
+}
+
+/** Makes every analysis delete fail until the returned function is called. */
+export async function failAnalysisDeletes(): Promise<() => Promise<void>> {
+  return failDeletesOn("analysis");
+}
+
+/** Makes every organization delete fail until the returned function is called. */
+export async function failOrganizationDeletes(): Promise<() => Promise<void>> {
+  return failDeletesOn("organization");
+}
+
+async function failDeletesOn(table: string): Promise<() => Promise<void>> {
   const db = testHelper.getDataSource();
+  const name = `fail_${table}_delete`;
   await db.query(`
-    CREATE OR REPLACE FUNCTION fail_project_delete() RETURNS trigger AS $$
-    BEGIN RAISE EXCEPTION 'project delete blocked by test'; END;
+    CREATE OR REPLACE FUNCTION ${name}() RETURNS trigger AS $$
+    BEGIN RAISE EXCEPTION '${table} delete blocked by test'; END;
     $$ LANGUAGE plpgsql`);
   await db.query(`
-    CREATE TRIGGER fail_project_delete BEFORE DELETE ON project
-    FOR EACH ROW EXECUTE FUNCTION fail_project_delete()`);
+    CREATE TRIGGER ${name} BEFORE DELETE ON ${table}
+    FOR EACH ROW EXECUTE FUNCTION ${name}()`);
   return async () => {
-    await db.query(`DROP TRIGGER IF EXISTS fail_project_delete ON project`);
-    await db.query(`DROP FUNCTION IF EXISTS fail_project_delete()`);
+    await db.query(`DROP TRIGGER IF EXISTS ${name} ON ${table}`);
+    await db.query(`DROP FUNCTION IF EXISTS ${name}()`);
   };
 }
 
@@ -164,4 +179,63 @@ export async function useDeployedJoinTableKeys(): Promise<void> {
       );
     }
   }
+}
+
+/** Marks analyses as running, as the dispatcher does once it picks them up. */
+export async function markAnalysesRunning(ids: string[]): Promise<void> {
+  await testHelper
+    .getDataSource()
+    .query(`UPDATE analysis SET status = 'started' WHERE id = ANY($1)`, [ids]);
+}
+
+/** Reads the current status of each analysis that still exists. */
+export async function analysisStatuses(
+  ids: string[],
+): Promise<Record<string, string>> {
+  const rows: { id: string; status: string }[] = await testHelper
+    .getDataSource()
+    .query(`SELECT id, status FROM analysis WHERE id = ANY($1)`, [ids]);
+  return Object.fromEntries(rows.map((r) => [r.id, r.status]));
+}
+
+/**
+ * Records the status each analysis had at the moment it was deleted, so a test
+ * can see whether it was cancelled first. Call the returned function to stop.
+ */
+export async function recordDeletedAnalysisStatuses(): Promise<{
+  statuses: () => Promise<Record<string, string>>;
+  stop: () => Promise<void>;
+}> {
+  const db = testHelper.getDataSource();
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS deleted_analysis_status (id uuid, status text)`,
+  );
+  await db.query(`TRUNCATE deleted_analysis_status`);
+  await db.query(`
+    CREATE OR REPLACE FUNCTION record_deleted_analysis_status() RETURNS trigger AS $$
+    BEGIN
+      INSERT INTO deleted_analysis_status VALUES (OLD.id, OLD.status);
+      RETURN OLD;
+    END;
+    $$ LANGUAGE plpgsql`);
+  await db.query(`
+    CREATE TRIGGER record_deleted_analysis_status BEFORE DELETE ON analysis
+    FOR EACH ROW EXECUTE FUNCTION record_deleted_analysis_status()`);
+  return {
+    statuses: async () => {
+      const rows: { id: string; status: string }[] = await db.query(
+        `SELECT id, status FROM deleted_analysis_status`,
+      );
+      return Object.fromEntries(rows.map((r) => [r.id, r.status]));
+    },
+    stop: async () => {
+      await db.query(
+        `DROP TRIGGER IF EXISTS record_deleted_analysis_status ON analysis`,
+      );
+      await db.query(
+        `DROP FUNCTION IF EXISTS record_deleted_analysis_status()`,
+      );
+      await db.query(`DROP TABLE IF EXISTS deleted_analysis_status`);
+    },
+  };
 }

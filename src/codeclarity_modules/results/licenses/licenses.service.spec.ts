@@ -261,9 +261,6 @@ describe("LicensesService", () => {
         pluginResults: [],
       });
 
-      // Mock the getDependencyVersions method to avoid "Not implemented" error
-      jest.spyOn(service as any, "getDependencyVersions").mockResolvedValue({});
-
       const result = await service.getDependenciesUsingLicense(
         "org-123",
         "project-123",
@@ -326,16 +323,58 @@ describe("LicensesService", () => {
         "MIT",
       );
 
-      expect(result["lodash@4.17.21"]).toMatchObject({
-        name: "lodash",
-        version: "4.17.21",
-        package_manager: "NPM",
+      expect(result).toEqual({
+        "lodash@4.17.21": {
+          name: "lodash",
+          version: "4.17.21",
+          package_manager: "NPM",
+          package_manager_link:
+            "https://www.npmjs.com/package/lodash/v/4.17.21",
+        },
+        "monolog/monolog@3.0.0": {
+          name: "monolog/monolog",
+          version: "3.0.0",
+          package_manager: "COMPOSER",
+        },
       });
-      expect(result["monolog/monolog@3.0.0"]).toMatchObject({
-        name: "monolog/monolog",
-        version: "3.0.0",
-        package_manager: "COMPOSER",
+    });
+
+    it("should describe a scoped npm package without logging a warning", async () => {
+      const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+      mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+      mockLicensesUtilsService.getLicensesResult.mockResolvedValue({
+        workspaces: {
+          default: { LicensesDepMap: { MIT: ["@vue/shared@3.4.0"] } },
+        },
       });
+      mockSbomUtilsService.getMergedSbomResults.mockResolvedValue({
+        mergedSbom: {
+          workspaces: {},
+          analysis_info: { package_manager: "NPM" },
+        },
+        pluginResults: [],
+      });
+
+      const result = await service.getDependenciesUsingLicense(
+        "org-123",
+        "project-123",
+        "analysis-123",
+        mockUser,
+        "default",
+        "MIT",
+      );
+
+      expect(result).toEqual({
+        "@vue/shared@3.4.0": {
+          name: "@vue/shared",
+          version: "3.4.0",
+          package_manager: "NPM",
+          package_manager_link:
+            "https://www.npmjs.com/package/@vue/shared/v/3.4.0",
+        },
+      });
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
     });
 
     it("should throw UnknownWorkspace error for invalid workspace", async () => {
@@ -442,26 +481,6 @@ describe("LicensesService", () => {
       await expect(
         service.getStatus("org-123", "project-123", "analysis-123", mockUser),
       ).rejects.toThrow("Access denied");
-    });
-  });
-
-  describe("getDependencyVersions (private method)", () => {
-    it("should return dependency versions data", async () => {
-      // Access private method through reflection for testing
-      const getDependencyVersions = (service as any).getDependencyVersions;
-
-      const result = await getDependencyVersions.call(service, [
-        "package:1.0.0",
-      ]);
-      expect(result).toEqual(
-        expect.objectContaining({
-          "package:1.0.0": expect.objectContaining({
-            version: "1.0.0",
-            dependencies: expect.any(Object),
-            dev_dependencies: expect.any(Object),
-          }),
-        }),
-      );
     });
   });
 });

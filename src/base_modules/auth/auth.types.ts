@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsEmail, IsNotEmpty } from "class-validator";
+import { IsEmail, IsNotEmpty, Length } from "class-validator";
 
 /** JWT payload structure for tokens */
 export interface JwtPayload {
@@ -38,22 +38,6 @@ export class AuthenticatedUser {
   }
 }
 
-export interface GithubAuthenticatedUser {
-  github_user_id: string;
-  email: string | undefined;
-  access_token: string;
-  refresh_token: undefined;
-  avatar_url: string;
-}
-
-export interface GitlabAuthenticatedUser {
-  gitlab_user_id: string;
-  email: string | undefined;
-  access_token: string;
-  refresh_token: string;
-  avatar_url: string;
-}
-
 export enum ROLE {
   USER = "ROLE_USER",
   ADMIN = "ROLE_ADMIN",
@@ -88,16 +72,19 @@ export class TokenRefreshResponse {
 export class UserPasswordResetRequestBody {
   @ApiProperty({ description: "Email" })
   @IsNotEmpty()
+  @IsEmail()
   email!: string;
 }
 
 export class UserPasswordResetBody {
-  @ApiProperty({ description: "The new password." })
+  @ApiProperty({ description: "The new password (min: 10, max: 75)" })
   @IsNotEmpty()
+  @Length(10, 75)
   new_password!: string;
 
-  @ApiProperty({ description: "Password confirmation" })
+  @ApiProperty({ description: "Password confirmation (min: 10, max: 75)" })
   @IsNotEmpty()
+  @Length(10, 75)
   new_password_confirmation!: string;
 
   @ApiProperty({ description: "The token sent via email" })
@@ -118,18 +105,6 @@ export class AuthenticateBody {
   @ApiProperty({ description: "Password" })
   @IsNotEmpty()
   password!: string;
-}
-
-export class Oauth2InitQuery {
-  @ApiProperty({ description: "State (used for csrf)" })
-  @IsNotEmpty()
-  state!: string;
-}
-
-export class Oauth2FinalizeBody {
-  @ApiProperty({ description: "The code provided by the oauth2 process." })
-  @IsNotEmpty()
-  code!: string;
 }
 
 export class GithubAppUpdateQuery {

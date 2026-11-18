@@ -19,6 +19,7 @@ import { Log } from "src/base_modules/organizations/log/log.entity";
 import { OrganizationLoggerService } from "src/base_modules/organizations/log/organizationLogger.service";
 import { OrganizationAuditLog } from "src/base_modules/organizations/log/orgAuditLog.types";
 import {
+  InviteeInfoQuery,
   JoinOrgCreateBody,
   OrganizationCreateBody,
   OrganizationInfoForInvitee,
@@ -26,7 +27,6 @@ import {
   OrganizationSettingsUpdateBody,
 } from "src/base_modules/organizations/org.types";
 import { Organization } from "src/base_modules/organizations/organization.entity";
-import { TeamMember } from "src/base_modules/users/teamMember.types";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocCreatedResponseDecorator } from "src/decorators/CrudResponse";
 import { APIDocNoDataResponseDecorator } from "src/decorators/NoDataResponse";
@@ -51,6 +51,7 @@ import {
   NotAuthorized,
   PersonalOrgCannotBeModified,
   UserDoesNotExist,
+  ValidationFailed,
 } from "src/types/error.types";
 import { SortDirection } from "src/types/sort.types";
 
@@ -220,27 +221,6 @@ export class OrganizationsController {
   }
 
   @ApiTags("Organizations")
-  @APIDocTypedResponseDecorator(TeamMember)
-  @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
-  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
-  @ApiErrorDecorator({ statusCode: 400, errors: [EntityNotFound] })
-  @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
-  @Get(":organization_id/members/:user_id")
-  async getOrgMember(
-    @AuthUser() user: AuthenticatedUser,
-    @Param("organization_id") organization_id: string,
-    @Param("user_id") user_id: string,
-  ): Promise<TypedResponse<TeamMember>> {
-    return {
-      data: await this.organizationsService.getOrgMember(
-        user_id,
-        organization_id,
-        user,
-      ),
-    };
-  }
-
-  @ApiTags("Organizations")
   @APIDocNoDataResponseDecorator()
   @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
@@ -301,13 +281,17 @@ export class OrganizationsController {
   @APIDocNoDataResponseDecorator()
   @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
   @ApiErrorDecorator({ statusCode: 400, errors: [InvitationInvalidOrExpired] })
+  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
+  @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
   @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
   @Post(":organization_id/join")
   async joinOrg(
     @AuthUser() user: AuthenticatedUser,
+    @Param("organization_id") organization_id: string,
     @Body() joinOrgBody: JoinOrgCreateBody,
   ): Promise<NoDataResponse> {
     await this.organizationsService.joinOrg(
+      organization_id,
       joinOrgBody.token,
       joinOrgBody.email_digest,
       user,
@@ -318,17 +302,23 @@ export class OrganizationsController {
   @ApiTags("Organizations")
   @APIDocNoDataResponseDecorator()
   @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
-  @ApiErrorDecorator({ statusCode: 400, errors: [InvitationInvalidOrExpired] })
+  @ApiErrorDecorator({
+    statusCode: 400,
+    errors: [InvitationInvalidOrExpired, ValidationFailed],
+  })
+  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
+  @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
   @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
   @Get(":organization_id/org_info_invitee")
   async inviteeInfo(
     @AuthUser() user: AuthenticatedUser,
-    @Query("token") token: string,
-    @Query("user_email_hash") user_email_hash: string,
+    @Param("organization_id") organization_id: string,
+    @Query() query: InviteeInfoQuery,
   ): Promise<TypedResponse<OrganizationInfoForInvitee>> {
     const info = await this.organizationsService.getInviteeInfo(
-      token,
-      user_email_hash,
+      organization_id,
+      query.token,
+      query.user_email_hash,
       user,
     );
 

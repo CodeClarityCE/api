@@ -69,7 +69,7 @@ export async function createUser(
     const existing = await manager.findOneBy(User, { email: input.email });
     if (existing) {
       if (!input.resetPassword) return "unchanged";
-      await manager.update(User, existing.id, { password });
+      await manager.update(User, existing.id, { password, social: false });
       return "password reset";
     }
     const handle = await freeHandle(manager, first, last);

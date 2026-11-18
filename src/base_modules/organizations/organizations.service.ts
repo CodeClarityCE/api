@@ -3,9 +3,15 @@ import { Injectable } from "@nestjs/common";
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { Email, EmailType } from "src/base_modules/email/email.entity";
 import { Invitation } from "src/base_modules/organizations/invitations/invitation.entity";
+import { invitationExpiry } from "src/base_modules/organizations/invitations/invitation.lifetime";
 import { InviteCreateBody } from "src/base_modules/organizations/invitations/orgInvitation.types";
+import { ActionType } from "src/base_modules/organizations/log/orgAuditLog.types";
 import { OrganizationMemberships } from "src/base_modules/organizations/memberships/organization.memberships.entity";
-import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
+import {
+  getTextualRepOfMemberRole,
+  isMemberRoleLessThan,
+  MemberRole,
+} from "src/base_modules/organizations/memberships/orgMembership.types";
 import {
   OrganizationCreateBody,
   OrganizationInfoForInvitee,
@@ -18,8 +24,15 @@ import {
   OrganizationsRepository,
   UsersRepository,
 } from "src/base_modules/shared/repositories";
-import { TeamMember } from "src/base_modules/users/teamMember.types";
-import { EntityNotFound } from "src/types/error.types";
+import {
+  CannotRevokeOwnMembership,
+  EntityNotFound,
+  FailedToSendOrganizationInviteEmail,
+  InvitationInvalidOrExpired,
+  NotAMember,
+  NotAuthorized,
+  PersonalOrgCannotBeModified,
+} from "src/types/error.types";
 import {
   PaginationConfig,
   PaginationUserSuppliedConf,
@@ -30,6 +43,10 @@ import { genRandomString, hash } from "src/utils/crypto";
 
 import { EmailRepository } from "../email/email.repository";
 import { EmailService } from "../email/email.service";
+import { ProjectRowsService } from "../projects/project-rows.service";
+
+import { OrganizationLoggerService } from "./log/organizationLogger.service";
+import { OrganizationTeardown } from "./organization-teardown";
 
 @Injectable()
 export class OrganizationsService {
@@ -40,6 +57,9 @@ export class OrganizationsService {
     private readonly usersRepository: UsersRepository,
     private readonly emailRepository: EmailRepository,
     private readonly invitationsRepository: InvitationsRepository,
+    private readonly organizationLoggerService: OrganizationLoggerService,
+    private readonly teardown: OrganizationTeardown,
+    private readonly projectRows: ProjectRowsService,
   ) {}
 
   /**
@@ -76,6 +96,13 @@ export class OrganizationsService {
     membership.user = creator;
     membership.organization = organization;
     await this.membershipsRepository.saveMembership(membership);
+
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.OrganizationCreated,
+      `The User created the organization ${organization.name}.`,
+      organization.id,
+      user.userId,
+    );
 
     return organization.id;
   }
@@ -248,14 +275,14 @@ export class OrganizationsService {
     invitation.user_email_digest = userEmailHash;
     invitation.user = invitedUser;
     invitation.organization = org;
-    invitation.ttl = new Date(new Date().getTime() + 30 * 60000);
+    invitation.ttl = invitationExpiry();
     await this.invitationsRepository.saveInvitation(invitation);
 
     const mail = new Email();
     mail.email_type = EmailType.ORGANIZATION_INVITE;
     mail.token_digest = activationTokenhash;
     mail.user_id_digest = userEmailHash;
-    mail.ttl = new Date(new Date().getTime() + 30 * 60000); // Expires after 30 mins
+    mail.ttl = invitation.ttl;
     mail.user = invitedUser;
 
     await this.emailRepository.saveMail(mail);
@@ -263,13 +290,18 @@ export class OrganizationsService {
     await this.emailService.sendOrganizationInvite({
       email: invitedUser.email,
       inviteToken: activationTokenhash,
-      blockOrgInvitesToken: "",
-      blockAllOrgInvitesToken: "",
       userEmailDigest: userEmailHash,
       organizationName: org.name,
       inviter: inviter,
       orgId: org.id,
     });
+
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.OrganizationMemberInvited,
+      `The User invited ${invitedUser.email} to join the organization as ${getTextualRepOfMemberRole(inviteBody.role)}.`,
+      orgId,
+      user.userId,
+    );
   }
 
   /**
@@ -285,11 +317,59 @@ export class OrganizationsService {
    * @param user The authenticated user
    */
   async reSendOrganizationInviteEmail(
-    _orgId: string,
-    _inviteId: string,
-    _user: AuthenticatedUser,
+    orgId: string,
+    inviteId: string,
+    user: AuthenticatedUser,
   ): Promise<void> {
-    throw new Error("Method not implemented.");
+    // Same role as sending an invitation.
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.OWNER,
+    );
+
+    const org = await this.organizationsRepository.getOrganizationById(orgId);
+    if (org.personal) {
+      throw new PersonalOrgCannotBeModified();
+    }
+
+    const invitation = await this.invitationsRepository.getInvitationBy(
+      { id: inviteId, organization: { id: orgId } },
+      { user: true },
+    );
+    const inviter = await this.usersRepository.getUserById(user.userId, {});
+
+    // A new token voids the old link; the expiry restarts in full.
+    const previousToken = invitation.token_digest;
+    const newToken = await hash(await genRandomString(64), {});
+    invitation.token_digest = newToken;
+    invitation.ttl = invitationExpiry();
+    await this.invitationsRepository.saveInvitation(invitation);
+
+    const mail =
+      (await this.emailRepository.findInviteMail(
+        previousToken,
+        invitation.user_email_digest,
+      )) ?? new Email();
+    mail.email_type = EmailType.ORGANIZATION_INVITE;
+    mail.token_digest = newToken;
+    mail.user_id_digest = invitation.user_email_digest;
+    mail.ttl = invitation.ttl;
+    mail.user = invitation.user;
+    await this.emailRepository.saveMail(mail);
+
+    try {
+      await this.emailService.sendOrganizationInvite({
+        email: invitation.user.email,
+        inviteToken: newToken,
+        userEmailDigest: invitation.user_email_digest,
+        organizationName: org.name,
+        inviter: inviter,
+        orgId: org.id,
+      });
+    } catch (err) {
+      throw new FailedToSendOrganizationInviteEmail(err);
+    }
   }
 
   /**
@@ -302,11 +382,34 @@ export class OrganizationsService {
    * @param user The authenticated user
    */
   async revokeInvitation(
-    _orgId: string,
-    _invitationId: string,
-    _user: AuthenticatedUser,
+    orgId: string,
+    invitationId: string,
+    user: AuthenticatedUser,
   ): Promise<void> {
-    throw new Error("Method not implemented.");
+    // Same role as sending an invitation.
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.OWNER,
+    );
+
+    const org = await this.organizationsRepository.getOrganizationById(orgId);
+    if (org.personal) {
+      throw new PersonalOrgCannotBeModified();
+    }
+
+    const invitation = await this.invitationsRepository.getInvitationBy(
+      { id: invitationId, organization: { id: orgId } },
+      { user: true },
+    );
+    await this.invitationsRepository.deleteInvitation(invitation.id);
+
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.OrganizationInvitationRevoked,
+      `The User revoked the invitation of ${invitation.user.email} to join the organization.`,
+      orgId,
+      user.userId,
+    );
   }
 
   /**
@@ -361,30 +464,26 @@ export class OrganizationsService {
 
   /**
    * Join an organization via an invitation
-   * @throws {InvitationInvalidOrExpired}
-   * @throws {InternalError}
+   * @throws {EntityNotFound} If no invitation of this organization matches
+   * @throws {InvitationInvalidOrExpired} If the invitation has expired
+   * @throws {NotAuthorized} If the signed-in user is not the invitee
    *
+   * @param orgId The organization id from the join link
    * @param inviteToken The invitation token
    * @param emailDigest The user's email digest
    * @param user The authenticated user
    */
   async joinOrg(
+    orgId: string,
     inviteToken: string,
     emailDigest: string,
-    _user: AuthenticatedUser,
+    user: AuthenticatedUser,
   ): Promise<void> {
-    const invitation = await this.invitationsRepository.getInvitationBy(
-      {
-        token_digest: inviteToken,
-        user_email_digest: emailDigest,
-      },
-      {
-        organization: {
-          organizationMemberships: true,
-          created_by: true,
-        },
-        user: true,
-      },
+    const invitation = await this.validInvitation(
+      orgId,
+      inviteToken,
+      emailDigest,
+      user,
     );
 
     const membership = new OrganizationMemberships();
@@ -394,48 +493,45 @@ export class OrganizationsService {
     membership.user = invitation.user;
 
     await this.membershipsRepository.saveMembership(membership);
-    await this.invitationsRepository.deleteInvitation(invitation);
+    await this.invitationsRepository.deleteInvitation(invitation.id);
 
     const mail = await this.emailRepository.getActivationMail(
       inviteToken,
       emailDigest,
     );
-    await this.emailRepository.deleteMail(mail);
+    await this.emailRepository.deleteMail(mail.id);
+
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.OrganizationMemberJoined,
+      `The User ${invitation.user.email} joined the organization as ${getTextualRepOfMemberRole(invitation.role)}.`,
+      invitation.organization.id,
+      user.userId,
+    );
   }
 
   /**
-   * Join an organization via an invitation
-   * @throws {InvitationInvalidOrExpired}
-   * @throws {InternalError}
+   * Get the organization an invitation is for, as seen by the invitee
+   * @throws {EntityNotFound} If no invitation of this organization matches
+   * @throws {InvitationInvalidOrExpired} If the invitation has expired
+   * @throws {NotAuthorized} If the signed-in user is not the invitee
    *
+   * @param orgId The organization id from the join link
    * @param inviteToken The invitation token
    * @param emailDigest The user's email digest
    * @param user The authenticated user
    */
   async getInviteeInfo(
+    orgId: string,
     inviteToken: string,
     emailDigest: string,
     user: AuthenticatedUser,
   ): Promise<OrganizationInfoForInvitee> {
-    const invitee = await this.usersRepository.getUserById(user.userId, {});
-    if (!invitee) {
-      throw new EntityNotFound();
-    }
-
     const info = new OrganizationInfoForInvitee();
-    const invitation = await this.invitationsRepository.getInvitationBy(
-      {
-        token_digest: inviteToken,
-        user_email_digest: emailDigest,
-        user: invitee,
-      },
-      {
-        organization: {
-          organizationMemberships: true,
-          created_by: true,
-        },
-        user: true,
-      },
+    const invitation = await this.validInvitation(
+      orgId,
+      inviteToken,
+      emailDigest,
+      user,
     );
 
     info.id = invitation.id;
@@ -454,6 +550,42 @@ export class OrganizationsService {
   }
 
   /**
+   * Finds an invitation the signed-in user may accept now.
+   * @throws {EntityNotFound} If no invitation of this organization matches
+   * @throws {InvitationInvalidOrExpired} If the invitation has expired
+   * @throws {NotAuthorized} If the signed-in user is not the invitee
+   */
+  private async validInvitation(
+    orgId: string,
+    inviteToken: string,
+    emailDigest: string,
+    user: AuthenticatedUser,
+  ): Promise<Invitation> {
+    const invitation = await this.invitationsRepository.getInvitationBy(
+      {
+        token_digest: inviteToken,
+        user_email_digest: emailDigest,
+        organization: { id: orgId },
+      },
+      {
+        organization: {
+          organizationMemberships: true,
+          created_by: true,
+        },
+        user: true,
+      },
+    );
+    // A missing ttl counts as expired.
+    if (!invitation.ttl || invitation.ttl.getTime() <= Date.now()) {
+      throw new InvitationInvalidOrExpired();
+    }
+    if (invitation.user.id !== user.userId) {
+      throw new NotAuthorized();
+    }
+    return invitation;
+  }
+
+  /**
    * Revoke an organization membership
    * @throws {NotAuthorized}
    * @throws {EntityNotFound}
@@ -466,11 +598,56 @@ export class OrganizationsService {
    * @param user The authenticated user
    */
   async revokeOrgMemberShip(
-    _orgId: string,
-    _user_id_to_remove: string,
-    _user: AuthenticatedUser,
+    orgId: string,
+    user_id_to_remove: string,
+    user: AuthenticatedUser,
   ): Promise<void> {
-    throw new Error("Method not implemented.");
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.ADMIN,
+    );
+    if (user_id_to_remove === user.userId) {
+      throw new CannotRevokeOwnMembership();
+    }
+
+    const org = await this.organizationsRepository.getOrganizationById(orgId);
+    if (org.personal) {
+      throw new PersonalOrgCannotBeModified();
+    }
+
+    let membership: OrganizationMemberships;
+    try {
+      membership =
+        await this.membershipsRepository.getMembershipByOrganizationAndUser(
+          orgId,
+          user_id_to_remove,
+          { user: true },
+        );
+    } catch (err) {
+      if (err instanceof EntityNotFound) {
+        throw new NotAMember();
+      }
+      throw err;
+    }
+
+    // An admin cannot remove someone with a higher role, such as an owner.
+    const actor = await this.membershipsRepository.getMembershipRole(
+      orgId,
+      user.userId,
+    );
+    if (isMemberRoleLessThan(actor.role, membership.role)) {
+      throw new NotAuthorized();
+    }
+
+    await this.membershipsRepository.removeMemberships([membership]);
+
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.OrganizationMembershipRevoked,
+      `The User revoked the membership of ${membership.user.email}.`,
+      orgId,
+      user.userId,
+    );
   }
 
   /**
@@ -484,11 +661,25 @@ export class OrganizationsService {
    * @param user The authenticated user
    */
   async leaveOrg(orgId: string, user: AuthenticatedUser): Promise<void> {
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.USER,
+    );
+    const leaver = await this.usersRepository.getUserById(user.userId, {});
+
     await this.membershipsRepository.leaveOrganization(user.userId, orgId);
+
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.OrganizationUserLeft,
+      `The User ${leaver.email} left the organization.`,
+      orgId,
+      user.userId,
+    );
   }
 
   /**
-   * Delete an organization
+   * Delete an organization with everything it owns; only an owner may
    * @throws {NotAuthorized}
    * @throws {PersonalOrgCannotBeModified} A user cannot delete a personal organization
    * @throws {EntityNotFound} In case the organization no longer exists
@@ -500,31 +691,28 @@ export class OrganizationsService {
     await this.membershipsRepository.hasRequiredRole(
       orgId,
       user.userId,
-      MemberRole.USER,
+      MemberRole.OWNER,
     );
+    const org = await this.organizationsRepository.getOrganizationById(orgId);
+    if (org.personal) {
+      throw new PersonalOrgCannotBeModified();
+    }
 
     const memberships =
       await this.membershipsRepository.getMembershipsByOrganizationId(orgId);
-    await this.membershipsRepository.removeMemberships(memberships);
-    await this.organizationsRepository.deleteOrganization(orgId);
-  }
-
-  /**
-   * Get a member of an org
-   * @throws {NotAuthorized}
-   * @throws {EntityNotFound}
-   *
-   * @param orgId The id of the organization
-   * @param userId The id of the user
-   * @param user The authenticated user
-   * @returns the team member
-   */
-  public async getOrgMember(
-    _orgId: string,
-    _userId: string,
-    _user: AuthenticatedUser,
-  ): Promise<TeamMember> {
-    throw new Error("Method not implemented.");
+    // All or nothing: a failed delete keeps every row and membership.
+    const projectIds = await this.organizationsRepository.runInTransaction(
+      async (manager) => {
+        const deleted = await this.teardown.deleteContents(orgId, manager);
+        await this.membershipsRepository.removeMemberships(
+          memberships,
+          manager,
+        );
+        await this.organizationsRepository.deleteOrganization(orgId, manager);
+        return deleted;
+      },
+    );
+    await this.projectRows.removeFolders(orgId, projectIds);
   }
 
   /**

@@ -158,6 +158,20 @@ pnpm test:e2e --watch
 pnpm test:e2e test/integration/*contract*.e2e-spec.ts
 ```
 
+### Test databases
+
+Each spec file that uses `IntegrationTestHelper` gets a new database named
+`codeclarity_<pid>_<random>_test`, and each `openScratchDatabase` suite gets
+`codeclarity_<suite>_it_<pid>_<random>_test`. Teardown drops them, so suites run
+in parallel workers and from several shells at once.
+
+An aborted run can leave its databases behind. Drop them once no other test run
+is live:
+
+```bash
+psql -h localhost -U postgres -Atc "SELECT format('DROP DATABASE %I WITH (FORCE);', datname) FROM pg_database WHERE datname ~ '_[0-9]+_[0-9a-f]{8}_test$'" | psql -h localhost -U postgres
+```
+
 ## Test Categories
 
 ### 1. Authentication Integration Tests

@@ -71,7 +71,6 @@ describe("GitlabIntegrationController", () => {
       addGitlabIntegration: jest.fn(),
       getGitlabIntegration: jest.fn(),
       modifyGitlabIntegration: jest.fn(),
-      removeGitlabIntegration: jest.fn(),
       getToken: jest.fn(),
     };
 
@@ -109,7 +108,7 @@ describe("GitlabIntegrationController", () => {
 
   describe("linkGitlab", () => {
     const linkGitlabCreateBody: LinkGitlabCreateBody = {
-      token: "glpat-xxxxxxxxxxxxxxxxxxxx",
+      token: "glpat-test-token",
       token_type: GitlabTokenType.PERSONAL_ACCESS_TOKEN,
       gitlab_instance_url: "https://gitlab.com",
     };

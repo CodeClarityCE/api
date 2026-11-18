@@ -1,29 +1,11 @@
 import { PublicAPIError } from "src/types/error.types";
 
 export const errorMessages: Record<string, string> = {
-  SetupAlreadyDone:
-    "The requested action cannot be performed on the social account because it is already setup.",
   FailedToSendAccountRegistrationVerificationEmail:
     "An error occurred while trying to send the account registration verification email.",
   CannotPerformActionOnSocialAccount:
     "The requested action cannot be performed on a social account.",
-  CannotPerformActionOnNormalAccount:
-    "The requested action cannot be performed on a normal account.",
 };
-
-export class SetupAlreadyDone extends PublicAPIError {
-  static errorCode = "SetupAlreadyDone";
-  static errorMessage = errorMessages[SetupAlreadyDone.errorCode]!;
-  static statusCode = 400;
-  constructor(cause?: unknown) {
-    super(
-      SetupAlreadyDone.errorCode,
-      SetupAlreadyDone.errorMessage,
-      SetupAlreadyDone.statusCode,
-      cause,
-    );
-  }
-}
 
 export class FailedToSendAccountRegistrationVerificationEmail extends PublicAPIError {
   static errorCode = "FailedToSendAccountRegistrationVerificationEmail";
@@ -50,21 +32,6 @@ export class CannotPerformActionOnSocialAccount extends PublicAPIError {
       CannotPerformActionOnSocialAccount.errorCode,
       CannotPerformActionOnSocialAccount.errorMessage,
       CannotPerformActionOnSocialAccount.statusCode,
-      cause,
-    );
-  }
-}
-
-export class CannotPerformActionOnNormalAccount extends PublicAPIError {
-  static errorCode = "CannotPerformActionOnNormalAccount";
-  static errorMessage =
-    errorMessages[CannotPerformActionOnNormalAccount.errorCode]!;
-  static statusCode = 400;
-  constructor(cause?: unknown) {
-    super(
-      CannotPerformActionOnNormalAccount.errorCode,
-      CannotPerformActionOnNormalAccount.errorMessage,
-      CannotPerformActionOnNormalAccount.statusCode,
       cause,
     );
   }

@@ -219,15 +219,15 @@ describe("FileRepository", () => {
   });
 
   describe("getById", () => {
-    it("should retrieve a file by ID and user successfully", async () => {
+    it("filters by file id and the adding user's id", async () => {
       mockRepository.findOne.mockResolvedValue(mockFile);
 
-      const result = await fileRepository.getById("file-123", mockUser);
+      const result = await fileRepository.getById("file-123", mockUser.id);
 
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: {
           id: "file-123",
-          added_by: mockUser,
+          added_by: { id: mockUser.id },
         },
       });
       expect(result).toEqual(mockFile);
@@ -237,16 +237,7 @@ describe("FileRepository", () => {
       mockRepository.findOne.mockResolvedValue(null);
 
       await expect(
-        fileRepository.getById("non-existent", mockUser),
-      ).rejects.toThrow("File not found");
-    });
-
-    it("should throw error when file exists but belongs to different user", async () => {
-      const differentUser = { ...mockUser, id: "different-user" };
-      mockRepository.findOne.mockResolvedValue(null);
-
-      await expect(
-        fileRepository.getById("file-123", differentUser),
+        fileRepository.getById("non-existent", mockUser.id),
       ).rejects.toThrow("File not found");
     });
 
@@ -255,38 +246,8 @@ describe("FileRepository", () => {
       mockRepository.findOne.mockRejectedValue(error);
 
       await expect(
-        fileRepository.getById("file-123", mockUser),
+        fileRepository.getById("file-123", mockUser.id),
       ).rejects.toThrow("Database connection failed");
-    });
-
-    it("should handle empty string ID", async () => {
-      mockRepository.findOne.mockResolvedValue(null);
-
-      await expect(fileRepository.getById("", mockUser)).rejects.toThrow(
-        "File not found",
-      );
-
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          id: "",
-          added_by: mockUser,
-        },
-      });
-    });
-
-    it("should handle null user gracefully", async () => {
-      mockRepository.findOne.mockResolvedValue(null);
-
-      await expect(
-        fileRepository.getById("file-123", null as any),
-      ).rejects.toThrow("File not found");
-
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          id: "file-123",
-          added_by: null,
-        },
-      });
     });
   });
 
@@ -298,7 +259,7 @@ describe("FileRepository", () => {
 
       const promises = [
         fileRepository.saveFile(mockFile),
-        fileRepository.getById("file-123", mockUser),
+        fileRepository.getById("file-123", mockUser.id),
         fileRepository.deleteFiles("file-123"),
       ];
 

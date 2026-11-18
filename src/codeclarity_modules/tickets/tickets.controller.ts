@@ -109,6 +109,18 @@ export class TicketsController {
     private readonly membershipsRepository: MembershipsRepository,
   ) {}
 
+  // Any member of the org may see which integrations it has.
+  private async requireMember(
+    orgId: string,
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.USER,
+    );
+  }
+
   // Only org admins may manage or check integration credentials.
   private async requireAdmin(
     orgId: string,
@@ -444,9 +456,10 @@ export class TicketsController {
     description: "Integrations retrieved successfully",
   })
   async getIntegrations(
-    @AuthUser() _user: AuthenticatedUser,
+    @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
   ): Promise<TypedResponse<IntegrationConfigSummary[]>> {
+    await this.requireMember(org_id, user);
     const configs =
       await this.ticketIntegrationService.getIntegrationConfigs(org_id);
     const summaries: IntegrationConfigSummary[] = configs.map((c) => ({
@@ -528,11 +541,12 @@ export class TicketsController {
   @ApiParam({ name: "org_id", description: "Organization ID" })
   @ApiQuery({ name: "redirect_uri", description: "OAuth redirect URI" })
   @ApiResponse({ status: 200, description: "OAuth URL generated successfully" })
-  getClickUpOAuthUrl(
-    @AuthUser() _user: AuthenticatedUser,
+  async getClickUpOAuthUrl(
+    @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Query("redirect_uri") redirect_uri: string,
-  ): TypedResponse<{ url: string }> {
+  ): Promise<TypedResponse<{ url: string }>> {
+    await this.requireAdmin(org_id, user);
     const url = this.ticketIntegrationService.getOAuthUrl(
       ExternalTicketProvider.CLICKUP,
       redirect_uri,
@@ -549,10 +563,11 @@ export class TicketsController {
     description: "OAuth tokens exchanged successfully",
   })
   async handleClickUpOAuthCallback(
-    @AuthUser() _user: AuthenticatedUser,
-    @Param("org_id") _org_id: string,
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
     @Body() body: { code: string; redirect_uri: string },
   ): Promise<TypedResponse<{ access_token: string }>> {
+    await this.requireAdmin(org_id, user);
     const tokens = await this.ticketIntegrationService.exchangeOAuthCode(
       ExternalTicketProvider.CLICKUP,
       body.code,
@@ -598,10 +613,11 @@ export class TicketsController {
   })
   @ApiResponse({ status: 200, description: "Connection test completed" })
   async testIntegration(
-    @AuthUser() _user: AuthenticatedUser,
+    @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("provider", providerPipe) provider: ExternalTicketProvider,
   ): Promise<TypedResponse<ConnectionTestResult>> {
+    await this.requireAdmin(org_id, user);
     const result = await this.ticketIntegrationService.testConnection(
       org_id,
       provider,
@@ -657,11 +673,12 @@ export class TicketsController {
     description: "Workspaces retrieved successfully",
   })
   async getWorkspaces(
-    @AuthUser() _user: AuthenticatedUser,
+    @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem[]>> {
+    await this.requireAdmin(org_id, user);
     const workspaces = await this.ticketIntegrationService.getWorkspaces(
       org_id,
       provider,
@@ -683,12 +700,13 @@ export class TicketsController {
   @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
   @ApiResponse({ status: 200, description: "Spaces retrieved successfully" })
   async getSpaces(
-    @AuthUser() _user: AuthenticatedUser,
+    @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Param("workspace_id") workspace_id: string,
     @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem[]>> {
+    await this.requireAdmin(org_id, user);
     const spaces = await this.ticketIntegrationService.getSpaces(
       org_id,
       provider,
@@ -711,12 +729,13 @@ export class TicketsController {
   @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
   @ApiResponse({ status: 200, description: "Folders retrieved successfully" })
   async getFolders(
-    @AuthUser() _user: AuthenticatedUser,
+    @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Param("space_id") space_id: string,
     @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem[]>> {
+    await this.requireAdmin(org_id, user);
     const folders = await this.ticketIntegrationService.getFolders(
       org_id,
       provider,
@@ -739,12 +758,13 @@ export class TicketsController {
   @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
   @ApiResponse({ status: 200, description: "Lists retrieved successfully" })
   async getLists(
-    @AuthUser() _user: AuthenticatedUser,
+    @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Param("parent_id") parent_id: string,
     @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem[]>> {
+    await this.requireAdmin(org_id, user);
     const lists = await this.ticketIntegrationService.getLists(
       org_id,
       provider,
@@ -771,13 +791,14 @@ export class TicketsController {
   @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
   @ApiResponse({ status: 201, description: "Space created successfully" })
   async createSpace(
-    @AuthUser() _user: AuthenticatedUser,
+    @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Param("workspace_id") workspace_id: string,
     @Body() body: { name: string },
     @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem>> {
+    await this.requireAdmin(org_id, user);
     const space = await this.ticketIntegrationService.createSpace(
       org_id,
       provider,
@@ -801,13 +822,14 @@ export class TicketsController {
   @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
   @ApiResponse({ status: 201, description: "Folder created successfully" })
   async createFolder(
-    @AuthUser() _user: AuthenticatedUser,
+    @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Param("space_id") space_id: string,
     @Body() body: { name: string },
     @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem>> {
+    await this.requireAdmin(org_id, user);
     const folder = await this.ticketIntegrationService.createFolder(
       org_id,
       provider,
@@ -831,13 +853,14 @@ export class TicketsController {
   @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
   @ApiResponse({ status: 201, description: "List created successfully" })
   async createList(
-    @AuthUser() _user: AuthenticatedUser,
+    @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Param("folder_id") folder_id: string,
     @Body() body: { name: string },
     @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem>> {
+    await this.requireAdmin(org_id, user);
     const list = await this.ticketIntegrationService.createList(
       org_id,
       provider,
@@ -861,13 +884,14 @@ export class TicketsController {
   @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
   @ApiResponse({ status: 201, description: "List created successfully" })
   async createFolderlessList(
-    @AuthUser() _user: AuthenticatedUser,
+    @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Param("space_id") space_id: string,
     @Body() body: { name: string },
     @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem>> {
+    await this.requireAdmin(org_id, user);
     const list = await this.ticketIntegrationService.createFolderlessList(
       org_id,
       provider,
@@ -891,12 +915,15 @@ export class TicketsController {
     description: "External links retrieved successfully",
   })
   async getExternalLinks(
-    @AuthUser() _user: AuthenticatedUser,
-    @Param("org_id") _org_id: string,
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
     @Param("ticket_id") ticket_id: string,
   ): Promise<TypedResponse<TicketExternalLinkFrontend[]>> {
-    const links =
-      await this.ticketIntegrationService.getExternalLinks(ticket_id);
+    await this.requireMember(org_id, user);
+    const links = await this.ticketIntegrationService.getExternalLinks(
+      org_id,
+      ticket_id,
+    );
     const linksFrontend: TicketExternalLinkFrontend[] = links.map((l) => ({
       id: l.id,
       provider: l.provider,
@@ -920,11 +947,13 @@ export class TicketsController {
   @ApiResponse({ status: 200, description: "Ticket synced successfully" })
   async syncTicket(
     @AuthUser() user: AuthenticatedUser,
-    @Param("org_id") _org_id: string,
+    @Param("org_id") org_id: string,
     @Param("ticket_id") ticket_id: string,
     @Param("provider", providerPipe) provider: ExternalTicketProvider,
   ): Promise<TypedResponse<SyncResult>> {
+    await this.requireMember(org_id, user);
     const link = await this.ticketIntegrationService.syncTicketToExternal(
+      org_id,
       ticket_id,
       provider,
       user.userId,
@@ -952,13 +981,15 @@ export class TicketsController {
   @ApiResponse({ status: 200, description: "Ticket unlinked successfully" })
   async unlinkTicket(
     @AuthUser() user: AuthenticatedUser,
-    @Param("org_id") _org_id: string,
+    @Param("org_id") org_id: string,
     @Param("ticket_id") ticket_id: string,
     @Param("link_id") link_id: string,
     @Query("delete_external", new DefaultValuePipe(false), ParseBoolPipe)
     delete_external: boolean,
   ): Promise<NoDataResponse> {
+    await this.requireMember(org_id, user);
     await this.ticketIntegrationService.unlinkTicket(
+      org_id,
       ticket_id,
       link_id,
       delete_external,
@@ -980,11 +1011,13 @@ export class TicketsController {
   @ApiResponse({ status: 200, description: "Bulk sync completed" })
   async bulkSync(
     @AuthUser() user: AuthenticatedUser,
-    @Param("org_id") _org_id: string,
+    @Param("org_id") org_id: string,
     @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Body() body: { ticket_ids: string[] },
   ): Promise<TypedResponse<BulkSyncResult>> {
+    await this.requireMember(org_id, user);
     const result = await this.ticketIntegrationService.bulkSyncTickets(
+      org_id,
       body.ticket_ids,
       provider,
       user.userId,
@@ -1027,11 +1060,13 @@ export class TicketsController {
   })
   async syncFromExternal(
     @AuthUser() user: AuthenticatedUser,
-    @Param("org_id") _org_id: string,
+    @Param("org_id") org_id: string,
     @Param("ticket_id") ticket_id: string,
     @Param("link_id") link_id: string,
   ): Promise<TypedResponse<SyncFromExternalResult>> {
+    await this.requireMember(org_id, user);
     const result = await this.ticketIntegrationService.syncFromExternal(
+      org_id,
       ticket_id,
       link_id,
       user.userId,
@@ -1069,10 +1104,12 @@ export class TicketsController {
   })
   async bulkSyncFromExternal(
     @AuthUser() user: AuthenticatedUser,
-    @Param("org_id") _org_id: string,
+    @Param("org_id") org_id: string,
     @Body() body: { ticket_ids: string[] },
   ): Promise<TypedResponse<BulkSyncFromExternalResult>> {
+    await this.requireMember(org_id, user);
     const result = await this.ticketIntegrationService.bulkSyncFromExternal(
+      org_id,
       body.ticket_ids,
       user.userId,
     );

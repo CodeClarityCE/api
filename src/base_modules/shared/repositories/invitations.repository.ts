@@ -23,10 +23,10 @@ export class InvitationsRepository {
   }
 
   /**
-   * Delete an invitation from the database.
+   * Delete an invitation from the database by its id.
    */
-  async deleteInvitation(invitation: Invitation): Promise<void> {
-    await this.invitationRepository.delete(invitation);
+  async deleteInvitation(invitationId: string): Promise<void> {
+    await this.invitationRepository.delete({ id: invitationId });
   }
 
   /**

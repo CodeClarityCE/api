@@ -50,7 +50,7 @@ export class TicketVulnerabilityOccurrence {
 
   @ApiProperty()
   @Expose()
-  @ManyToOne("Analysis")
+  @ManyToOne("Analysis", { onDelete: "CASCADE" })
   analysis!: Relation<Analysis>;
 }
 

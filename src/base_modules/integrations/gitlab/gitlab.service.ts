@@ -8,6 +8,8 @@ import {
   LinkGitlabPatchBody,
 } from "src/base_modules/integrations/gitlab/gitlabIntegration.types";
 import { GitlabIntegrationToken } from "src/base_modules/integrations/Token";
+import { OrganizationLoggerService } from "src/base_modules/organizations/log/organizationLogger.service";
+import { ActionType } from "src/base_modules/organizations/log/orgAuditLog.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
 import {
   IntegrationsRepository,
@@ -18,6 +20,7 @@ import {
 import {
   DuplicateIntegration,
   EntityNotFound,
+  IntegrationInstanceUrlChanged,
   IntegrationInvalidToken,
   IntegrationTokenExpired,
   IntegrationTokenMissingPermissions,
@@ -29,6 +32,7 @@ import {
 } from "src/types/error.types";
 
 import { VCSIntegrationMetaData } from "../integration.types";
+import { describeIntegration } from "../integrationAuditLog";
 import {
   Integration,
   IntegrationProvider,
@@ -47,6 +51,7 @@ export class GitlabIntegrationService {
     private readonly organizationsRepository: OrganizationsRepository,
     private readonly integrationsRepository: IntegrationsRepository,
     private readonly usersRepository: UsersRepository,
+    private readonly organizationLoggerService: OrganizationLoggerService,
   ) {}
 
   /**
@@ -111,22 +116,6 @@ export class GitlabIntegrationService {
   }
 
   /**
-   * Remove an existing gitlab integration from the organization
-   * @throws {NotAuthorized} If the authenticated user is not authorized to perform this action
-   * @param orgId The organization to which the integration belongs
-   * @param integrationId The integration id
-   * @param user The authenticated user
-   * @returns no data response
-   */
-  async removeGitlabIntegration(
-    _orgId: string,
-    _integrationId: string,
-    _user: AuthenticatedUser,
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-
-  /**
    * Add a gitlab integration to the organization
    * @throws {NotAuthorized} If the authenticated user is not authorized to perform this action
    * @throws {IntegrationWrongTokenType} In case the token appears to be of the incorrect form
@@ -146,6 +135,13 @@ export class GitlabIntegrationService {
     linkGitlabCreate: LinkGitlabCreateBody,
     user: AuthenticatedUser,
   ): Promise<string> {
+    // Only an org admin may link a token, checked before anything else.
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.ADMIN,
+    );
+
     if (linkGitlabCreate.token_type !== GitlabTokenType.PERSONAL_ACCESS_TOKEN) {
       throw new IntegrationWrongTokenType();
     }
@@ -208,12 +204,21 @@ export class GitlabIntegrationService {
     organization.integrations?.push(addedIntegration);
     await this.organizationsRepository.saveOrganization(organization);
 
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.OrganizationIntegrationAdded,
+      `The User linked the ${describeIntegration(addedIntegration)} to the organization.`,
+      orgId,
+      user.userId,
+    );
+
     return addedIntegration.id;
   }
 
   /**
-   * Modify an existing gitlab integration of the organization
+   * Replace the token of an existing gitlab integration of the organization
    * @throws {NotAuthorized} If the authenticated user is not authorized to perform this action
+   * @throws {IntegrationWrongTokenType} In case the token appears to be of the incorrect form
+   * @throws {IntegrationInstanceUrlChanged} In case the instance URL differs from the stored one
    * @throws {IntegrationTokenMissingPermissions} In case any scopes/permissions are not granted
    * @throws {IntegrationTokenExpired} In case the token is already expired
    * @throws {IntegrationInvalidToken} In case the token is not valid (revoked or non-existant)
@@ -248,8 +253,51 @@ export class GitlabIntegrationService {
     if (linkGitlabCreate.token_type !== GitlabTokenType.PERSONAL_ACCESS_TOKEN) {
       throw new IntegrationWrongTokenType();
     }
+    const tokenType = this.getTokenTypeFromTokenString(linkGitlabCreate.token);
+    if (tokenType !== GitlabTokenType.PERSONAL_ACCESS_TOKEN) {
+      throw new IntegrationWrongTokenType();
+    }
 
-    throw new Error("Method not implemented.");
+    const integration =
+      await this.integrationsRepository.getIntegrationById(integrationId);
+    if (integration.integration_provider !== IntegrationProvider.GITLAB) {
+      throw new EntityNotFound();
+    }
+
+    // Moving an integration to another server would break its projects
+    const withoutSlash = (url: string): string => url.replace(/\/+$/, "");
+    if (
+      withoutSlash(linkGitlabCreate.gitlab_instance_url) !==
+      withoutSlash(integration.service_domain)
+    ) {
+      throw new IntegrationInstanceUrlChanged();
+    }
+
+    await this.gitlabIntegrationTokenService.validatePersonalAccessTokenPermissions(
+      linkGitlabCreate.token,
+      integration.service_domain,
+      {},
+    );
+    const [expires, expiresAt] =
+      await this.gitlabIntegrationTokenService.getPersonalAccessTokenExpiryRemote(
+        linkGitlabCreate.token,
+        integration.service_domain,
+      );
+
+    integration.access_token = linkGitlabCreate.token;
+    integration.token_type = GitlabTokenType.PERSONAL_ACCESS_TOKEN;
+    integration.invalid = false;
+    if (expires && expiresAt) {
+      integration.expiry_date = expiresAt;
+    }
+    await this.integrationsRepository.saveIntegration(integration);
+
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.OrganizationIntegrationUpdated,
+      `The User replaced the token of the ${describeIntegration(integration)}.`,
+      orgId,
+      user.userId,
+    );
   }
 
   /**

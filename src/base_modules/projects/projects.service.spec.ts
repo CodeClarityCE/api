@@ -28,6 +28,7 @@ import { MemberRole } from "../organizations/memberships/orgMembership.types";
 
 import type { Project } from "./project.entity";
 import type { ProjectImportBody } from "./project.types";
+import { ProjectRowsService } from "./project-rows.service";
 import { ProjectMemberService } from "./projectMember.service";
 import { ProjectService } from "./projects.service";
 import type { RepositoryCache } from "./repositoryCache.entity";
@@ -62,6 +63,7 @@ describe("ProjectService", () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProjectService,
+        ProjectRowsService,
         {
           provide: OrganizationLoggerService,
           useValue: { addAuditLog: jest.fn().mockResolvedValue(null) },
@@ -675,6 +677,7 @@ describe("ProjectService", () => {
       service["repos"].analyses as jest.Mocked<AnalysesRepository>;
     const fileRepo = () => service["repos"].file as jest.Mocked<FileRepository>;
     const mockManager = { tx: true };
+    let calls: string[];
 
     beforeEach(() => {
       jest
@@ -694,7 +697,15 @@ describe("ProjectService", () => {
       (analysesRepo().getAnalysisIdsByProjectIds as any) = jest
         .fn()
         .mockResolvedValue([]);
-      (analysesRepo().deleteByIds as any) = jest.fn().mockResolvedValue(0);
+      calls = [];
+      (analysesRepo().cancelByIds as any) = jest.fn(async () => {
+        calls.push("cancel");
+        return 0;
+      });
+      (analysesRepo().deleteByIds as any) = jest.fn(async () => {
+        calls.push("delete");
+        return 0;
+      });
       (fileRepo().deleteByProjectIds as any) = jest.fn().mockResolvedValue(0);
     });
 
@@ -730,10 +741,15 @@ describe("ProjectService", () => {
 
       expect(res.succeeded).toBe(2);
       expect(res.failed).toBe(0);
+      expect(analysesRepo().cancelByIds).toHaveBeenCalledWith(
+        ["a1"],
+        mockManager,
+      );
       expect(analysesRepo().deleteByIds).toHaveBeenCalledWith(
         ["a1"],
         mockManager,
       );
+      expect(calls).toEqual(["cancel", "delete"]);
       expect(fileRepo().deleteByProjectIds).toHaveBeenCalledWith(
         ["p1", "p2"],
         mockManager,
@@ -745,6 +761,30 @@ describe("ProjectService", () => {
         ["p1", "p2"],
         mockManager,
       );
+    });
+
+    it("cancels running analyses before deleting a single project", async () => {
+      projectsRepository.doesProjectBelongToOrg.mockResolvedValue(undefined);
+      projectsRepository.getProjectById.mockResolvedValue({
+        id: "p1",
+        url: "https://example.com/p1",
+        added_by: { id: "someone" },
+      } as any);
+      (analysesRepo().getAnalysisIdsByProjectIds as any).mockResolvedValue([
+        "a1",
+      ]);
+
+      await service.delete(mockOrgId, "p1", mockAuthenticatedUser);
+
+      expect(analysesRepo().cancelByIds).toHaveBeenCalledWith(
+        ["a1"],
+        mockManager,
+      );
+      expect(analysesRepo().deleteByIds).toHaveBeenCalledWith(
+        ["a1"],
+        mockManager,
+      );
+      expect(calls).toEqual(["cancel", "delete"]);
     });
 
     it("denies a USER deleting a project they did not import", async () => {

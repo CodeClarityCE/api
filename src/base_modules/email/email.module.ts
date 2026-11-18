@@ -9,8 +9,6 @@ import { Email } from "src/base_modules/email/email.entity";
 
 import { EmailRepository } from "./email.repository";
 import { EmailService } from "./email.service";
-import { EmailUnsubscriptionController } from "./emailUnsubscriptions/emailUnsubscriptions.controller";
-import { EmailUnsubscriptionService } from "./emailUnsubscriptions/emailUnsubscriptions.service";
 
 @Module({
   imports: [
@@ -49,8 +47,7 @@ import { EmailUnsubscriptionService } from "./emailUnsubscriptions/emailUnsubscr
       inject: [ConfigService],
     }),
   ],
-  providers: [EmailService, EmailUnsubscriptionService, EmailRepository],
+  providers: [EmailService, EmailRepository],
   exports: [EmailService, EmailRepository],
-  controllers: [EmailUnsubscriptionController],
 })
 export class EmailModule {}

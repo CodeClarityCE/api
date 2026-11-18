@@ -344,7 +344,17 @@ export class AnalyzersService {
       throw new AnalyzerHasAnalyses();
     }
 
+    const analyzer = await this.analyzersRepository.getAnalyzerById(id);
+
     // Delete the analyzer from the database
     await this.analyzersRepository.deleteAnalyzer(id);
+
+    // Log the deletion of the analyzer in the organization audit log
+    await this.organizationLoggerService.addAuditLog(
+      ActionType.AnalyzerDelete,
+      `The user deleted an analyzer ${analyzer.name} from the organization.`,
+      orgId,
+      user.userId,
+    );
   }
 }

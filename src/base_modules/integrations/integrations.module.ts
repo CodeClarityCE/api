@@ -3,6 +3,8 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 
 import { Integration } from "src/base_modules/integrations/integrations.entity";
 
+import { OrganizationsModule } from "../organizations/organizations.module";
+
 import { GithubModule } from "./github/github.module";
 import { GitlabModule } from "./gitlab/gitlab.module";
 import { IntegrationsController } from "./integrations.controller";
@@ -14,6 +16,7 @@ import { IntegrationsService } from "./integrations.service";
     TypeOrmModule.forFeature([Integration], "codeclarity"),
     GitlabModule,
     GithubModule,
+    OrganizationsModule, // For OrganizationLoggerService
   ],
   exports: [IntegrationsRepository, IntegrationsService],
   providers: [IntegrationsService, IntegrationsRepository],

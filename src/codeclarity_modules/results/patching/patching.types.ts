@@ -20,9 +20,11 @@ export interface PatchInfo {
   Introduced: ToPatch[];
   Patches: Record<string, SemVer>;
   Update: SemVer;
+  /** The upgrade leaves the installed major version; absent in older results. */
+  PotentiallyBreaking?: boolean;
 }
 
-interface SemVer {
+export interface SemVer {
   Major: number;
   Minor: number;
   Patch: number;
@@ -50,24 +52,30 @@ interface AnalysisInfo {
   self_managed_workspace_name: string;
 }
 
-// Types from patching2.types.ts (processed/API response types)
-
-export interface PatchSummary {
-  affected_deps: string[];
-  affected_dep_name: string;
-  occurance_count: number;
-  patchable_occurances_count: number;
-  unpatchable_occurances_count: number;
-  vulnerability_id: string;
-  introduction_type: string;
-  patch_type: string;
-  vulnerability_info: VulnerabilitySummary;
-  patches: Record<string, unknown>;
+/** What to do with one direct dependency entry of the manifest. */
+export interface ManifestUpgrade {
+  original_constraint: string;
+  vulnerable: boolean;
+  /** FULL, PARTIAL or NONE for a vulnerable dependency, null otherwise. */
+  patch_type: string | null;
+  /** The version to upgrade to, null when there is no upgrade. */
+  upgrade_to: string | null;
+  potential_breaking_changes: boolean;
 }
 
-export interface VulnerabilitySummary {
-  Severity: string;
-  Weaknesses?: string[];
+/** The direct dependency entries of a workspace's manifest, with the suggested upgrades. */
+export interface PatchedManifestData {
+  patched_manifest: {
+    dependencies: Record<string, ManifestUpgrade>;
+    devDependencies: Record<string, ManifestUpgrade>;
+  };
+  /** The dependencies and devDependencies blocks with upgraded constraints, as JSON text. */
+  patched_manifest_raw: string;
+  other_info: {
+    package_manager: string;
+    /** The manifest's path relative to the project root. */
+    relative_package_file: string;
+  };
 }
 
 export interface PatchingAnalysisStats {

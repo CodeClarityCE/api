@@ -1,5 +1,6 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 
+import { OrganizationLoggerService } from "src/base_modules/organizations/log/organizationLogger.service";
 import {
   IntegrationsRepository,
   MembershipsRepository,
@@ -10,6 +11,7 @@ import {
 import {
   DuplicateIntegration,
   EntityNotFound,
+  IntegrationInstanceUrlChanged,
   IntegrationInvalidToken,
   IntegrationTokenExpired,
   IntegrationTokenMissingPermissions,
@@ -44,6 +46,7 @@ describe("GitlabIntegrationService", () => {
   let membershipsRepository: MembershipsRepository;
   let integrationsRepository: jest.Mocked<IntegrationsRepository>;
   let usersRepository: jest.Mocked<UsersRepository>;
+  let organizationLoggerService: jest.Mocked<OrganizationLoggerService>;
 
   const mockAuthenticatedUser: AuthenticatedUser = new AuthenticatedUser(
     "test-user-id",
@@ -104,10 +107,6 @@ describe("GitlabIntegrationService", () => {
     const mockGitlabIntegrationTokenService = {
       validatePersonalAccessTokenPermissions: jest.fn(),
       getPersonalAccessTokenExpiryRemote: jest.fn(),
-      validateOAuthAccessTokenPermissions: jest.fn(),
-      getOAuthTokenExpiryRemote: jest.fn(),
-      refreshOAuthToken: jest.fn(),
-      updateOAuthTokenFromSignIn: jest.fn(),
     };
 
     const mockOrganizationsRepository = {
@@ -152,6 +151,10 @@ describe("GitlabIntegrationService", () => {
           provide: UsersRepository,
           useValue: mockUsersRepository,
         },
+        {
+          provide: OrganizationLoggerService,
+          useValue: { addAuditLog: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -162,6 +165,7 @@ describe("GitlabIntegrationService", () => {
     );
     integrationsRepository = module.get(IntegrationsRepository);
     usersRepository = module.get(UsersRepository);
+    organizationLoggerService = module.get(OrganizationLoggerService);
   });
 
   it("should be defined", () => {
@@ -316,7 +320,51 @@ describe("GitlabIntegrationService", () => {
       ).rejects.toThrow(IntegrationWrongTokenType);
     });
 
+    it("checks that the caller is an org admin", async () => {
+      organizationsRepository.getOrganizationById.mockResolvedValue({
+        ...mockOrganizationWithIntegrations,
+        integrations: [],
+      });
+      usersRepository.getUserById.mockResolvedValue(mockUser);
+      integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
+
+      await service.addGitlabIntegration(
+        "test-org-id",
+        linkGitlabCreateBody,
+        mockAuthenticatedUser,
+      );
+
+      expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
+        "test-org-id",
+        "test-user-id",
+        MemberRole.ADMIN,
+      );
+      expect(organizationLoggerService.addAuditLog).toHaveBeenCalledTimes(1);
+    });
+
+    it("refuses a caller below admin or outside the org before doing anything", async () => {
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockRejectedValue(new NotAuthorized());
+
+      await expect(
+        service.addGitlabIntegration(
+          "test-org-id",
+          linkGitlabCreateBody,
+          mockAuthenticatedUser,
+        ),
+      ).rejects.toThrow(NotAuthorized);
+
+      expect(
+        organizationsRepository.getOrganizationById,
+      ).not.toHaveBeenCalled();
+      expect(integrationsRepository.saveIntegration).not.toHaveBeenCalled();
+      expect(organizationsRepository.saveOrganization).not.toHaveBeenCalled();
+      expect(organizationLoggerService.addAuditLog).not.toHaveBeenCalled();
+    });
+
     it("should throw EntityNotFound when organization does not exist", async () => {
+      jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
       organizationsRepository.getOrganizationById.mockRejectedValue(
         new EntityNotFound(),
       );
@@ -440,34 +488,26 @@ describe("GitlabIntegrationService", () => {
       ).rejects.toThrow(IntegrationWrongTokenType);
     });
 
-    it("should throw Error for unimplemented method", async () => {
+    it("should refuse a different instance URL before asking GitLab", async () => {
       organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
         true,
       );
       jest
         .spyOn(membershipsRepository, "hasRequiredRole")
         .mockResolvedValue(undefined);
+      integrationsRepository.getIntegrationById.mockResolvedValue({
+        ...mockIntegration,
+      });
 
       await expect(
         service.modifyGitlabIntegration(
           "test-org-id",
           "test-integration-id",
-          linkGitlabPatchBody,
+          { ...linkGitlabPatchBody, gitlab_instance_url: "https://other.io" },
           mockAuthenticatedUser,
         ),
-      ).rejects.toThrow("Method not implemented.");
-    });
-  });
-
-  describe("removeGitlabIntegration", () => {
-    it("should throw Error for unimplemented method", async () => {
-      await expect(
-        service.removeGitlabIntegration(
-          "test-org-id",
-          "test-integration-id",
-          mockAuthenticatedUser,
-        ),
-      ).rejects.toThrow("Method not implemented.");
+      ).rejects.toThrow(IntegrationInstanceUrlChanged);
+      expect(integrationsRepository.saveIntegration).not.toHaveBeenCalled();
     });
   });
 
@@ -606,7 +646,7 @@ describe("GitlabIntegrationService", () => {
   describe("getTokenTypeFromTokenString", () => {
     it("should return PERSONAL_ACCESS_TOKEN for tokens starting with glpat", () => {
       const result = (service as any).getTokenTypeFromTokenString(
-        "glpat-xxxxxxxxxxxxxxxxxxxx",
+        "glpat-test-token",
       );
       expect(result).toBe(GitlabTokenType.PERSONAL_ACCESS_TOKEN);
     });

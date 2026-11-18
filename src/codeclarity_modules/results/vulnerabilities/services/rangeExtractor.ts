@@ -405,6 +405,20 @@ export function filterNVDByPackage(
   });
 }
 
+/**
+ * Keep only OSV entries for the finding's package. Framework findings name
+ * no real package, so they keep every entry.
+ */
+export function filterOSVByPackage(
+  entries: SourceRangeData[],
+  packageName: string,
+): SourceRangeData[] {
+  if (!packageName || packageName.startsWith("framework-")) return entries;
+  return entries.filter(
+    (entry) => !entry.packageName || entry.packageName === packageName,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Formatting helpers
 // ---------------------------------------------------------------------------

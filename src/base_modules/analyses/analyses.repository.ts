@@ -98,16 +98,25 @@ export class AnalysesRepository {
     return res.affected ?? 0;
   }
 
+  /** Runs the given work in one database transaction. */
+  async runInTransaction<T>(
+    work: (manager: EntityManager) => Promise<T>,
+  ): Promise<T> {
+    return this.analysisRepository.manager.transaction(work);
+  }
+
   /**
    * Cancels (sets status to CANCELLED) every non-terminal analysis among the
    * given IDs in a single set-based statement. Terminal analyses are left
    * untouched so a finished/failed run is never re-labelled.
    * @param ids The IDs of the analyses to cancel.
+   * @param manager Runs the update in the caller's transaction when given.
    * @returns The number of analyses transitioned to CANCELLED.
    */
-  async cancelByIds(ids: string[]): Promise<number> {
+  async cancelByIds(ids: string[], manager?: EntityManager): Promise<number> {
     if (ids.length === 0) return 0;
-    const res = await this.analysisRepository.update(
+    const repo = manager?.getRepository(Analysis) ?? this.analysisRepository;
+    const res = await repo.update(
       { id: In(ids), status: Not(In([...TERMINAL_ANALYSIS_STATUSES])) },
       { status: AnalysisStatus.CANCELLED, ended_on: new Date() },
     );

@@ -2,6 +2,10 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Raw, Repository } from "typeorm";
 
+import {
+  AffectedPackage,
+  affectsPackage,
+} from "src/codeclarity_modules/knowledge/osv/affected-package";
 import { OSV } from "src/codeclarity_modules/knowledge/osv/osv.entity";
 import {
   activeRecordFilter,
@@ -29,20 +33,13 @@ export class OSVRepository {
     return osv;
   }
 
-  async getVulnCVE(cve: string): Promise<OSV> {
-    const osv = await this.getVulnByCVEIDWithoutFailing(cve);
-    if (!osv) {
-      throw new EntityNotFound();
-    }
-    return osv;
-  }
-
-  // Matches any CVE alias, and picks the same record every time when several share it.
+  // Matches any CVE alias, keeps records affecting the package (any when null), and picks the same one every time.
   async getVulnByCVEIDWithoutFailing(
     cve: string,
+    affectedPackage: AffectedPackage | null,
     options?: KnowledgeLookupOptions,
   ): Promise<OSV | null> {
-    return this.osvRepository.findOne({
+    const candidates = await this.osvRepository.find({
       where: {
         cve_aliases: Raw(
           (alias) => `${alias} @> to_jsonb(CAST(:cve AS text))`,
@@ -58,6 +55,12 @@ export class OSVRepository {
         osv_id: "ASC",
       },
     });
+    return (
+      candidates.find(
+        (osv) =>
+          !affectedPackage || affectsPackage(osv.affected, affectedPackage),
+      ) ?? null
+    );
   }
 
   async getVulnByOSVIDWithoutFailing(

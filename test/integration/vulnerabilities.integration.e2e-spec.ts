@@ -219,6 +219,38 @@ describe("Vulnerabilities list (e2e)", () => {
     });
   });
 
+  it("filters and counts by patch status", async () => {
+    await testHelper
+      .getDataSource()
+      .query(
+        `INSERT INTO result (result, plugin, created_on, "analysisId") VALUES ($1, 'js-patching', now(), $2)`,
+        [JSON.stringify(patchingOutput), analysisId],
+      );
+
+    expect(await dependencies("active_filters=[patch_full]")).toEqual([
+      "lodash",
+    ]);
+    expect(
+      (await dependencies("active_filters=[patch_partial,patch_none]")).sort(),
+    ).toEqual(["axios", "minimist"]);
+
+    const response = await testHelper.makeAuthenticatedRequest(
+      "GET",
+      url,
+      user.accessToken,
+    );
+    const counts = response.json().filter_count as Record<string, number>;
+    expect([
+      counts["patch_full"],
+      counts["patch_partial"],
+      counts["patch_none"],
+    ]).toEqual([1, 1, 1]);
+  });
+
+  it("finds nothing by patch status when patching did not run", async () => {
+    expect(await dependencies("active_filters=[patch_full]")).toEqual([]);
+  });
+
   it("leaves the patch status out when patching did not run", async () => {
     expect(await patchTypes()).toEqual({
       lodash: undefined,
