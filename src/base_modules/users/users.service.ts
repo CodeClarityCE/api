@@ -463,14 +463,6 @@ export class UsersService {
   }
 
   /**
-   * Check whether user with the given id exists.
-   * @param id The id of the user to check
-   */
-  async existsUser(_id: string): Promise<boolean> {
-    throw new Error("Method not implemented.");
-  }
-
-  /**
    * Check whether user with the given social id for the given social type exists.
    * @param socialId The id of the social account (this is not the userid!)
    * @param socialType socialType

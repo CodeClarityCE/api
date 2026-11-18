@@ -24,7 +24,6 @@ import {
   OrganizationsRepository,
   UsersRepository,
 } from "src/base_modules/shared/repositories";
-import { TeamMember } from "src/base_modules/users/teamMember.types";
 import {
   CannotRevokeOwnMembership,
   EntityNotFound,
@@ -718,24 +717,6 @@ export class OrganizationsService {
       },
     );
     await this.projectRows.removeFolders(orgId, projectIds);
-  }
-
-  /**
-   * Get a member of an org
-   * @throws {NotAuthorized}
-   * @throws {EntityNotFound}
-   *
-   * @param orgId The id of the organization
-   * @param userId The id of the user
-   * @param user The authenticated user
-   * @returns the team member
-   */
-  public async getOrgMember(
-    _orgId: string,
-    _userId: string,
-    _user: AuthenticatedUser,
-  ): Promise<TeamMember> {
-    throw new Error("Method not implemented.");
   }
 
   /**

@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { LicenseRepository } from "src/codeclarity_modules/knowledge/license/license.repository";
-import { Version } from "src/codeclarity_modules/knowledge/package/package.entity";
 import {
   DepShortInfo,
   LicenseInfo,
@@ -242,18 +241,10 @@ export class LicensesService {
 
     const depShortInfoMap: Record<string, DepShortInfo> = {};
 
-    const safeAllDeps = [];
     for (const dep of allDeps) {
-      const lastIndex = dep.lastIndexOf("@");
-      const replaced = `${dep.slice(0, lastIndex)}:${dep.slice(lastIndex + 1)}`;
-      safeAllDeps.push(replaced);
-    }
-
-    const versionsInfo = await this.getDependencyVersions(safeAllDeps);
-    for (const [key, versionInfo] of Object.entries(versionsInfo)) {
-      const versionIndex = key.lastIndexOf(":");
-      const depName = key.slice(0, versionIndex);
-      const depVersion = key.slice(versionIndex + 1);
+      const versionIndex = dep.lastIndexOf("@");
+      const depName = dep.slice(0, versionIndex);
+      const depVersion = dep.slice(versionIndex + 1);
       const depKey = `${depName}@${depVersion}`;
       const packageManager = packageManagerOf(depName);
       let packageManagerUrl = "";
@@ -266,7 +257,7 @@ export class LicensesService {
 
       depShortInfoMap[depKey] = {
         name: depName,
-        version: versionInfo.version,
+        version: depVersion,
         package_manager: packageManager,
       };
 
@@ -311,38 +302,5 @@ export class LicensesService {
       stage_start: licensesOutput.analysis_info.analysis_start_time,
       stage_end: licensesOutput.analysis_info.analysis_end_time,
     };
-  }
-
-  private async getDependencyVersions(
-    versionsArray: string[],
-  ): Promise<Record<string, Version>> {
-    const versions: Record<string, Version> = {};
-
-    // TODO: Implement dependency version lookup from package database
-    // For now, return empty versions to avoid 500 errors
-    // This means dependency details won't show version info, but licenses will work
-    console.warn(
-      "getDependencyVersions not implemented - returning empty versions",
-    );
-
-    // Create minimal version objects for each requested package
-    for (const version of versionsArray) {
-      const versionParts = version.split(":");
-      const versionNumber =
-        versionParts.length > 1
-          ? versionParts[versionParts.length - 1]
-          : "unknown";
-
-      versions[version] = {
-        id: "", // Empty ID since we're not looking up from database
-        version: versionNumber,
-        dependencies: {},
-        dev_dependencies: {},
-        extra: {},
-        package_id: "",
-      } as unknown as Version;
-    }
-
-    return versions;
   }
 }

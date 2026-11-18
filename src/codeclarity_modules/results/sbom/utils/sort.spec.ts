@@ -384,52 +384,6 @@ describe("sort", () => {
     });
   });
 
-  describe("licenses sorting (currently not implemented)", () => {
-    it.skip("should call console.log and return unsorted array for licenses", () => {
-      // SKIPPED: licenses sorting is not fully implemented
-      // It only logs to console but doesn't actually sort dependencies
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
-      const dependencies = [
-        createMockDependency({ name: "package-a" }),
-        createMockDependency({ name: "package-b" }),
-      ];
-
-      const result = sort(dependencies, "licenses", "ASC");
-
-      expect(consoleSpy).toHaveBeenCalledWith(dependencies[0], dependencies[1]);
-      expect(result).toEqual(dependencies);
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe("combined_severity sorting (currently not implemented)", () => {
-    it("should return unsorted array for combined_severity", () => {
-      const dependencies = [
-        createMockDependency({ name: "package-a" }),
-        createMockDependency({ name: "package-b" }),
-      ];
-
-      const result = sort(dependencies, "combined_severity", "ASC");
-
-      expect(result).toEqual(dependencies);
-    });
-  });
-
-  describe("newest_release sorting (currently not implemented)", () => {
-    it.skip("should return undefined for newest_release", () => {
-      // SKIPPED: newest_release sorting is not implemented in the source code
-      // The implementation is commented out, so it returns undefined
-      const dependencies = [
-        createMockDependency({ name: "package-a" }),
-        createMockDependency({ name: "package-b" }),
-      ];
-
-      const result = sort(dependencies, "newest_release", "ASC");
-
-      expect(result).toBeUndefined();
-    });
-  });
-
   describe("default string sorting", () => {
     it("should sort by string fields in ascending order", () => {
       const dependencies = [
@@ -539,15 +493,12 @@ describe("sort", () => {
 
   describe("allowed sort fields validation", () => {
     const allowedSortBy = [
-      "combined_severity",
       "name",
       "version",
       "package_manager",
       "unlicensed",
       "deprecated",
       "outdated",
-      "licenses",
-      "newest_release",
       "last_published",
       "user_installed",
       "release",
@@ -564,6 +515,22 @@ describe("sort", () => {
         }).not.toThrow();
       });
     });
+
+    it.each(["licenses", "combined_severity", "newest_release"])(
+      "should fall back to the default sort for %s",
+      (field) => {
+        const dependencies = [
+          createMockDependency({ name: "package-a" }),
+          createMockDependency({ name: "package-b" }),
+        ] as any;
+        dependencies[0]!.dev = 1;
+        dependencies[1]!.dev = 2;
+
+        const result = sort(dependencies, field, "ASC");
+
+        expect(result.map((d) => d.name)).toEqual(["package-b", "package-a"]);
+      },
+    );
 
     it("should fall back to default for disallowed sort field", () => {
       const dependencies = [

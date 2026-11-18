@@ -191,19 +191,19 @@ describe("CombinedAuthGuard", () => {
         );
       });
 
-      it("should handle API key header (currently not implemented)", async () => {
+      it("should reject an API key header without a bearer token", async () => {
         mockRequest.headers!["x-api-key"] = "api-key-123";
 
         await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
-          "Not implemented",
+          NotAuthenticated,
         );
       });
 
-      it("should handle uppercase API key header", async () => {
+      it("should reject an uppercase API key header without a bearer token", async () => {
         mockRequest.headers!["X-API-KEY"] = "api-key-123";
 
         await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
-          "Not implemented",
+          NotAuthenticated,
         );
       });
     });
@@ -272,27 +272,6 @@ describe("CombinedAuthGuard", () => {
     });
   });
 
-  describe("extractAPITokenFromHeader", () => {
-    it("should extract token from string header", () => {
-      const token = "api-token-123";
-      const result = (guard as any).extractAPITokenFromHeader(token);
-      expect(result).toBe(token);
-    });
-
-    it("should return undefined for array header", () => {
-      const result = (guard as any).extractAPITokenFromHeader([
-        "token1",
-        "token2",
-      ]);
-      expect(result).toBeUndefined();
-    });
-
-    it("should return undefined for undefined header", () => {
-      const result = (guard as any).extractAPITokenFromHeader(undefined);
-      expect(result).toBeUndefined();
-    });
-  });
-
   describe("verifyJWTToken", () => {
     it("should return valid result for correct token", async () => {
       const token = "valid-token";
@@ -329,15 +308,6 @@ describe("CombinedAuthGuard", () => {
 
       expect(isValid).toBe(true);
       expect(user.roles).toEqual(["USER", "ADMIN"]);
-    });
-  });
-
-  describe("verifyAPIToken", () => {
-    it.skip('should throw "Not implemented" error', async () => {
-      // This test is skipped because verifyAPIToken is not implemented yet (commented out)
-      // await expect((guard as any).___verifyAPIToken('any-token')).rejects.toThrow(
-      //     'Not implemented'
-      // );
     });
   });
 });

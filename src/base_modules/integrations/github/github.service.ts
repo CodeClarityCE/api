@@ -268,41 +268,6 @@ export class GithubIntegrationService {
   }
 
   /**
-   * Remove an existing GitHub integration from the organization.
-   *
-   * @throws {NotAuthorized} If the authenticated user is not authorized to perform this action.
-   *
-   * @param orgId The ID of the organization.
-   * @param integrationId The ID of the integration to remove.
-   * @param user The authenticated user.
-   */
-  async removeGithubIntegration(
-    orgId: string,
-    integrationId: string,
-    user: AuthenticatedUser,
-  ): Promise<void> {
-    // Check if the integration belongs to the organization
-    if (
-      !(await this.organizationsRepository.doesIntegrationBelongToOrg(
-        integrationId,
-        orgId,
-      ))
-    ) {
-      throw new NotAuthorized();
-    }
-
-    // Check if the user has permission to remove the integration
-    await this.membershipsRepository.hasRequiredRole(
-      orgId,
-      user.userId,
-      MemberRole.ADMIN,
-    );
-
-    // TODO: Implement the removal of the GitHub integration from the organization
-    throw new Error("Not implemented");
-  }
-
-  /**
    * Return the GitHub integration's token. A token validated within the last
    * minute is returned without validating it again.
    *

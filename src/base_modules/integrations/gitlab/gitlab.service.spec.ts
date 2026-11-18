@@ -515,18 +515,6 @@ describe("GitlabIntegrationService", () => {
     });
   });
 
-  describe("removeGitlabIntegration", () => {
-    it("should throw Error for unimplemented method", async () => {
-      await expect(
-        service.removeGitlabIntegration(
-          "test-org-id",
-          "test-integration-id",
-          mockAuthenticatedUser,
-        ),
-      ).rejects.toThrow("Method not implemented.");
-    });
-  });
-
   describe("getToken", () => {
     it("should successfully retrieve and validate GitLab token", async () => {
       integrationsRepository.getIntegrationById.mockResolvedValue(
