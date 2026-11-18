@@ -44,7 +44,10 @@ import { ExperimentRunSubmission } from "../../src/codeclarity_modules/experimen
 import { TypeOrmExperimentStore } from "../../src/codeclarity_modules/experiments/experiment-store";
 import { Policy } from "../../src/codeclarity_modules/policies/policy.entity";
 import { Result } from "../../src/codeclarity_modules/results/result.entity";
-import { openScratchDatabase } from "../utils/scratch-database";
+import {
+  closeScratchDatabase,
+  openScratchDatabase,
+} from "../utils/scratch-database";
 
 const HEAD = {
   branch: "main",
@@ -71,7 +74,7 @@ describe("ExperimentRunSubmission against Postgres", () => {
   });
 
   afterAll(async () => {
-    await dataSource?.destroy();
+    await closeScratchDatabase(dataSource);
     await rm(downloads, { recursive: true, force: true });
   });
 

@@ -8,7 +8,7 @@ import {
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getDataSourceToken } from "@nestjs/typeorm";
 import * as bcrypt from "bcrypt";
-import { DataSource } from "typeorm";
+import { type DataSource } from "typeorm";
 
 import { AppModule } from "../../src/app.module";
 import {
@@ -28,6 +28,12 @@ import { ResponseBodyInterceptor } from "../../src/interceptors/ResponseBodyInte
 import { ValidationFailed } from "../../src/types/error.types";
 import { validate } from "../../src/utils/validate-env";
 
+import {
+  createRunDatabase,
+  dropRunDatabase,
+  runDatabaseName,
+} from "./run-database";
+
 export interface TestUser {
   user: User;
   organization: Organization;
@@ -41,8 +47,14 @@ export class IntegrationTestHelper {
   private usersRepository!: UsersRepository;
   private organizationsRepository!: OrganizationsRepository;
   private membershipsRepository!: MembershipsRepository;
+  private database: string | undefined;
 
   async setupTestApp(): Promise<NestFastifyApplication> {
+    // Each spec file gets its own database, so parallel runs never share one.
+    this.database = runDatabaseName("codeclarity");
+    await createRunDatabase(this.database);
+    process.env["CODECLARITY_TEST_DB_NAME"] = this.database;
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({
@@ -93,7 +105,7 @@ export class IntegrationTestHelper {
     await this.app.init();
     await this.app.getHttpAdapter().getInstance().ready();
 
-    // The test database is restored from an old dump, so rebuild it from the entities.
+    // Build the new database's schema from the entities.
     this.assertTestDatabase();
     await this.dataSource.synchronize(true);
 
@@ -111,8 +123,15 @@ export class IntegrationTestHelper {
   }
 
   async teardownTestApp(): Promise<void> {
-    if (this.app) {
-      await this.app.close();
+    try {
+      if (this.app) {
+        await this.app.close();
+      }
+    } finally {
+      if (this.database) {
+        await dropRunDatabase(this.database);
+        this.database = undefined;
+      }
     }
   }
 
@@ -124,20 +143,10 @@ export class IntegrationTestHelper {
     // Get all entity metadata
     const entities = this.dataSource.entityMetadatas;
 
-    // Disable foreign key checks temporarily
-    await this.dataSource.query("SET session_replication_role = replica;");
-
-    try {
-      // Truncate all tables
-      for (const entity of entities) {
-        await this.dataSource.query(
-          `TRUNCATE TABLE "${entity.tableName}" CASCADE;`,
-        );
-      }
-    } finally {
-      // Re-enable foreign key checks
-      await this.dataSource.query("SET session_replication_role = DEFAULT;");
-    }
+    // One statement empties every table at once, so it cannot deadlock itself.
+    const tables = [...new Set(entities.map((e) => `"${e.tableName}"`))];
+    if (tables.length === 0) return;
+    await this.dataSource.query(`TRUNCATE TABLE ${tables.join(", ")} CASCADE;`);
   }
 
   async createTestUser(

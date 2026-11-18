@@ -17,7 +17,10 @@ import { User } from "../../src/base_modules/users/users.entity";
 import { DashboardService } from "../../src/codeclarity_modules/dashboard/dashboard.service";
 import type { SeverityInfoByWeek } from "../../src/codeclarity_modules/dashboard/dashboard.types";
 import { Result } from "../../src/codeclarity_modules/results/result.entity";
-import { openScratchDatabase } from "../utils/scratch-database";
+import {
+  closeScratchDatabase,
+  openScratchDatabase,
+} from "../utils/scratch-database";
 
 const DAY = 86_400_000;
 
@@ -71,7 +74,7 @@ describe("Dashboard aggregates against Postgres", () => {
   });
 
   afterAll(async () => {
-    await dataSource?.destroy();
+    await closeScratchDatabase(dataSource);
   });
 
   beforeEach(async () => {
