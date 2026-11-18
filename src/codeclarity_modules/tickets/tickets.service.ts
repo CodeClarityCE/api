@@ -20,6 +20,7 @@ import { NVDRepository } from "src/codeclarity_modules/knowledge/nvd/nvd.reposit
 import { OSV } from "src/codeclarity_modules/knowledge/osv/osv.entity";
 import { OSVRepository } from "src/codeclarity_modules/knowledge/osv/osv.repository";
 import { uniqueReferences } from "src/codeclarity_modules/results/vulnerabilities/services/reportGenerator";
+import { affectedPackageOf } from "src/codeclarity_modules/results/vulnerabilities/utils/finding-advisory";
 import {
   ReferenceInfo,
   SeverityInfo,
@@ -295,7 +296,10 @@ export class TicketsService {
 
     // Fallback: fetch vulnerability data directly from knowledge database
     // This handles tickets without source_analysis or when the full service fails
-    return this.getVulnerabilityFromKnowledge(ticket.vulnerability_id);
+    return this.getVulnerabilityFromKnowledge(
+      ticket.vulnerability_id,
+      ticket.affected_package,
+    );
   }
 
   /**
@@ -304,6 +308,7 @@ export class TicketsService {
    */
   private async getVulnerabilityFromKnowledge(
     vulnerabilityId: string,
+    affectedPackage: string | undefined,
   ): Promise<VulnerabilityDetailsReport | null> {
     try {
       const nvdData = await this.nvdRepository.getVulnWithoutFailing(
@@ -313,8 +318,10 @@ export class TicketsService {
 
       let osvData: OSV | null = null;
       if (vulnerabilityId.startsWith("CVE")) {
+        // A ticket does not record its ecosystem, so the package matches by name.
         osvData = await this.osvRepository.getVulnByCVEIDWithoutFailing(
           vulnerabilityId,
+          affectedPackageOf(affectedPackage ?? "", undefined),
           { includeRetired: true },
         );
       }

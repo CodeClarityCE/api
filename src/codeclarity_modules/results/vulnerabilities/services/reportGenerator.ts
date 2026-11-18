@@ -20,7 +20,6 @@ import type {
   AffectedRange,
   CommonConsequencesInfo,
   DependencyInfoReport,
-  OtherInfo,
   ReferenceInfo,
   SeverityInfo,
   Vulnerability,
@@ -38,6 +37,7 @@ import {
   extractNVDRanges,
   extractOSVRanges,
   filterNVDByPackage,
+  filterOSVByPackage,
   mergeSourceRangeData,
 } from "./rangeExtractor";
 import { buildSourceComparison } from "./sourceComparison";
@@ -82,19 +82,25 @@ interface NVDReference {
 }
 
 // ---------------------------------------------------------------------------
+// Per-report inputs
+// ---------------------------------------------------------------------------
+
+/** Everything one report is built from; never kept between reports. */
+interface ReportContext {
+  readonly vuln: Vulnerability;
+  readonly packageManager: string;
+  readonly dependency?: Dependency | undefined;
+  readonly osv?: OSV | undefined;
+  readonly nvd?: NVD | undefined;
+  readonly gcve?: GCVE | undefined;
+  readonly friendsOfPhp?: FriendsOfPhp | undefined;
+}
+
+// ---------------------------------------------------------------------------
 // Base report generator
 // ---------------------------------------------------------------------------
 
 abstract class BaseReportGenerator {
-  patchesData!: PatchInfo;
-  vulnsData!: Vulnerability;
-  dependencyData?: Dependency;
-  versions!: Version[];
-  packageManager!: string;
-  osvItem?: OSV;
-  nvdItem?: NVD;
-  gcveItem?: GCVE;
-
   readonly versionsRepository: VersionsRepository;
   readonly osvRepository: OSVRepository;
   readonly nvdRepository: NVDRepository;
@@ -118,47 +124,52 @@ abstract class BaseReportGenerator {
     this.owaspRepository = owaspRepository;
   }
 
+  // Source the affected versions string prefers.
+  protected abstract readonly primarySource: "OSV" | "NVD";
+
   // -------------------------------------------------------------------------
   // Abstract hooks – subclasses implement source-specific logic
   // -------------------------------------------------------------------------
 
-  protected abstract getVulnerabilityId(): string;
-  protected abstract getDescription(): string;
-  protected abstract getPublishedDate(): string;
-  protected abstract getLastModifiedDate(): string;
-  protected abstract buildSources(
-    friendsOfPhpItem?: FriendsOfPhp,
-  ): VulnSourceInfo[];
-  protected abstract buildAliases(): string[];
-  protected abstract getReferences(): ReferenceInfo[];
-  protected abstract getPrimarySeverity(): Promise<SeverityInfo>;
-  protected abstract getFallbackSeverity(): Promise<SeverityInfo>;
+  protected abstract getVulnerabilityId(ctx: ReportContext): string;
+  protected abstract getDescription(ctx: ReportContext): string;
+  protected abstract getPublishedDate(ctx: ReportContext): string;
+  protected abstract getLastModifiedDate(ctx: ReportContext): string;
+  protected abstract buildSources(ctx: ReportContext): VulnSourceInfo[];
+  protected abstract buildAliases(ctx: ReportContext): string[];
+  protected abstract getReferences(ctx: ReportContext): ReferenceInfo[];
+  protected abstract getPrimarySeverity(
+    ctx: ReportContext,
+  ): Promise<SeverityInfo>;
+  protected abstract getFallbackSeverity(
+    ctx: ReportContext,
+  ): Promise<SeverityInfo>;
 
   // -------------------------------------------------------------------------
   // Affected versions (delegates to range extractor)
   // -------------------------------------------------------------------------
 
-  async getVulnerableVersionsString(
+  private getVulnerableVersionsString(
+    ctx: ReportContext,
     source: string,
-  ): Promise<{ versions: string; source: string }> {
+  ): { versions: string; source: string } {
     // Try to build affected string from knowledge-DB data
-    const result = this.getDirectAffectedVersions(source);
+    const result = this.getDirectAffectedVersions(ctx, source);
     if (result) return result;
 
     // Fallback to AffectedInfo from vuln-finder analysis results
-    const affectedData = this.getAffectedDataBySource(source);
+    const affectedData = this.getAffectedDataBySource(ctx.vuln, source);
     const affectedStringParts = this.buildAffectedStringParts(affectedData);
 
     // Final fallback for framework vulnerabilities
-    const isFramework =
-      this.vulnsData.AffectedDependency?.startsWith("framework-");
+    const isFramework = ctx.vuln.AffectedDependency?.startsWith("framework-");
     if (
       affectedStringParts.length === 0 &&
       isFramework &&
-      this.vulnsData.AffectedVersion
+      ctx.vuln.AffectedVersion
     ) {
       return {
-        versions: `${this.vulnsData.AffectedVersion} (check advisory for details)`,
+        versions: `${ctx.vuln.AffectedVersion} (check advisory for details)`,
         source,
       };
     }
@@ -167,6 +178,7 @@ abstract class BaseReportGenerator {
   }
 
   private getDirectAffectedVersions(
+    ctx: ReportContext,
     preferredSource: string,
   ): { versions: string; source: string } | null {
     const sourceOrders: Record<string, readonly string[]> = {
@@ -175,17 +187,17 @@ abstract class BaseReportGenerator {
     };
     const order = sourceOrders[preferredSource] ?? ["OSV", "NVD", "GCVE"];
 
-    const packageName = this.vulnsData.AffectedDependency || "";
+    const packageName = ctx.vuln.AffectedDependency || "";
 
     for (const src of order) {
       let entries: SourceRangeData[] = [];
-      if (src === "NVD" && this.nvdItem) {
-        entries = extractNVDRanges(this.nvdItem);
+      if (src === "NVD" && ctx.nvd) {
+        entries = extractNVDRanges(ctx.nvd);
         entries = filterNVDByPackage(entries, packageName);
-      } else if (src === "OSV" && this.osvItem) {
-        entries = extractOSVRanges(this.osvItem);
-      } else if (src === "GCVE" && this.gcveItem) {
-        entries = extractGCVERanges(this.gcveItem);
+      } else if (src === "OSV" && ctx.osv) {
+        entries = filterOSVByPackage(extractOSVRanges(ctx.osv), packageName);
+      } else if (src === "GCVE" && ctx.gcve) {
+        entries = extractGCVERanges(ctx.gcve);
       }
 
       if (entries.length === 0) continue;
@@ -208,19 +220,22 @@ abstract class BaseReportGenerator {
     return null;
   }
 
-  private getAffectedDataBySource(source: string): AffectedInfo {
+  private getAffectedDataBySource(
+    vuln: Vulnerability,
+    source: string,
+  ): AffectedInfo {
     if (source === "NVD") {
-      if (this.vulnsData.NVDMatch?.AffectedInfo?.length > 0) {
-        return this.vulnsData.NVDMatch.AffectedInfo[0]!;
+      if (vuln.NVDMatch?.AffectedInfo?.length > 0) {
+        return vuln.NVDMatch.AffectedInfo[0]!;
       }
     } else if (source === "GCVE") {
-      const gcveMatch = this.vulnsData.GCVEMatch;
+      const gcveMatch = vuln.GCVEMatch;
       if (gcveMatch?.AffectedInfo && gcveMatch.AffectedInfo.length > 0) {
         return gcveMatch.AffectedInfo[0]!;
       }
     } else {
-      if (this.vulnsData.OSVMatch?.AffectedInfo?.length > 0) {
-        return this.vulnsData.OSVMatch.AffectedInfo[0]!;
+      if (vuln.OSVMatch?.AffectedInfo?.length > 0) {
+        return vuln.OSVMatch.AffectedInfo[0]!;
       }
     }
     return { Ranges: [], Exact: [], Universal: false };
@@ -254,38 +269,12 @@ abstract class BaseReportGenerator {
   }
 
   // -------------------------------------------------------------------------
-  // Source comparison (delegates to sourceComparison module)
-  // -------------------------------------------------------------------------
-
-  async getAffectedVersionsBySources(): Promise<{
-    nvd: string;
-    osv: string;
-    gcve: string;
-    agree: boolean;
-    nvdReason: string;
-    osvReason: string;
-    gcveReason: string;
-    nvdAllVersions: string;
-    osvAllVersions: string;
-    gcveAllVersions: string;
-  }> {
-    return buildSourceComparison(
-      this.vulnsData.AffectedVersion || "",
-      this.vulnsData.AffectedDependency || "",
-      this.nvdItem,
-      this.osvItem,
-      this.gcveItem,
-    );
-  }
-
-  // -------------------------------------------------------------------------
   // Version status array
   // -------------------------------------------------------------------------
 
-  async getVersionsStatusArray(
+  private getVersionsStatusArray(
     affectedVersionsString: string,
-    _affectedDependencyName: string,
-  ): Promise<VulnerableVersionInfoReport[]> {
+  ): VulnerableVersionInfoReport[] {
     // TODO: re-enable when VersionsRepository supports this query
     const versions: Version[] = [];
     const result: VulnerableVersionInfoReport[] = [];
@@ -300,26 +289,18 @@ abstract class BaseReportGenerator {
   }
 
   // -------------------------------------------------------------------------
-  // Patches
-  // -------------------------------------------------------------------------
-
-  getPatchesData(): PatchInfo {
-    return this.patchesData;
-  }
-
-  // -------------------------------------------------------------------------
   // Weaknesses / CWE
   // -------------------------------------------------------------------------
 
-  async getWeaknessData(): Promise<
-    [WeaknessInfoReport[], Record<string, CommonConsequencesInfo[]>]
-  > {
+  private async getWeaknessData(
+    vuln: Vulnerability,
+  ): Promise<[WeaknessInfoReport[], Record<string, CommonConsequencesInfo[]>]> {
     const consequences: Record<string, CommonConsequencesInfo[]> = {};
     const weaknesses: WeaknessInfoReport[] = [];
 
-    if (!this.vulnsData.Weaknesses) return [weaknesses, consequences];
+    if (!vuln.Weaknesses) return [weaknesses, consequences];
 
-    for (const weakness of this.vulnsData.Weaknesses) {
+    for (const weakness of vuln.Weaknesses) {
       try {
         const cweInfo = await this.cweRepository.getCWE(
           weakness.WeaknessId.replace("CWE-", ""),
@@ -366,7 +347,7 @@ abstract class BaseReportGenerator {
   // Dependency info
   // -------------------------------------------------------------------------
 
-  async getDependencyData(): Promise<DependencyInfoReport> {
+  private getDependencyData(ctx: ReportContext): DependencyInfoReport {
     const info: DependencyInfoReport = {
       name: "",
       published: "",
@@ -376,9 +357,8 @@ abstract class BaseReportGenerator {
       package_manager_links: [],
     };
 
-    if (!this.dependencyData) {
+    if (!ctx.dependency) {
       console.warn("No dependency data available for vulnerability report");
-      return info;
     }
 
     return info;
@@ -388,10 +368,10 @@ abstract class BaseReportGenerator {
   // OWASP Top 10
   // -------------------------------------------------------------------------
 
-  getOwaspTop10Info(): OwaspTop10Info | null {
-    if (!this.vulnsData.Weaknesses) return null;
+  private getOwaspTop10Info(vuln: Vulnerability): OwaspTop10Info | null {
+    if (!vuln.Weaknesses) return null;
 
-    for (const weakness of this.vulnsData.Weaknesses) {
+    for (const weakness of vuln.Weaknesses) {
       if (weakness.OWASPTop10Id !== "") {
         try {
           return this.owaspRepository.getOwaspTop10CategoryInfo(
@@ -407,26 +387,21 @@ abstract class BaseReportGenerator {
   }
 
   // -------------------------------------------------------------------------
-  // Other info
-  // -------------------------------------------------------------------------
-
-  getOtherInfo(): OtherInfo {
-    return { package_manager: this.packageManager };
-  }
-
-  // -------------------------------------------------------------------------
   // Framework package name extraction
   // -------------------------------------------------------------------------
 
-  protected extractFrameworkPackageName(fallbackName: string): string {
-    if (this.osvItem?.affected) {
-      const entries = this.osvItem.affected as OSVAffectedEntry[];
+  private extractFrameworkPackageName(
+    ctx: ReportContext,
+    fallbackName: string,
+  ): string {
+    if (ctx.osv?.affected) {
+      const entries = ctx.osv.affected as OSVAffectedEntry[];
       for (const entry of entries) {
         if (entry.package?.name) return entry.package.name;
       }
     }
-    if (this.nvdItem?.affected) {
-      const entries = this.nvdItem.affected as NVDAffectedEntry[];
+    if (ctx.nvd?.affected) {
+      const entries = ctx.nvd.affected as NVDAffectedEntry[];
       for (const entry of entries) {
         if (!entry.sources) continue;
         for (const src of entry.sources) {
@@ -444,97 +419,80 @@ abstract class BaseReportGenerator {
   // -------------------------------------------------------------------------
 
   protected async assembleReport(
-    friendsOfPhpItem?: FriendsOfPhp,
+    ctx: ReportContext,
   ): Promise<VulnerabilityDetailsReport> {
+    const { vuln } = ctx;
+
     // Vulnerability info
     const vulnInfo: VulnerabilityInfoReport = {
-      vulnerability_id: this.getVulnerabilityId(),
-      description: this.getDescription(),
+      vulnerability_id: this.getVulnerabilityId(ctx),
+      description: this.getDescription(ctx),
       version_info: {
         affected_versions_string: "",
         patched_versions_string: "",
         versions: [],
       },
-      published: this.getPublishedDate(),
-      last_modified: this.getLastModifiedDate(),
-      sources: this.buildSources(friendsOfPhpItem),
-      aliases: this.buildAliases(),
+      published: this.getPublishedDate(ctx),
+      last_modified: this.getLastModifiedDate(ctx),
+      sources: this.buildSources(ctx),
+      aliases: this.buildAliases(ctx),
     };
 
-    // Determine the primary source for version string
-    const primarySource = this instanceof OSVReportGenerator ? "OSV" : "NVD";
-    const affectedResult =
-      await this.getVulnerableVersionsString(primarySource);
-    const versionsStatusArray = await this.getVersionsStatusArray(
-      affectedResult.versions,
-      this.vulnsData.AffectedDependency,
+    const affectedResult = this.getVulnerableVersionsString(
+      ctx,
+      this.primarySource,
     );
-    const sourceComparison = await this.getAffectedVersionsBySources();
-
     vulnInfo.version_info.affected_versions_string = affectedResult.versions;
     vulnInfo.version_info.affected_versions_source = affectedResult.source;
-    vulnInfo.version_info.versions = versionsStatusArray;
-    vulnInfo.version_info.source_comparison = sourceComparison;
+    vulnInfo.version_info.versions = this.getVersionsStatusArray(
+      affectedResult.versions,
+    );
+    vulnInfo.version_info.source_comparison = buildSourceComparison(
+      vuln.AffectedVersion || "",
+      vuln.AffectedDependency || "",
+      ctx.nvd,
+      ctx.osv,
+      ctx.gcve,
+    );
 
     // Dependency info
-    let dependencyInfo: DependencyInfoReport | undefined;
-    try {
-      dependencyInfo = await this.getDependencyData();
-      let displayName = this.vulnsData.AffectedDependency || "";
-      if (displayName.startsWith("framework-")) {
-        displayName = this.extractFrameworkPackageName(displayName);
-      }
-      dependencyInfo.name = displayName;
-      dependencyInfo.version = this.vulnsData.AffectedVersion || "";
-
-      if (
-        !this.vulnsData.AffectedDependency ||
-        !this.vulnsData.AffectedVersion
-      ) {
-        console.warn("Missing dependency info in vulnerability data:", {
-          vulnId: this.vulnsData.VulnerabilityId,
-          affectedDep: this.vulnsData.AffectedDependency,
-          affectedVersion: this.vulnsData.AffectedVersion,
-        });
-      }
-    } catch (error) {
-      console.error("Error getting dependency data:", error);
+    const dependencyInfo = this.getDependencyData(ctx);
+    let displayName = vuln.AffectedDependency || "";
+    if (displayName.startsWith("framework-")) {
+      displayName = this.extractFrameworkPackageName(ctx, displayName);
+    }
+    dependencyInfo.name = displayName;
+    dependencyInfo.version = vuln.AffectedVersion || "";
+    if (!vuln.AffectedDependency || !vuln.AffectedVersion) {
+      console.warn("Missing dependency info in vulnerability data:", {
+        vulnId: vuln.VulnerabilityId,
+        affectedDep: vuln.AffectedDependency,
+        affectedVersion: vuln.AffectedVersion,
+      });
     }
 
     // Weaknesses and consequences
-    const [weaknesses, consequences] = await this.getWeaknessData();
-
-    // Patch info
-    const patchInfo = this.getPatchesData();
+    const [weaknesses, consequences] = await this.getWeaknessData(vuln);
 
     // Severity (primary then fallback)
-    let severityInfo = await this.getPrimarySeverity();
+    let severityInfo = await this.getPrimarySeverity(ctx);
     if (!severityInfo.cvss_2 && !severityInfo.cvss_31 && !severityInfo.cvss_3) {
-      severityInfo = await this.getFallbackSeverity();
+      severityInfo = await this.getFallbackSeverity(ctx);
     }
 
-    // References
-    const references = this.getReferences();
-
-    // OWASP Top 10
-    const owaspTop10Info = this.getOwaspTop10Info();
-
-    // Assemble
-    const report: VulnerabilityDetailsReport = {
+    return {
       vulnerability_info: vulnInfo,
+      dependency_info: dependencyInfo,
       weaknesses,
       severities: severityInfo,
       common_consequences: consequences,
-      patch: patchInfo,
-      references,
-      owasp_top_10: owaspTop10Info,
+      // Patch data is not loaded for reports yet.
+      patch: undefined as unknown as PatchInfo,
+      references: this.getReferences(ctx),
+      owasp_top_10: this.getOwaspTop10Info(vuln),
       location: [],
-      other: this.getOtherInfo(),
+      other: { package_manager: ctx.packageManager },
     };
-    if (dependencyInfo) {
-      report.dependency_info = dependencyInfo;
-    }
-    return report;
   }
 }
 
@@ -544,6 +502,8 @@ abstract class BaseReportGenerator {
 
 @Injectable()
 export class OSVReportGenerator extends BaseReportGenerator {
+  protected readonly primarySource = "OSV";
+
   constructor(
     readonly versionsRepository: VersionsRepository,
     readonly osvRepository: OSVRepository,
@@ -571,81 +531,86 @@ export class OSVReportGenerator extends BaseReportGenerator {
     friendsOfPhpItem?: FriendsOfPhp,
     gcveItem?: GCVE,
   ): Promise<VulnerabilityDetailsReport> {
-    this.vulnsData = vulnsData;
-    this.packageManager = packageManager;
-    if (dependencyData !== undefined) this.dependencyData = dependencyData;
-    if (osvItem !== undefined) this.osvItem = osvItem;
-    if (nvdItem !== undefined) this.nvdItem = nvdItem;
-    if (gcveItem !== undefined) this.gcveItem = gcveItem;
-
-    if (!this.osvItem) {
+    if (!osvItem) {
       throw new Error("Failed to generate report from undefined nvd entry");
     }
 
-    return this.assembleReport(friendsOfPhpItem);
+    return this.assembleReport({
+      vuln: vulnsData,
+      packageManager,
+      dependency: dependencyData,
+      osv: osvItem,
+      nvd: nvdItem,
+      gcve: gcveItem,
+      friendsOfPhp: friendsOfPhpItem,
+    });
   }
 
   // -- Source-specific hooks ------------------------------------------------
 
-  protected getVulnerabilityId(): string {
-    return this.osvItem!.cve ?? this.osvItem!.osv_id;
+  protected getVulnerabilityId(ctx: ReportContext): string {
+    return ctx.osv!.cve ?? ctx.osv!.osv_id;
   }
 
-  protected getDescription(): string {
-    return cleanOsvDescription(this.osvItem!.details);
+  protected getDescription(ctx: ReportContext): string {
+    return cleanOsvDescription(ctx.osv!.details);
   }
 
-  protected getPublishedDate(): string {
-    return this.osvItem!.published;
+  protected getPublishedDate(ctx: ReportContext): string {
+    return ctx.osv!.published;
   }
 
-  protected getLastModifiedDate(): string {
-    return this.osvItem!.modified;
+  protected getLastModifiedDate(ctx: ReportContext): string {
+    return ctx.osv!.modified;
   }
 
-  protected buildSources(friendsOfPhpItem?: FriendsOfPhp): VulnSourceInfo[] {
+  protected buildSources(ctx: ReportContext): VulnSourceInfo[] {
     const sources: VulnSourceInfo[] = [
       {
         name: "OSV",
-        vuln_url: `https://osv.dev/vulnerability/${this.osvItem!.osv_id}`,
+        vuln_url: `https://osv.dev/vulnerability/${ctx.osv!.osv_id}`,
       },
     ];
-    if (this.nvdItem) {
+    if (ctx.nvd) {
       sources.push({
         name: "NVD",
-        vuln_url: `https://nvd.nist.gov/vuln/detail/${this.nvdItem.nvd_id}`,
+        vuln_url: `https://nvd.nist.gov/vuln/detail/${ctx.nvd.nvd_id}`,
       });
     }
-    if (friendsOfPhpItem) {
-      sources.push({ name: "FriendsOfPHP", vuln_url: friendsOfPhpItem.link });
+    if (ctx.friendsOfPhp) {
+      sources.push({ name: "FriendsOfPHP", vuln_url: ctx.friendsOfPhp.link });
     }
-    if (this.gcveItem) {
+    if (ctx.gcve) {
       sources.push({
         name: "GCVE",
-        vuln_url: `https://vulnerability.circl.lu/vuln/${this.gcveItem.cve_id || this.gcveItem.gcve_id}`,
+        vuln_url: `https://vulnerability.circl.lu/vuln/${ctx.gcve.cve_id || ctx.gcve.gcve_id}`,
       });
     }
     return sources;
   }
 
-  protected buildAliases(): string[] {
-    const aliases = [this.osvItem!.osv_id];
-    if (this.osvItem!.cve) aliases.push(this.osvItem!.cve);
+  protected buildAliases(ctx: ReportContext): string[] {
+    const aliases = [ctx.osv!.osv_id];
+    if (ctx.osv!.cve) aliases.push(ctx.osv!.cve);
     return aliases;
   }
 
-  protected getReferences(): ReferenceInfo[] {
-    if (!this.osvItem?.references) return [];
-    const refs = this.osvItem.references as OSVReference[];
+  protected getReferences(ctx: ReportContext): ReferenceInfo[] {
+    if (!ctx.osv?.references) return [];
+    const refs = ctx.osv.references as OSVReference[];
     return uniqueReferences(refs.map((r) => ({ url: r.url, tags: [r.type] })));
   }
 
-  protected async getPrimarySeverity(): Promise<SeverityInfo> {
-    return getCVSSOSVInfo(this.osvItem!);
+  protected async getPrimarySeverity(
+    ctx: ReportContext,
+  ): Promise<SeverityInfo> {
+    return getCVSSOSVInfo(ctx.osv!);
   }
 
-  protected async getFallbackSeverity(): Promise<SeverityInfo> {
-    return this.nvdItem ? getCVSSNVDInfo(this.nvdItem) : {};
+  protected async getFallbackSeverity(
+    ctx: ReportContext,
+  ): Promise<SeverityInfo> {
+    return ctx.nvd ? getCVSSNVDInfo(ctx.nvd) : {};
   }
 }
 
@@ -655,6 +620,8 @@ export class OSVReportGenerator extends BaseReportGenerator {
 
 @Injectable()
 export class NVDReportGenerator extends BaseReportGenerator {
+  protected readonly primarySource = "NVD";
+
   constructor(
     readonly versionsRepository: VersionsRepository,
     readonly osvRepository: OSVRepository,
@@ -682,84 +649,89 @@ export class NVDReportGenerator extends BaseReportGenerator {
     friendsOfPhpItem?: FriendsOfPhp,
     gcveItem?: GCVE,
   ): Promise<VulnerabilityDetailsReport> {
-    this.vulnsData = vulnsData;
-    this.packageManager = packageManager;
-    if (dependencyData !== undefined) this.dependencyData = dependencyData;
-    if (osvItem !== undefined) this.osvItem = osvItem;
-    if (nvdItem !== undefined) this.nvdItem = nvdItem;
-    if (gcveItem !== undefined) this.gcveItem = gcveItem;
-
-    if (!this.nvdItem) {
+    if (!nvdItem) {
       throw new Error("Failed to generate report from undefined nvd entry");
     }
 
-    return this.assembleReport(friendsOfPhpItem);
+    return this.assembleReport({
+      vuln: vulnsData,
+      packageManager,
+      dependency: dependencyData,
+      osv: osvItem,
+      nvd: nvdItem,
+      gcve: gcveItem,
+      friendsOfPhp: friendsOfPhpItem,
+    });
   }
 
   // -- Source-specific hooks ------------------------------------------------
 
-  protected getVulnerabilityId(): string {
-    return this.nvdItem!.nvd_id;
+  protected getVulnerabilityId(ctx: ReportContext): string {
+    return ctx.nvd!.nvd_id;
   }
 
-  protected getDescription(): string {
-    const descriptions = this.nvdItem!.descriptions as NVDDescription[];
+  protected getDescription(ctx: ReportContext): string {
+    const descriptions = ctx.nvd!.descriptions as NVDDescription[];
     for (const d of descriptions) {
       if (d.lang === "en") return d.value;
     }
     return "";
   }
 
-  protected getPublishedDate(): string {
-    return this.nvdItem!.published;
+  protected getPublishedDate(ctx: ReportContext): string {
+    return ctx.nvd!.published;
   }
 
-  protected getLastModifiedDate(): string {
-    return this.nvdItem!.lastModified;
+  protected getLastModifiedDate(ctx: ReportContext): string {
+    return ctx.nvd!.lastModified;
   }
 
-  protected buildSources(friendsOfPhpItem?: FriendsOfPhp): VulnSourceInfo[] {
+  protected buildSources(ctx: ReportContext): VulnSourceInfo[] {
     const sources: VulnSourceInfo[] = [
       {
         name: "NVD",
-        vuln_url: `https://nvd.nist.gov/vuln/detail/${this.nvdItem!.nvd_id}`,
+        vuln_url: `https://nvd.nist.gov/vuln/detail/${ctx.nvd!.nvd_id}`,
       },
     ];
-    if (this.osvItem) {
+    if (ctx.osv) {
       sources.push({
         name: "OSV",
-        vuln_url: `https://osv.dev/vulnerability/${this.osvItem.osv_id}`,
+        vuln_url: `https://osv.dev/vulnerability/${ctx.osv.osv_id}`,
       });
     }
-    if (friendsOfPhpItem) {
-      sources.push({ name: "FriendsOfPHP", vuln_url: friendsOfPhpItem.link });
+    if (ctx.friendsOfPhp) {
+      sources.push({ name: "FriendsOfPHP", vuln_url: ctx.friendsOfPhp.link });
     }
-    if (this.gcveItem) {
+    if (ctx.gcve) {
       sources.push({
         name: "GCVE",
-        vuln_url: `https://vulnerability.circl.lu/vuln/${this.gcveItem.cve_id || this.gcveItem.gcve_id}`,
+        vuln_url: `https://vulnerability.circl.lu/vuln/${ctx.gcve.cve_id || ctx.gcve.gcve_id}`,
       });
     }
     return sources;
   }
 
-  protected buildAliases(): string[] {
+  protected buildAliases(ctx: ReportContext): string[] {
     const aliases: string[] = [];
-    if (this.osvItem) aliases.push(this.osvItem.osv_id);
+    if (ctx.osv) aliases.push(ctx.osv.osv_id);
     return aliases;
   }
 
-  protected getReferences(): ReferenceInfo[] {
-    const refs = this.nvdItem!.references as NVDReference[];
+  protected getReferences(ctx: ReportContext): ReferenceInfo[] {
+    const refs = ctx.nvd!.references as NVDReference[];
     return uniqueReferences(refs.map((r) => ({ url: r.url, tags: [] })));
   }
 
-  protected async getPrimarySeverity(): Promise<SeverityInfo> {
-    return getCVSSNVDInfo(this.nvdItem!);
+  protected async getPrimarySeverity(
+    ctx: ReportContext,
+  ): Promise<SeverityInfo> {
+    return getCVSSNVDInfo(ctx.nvd!);
   }
 
-  protected async getFallbackSeverity(): Promise<SeverityInfo> {
-    return this.osvItem ? getCVSSOSVInfo(this.osvItem) : {};
+  protected async getFallbackSeverity(
+    ctx: ReportContext,
+  ): Promise<SeverityInfo> {
+    return ctx.osv ? getCVSSOSVInfo(ctx.osv) : {};
   }
 }
 

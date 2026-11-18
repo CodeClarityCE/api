@@ -31,6 +31,7 @@ import { AnalysisResultsService } from "../results.service";
 import { SbomUtilsService } from "../sbom/utils/utils";
 
 import { VulnerabilitiesFilterService } from "./utils/filter.service";
+import { findFindingAdvisory } from "./utils/finding-advisory";
 import { VulnerabilitiesSortService } from "./utils/sort.service";
 import { computeVulnerabilityStats } from "./utils/stats";
 import { VulnerabilitiesUtilsService } from "./utils/utils.service";
@@ -421,6 +422,8 @@ export class VulnerabilitiesService {
       paginatedVulns = paginated.data;
     }
 
+    const packageManager = await this.getPackageManagerSafe(analysisId);
+
     // Attach additional info
     for (const finding of paginatedVulns) {
       // Attach vulnerability description
@@ -445,8 +448,16 @@ export class VulnerabilitiesService {
           nvdDescription = descriptions?.[0]?.value ?? "";
         }
 
-        osvVuln = await this.osvRepository.getVulnByCVEIDWithoutFailing(
-          finding.Vulnerability,
+        // Describe the finding with the first affected package's advisory, as its report does.
+        const affected = finding.Affected[0];
+        osvVuln = await findFindingAdvisory(
+          this.osvRepository,
+          {
+            vulnerabilityId: finding.Vulnerability,
+            affectedDependency: affected?.AffectedDependency ?? "",
+            packageManager,
+            osvMatch: affected?.OSVMatch,
+          },
           { includeRetired: true },
         );
 
@@ -570,6 +581,19 @@ export class VulnerabilitiesService {
 
     paginated.data = paginatedVulns;
     return paginated;
+  }
+
+  // Package manager of the analysis's SBOMs, or undefined when they cannot be read.
+  private async getPackageManagerSafe(
+    analysisId: string,
+  ): Promise<string | undefined> {
+    try {
+      const { mergedSbom } =
+        await this.sbomUtilsService.getMergedSbomResults(analysisId);
+      return mergedSbom.analysis_info?.package_manager;
+    } catch {
+      return undefined;
+    }
   }
 
   async getStatus(

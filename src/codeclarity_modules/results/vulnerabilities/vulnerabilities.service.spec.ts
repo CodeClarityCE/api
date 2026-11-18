@@ -1158,10 +1158,93 @@ describe("VulnerabilitiesService", () => {
       );
       expect(
         mockOSVRepository.getVulnByCVEIDWithoutFailing,
-      ).toHaveBeenCalledWith("CVE-2024-1234", { includeRetired: true });
+      ).toHaveBeenCalledWith(
+        "CVE-2024-1234",
+        { name: "package1", ecosystem: undefined },
+        { includeRetired: true },
+      );
       expect((result.data as { Description: string }[])[0]!.Description).toBe(
         "#### .\n\n",
       );
+    });
+
+    describe("a CVE shared by several OSV records", () => {
+      const jquery = { summary: "jquery summary", details: "jquery details" };
+      const drupal = { summary: "", details: "drupal details" };
+      afterEach(() => {
+        mockOSVRepository.getVulnByCVEIDWithoutFailing.mockResolvedValue({
+          summary: "Test OSV summary",
+          details: "Test OSV details",
+        });
+        mockOSVRepository.getVulnByOSVIDWithoutFailing.mockResolvedValue({
+          summary: "Test GHSA summary",
+          details: "Test GHSA details",
+        });
+      });
+      const listFor = async (osvMatch: unknown): Promise<string> => {
+        const finding = {
+          Id: "vuln-1",
+          VulnerabilityId: "CVE-2019-11358",
+          AffectedDependency: "jquery",
+          AffectedVersion: "3.3.1",
+          Sources: ["OSV"],
+          Severity: { Severity: 6.1 },
+          OSVMatch: osvMatch,
+          NVDMatch: null,
+          Conflict: { ConflictFlag: "MATCH_CORRECT", ConflictWinner: "OSV" },
+        };
+        mockFindingsUtilsService.getFindingsData.mockResolvedValue([finding]);
+        mockFindingsFilterService.filter.mockImplementation(
+          (findings: unknown[]) => [findings, {}],
+        );
+        mockFindingsSortService.sort.mockImplementation(
+          (findings: unknown[]) => findings,
+        );
+        mockSbomUtilsService.getMergedSbomResults.mockResolvedValue({
+          mergedSbom: {
+            workspaces: { default: { dependencies: {} } },
+            analysis_info: { package_manager: "NPM" },
+          },
+          pluginResults: [],
+        });
+        mockNVDRepository.getVulnWithoutFailing.mockResolvedValue(null);
+        mockOSVRepository.getVulnByOSVIDWithoutFailing.mockImplementation(
+          async (id: string) => (id === "GHSA-6c3j-c64m-qhgq" ? jquery : null),
+        );
+        mockOSVRepository.getVulnByCVEIDWithoutFailing.mockImplementation(
+          async (_cve: string, pkg: { name: string; ecosystem?: string }) =>
+            pkg?.name === "jquery" && pkg.ecosystem === "npm" ? jquery : drupal,
+        );
+
+        const result = await service.getVulnerabilities(
+          "org-123",
+          "project-123",
+          "analysis-123",
+          mockUser,
+          "default",
+          0,
+          20,
+          "severity",
+          "desc",
+          undefined,
+          undefined,
+        );
+        return (result.data as { Description: string }[])[0]!.Description;
+      };
+
+      it("describes it with the record its source match names", async () => {
+        const description = await listFor({
+          Vulnerability: { id: "GHSA-6c3j-c64m-qhgq" },
+        });
+
+        expect(description).toContain("Jquery summary");
+      });
+
+      it("describes it with the record for the finding's package", async () => {
+        const description = await listFor(null);
+
+        expect(description).toContain("Jquery summary");
+      });
     });
 
     it("should handle GHSA vulnerability descriptions", async () => {
