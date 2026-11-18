@@ -1,6 +1,7 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 
 import { CWERepository } from "src/codeclarity_modules/knowledge/cwe/cwe.repository";
+import type { GCVE } from "src/codeclarity_modules/knowledge/gcve/gcve.entity";
 import type { NVD } from "src/codeclarity_modules/knowledge/nvd/nvd.entity";
 import { NVDRepository } from "src/codeclarity_modules/knowledge/nvd/nvd.repository";
 import type { OSV } from "src/codeclarity_modules/knowledge/osv/osv.entity";
@@ -618,14 +619,164 @@ describe("ReportGenerator Services", () => {
     });
   });
 
+  describe("reports built on the same generator", () => {
+    const lodashOSV = {
+      ...mockOSV,
+      osv_id: "GHSA-lodash",
+      cve: "CVE-2024-1111",
+      affected: [
+        {
+          package: { name: "lodash", ecosystem: "npm" },
+          ranges: [{ events: [{ introduced: "4.0.0" }, { fixed: "4.17.23" }] }],
+        },
+      ],
+    } as unknown as OSV;
+    const lodashGCVE = {
+      gcve_id: "GCVE-0-2024-1111",
+      cve_id: "CVE-2024-1111",
+      affected: [],
+    } as unknown as GCVE;
+    const lodashVuln: Vulnerability = {
+      ...mockVulnerability,
+      VulnerabilityId: "CVE-2024-1111",
+      AffectedDependency: "lodash",
+      AffectedVersion: "4.17.21",
+    };
+    const axiosNVD = {
+      ...mockNVD,
+      nvd_id: "CVE-2024-2222",
+      metrics: {},
+      descriptions: [{ lang: "en", value: "axios issue" }],
+    } as unknown as NVD;
+    const axiosVuln: Vulnerability = {
+      ...mockVulnerability,
+      VulnerabilityId: "CVE-2024-2222",
+      AffectedDependency: "axios",
+      AffectedVersion: "1.7.0",
+      OSVMatch: { ...mockVulnerability.OSVMatch, AffectedInfo: [] },
+    };
+
+    it("keeps nothing from an earlier NVD report", async () => {
+      await nvdReportGenerator.genReport(
+        lodashVuln,
+        "NPM",
+        mockDependency,
+        lodashOSV,
+        mockNVD,
+        undefined,
+        lodashGCVE,
+      );
+
+      const report = await nvdReportGenerator.genReport(
+        axiosVuln,
+        "NPM",
+        undefined,
+        undefined,
+        axiosNVD,
+      );
+
+      const info = report.vulnerability_info;
+      expect(info.sources.map((s) => s.name)).toEqual(["NVD"]);
+      expect(info.aliases).toEqual([]);
+      expect(report.severities).toEqual({});
+      expect(info.version_info.affected_versions_string).not.toContain(
+        "4.17.23",
+      );
+      expect(info.version_info.source_comparison?.osvAllVersions).toBe("");
+    });
+
+    it("keeps nothing from an earlier OSV report", async () => {
+      await osvReportGenerator.genReport(
+        lodashVuln,
+        "NPM",
+        mockDependency,
+        lodashOSV,
+        mockNVD,
+        undefined,
+        lodashGCVE,
+      );
+
+      await expect(
+        osvReportGenerator.genReport(
+          axiosVuln,
+          "NPM",
+          undefined,
+          undefined,
+          axiosNVD,
+        ),
+      ).rejects.toThrow();
+
+      const axiosOSV = {
+        ...mockOSV,
+        osv_id: "GHSA-axios",
+        cve: "CVE-2024-2222",
+        severity: [],
+      } as unknown as OSV;
+      const report = await osvReportGenerator.genReport(
+        axiosVuln,
+        "NPM",
+        undefined,
+        axiosOSV,
+      );
+
+      const info = report.vulnerability_info;
+      expect(info.sources.map((s) => s.name)).toEqual(["OSV"]);
+      expect(info.aliases).toEqual(["GHSA-axios", "CVE-2024-2222"]);
+      expect(report.severities).toEqual({});
+      expect(info.version_info.affected_versions_string).not.toContain(
+        "4.17.23",
+      );
+    });
+
+    it("gives each of two reports built at once only its own data", async () => {
+      const slowCWE = (): Promise<never> =>
+        new Promise((_, reject) => setTimeout(() => reject(new Error()), 5));
+      mockCweRepository.getCWE.mockImplementation(slowCWE);
+      jest.spyOn(console, "error").mockImplementation();
+
+      const [lodash, axios] = await Promise.all([
+        nvdReportGenerator.genReport(
+          lodashVuln,
+          "NPM",
+          mockDependency,
+          lodashOSV,
+          mockNVD,
+          undefined,
+          lodashGCVE,
+        ),
+        nvdReportGenerator.genReport(
+          axiosVuln,
+          "YARN",
+          undefined,
+          undefined,
+          axiosNVD,
+        ),
+      ]);
+
+      expect(lodash.vulnerability_info.vulnerability_id).toBe("CVE-2024-1234");
+      expect(lodash.vulnerability_info.aliases).toEqual(["GHSA-lodash"]);
+      expect(lodash.dependency_info?.name).toBe("lodash");
+      expect(lodash.other.package_manager).toBe("NPM");
+      expect(axios.vulnerability_info.vulnerability_id).toBe("CVE-2024-2222");
+      expect(axios.vulnerability_info.aliases).toEqual([]);
+      expect(axios.vulnerability_info.sources.map((s) => s.name)).toEqual([
+        "NVD",
+      ]);
+      expect(axios.dependency_info?.name).toBe("axios");
+      expect(axios.other.package_manager).toBe("YARN");
+    });
+  });
+
   describe("BaseReportGenerator methods", () => {
+    const osvReport = (vuln: Vulnerability) =>
+      osvReportGenerator.genReport(vuln, "NPM", mockDependency, mockOSV);
+
     describe("getVulnerableVersionsString", () => {
       it("should format version ranges correctly", async () => {
-        osvReportGenerator.vulnsData = mockVulnerability;
-        const result =
-          await osvReportGenerator.getVulnerableVersionsString("OSV");
-        expect(result.versions).toBe(">= 1.0.0 < 1.0.1");
-        expect(result.source).toBe("OSV");
+        const { version_info } = (await osvReport(mockVulnerability))
+          .vulnerability_info;
+        expect(version_info.affected_versions_string).toBe(">= 1.0.0 < 1.0.1");
+        expect(version_info.affected_versions_source).toBe("OSV");
       });
 
       it("should handle pre-release tags", async () => {
@@ -660,10 +811,11 @@ describe("ReportGenerator Services", () => {
           },
         };
 
-        osvReportGenerator.vulnsData = vulnWithPreRelease;
-        const result =
-          await osvReportGenerator.getVulnerableVersionsString("OSV");
-        expect(result.versions).toBe(">= 1.0.0-alpha < 1.0.1-beta");
+        const { version_info } = (await osvReport(vulnWithPreRelease))
+          .vulnerability_info;
+        expect(version_info.affected_versions_string).toBe(
+          ">= 1.0.0-alpha < 1.0.1-beta",
+        );
       });
 
       it("should handle multiple ranges", async () => {
@@ -714,31 +866,30 @@ describe("ReportGenerator Services", () => {
           },
         };
 
-        osvReportGenerator.vulnsData = vulnWithMultipleRanges;
-        const result =
-          await osvReportGenerator.getVulnerableVersionsString("OSV");
-        expect(result.versions).toBe(">= 1.0.0 < 1.0.1 || >= 2.0.0 < 2.0.5");
+        const { version_info } = (await osvReport(vulnWithMultipleRanges))
+          .vulnerability_info;
+        expect(version_info.affected_versions_string).toBe(
+          ">= 1.0.0 < 1.0.1 || >= 2.0.0 < 2.0.5",
+        );
       });
     });
 
     describe("getOwaspTop10Info", () => {
-      it("should return OWASP Top 10 info when available", () => {
-        osvReportGenerator.vulnsData = mockVulnerability;
-        const owaspInfo = osvReportGenerator.getOwaspTop10Info();
+      it("should return OWASP Top 10 info when available", async () => {
+        const owaspInfo = (await osvReport(mockVulnerability)).owasp_top_10;
         expect(owaspInfo).toBeDefined();
         expect(owaspInfo?.id).toBe("A01:2021");
         expect(owaspInfo?.name).toBe("Broken Access Control");
       });
 
-      it("should return null when no weaknesses", () => {
+      it("should return null when no weaknesses", async () => {
         const { Weaknesses, ...vulnWithoutWeaknesses } = mockVulnerability;
-        osvReportGenerator.vulnsData = vulnWithoutWeaknesses;
-        const owaspInfo = osvReportGenerator.getOwaspTop10Info();
+        const owaspInfo = (await osvReport(vulnWithoutWeaknesses)).owasp_top_10;
         expect(owaspInfo).toBeNull();
       });
 
-      it("should return null when no OWASP ID", () => {
-        osvReportGenerator.vulnsData = {
+      it("should return null when no OWASP ID", async () => {
+        const report = await osvReport({
           ...mockVulnerability,
           Weaknesses: [
             {
@@ -752,99 +903,61 @@ describe("ReportGenerator Services", () => {
               OWASPTop10Name: "",
             },
           ],
-        };
-        const owaspInfo = osvReportGenerator.getOwaspTop10Info();
-        expect(owaspInfo).toBeNull();
+        });
+        expect(report.owasp_top_10).toBeNull();
       });
     });
 
-    describe("getWeaknessData", () => {
+    describe("weaknesses", () => {
       it("should return empty arrays when no weaknesses", async () => {
         const { Weaknesses, ...vulnWithoutWeaknesses } = mockVulnerability;
-        osvReportGenerator.vulnsData = vulnWithoutWeaknesses;
-        const [weaknesses, consequences] =
-          await osvReportGenerator.getWeaknessData();
-        expect(weaknesses).toEqual([]);
-        expect(consequences).toEqual({});
+        const report = await osvReport(vulnWithoutWeaknesses);
+        expect(report.weaknesses).toEqual([]);
+        expect(report.common_consequences).toEqual({});
       });
 
       it("should handle CWE repository errors gracefully", async () => {
-        osvReportGenerator.vulnsData = mockVulnerability;
         const consoleErrorSpy = jest
           .spyOn(console, "error")
           .mockImplementation();
-        const [weaknesses, consequences] =
-          await osvReportGenerator.getWeaknessData();
-        expect(weaknesses).toEqual([]);
-        expect(consequences).toEqual({});
+        const report = await osvReport(mockVulnerability);
+        expect(report.weaknesses).toEqual([]);
+        expect(report.common_consequences).toEqual({});
         expect(consoleErrorSpy).toHaveBeenCalled();
         consoleErrorSpy.mockRestore();
       });
     });
 
-    describe("getDependencyData", () => {
-      it("should return empty dependency data when dependency data is missing", async () => {
-        // dependencyData is already undefined by default
-        const result = await osvReportGenerator.getDependencyData();
-        expect(result).toEqual({
+    describe("dependency info", () => {
+      it("names the affected package and version without SBOM data", async () => {
+        const report = await osvReportGenerator.genReport(
+          mockVulnerability,
+          "NPM",
+          undefined,
+          mockOSV,
+        );
+        expect(report.dependency_info).toEqual({
           description: "",
           keywords: [],
-          name: "",
+          name: "test-package",
           package_manager_links: [],
           published: "",
-          version: "",
+          version: "1.0.0",
         });
       });
+    });
 
-      it("should return dependency info structure", async () => {
-        osvReportGenerator.dependencyData = mockDependency;
-        const dependencyInfo = await osvReportGenerator.getDependencyData();
-        expect(dependencyInfo).toHaveProperty("name");
-        expect(dependencyInfo).toHaveProperty("version");
-        expect(dependencyInfo).toHaveProperty("description");
-        expect(dependencyInfo).toHaveProperty("keywords");
-        expect(dependencyInfo).toHaveProperty("package_manager_links");
+    describe("other info", () => {
+      it("should return package manager info", async () => {
+        const report = await osvReport(mockVulnerability);
+        expect(report.other.package_manager).toBe("NPM");
       });
     });
 
-    describe("getOtherInfo", () => {
-      it("should return package manager info", () => {
-        osvReportGenerator.packageManager = "NPM";
-        const otherInfo = osvReportGenerator.getOtherInfo();
-        expect(otherInfo.package_manager).toBe("NPM");
-      });
-    });
-
-    describe("getPatchesData", () => {
-      it("should return patches data", () => {
-        const mockPatchInfo = {
-          TopLevelVulnerable: true,
-          IsPatchable: "true",
-          Unpatchable: [],
-          Patchable: [],
-          Introduced: [],
-          Patches: {},
-          Update: {
-            Major: 1,
-            Minor: 0,
-            Patch: 1,
-            PreReleaseTag: "",
-            MetaData: "",
-          },
-        };
-        osvReportGenerator.patchesData = mockPatchInfo;
-        const patchInfo = osvReportGenerator.getPatchesData();
-        expect(patchInfo).toEqual(mockPatchInfo);
-      });
-    });
-
-    describe("getVersionsStatusArray", () => {
-      it("should return empty array when no versions", async () => {
-        const result = await osvReportGenerator.getVersionsStatusArray(
-          ">= 1.0.0 < 1.0.1",
-          "test-package",
-        );
-        expect(result).toEqual([]);
+    describe("version status", () => {
+      it("lists no versions", async () => {
+        const report = await osvReport(mockVulnerability);
+        expect(report.vulnerability_info.version_info.versions).toEqual([]);
       });
     });
   });
