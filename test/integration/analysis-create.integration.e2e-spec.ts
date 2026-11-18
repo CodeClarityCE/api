@@ -10,9 +10,11 @@ import {
   AuthenticatedUser,
   ROLE,
 } from "../../src/base_modules/auth/auth.types";
+import { type OrganizationLoggerService } from "../../src/base_modules/organizations/log/organizationLogger.service";
 import { OrganizationMemberships } from "../../src/base_modules/organizations/memberships/organization.memberships.entity";
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import { Organization } from "../../src/base_modules/organizations/organization.entity";
+import { type PluginAvailabilityService } from "../../src/base_modules/plugin-availability/plugin-availability.service";
 import { Project } from "../../src/base_modules/projects/project.entity";
 import {
   MembershipsRepository,
@@ -48,8 +50,16 @@ describe("AnalysesService.create against Postgres", () => {
     await dataSource.synchronize(true);
     publisher = new InMemoryAnalysisPublisher();
     const unused = undefined as never;
+    // Every plugin counts as available; audit log entries are discarded.
+    const pluginAvailability = {
+      assertAvailable: async () => undefined,
+    } as unknown as PluginAvailabilityService;
+    const auditLog = {
+      addAuditLog: async () => undefined,
+    } as unknown as OrganizationLoggerService;
     service = new AnalysesService(
       publisher,
+      pluginAvailability,
       new MembershipsRepository(
         dataSource.getRepository(OrganizationMemberships),
       ),
@@ -63,6 +73,7 @@ describe("AnalysesService.create against Postgres", () => {
       unused,
       new AnalysesRepository(dataSource.getRepository(Analysis)),
       dataSource.getRepository(Policy),
+      auditLog,
     );
 
     const creator = await dataSource.getRepository(User).save({
@@ -166,6 +177,26 @@ describe("AnalysesService.create against Postgres", () => {
     expect(publisher.published).toEqual([]);
   });
 
+  it("stores each step with the keys the dispatcher writes", async () => {
+    const analysisId = await service.create(orgId, projectId, body(), user);
+
+    const [row] = await dataSource.query(
+      `SELECT steps FROM analysis WHERE id = $1`,
+      [analysisId],
+    );
+    expect(row.steps).toEqual([
+      [
+        {
+          Name: "js-sbom",
+          Version: "v0.0.1",
+          Status: "requested",
+          Result: null,
+          Config: {},
+        },
+      ],
+    ]);
+  });
+
   it("still returns a committed analysis when publishing fails", async () => {
     publisher.failWith = new Error("ECONNREFUSED");
 
@@ -214,7 +245,7 @@ describe("AnalysesService.create against Postgres", () => {
     const analysis = await dataSource
       .getRepository(Analysis)
       .findOneByOrFail({ id: analysisId });
-    expect(analysis.steps.map((stage) => stage.map((s) => s.name))).toEqual([
+    expect(analysis.steps.map((stage) => stage.map((s) => s.Name))).toEqual([
       ["js-sbom"],
       ["vuln-finder", "license-finder"],
       ["js-patching"],
