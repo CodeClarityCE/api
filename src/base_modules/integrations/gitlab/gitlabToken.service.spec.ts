@@ -2,6 +2,7 @@ import { Test, type TestingModule } from "@nestjs/testing";
 
 import {
   IntegrationInvalidToken,
+  IntegrationTokenExpired,
   IntegrationTokenMissingPermissions,
   IntegrationTokenRetrievalFailed,
 } from "src/types/error.types";
@@ -263,7 +264,7 @@ describe("GitlabIntegrationTokenService", () => {
     const testGitlabInstanceUrl = "https://gitlab.com";
 
     it("should successfully retrieve token expiry date", async () => {
-      const expiryDate = "2024-12-31T23:59:59.000Z";
+      const expiryDate = "2099-12-31T23:59:59.000Z";
       const mockTokenData = {
         expires_at: expiryDate,
       };
@@ -280,16 +281,23 @@ describe("GitlabIntegrationTokenService", () => {
 
       expect(result).toEqual([true, new Date(expiryDate)]);
       expect(fetch).toHaveBeenCalledWith(
-        `${testGitlabInstanceUrl}/api/v4/admin/token`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "PRIVATE-TOKEN": testToken,
-          },
-          body: JSON.stringify({ token: testToken }),
-        },
+        `${testGitlabInstanceUrl}/api/v4/personal_access_tokens/self`,
+        { headers: { "PRIVATE-TOKEN": testToken } },
       );
+    });
+
+    it("should throw IntegrationTokenExpired for a token past its expiry", async () => {
+      (fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ expires_at: "2020-01-01" }),
+      });
+
+      await expect(
+        service.getPersonalAccessTokenExpiryRemote(
+          testToken,
+          testGitlabInstanceUrl,
+        ),
+      ).rejects.toThrow(IntegrationTokenExpired);
     });
 
     it("should return false when token has no expiry date", async () => {
