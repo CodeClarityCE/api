@@ -94,6 +94,7 @@ describe("SBOMService", () => {
     findOne: jest.fn(),
     find: jest.fn(),
     getPackageInfoWithoutFailing: jest.fn(),
+    getVersionInfo: jest.fn(),
   };
 
   const mockResultRepository = {
@@ -345,6 +346,52 @@ describe("SBOMService", () => {
       });
       expect(byName["left-pad"]!.purl).toBe("pkg:npm/left-pad@1.3.0");
       expect(byName["left-pad"]!.license).toBeUndefined();
+    });
+
+    it("gives each dependency its version's license, or the package's when the version has none", async () => {
+      mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+      mockSbomUtilsService.getMergedSbomResults.mockResolvedValue({
+        mergedSbom: {
+          workspaces: {
+            default: {
+              dependencies: {
+                glob: { "7.1.2": { Prod: true }, "9.0.0": { Prod: true } },
+              },
+              start: { dependencies: [] },
+            },
+          },
+          analysis_info: mockSbomOutput.analysis_info,
+        },
+      });
+      mockPackageRepository.getPackageInfoWithoutFailing.mockResolvedValue({
+        latest_version: "9.0.0",
+        license: "BlueOak-1.0.0",
+      });
+      mockPackageRepository.getVersionInfo.mockImplementation(
+        (_name: string, version: string) =>
+          Promise.resolve({
+            license: "BlueOak-1.0.0",
+            versions: [
+              {
+                version,
+                extra: version === "7.1.2" ? { license_expression: "ISC" } : {},
+              },
+            ],
+          }),
+      );
+
+      const result = await service.getSbom(
+        "org-123",
+        "project-123",
+        "analysis-123",
+        mockUser,
+        { workspace: "default", sortBy: "name", sortDirection: "ASC" },
+      );
+
+      const byVersion = Object.fromEntries(
+        (result.data as SbomDependency[]).map((d) => [d.version, d.license]),
+      );
+      expect(byVersion).toEqual({ "7.1.2": "ISC", "9.0.0": "BlueOak-1.0.0" });
     });
 
     it("should handle active filters", async () => {
