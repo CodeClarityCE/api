@@ -19,13 +19,19 @@ import {
   UserPatchBody,
 } from "src/base_modules/users/user.types";
 import { User } from "src/base_modules/users/users.entity";
-import { EmailAlreadyExists, NotAuthorized } from "src/types/error.types";
+import { CodeClarityLogger } from "src/services/logger.service";
+import {
+  EmailAlreadyExists,
+  NotAuthorized,
+  UserDoesNotExist,
+} from "src/types/error.types";
 import { genRandomString, hash } from "src/utils/crypto";
 
 import {
   AccountRegistrationVerificationTokenInvalidOrExpired,
   HandleAlreadyExists,
   IncorrectCurrentPassword,
+  PasswordResetTokenInvalidOrExpired,
   PasswordsDoNotMatch,
 } from "../auth/auth.errors";
 import type { AuthService } from "../auth/auth.service";
@@ -33,6 +39,7 @@ import { AUTH_SERVICE } from "../auth/auth.tokens";
 import { EmailRepository } from "../email/email.repository";
 import { EmailService } from "../email/email.service";
 
+import { passwordResetExpiry } from "./password-reset.lifetime";
 import {
   CannotPerformActionOnSocialAccount,
   FailedToSendAccountRegistrationVerificationEmail,
@@ -43,6 +50,8 @@ import {
  */
 @Injectable()
 export class UsersService {
+  private readonly logger = CodeClarityLogger.forService("UsersService");
+
   constructor(
     private readonly emailService: EmailService,
     private readonly organizationsRepository: OrganizationsRepository,
@@ -261,17 +270,53 @@ export class UsersService {
   }
 
   /**
-   * Requests a password reset
-   * @throws {FailedToSendPasswordResetEmail} If the email with the password reset failed to be sent
+   * Emails a password reset link to a password-based account.
+   * Answers the same whether or not the email has an account, and never throws for a failed send.
    *
    * @param email the email of the user
    */
-  async requestPasswordReset(_email: string): Promise<void> {
-    throw new Error("Method not implemented.");
+  async requestPasswordReset(email: string): Promise<void> {
+    let user: User;
+    try {
+      user = await this.usersRepository.getUserByEmail(email);
+    } catch (err) {
+      if (err instanceof UserDoesNotExist) return;
+      throw err;
+    }
+    // Social accounts have no password to reset.
+    if (user.social) return;
+
+    const token = await genRandomString(64);
+    const tokenDigest = await hash(token, {});
+    const userIdDigest = await hash(user.id, {});
+
+    // One reset email row per user: a new request replaces the earlier token.
+    const mail =
+      (await this.emailRepository.getMailByType(
+        EmailType.USERS_PASSWORD_RESET,
+        user.id,
+      )) ?? new Email();
+    mail.email_type = EmailType.USERS_PASSWORD_RESET;
+    mail.token_digest = tokenDigest;
+    mail.user_id_digest = userIdDigest;
+    mail.ttl = passwordResetExpiry();
+    mail.user = user;
+    await this.emailRepository.saveMail(mail);
+
+    // Not awaited, so the answer takes as long whether or not mail is sent.
+    void this.emailService
+      .sendPasswordReset({ email: user.email, token, userIdDigest })
+      .catch((err: unknown) => {
+        this.logger.error(
+          "Failed to send password reset email",
+          err instanceof Error ? err.message : String(err),
+          { userId: user.id },
+        );
+      });
   }
 
   /**
-   * Resets the password of a user via the email reset link sent via email
+   * Resets the password of a user via the link sent by email. The link works once.
    * @throws {PasswordsDoNotMatch} Passwords do not match.
    * @throws {PasswordResetTokenInvalidOrExpired} Password reset token does not exist or has expired.
    *
@@ -281,12 +326,27 @@ export class UsersService {
    * @param newPasswordConfirmation Confirmation of the new password
    */
   async resetPassword(
-    _token: string,
-    _userIdHash: string,
-    _newPassword: string,
-    _newPasswordConfirmation: string,
+    token: string,
+    userIdHash: string,
+    newPassword: string,
+    newPasswordConfirmation: string,
   ): Promise<void> {
-    throw new Error("Method not implemented.");
+    if (newPassword !== newPasswordConfirmation) {
+      throw new PasswordsDoNotMatch();
+    }
+
+    const tokenDigest = await hash(token, {});
+    const mail = await this.emailRepository.findPasswordResetMail(
+      tokenDigest,
+      userIdHash,
+    );
+    // Deleting the row first makes the token single-use, even for concurrent requests.
+    if (!mail || !(await this.emailRepository.consumeMail(mail.id))) {
+      throw new PasswordResetTokenInvalidOrExpired();
+    }
+
+    mail.user.password = await this.authService.hashPassword(newPassword);
+    await this.usersRepository.saveUser(mail.user);
   }
 
   /**

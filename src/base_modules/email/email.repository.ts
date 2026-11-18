@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { MoreThan, Repository } from "typeorm";
 
 import { Email, EmailType } from "src/base_modules/email/email.entity";
 import { EntityNotFound } from "src/types/error.types";
@@ -84,6 +84,40 @@ export class EmailRepository {
         user_id_digest: userEmailDigest,
       },
     });
+  }
+
+  /**
+   * Retrieves the unexpired password reset email for this token and user digest, if any.
+   *
+   * @param tokenDigest - The digest of the token sent in the reset link.
+   * @param userIdDigest - The digest of the user id sent in the reset link.
+   */
+  async findPasswordResetMail(
+    tokenDigest: string,
+    userIdDigest: string,
+  ): Promise<Email | null> {
+    return this.emailRepository.findOne({
+      where: {
+        email_type: EmailType.USERS_PASSWORD_RESET,
+        token_digest: tokenDigest,
+        user_id_digest: userIdDigest,
+        ttl: MoreThan(new Date()),
+      },
+      relations: {
+        user: true,
+      },
+    });
+  }
+
+  /**
+   * Deletes an Email by its id and says whether this call deleted it.
+   * Two concurrent calls for the same id cannot both get true.
+   *
+   * @param mailId - The id of the email to delete.
+   */
+  async consumeMail(mailId: string): Promise<boolean> {
+    const result = await this.emailRepository.delete({ id: mailId });
+    return (result.affected ?? 0) > 0;
   }
 
   /**

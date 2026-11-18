@@ -519,27 +519,6 @@ describe("UsersService", () => {
     });
   });
 
-  describe("requestPasswordReset", () => {
-    it("should throw not implemented error", async () => {
-      await expect(
-        service.requestPasswordReset("test@example.com"),
-      ).rejects.toThrow("Method not implemented.");
-    });
-  });
-
-  describe("resetPassword", () => {
-    it("should throw not implemented error", async () => {
-      await expect(
-        service.resetPassword(
-          "token",
-          "userIdHash",
-          "newPassword",
-          "newPasswordConfirmation",
-        ),
-      ).rejects.toThrow("Method not implemented.");
-    });
-  });
-
   describe("updatePassword", () => {
     it("should update password successfully", async () => {
       const userWithOldPassword = { ...mockUser, social: false };
