@@ -2,7 +2,6 @@ import { GithubTokenType } from "src/base_modules/integrations/github/githubInte
 import { GitlabTokenType } from "src/base_modules/integrations/gitlab/gitlabIntegration.types";
 import {
   IntegrationTokenExpired,
-  IntegrationTokenRefreshFailed,
   IntegrationWrongTokenType,
 } from "src/types/error.types";
 
@@ -120,50 +119,21 @@ export class GitlabIntegrationToken extends IntegrationToken {
    * @throws {IntegrationWrongTokenType} In case the token type is not supported
    */
   async validatePermissions(): Promise<void> {
-    if (this.gitlabTokenType === GitlabTokenType.OAUTH_TOKEN) {
-      await this.gitlabIntegrationTokenService.validateOAuthAccessTokenPermissions(
-        this.token,
-        {},
-      );
-    } else if (this.gitlabTokenType === GitlabTokenType.PERSONAL_ACCESS_TOKEN) {
-      await this.gitlabIntegrationTokenService.validatePersonalAccessTokenPermissions(
-        this.token,
-        this.gitlabInstanceUrl,
-        {},
-      );
-    } else {
+    if (this.gitlabTokenType !== GitlabTokenType.PERSONAL_ACCESS_TOKEN) {
       throw new IntegrationWrongTokenType();
     }
+    await this.gitlabIntegrationTokenService.validatePersonalAccessTokenPermissions(
+      this.token,
+      this.gitlabInstanceUrl,
+      {},
+    );
   }
 
   /**
-   * Refresh an access token if necessary (i.e. the token has expired)
-   * @throws {IntegrationTokenRefreshFailed} In the case the token could not be refreshed
+   * Refresh an access token if necessary; GitLab integrations hold personal access tokens
    */
   async refreshIfNecessary(): Promise<void> {
-    // Gitlab Oauth tokens expire and Gitlab personal access tokens cannot be refreshed
-    if (this.gitlabTokenType !== GitlabTokenType.OAUTH_TOKEN) return;
-
-    const expired = await this.isExpired();
-    if (expired) {
-      if (this.refreshToken) {
-        const newIntegration =
-          await this.gitlabIntegrationTokenService.refreshOAuthToken(
-            this.refreshToken,
-            this.integrationId,
-          );
-
-        this.token = newIntegration.access_token;
-        if (newIntegration.refresh_token !== undefined) {
-          this.refreshToken = newIntegration.refresh_token;
-        }
-        if (newIntegration.expiry_date !== undefined) {
-          this.expiresOn = newIntegration.expiry_date;
-        }
-      } else {
-        throw new IntegrationTokenRefreshFailed();
-      }
-    }
+    // Personal access tokens cannot be refreshed.
   }
 
   /**

@@ -38,22 +38,6 @@ export class AuthenticatedUser {
   }
 }
 
-export interface GithubAuthenticatedUser {
-  github_user_id: string;
-  email: string | undefined;
-  access_token: string;
-  refresh_token: undefined;
-  avatar_url: string;
-}
-
-export interface GitlabAuthenticatedUser {
-  gitlab_user_id: string;
-  email: string | undefined;
-  access_token: string;
-  refresh_token: string;
-  avatar_url: string;
-}
-
 export enum ROLE {
   USER = "ROLE_USER",
   ADMIN = "ROLE_ADMIN",
@@ -118,18 +102,6 @@ export class AuthenticateBody {
   @ApiProperty({ description: "Password" })
   @IsNotEmpty()
   password!: string;
-}
-
-export class Oauth2InitQuery {
-  @ApiProperty({ description: "State (used for csrf)" })
-  @IsNotEmpty()
-  state!: string;
-}
-
-export class Oauth2FinalizeBody {
-  @ApiProperty({ description: "The code provided by the oauth2 process." })
-  @IsNotEmpty()
-  code!: string;
 }
 
 export class GithubAppUpdateQuery {

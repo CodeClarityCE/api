@@ -91,7 +91,6 @@ export const errorMessages: Record<string, string> = {
     "The requested action cannot be performed because the token is not valid or has been revoked.",
   PersonalOrgCannotBeModified: "A personal org cannot be modified.",
   FailedToCreateApiKey: "Failed to generate the api key.",
-  FailedToAuthenticateSocialAccount: "Failed to authenticate social account.",
   InvitationExpired: "Invitation expired.",
   EmailAlreadyExists:
     "The requested user could not be created because a different user with the same email already exists.",
@@ -448,21 +447,6 @@ export class AccountNotActivated extends PublicAPIError {
   }
 }
 
-export class SocialConnectionTypeNotSupported extends PublicAPIError {
-  static errorCode = "SocialConnectionTypeNotSupported";
-  static errorMessage =
-    errorMessages[SocialConnectionTypeNotSupported.errorCode]!;
-  static statusCode = 400;
-  constructor(cause?: unknown) {
-    super(
-      SocialConnectionTypeNotSupported.errorCode,
-      SocialConnectionTypeNotSupported.errorMessage,
-      SocialConnectionTypeNotSupported.statusCode,
-      cause,
-    );
-  }
-}
-
 export class PersonalOrgCannotBeModified extends PublicAPIError {
   static errorCode = "PersonalOrgCannotBeModified";
   static errorMessage = errorMessages[PersonalOrgCannotBeModified.errorCode]!;
@@ -486,21 +470,6 @@ export class FailedToCreateApiKey extends PublicAPIError {
       FailedToCreateApiKey.errorCode,
       FailedToCreateApiKey.errorMessage,
       FailedToCreateApiKey.statusCode,
-      cause,
-    );
-  }
-}
-
-export class FailedToAuthenticateSocialAccount extends PublicAPIError {
-  static errorCode = "FailedToCreateSocialAccount";
-  static errorMessage =
-    errorMessages[FailedToAuthenticateSocialAccount.errorCode]!;
-  static statusCode = 500;
-  constructor(cause?: unknown) {
-    super(
-      FailedToAuthenticateSocialAccount.errorCode,
-      FailedToAuthenticateSocialAccount.errorMessage,
-      FailedToAuthenticateSocialAccount.statusCode,
       cause,
     );
   }

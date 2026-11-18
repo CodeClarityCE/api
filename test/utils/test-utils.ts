@@ -117,10 +117,6 @@ export class TestUtils {
           MAIL_USER: "test",
           MAIL_PASSWORD: "test",
           MAIL_FROM: "test@codeclarity.io",
-          GITHUB_AUTH_CLIENT_ID: "test_github_client",
-          GITHUB_AUTH_CLIENT_SECRET: "test_github_secret",
-          GITLAB_AUTH_CLIENT_ID: "test_gitlab_client",
-          GITLAB_AUTH_CLIENT_SECRET: "test_gitlab_secret",
         };
         return config[key as keyof typeof config];
       }),

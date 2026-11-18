@@ -14,8 +14,6 @@ import {
   UsersRepository,
 } from "src/base_modules/shared/repositories";
 import {
-  SocialType,
-  UserCompleteSocialCreateBody,
   UserCreateBody,
   UserPasswordPatchBody,
   UserPatchBody,
@@ -292,48 +290,6 @@ export class UsersService {
   }
 
   /**
-   * Register a social connected account
-   * @throws {SocialConnectionTypeNotSupported} The social connection type is not supported
-   *
-   * @param email The email of the user
-   * @param accessToken The access token of the social connection
-   * @param socialType The social type, e.g. Github, GitLab
-   * @param socialId The id of the social account
-   * @param avatarUrl An avatar of the user (optional)
-   * @param refreshToken A refresh token
-   * @param integrationBaseUrl The url under which to reach the social connection's api
-   * @returns the id of the created user
-   */
-  async registerSocial(
-    _email: string,
-    _accessToken: string,
-    _socialType: SocialType,
-    _socialId: string,
-    _avatarUrl?: string,
-    _refreshToken?: string,
-    _integrationBaseUrl?: string,
-  ): Promise<string> {
-    throw new Error("Method not implemented.");
-  }
-
-  /**
-   * Completes a user's social registration
-   * @throws {EntityNotFound} If the user could not be found
-   * @throws {CannotPerformActionOnNormalAccount} If the user tries to invoke this method on a non-social account
-   * @throws {SetupAlreadyDone} If the setup is already done
-   *
-   * @param userCompleteSocial The data to complete the social account
-   * @param authenticatedUser The authenticated user
-   * @returns the user id
-   */
-  async completeSocialAccountSetup(
-    _userCompleteSocial: UserCompleteSocialCreateBody,
-    _authenticatedUser: AuthenticatedUser,
-  ): Promise<string> {
-    throw new Error("Method not implemented.");
-  }
-
-  /**
    * Update a user's password
    * @throws {EntityNotFound} If the user does not exist
    * @throws {NotAuthorized} If the user is not authorized to perform the action on the indicated userId
@@ -460,25 +416,5 @@ export class UsersService {
     await this.membershipsRepository.removeUserMemberships(user.id);
     await this.projectsRepository.deleteUserProjects(user.id);
     await this.usersRepository.deleteUser(user.id);
-  }
-
-  /**
-   * Check whether user with the given social id for the given social type exists.
-   * @param socialId The id of the social account (this is not the userid!)
-   * @param socialType socialType
-   */
-  async existsSocialUser(
-    _socialId: string,
-    _socialType: SocialType,
-  ): Promise<boolean> {
-    throw new Error("Method not implemented.");
-  }
-
-  /**
-   * Check whether user with the given email exists.
-   * @param id email
-   */
-  async existsUserEmail(_email: string): Promise<boolean> {
-    throw new Error("Method not implemented.");
   }
 }

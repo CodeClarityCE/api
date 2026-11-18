@@ -128,6 +128,24 @@ describe("create-user (e2e)", () => {
     ).toHaveLength(1);
   });
 
+  it("lets a former GitHub or GitLab sign-in user log in once a password is reset", async () => {
+    await createUser(testHelper.getDataSource(), account);
+    await testHelper
+      .getDataSource()
+      .getRepository(User)
+      .update({ email: account.email }, { social: true });
+
+    await createUser(testHelper.getDataSource(), {
+      ...account,
+      password: "Another-Password-42!",
+      resetPassword: true,
+    });
+
+    expect(
+      (await logIn(account.email, "Another-Password-42!")).statusCode,
+    ).toBe(201);
+  });
+
   it("creates users who share a name, or have a very short one", async () => {
     await createUser(testHelper.getDataSource(), account);
     await createUser(testHelper.getDataSource(), {

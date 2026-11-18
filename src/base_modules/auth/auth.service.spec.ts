@@ -2,12 +2,8 @@ import { JwtService } from "@nestjs/jwt";
 import { Test, type TestingModule } from "@nestjs/testing";
 import * as bcrypt from "bcrypt";
 
-import {
-  EntityNotFound,
-  FailedToAuthenticateSocialAccount,
-} from "src/types/error.types";
+import { EntityNotFound } from "src/types/error.types";
 
-import { GitlabIntegrationTokenService } from "../integrations/gitlab/gitlabToken.service";
 import { UsersRepository } from "../shared/repositories";
 import { SocialType } from "../users/user.types";
 import type { User } from "../users/users.entity";
@@ -16,12 +12,7 @@ import { UsersService } from "../users/users.service";
 
 import { RegistrationNotVerified, WrongCredentials } from "./auth.errors";
 import { AuthService } from "./auth.service";
-import {
-  AuthenticatedUser,
-  type GithubAuthenticatedUser,
-  type GitlabAuthenticatedUser,
-  ROLE,
-} from "./auth.types";
+import { AuthenticatedUser, ROLE } from "./auth.types";
 
 // Mock the ms module before importing the service
 jest.mock("ms", () => ({
@@ -67,22 +58,6 @@ describe("AuthService", () => {
     social_id: "github123",
   } as User;
 
-  const mockGithubUser: GithubAuthenticatedUser = {
-    github_user_id: "github123",
-    email: "github@example.com",
-    access_token: "github-token",
-    refresh_token: undefined,
-    avatar_url: "https://github.com/avatar.jpg",
-  };
-
-  const mockGitlabUser: GitlabAuthenticatedUser = {
-    gitlab_user_id: "gitlab123",
-    email: "gitlab@example.com",
-    access_token: "gitlab-token",
-    refresh_token: "gitlab-refresh-token",
-    avatar_url: "https://gitlab.com/avatar.jpg",
-  };
-
   const mockAuthenticatedUser = new AuthenticatedUser(
     mockUser.id,
     [ROLE.USER],
@@ -92,8 +67,6 @@ describe("AuthService", () => {
   beforeEach(async () => {
     const mockUsersService = {
       sendUserRegistrationVerificationEmail: jest.fn(),
-      existsSocialUser: jest.fn(),
-      registerSocial: jest.fn(),
     };
 
     const mockUsersRepository = {
@@ -108,34 +81,20 @@ describe("AuthService", () => {
       verify: jest.fn(),
     };
 
-    const mockGitlabIntegrationTokenService = {
-      createGitlabIntegrationToken: jest.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         {
           provide: AuthService,
           useFactory: (
             jwt: JwtService,
-            gitlab: GitlabIntegrationTokenService,
             users: UsersService,
             usersRepo: UsersRepository,
-          ) => new AuthService(jwt, gitlab, users, usersRepo),
-          inject: [
-            JwtService,
-            GitlabIntegrationTokenService,
-            UsersService,
-            UsersRepository,
-          ],
+          ) => new AuthService(jwt, users, usersRepo),
+          inject: [JwtService, UsersService, UsersRepository],
         },
         {
           provide: JwtService,
           useValue: mockJwtService,
-        },
-        {
-          provide: GitlabIntegrationTokenService,
-          useValue: mockGitlabIntegrationTokenService,
         },
         {
           provide: UsersService,
@@ -240,74 +199,6 @@ describe("AuthService", () => {
       await expect(
         service.authenticate("test@example.com", "wrongpassword"),
       ).rejects.toThrow(WrongCredentials);
-    });
-  });
-
-  describe("authenticateGithubSocial", () => {
-    it("should throw FailedToAuthenticateSocialAccount when email is missing", async () => {
-      // Arrange
-      const userWithoutEmail = { ...mockGithubUser, email: undefined };
-
-      // Act & Assert
-      await expect(
-        service.authenticateGithubSocial(userWithoutEmail),
-      ).rejects.toThrow(FailedToAuthenticateSocialAccount);
-    });
-
-    it("should call existsSocialUser to check if user exists", async () => {
-      // Arrange
-      jest.spyOn(usersService, "existsSocialUser").mockResolvedValue(false);
-      jest
-        .spyOn(usersService, "registerSocial")
-        .mockResolvedValue("new-user-id");
-      jest.spyOn(jwtService, "signAsync").mockResolvedValue("jwt-token");
-
-      // Act
-      try {
-        await service.authenticateGithubSocial(mockGithubUser);
-      } catch (_error) {
-        // Expected since methods are not fully implemented
-      }
-
-      // Assert
-      expect(usersService.existsSocialUser).toHaveBeenCalledWith(
-        mockGithubUser.github_user_id,
-        SocialType.GITHUB,
-      );
-    });
-  });
-
-  describe("authenticateGitlabSocial", () => {
-    it("should throw FailedToAuthenticateSocialAccount when email is missing", async () => {
-      // Arrange
-      const userWithoutEmail = { ...mockGitlabUser, email: undefined };
-
-      // Act & Assert
-      await expect(
-        service.authenticateGitlabSocial(userWithoutEmail),
-      ).rejects.toThrow(FailedToAuthenticateSocialAccount);
-    });
-
-    it("should call existsSocialUser to check if user exists", async () => {
-      // Arrange
-      jest.spyOn(usersService, "existsSocialUser").mockResolvedValue(false);
-      jest
-        .spyOn(usersService, "registerSocial")
-        .mockResolvedValue("new-user-id");
-      jest.spyOn(jwtService, "signAsync").mockResolvedValue("jwt-token");
-
-      // Act
-      try {
-        await service.authenticateGitlabSocial(mockGitlabUser);
-      } catch (_error) {
-        // Expected since methods are not fully implemented
-      }
-
-      // Assert
-      expect(usersService.existsSocialUser).toHaveBeenCalledWith(
-        mockGitlabUser.gitlab_user_id,
-        SocialType.GITLAB,
-      );
     });
   });
 

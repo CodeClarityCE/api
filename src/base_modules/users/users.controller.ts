@@ -15,27 +15,20 @@ import {
   DeleteAccountBody,
   RegistrationConfirmationBody,
   ResendAccountRegEmailBody,
-  UserCompleteSocialCreateBody,
   UserPasswordPatchBody,
   UserPatchBody,
 } from "src/base_modules/users/user.types";
 import { User } from "src/base_modules/users/users.entity";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
-import { APIDocCreatedResponseDecorator } from "src/decorators/CrudResponse";
 import { APIDocNoDataResponseDecorator } from "src/decorators/NoDataResponse";
 import { NonAuthEndpoint } from "src/decorators/SkipAuthDecorator";
 import { APIDocTypedResponseDecorator } from "src/decorators/TypedResponse";
 import { AuthUser } from "src/decorators/UserDecorator";
-import {
-  CreatedResponse,
-  NoDataResponse,
-  TypedResponse,
-} from "src/types/apiResponses.types";
+import { NoDataResponse, TypedResponse } from "src/types/apiResponses.types";
 import {
   EntityNotFound,
   InternalError,
   NotAuthorized,
-  Unsupported,
 } from "src/types/error.types";
 
 import {
@@ -45,10 +38,8 @@ import {
 } from "../auth/auth.errors";
 
 import {
-  CannotPerformActionOnNormalAccount,
   CannotPerformActionOnSocialAccount,
   FailedToSendAccountRegistrationVerificationEmail,
-  SetupAlreadyDone,
 } from "./users.errors";
 import { UsersService } from "./users.service";
 
@@ -116,27 +107,6 @@ export class UsersController {
   ): Promise<NoDataResponse> {
     await this.usersService.delete(user_id, user, body.password);
     return {};
-  }
-
-  @ApiTags("Users")
-  @APIDocCreatedResponseDecorator()
-  @ApiErrorDecorator({
-    statusCode: 400,
-    errors: [CannotPerformActionOnNormalAccount, SetupAlreadyDone, Unsupported],
-  })
-  @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
-  @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
-  @Post("complete_social_setup")
-  async completeSocialAccountSetup(
-    @AuthUser() user: AuthenticatedUser,
-    @Body() account_setup_data: UserCompleteSocialCreateBody,
-  ): Promise<CreatedResponse> {
-    return {
-      id: await this.usersService.completeSocialAccountSetup(
-        account_setup_data,
-        user,
-      ),
-    };
   }
 
   @ApiTags("Users")
