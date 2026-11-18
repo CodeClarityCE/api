@@ -1,0 +1,18 @@
+# The dev stack's JWT signing key, tracked on purpose for local development.
+980fce2affbe4cac0896ecf3acbf3dd6b3bb56e0:jwt/private.pem:private-key:1
+jwt/private.pem:private-key:1
+
+# A made-up EC key the auth strategy specs sign test tokens with.
+d6e50e1b93629290416b65cd61788ea289184d1a:src/base_modules/auth/strategies/jwt.strategy.spec.ts:private-key:15
+src/base_modules/auth/strategies/jwt.strategy.spec.ts:private-key:18
+d6e50e1b93629290416b65cd61788ea289184d1a:src/base_modules/auth/strategies/refresh-token.strategy.spec.ts:private-key:15
+src/base_modules/auth/strategies/refresh-token.strategy.spec.ts:private-key:18
+
+# An all-x GitLab placeholder in a spec, since replaced by glpat-test-token.
+44265d4c0444441af8647cbd568c3f9f94155396:src/base_modules/integrations/gitlab/gitlab.controller.spec.ts:gitlab-pat-any-entropy:110
+d6e50e1b93629290416b65cd61788ea289184d1a:src/base_modules/integrations/gitlab/gitlab.controller.spec.ts:gitlab-pat-any-entropy:110
+44265d4c0444441af8647cbd568c3f9f94155396:src/base_modules/integrations/gitlab/gitlab.service.spec.ts:gitlab-pat-any-entropy:606
+d6e50e1b93629290416b65cd61788ea289184d1a:src/base_modules/integrations/gitlab/gitlab.service.spec.ts:gitlab-pat-any-entropy:540
+fc6cffdf9ff5ac8d8727858d2bbd40de3303862b:test/integration/audit-log-integrations.integration.e2e-spec.ts:gitlab-pat-any-entropy:9
+d292630d622230be207226c7e06568a624b0f572:test/integration/gitlab-instance-url.integration.e2e-spec.ts:gitlab-pat-any-entropy:38
+c30ee03b45231df3c18bdb35005d30ac1fdbb5ce:test/integration/integration-link-roles.integration.e2e-spec.ts:gitlab-pat-any-entropy:19

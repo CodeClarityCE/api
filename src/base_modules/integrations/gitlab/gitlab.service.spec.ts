@@ -657,7 +657,7 @@ describe("GitlabIntegrationService", () => {
   describe("getTokenTypeFromTokenString", () => {
     it("should return PERSONAL_ACCESS_TOKEN for tokens starting with glpat", () => {
       const result = (service as any).getTokenTypeFromTokenString(
-        "glpat-xxxxxxxxxxxxxxxxxxxx",
+        "glpat-test-token",
       );
       expect(result).toBe(GitlabTokenType.PERSONAL_ACCESS_TOKEN);
     });

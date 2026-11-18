@@ -6,7 +6,7 @@ import { testHelper, type TestUser } from "../utils/integration-test-helper";
 
 const GITHUB_TOKEN = "ghp_secretGithubToken123";
 const GITHUB_NEW_TOKEN = "ghp_rotatedGithubToken456";
-const GITLAB_TOKEN = "glpat-xxxxxxxxxxxxxxxxxxxx";
+const GITLAB_TOKEN = "glpat-test-token";
 const GITLAB_URL = "https://gitlab.acme.io";
 
 describe("Audit log for integrations (e2e)", () => {

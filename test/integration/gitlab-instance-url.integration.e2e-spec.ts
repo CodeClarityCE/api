@@ -35,7 +35,7 @@ describe("GitLab instance URL length (e2e)", () => {
       `/org/${admin.organization.id}/integrations/gitlab/add`,
       admin.accessToken,
       {
-        token: "glpat-xxxxxxxxxxxxxxxxxxxx",
+        token: "glpat-test-token",
         token_type: "PERSONAL_ACCESS_TOKEN",
         gitlab_instance_url: url,
       },

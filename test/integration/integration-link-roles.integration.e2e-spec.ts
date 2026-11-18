@@ -16,7 +16,7 @@ const PROVIDERS = [
     name: "GitLab",
     path: "/gitlab/add",
     body: {
-      token: "glpat-xxxxxxxxxxxxxxxxxxxx",
+      token: "glpat-test-token",
       token_type: "PERSONAL_ACCESS_TOKEN",
       gitlab_instance_url: "https://gitlab.com",
     },
