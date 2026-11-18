@@ -1,6 +1,7 @@
 import { Email } from "../../src/base_modules/email/email.entity";
 import { EmailService } from "../../src/base_modules/email/email.service";
 import { Invitation } from "../../src/base_modules/organizations/invitations/invitation.entity";
+import { INVITATION_LIFETIME_MS } from "../../src/base_modules/organizations/invitations/invitation.lifetime";
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import { testHelper, type TestUser } from "../utils/integration-test-helper";
 
@@ -8,6 +9,7 @@ describe("Organization invitations (e2e)", () => {
   let owner: TestUser;
   let invitee: TestUser;
   let outsider: TestUser;
+  let member: TestUser;
   let sentInvites: { inviteToken: string; userEmailDigest: string }[];
 
   beforeAll(async () => {
@@ -25,7 +27,7 @@ describe("Organization invitations (e2e)", () => {
       orgName: "Inviting Org",
       role: MemberRole.OWNER,
     });
-    await testHelper.createTestUser({
+    member = await testHelper.createTestUser({
       email: "member@invites.com",
       organization: owner.organization,
       role: MemberRole.USER,
@@ -233,6 +235,187 @@ describe("Organization invitations (e2e)", () => {
       expect(response.statusCode).toBe(201);
       expect(await invitationRow(token)).toBeNull();
       expect(await emailRow(token)).toBeNull();
+    });
+  });
+  describe("POST /org/:id/invitations/:invitation_id/resend", () => {
+    const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
+
+    async function invitationId(token: string): Promise<string> {
+      return (await invitationRow(token))!.id;
+    }
+
+    function resend(
+      user: TestUser,
+      id: string,
+      orgId: string = owner.organization.id,
+    ): Promise<any> {
+      return testHelper.makeAuthenticatedRequest(
+        "POST",
+        `/org/${orgId}/invitations/${id}/resend`,
+        user.accessToken,
+      );
+    }
+
+    function join(token: string, digest: string): Promise<any> {
+      return testHelper.makeAuthenticatedRequest(
+        "POST",
+        `/org/${owner.organization.id}/join`,
+        invitee.accessToken,
+        { token, email_digest: digest },
+      );
+    }
+
+    function expectAboutThreeDaysAhead(ttl: Date): void {
+      expect(Math.abs(ttl.getTime() - (Date.now() + THREE_DAYS))).toBeLessThan(
+        60_000,
+      );
+    }
+
+    it("a new invitation and its email last three days", async () => {
+      const { token } = await invite();
+
+      expect(INVITATION_LIFETIME_MS).toBe(THREE_DAYS);
+      expectAboutThreeDaysAhead((await invitationRow(token))!.ttl);
+      expectAboutThreeDaysAhead((await emailRow(token))!.ttl);
+    });
+
+    it("sends one new email with a new link and moves the expiry three days ahead", async () => {
+      const { token, digest } = await invite();
+      const id = await invitationId(token);
+      await testHelper
+        .getDataSource()
+        .getRepository(Invitation)
+        .update({ id }, { ttl: new Date(Date.now() + 1000) });
+
+      const response = await resend(owner, id);
+
+      expect(response.statusCode).toBe(201);
+      expect(sentInvites).toHaveLength(2);
+      const sent = sentInvites[1]!;
+      expect(sent.inviteToken).not.toBe(token);
+      expect(sent.userEmailDigest).toBe(digest);
+      const invitation = await testHelper
+        .getDataSource()
+        .getRepository(Invitation)
+        .findOneByOrFail({ id });
+      expect(invitation.token_digest).toBe(sent.inviteToken);
+      expectAboutThreeDaysAhead(invitation.ttl);
+      expect(await emailRow(sent.inviteToken)).not.toBeNull();
+      expect(await emailRow(token)).toBeNull();
+    });
+
+    it("the old link stops working and the new one joins", async () => {
+      const { token, digest } = await invite();
+
+      await resend(owner, await invitationId(token));
+
+      expect((await join(token, digest)).statusCode).toBe(404);
+      const fresh = await join(sentInvites[1]!.inviteToken, digest);
+      expect(fresh.statusCode).toBe(201);
+    });
+
+    it("renews an expired invitation", async () => {
+      const { token, digest } = await invite();
+      const id = await invitationId(token);
+      await testHelper
+        .getDataSource()
+        .getRepository(Invitation)
+        .update({ id }, { ttl: new Date(Date.now() - 1000) });
+
+      const response = await resend(owner, id);
+
+      expect(response.statusCode).toBe(201);
+      const joined = await join(sentInvites[1]!.inviteToken, digest);
+      expect(joined.statusCode).toBe(201);
+    });
+
+    it.each([
+      ["an admin", MemberRole.ADMIN],
+      ["a member", MemberRole.USER],
+    ])("answers 403 to %s", async (_name, role) => {
+      const { token } = await invite();
+      const caller =
+        role === MemberRole.USER
+          ? member
+          : await testHelper.createTestUser({
+              email: "admin@invites.com",
+              organization: owner.organization,
+              role,
+            });
+
+      const response = await resend(caller, await invitationId(token));
+
+      expect(response.statusCode).toBe(403);
+      expect(sentInvites).toHaveLength(1);
+      expect(await invitationRow(token)).not.toBeNull();
+    });
+
+    it("answers 404 for an invitation of another organization", async () => {
+      const { token } = await invite();
+      const otherOwner = await testHelper.createTestUser({
+        email: "other-owner@invites.com",
+        orgName: "Other Org",
+        role: MemberRole.OWNER,
+      });
+
+      const response = await resend(
+        otherOwner,
+        await invitationId(token),
+        otherOwner.organization.id,
+      );
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json().error_code).toBe("EntityNotFound");
+      expect(await invitationRow(token)).not.toBeNull();
+    });
+
+    it("answers 404 for an unknown invitation", async () => {
+      const response = await resend(
+        owner,
+        "00000000-0000-4000-8000-000000000000",
+      );
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json().error_code).toBe("EntityNotFound");
+    });
+
+    it("answers PersonalOrgCannotBeModified for a personal organization", async () => {
+      const { token } = await invite();
+      await testHelper
+        .getDataSource()
+        .query("UPDATE organization SET personal = true WHERE id = $1", [
+          owner.organization.id,
+        ]);
+
+      const response = await resend(owner, await invitationId(token));
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error_code).toBe("PersonalOrgCannotBeModified");
+    });
+
+    it("a failed send answers FailedToSendOrganizationInviteEmail and a retry works", async () => {
+      const { token, digest } = await invite();
+      const id = await invitationId(token);
+      jest
+        .spyOn(testHelper.getApp().get(EmailService), "sendOrganizationInvite")
+        .mockImplementationOnce(async (sent) => {
+          sentInvites.push(sent);
+          throw new Error("SMTP down");
+        });
+
+      const failed = await resend(owner, id);
+
+      expect(failed.statusCode).toBe(500);
+      expect(failed.json().error_code).toBe(
+        "FailedToSendOrganizationInviteEmail",
+      );
+      expect((await invitationRow(sentInvites[1]!.inviteToken))?.id).toBe(id);
+
+      const retried = await resend(owner, id);
+
+      expect(retried.statusCode).toBe(201);
+      const joined = await join(sentInvites[2]!.inviteToken, digest);
+      expect(joined.statusCode).toBe(201);
     });
   });
 });

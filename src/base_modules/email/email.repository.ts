@@ -68,6 +68,25 @@ export class EmailRepository {
   }
 
   /**
+   * Retrieves the invite email sent with this invitation token, if any.
+   *
+   * @param tokenDigest - The invitation's token digest.
+   * @param userEmailDigest - The hash of the invitee's email.
+   */
+  async findInviteMail(
+    tokenDigest: string,
+    userEmailDigest: string,
+  ): Promise<Email | null> {
+    return this.emailRepository.findOne({
+      where: {
+        email_type: EmailType.ORGANIZATION_INVITE,
+        token_digest: tokenDigest,
+        user_id_digest: userEmailDigest,
+      },
+    });
+  }
+
+  /**
    * Removes a given Email entity from the database.
    *
    * @param mail - The Email entity to remove.
