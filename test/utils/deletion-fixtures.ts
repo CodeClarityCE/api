@@ -134,6 +134,11 @@ export async function failAnalysisDeletes(): Promise<() => Promise<void>> {
   return failDeletesOn("analysis");
 }
 
+/** Makes every organization delete fail until the returned function is called. */
+export async function failOrganizationDeletes(): Promise<() => Promise<void>> {
+  return failDeletesOn("organization");
+}
+
 async function failDeletesOn(table: string): Promise<() => Promise<void>> {
   const db = testHelper.getDataSource();
   const name = `fail_${table}_delete`;

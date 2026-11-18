@@ -12,6 +12,7 @@ import { GitlabModule } from "../integrations/gitlab/gitlab.module";
 import { IntegrationsModule } from "../integrations/integrations.module";
 import { OrganizationsModule } from "../organizations/organizations.module";
 
+import { ProjectRowsModule } from "./project-rows.module";
 import { ProjectMemberService } from "./projectMember.service";
 import { ProjectController } from "./projects.controller";
 import { ProjectService } from "./projects.service";
@@ -20,6 +21,7 @@ import { ProjectService } from "./projects.service";
   imports: [
     OrganizationsModule, // For OrganizationLoggerService
     FileModule,
+    ProjectRowsModule,
     IntegrationsModule,
     GithubModule,
     GitlabModule,
