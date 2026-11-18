@@ -5,6 +5,8 @@ import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { User } from "../../users/users.entity";
 import type { Organization } from "../organization.entity";
 
+// The frontend copies MemberRole in frontend/src/codeclarity_components/organizations/organization.entity.ts.
+// The umbrella type-sync check (scripts/type-sync) fails CI when it lacks a value.
 export enum MemberRole {
   OWNER = 0,
   ADMIN = 1,
