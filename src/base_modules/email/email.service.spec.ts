@@ -56,8 +56,6 @@ describe("EmailService invite emails", () => {
     await service.sendOrganizationInvite({
       email: "invitee@example.com",
       inviteToken: "token",
-      blockOrgInvitesToken: "",
-      blockAllOrgInvitesToken: "",
       userEmailDigest: "digest",
       organizationName: "Acme",
       inviter,
@@ -72,7 +70,6 @@ describe("EmailService invite emails", () => {
     await service.sendOrganizationInviteForNonUser({
       email: "new@example.com",
       inviteToken: "token",
-      blockEmailsToken: "",
       userEmailDigest: "digest",
       organizationName: "Acme",
       inviter,
@@ -81,5 +78,38 @@ describe("EmailService invite emails", () => {
 
     expect(sentText()).toContain("This invitation is valid for 3 days.");
     expect(sentText()).not.toMatch(/valid for (?!3 days)/);
+  });
+
+  it("the invite email has a join link and no unsubscribe links", async () => {
+    await service.sendOrganizationInvite({
+      email: "invitee@example.com",
+      inviteToken: "invite-token",
+      userEmailDigest: "digest",
+      organizationName: "Acme",
+      inviter,
+      orgId: "org-1",
+    });
+
+    expect(sentText()).toContain(
+      "https://codeclarity.example/email_action/join_org?token",
+    );
+    expect(sentText()).not.toContain("/email_action/unsubscribe");
+    expect(sentText()).not.toContain("user settings");
+  });
+
+  it("the invite email for a new user has a join link and no unsubscribe links", async () => {
+    await service.sendOrganizationInviteForNonUser({
+      email: "new@example.com",
+      inviteToken: "invite-token",
+      userEmailDigest: "digest",
+      organizationName: "Acme",
+      inviter,
+      orgId: "org-1",
+    });
+
+    expect(sentText()).toContain(
+      "https://codeclarity.example/email_action/join_org?token",
+    );
+    expect(sentText()).not.toContain("/email_action/unsubscribe");
   });
 });

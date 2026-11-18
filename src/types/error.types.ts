@@ -97,8 +97,6 @@ export const errorMessages: Record<string, string> = {
   AlreadyExists:
     "The requested entity could not be created because it already exists.",
   UserDoesNotExist: "The referenced user does not exists.",
-  UnsubscriptionTokenInvalidOrExpired:
-    "The unsubscription link is invalid or has expired.",
   NotAMember: "The user is not a member of the referenced organization.",
   CannotLeaveAsLastOwner:
     "You cannot leave the organization as the last owner.",
@@ -526,21 +524,6 @@ export class UserDoesNotExist extends PublicAPIError {
       UserDoesNotExist.errorCode,
       UserDoesNotExist.errorMessage,
       UserDoesNotExist.statusCode,
-      cause,
-    );
-  }
-}
-
-export class UnsubscriptionTokenInvalidOrExpired extends PublicAPIError {
-  static errorCode = "UnsubscriptionTokenInvalidOrExpired";
-  static errorMessage =
-    errorMessages[UnsubscriptionTokenInvalidOrExpired.errorCode]!;
-  static statusCode = 400;
-  constructor(cause?: unknown) {
-    super(
-      UnsubscriptionTokenInvalidOrExpired.errorCode,
-      UnsubscriptionTokenInvalidOrExpired.errorMessage,
-      UnsubscriptionTokenInvalidOrExpired.statusCode,
       cause,
     );
   }
