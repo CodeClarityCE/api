@@ -592,7 +592,9 @@ describe("SBOMService", () => {
       mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
       mockSbomUtilsService.getMergedSbomResults.mockResolvedValue({
         mergedSbom: mockWorkspacesOutput,
-        pluginResults: [{ plugin: "js-sbom", sbom: mockWorkspacesOutput }],
+        pluginResults: [
+          { plugin: "js-sbom", sbom: mockWorkspacesOutput, ecosystem: "npm" },
+        ],
       });
 
       const result = await service.getWorkspaces(
@@ -606,6 +608,10 @@ describe("SBOMService", () => {
         workspaces: ["default", "workspace1"],
         package_manager: "npm",
         package_managers: { default: "npm", workspace1: "npm" },
+        ecosystem_package_managers: {
+          default: { npm: "npm" },
+          workspace1: { npm: "npm" },
+        },
       });
       expect(analysisResultsService.checkAccess).toHaveBeenCalledWith(
         "org-123",
@@ -616,6 +622,41 @@ describe("SBOMService", () => {
       expect(sbomUtilsService.getMergedSbomResults).toHaveBeenCalledWith(
         "analysis-123",
       );
+    });
+
+    it("names the package manager of each ecosystem in a shared workspace", async () => {
+      const js = {
+        workspaces: { ".": { dependencies: {}, start: {} } },
+        analysis_info: { package_manager: "NPM" },
+      };
+      const php = {
+        workspaces: { ".": { dependencies: {}, start: {} } },
+        analysis_info: { package_manager: "COMPOSER" },
+      };
+
+      mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+      mockSbomUtilsService.getMergedSbomResults.mockResolvedValue({
+        mergedSbom: {
+          workspaces: { ".": { dependencies: {}, start: {} } },
+          analysis_info: { package_manager: "multi-language" },
+        },
+        pluginResults: [
+          { plugin: "js-sbom", sbom: js, ecosystem: "npm" },
+          { plugin: "php-sbom", sbom: php, ecosystem: "packagist" },
+        ],
+      });
+
+      const result = await service.getWorkspaces(
+        "org-123",
+        "project-123",
+        "analysis-123",
+        mockUser,
+      );
+
+      expect(result.package_managers).toEqual({ ".": "multi-language" });
+      expect(result.ecosystem_package_managers).toEqual({
+        ".": { npm: "NPM", packagist: "COMPOSER" },
+      });
     });
 
     it("should handle access check failure", async () => {

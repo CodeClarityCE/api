@@ -353,11 +353,19 @@ export class SBOMService {
 
     // Each workspace takes the manager of the plugins that found it.
     const packageManagers: Record<string, string> = {};
+    const ecosystemPackageManagers: Record<string, Record<string, string>> = {};
     for (const workspace of Object.keys(mergedSbom.workspaces)) {
+      const found = pluginResults.filter(
+        ({ sbom }) => workspace in sbom.workspaces,
+      );
       packageManagers[workspace] = sharedPackageManager(
-        pluginResults
-          .map(({ sbom }) => sbom)
-          .filter((sbom) => workspace in sbom.workspaces),
+        found.map(({ sbom }) => sbom),
+      );
+      ecosystemPackageManagers[workspace] = Object.fromEntries(
+        found.map(({ sbom, ecosystem }) => [
+          ecosystem,
+          sbom.analysis_info.package_manager,
+        ]),
       );
     }
 
@@ -365,6 +373,7 @@ export class SBOMService {
       workspaces: Object.keys(mergedSbom.workspaces),
       package_manager: mergedSbom.analysis_info.package_manager,
       package_managers: packageManagers,
+      ecosystem_package_managers: ecosystemPackageManagers,
     };
   }
 

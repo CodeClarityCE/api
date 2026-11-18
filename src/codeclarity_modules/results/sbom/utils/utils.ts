@@ -30,6 +30,8 @@ import { EcosystemMapper } from "./ecosystem-mapper";
 interface EnhancedDependency extends Dependency {
   ecosystem?: string;
   source_plugin?: string;
+  // Package manager reported by the SBOM plugin that found the dependency
+  package_manager?: string;
   transitive?: boolean;
 }
 
@@ -253,10 +255,11 @@ export class SbomUtilsService {
 
         for (const [version, dependency] of Object.entries(versions)) {
           // Add ecosystem and source plugin information
-          const enhancedDependency = {
+          const enhancedDependency: EnhancedDependency = {
             ...dependency,
             ecosystem,
             source_plugin: plugin,
+            package_manager: sbom.analysis_info.package_manager,
           };
 
           mergedDependencies[depName][version] = enhancedDependency;
@@ -391,7 +394,8 @@ export class SbomUtilsService {
         sbom.workspaces[workspace]!.start,
       ),
       transitive: dependency.Transitive ?? enhancedDep.transitive ?? false,
-      package_manager: sbom.analysis_info.package_manager,
+      package_manager:
+        enhancedDep.package_manager ?? sbom.analysis_info.package_manager,
       license: package_version?.license ?? "",
       engines: enginesExtra ?? {},
       release_date: timeExtra ? new Date(timeExtra) : null,

@@ -162,4 +162,6 @@ export interface WorkspacesOutput {
   package_manager: string;
   /** Package manager of each workspace, keyed by workspace */
   package_managers: Record<string, string>;
+  /** Package manager of each ecosystem in each workspace, e.g. { ".": { npm: "NPM" } } */
+  ecosystem_package_managers: Record<string, Record<string, string>>;
 }
