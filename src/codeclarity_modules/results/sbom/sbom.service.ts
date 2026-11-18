@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { PackageRepository } from "src/codeclarity_modules/knowledge/package/package.repository";
+import { versionLicense } from "src/codeclarity_modules/knowledge/package/version-license";
 import {
   Dependency,
   DependencyDetails,
@@ -16,6 +17,7 @@ import {
   newAnalysisStats,
 } from "src/codeclarity_modules/results/sbom/sbom_stats.types";
 import {
+  isDirectDependency,
   SbomUtilsService,
   sharedPackageManager,
 } from "src/codeclarity_modules/results/sbom/utils/utils";
@@ -238,11 +240,13 @@ export class SBOMService {
     for (const [dep_key, dep] of Object.entries(workspaceData.dependencies)) {
       for (const [version_key, depVersion] of Object.entries(dep)) {
         const version = depVersion as EnhancedDependency;
-        const is_direct = this.isDirectDependency(
+        const is_direct = isDirectDependency(
           dep_key,
           version_key,
           workspaceData.start,
-        );
+        )
+          ? 1
+          : 0;
 
         const sbomDependency: SbomDependency = new SbomDependency();
         sbomDependency.name = dep_key;
@@ -350,11 +354,19 @@ export class SBOMService {
 
     // Each workspace takes the manager of the plugins that found it.
     const packageManagers: Record<string, string> = {};
+    const ecosystemPackageManagers: Record<string, Record<string, string>> = {};
     for (const workspace of Object.keys(mergedSbom.workspaces)) {
+      const found = pluginResults.filter(
+        ({ sbom }) => workspace in sbom.workspaces,
+      );
       packageManagers[workspace] = sharedPackageManager(
-        pluginResults
-          .map(({ sbom }) => sbom)
-          .filter((sbom) => workspace in sbom.workspaces),
+        found.map(({ sbom }) => sbom),
+      );
+      ecosystemPackageManagers[workspace] = Object.fromEntries(
+        found.map(({ sbom, ecosystem }) => [
+          ecosystem,
+          sbom.analysis_info.package_manager,
+        ]),
       );
     }
 
@@ -362,6 +374,7 @@ export class SBOMService {
       workspaces: Object.keys(mergedSbom.workspaces),
       package_manager: mergedSbom.analysis_info.package_manager,
       package_managers: packageManagers,
+      ecosystem_package_managers: ecosystemPackageManagers,
     };
   }
 
@@ -680,28 +693,6 @@ export class SBOMService {
   }
 
   /**
-   * Check if a dependency is a direct dependency (in start dependencies)
-   */
-  private isDirectDependency(
-    depKey: string,
-    versionKey: string,
-    start: {
-      dependencies?: WorkSpaceDependency[];
-      dev_dependencies?: WorkSpaceDependency[];
-    },
-  ): number {
-    const checkDeps = (deps: WorkSpaceDependency[] | undefined): boolean => {
-      return (
-        deps?.some((d) => d.name === depKey && d.version === versionKey) ??
-        false
-      );
-    };
-    return checkDeps(start.dependencies) || checkDeps(start.dev_dependencies)
-      ? 1
-      : 0;
-  }
-
-  /**
    * Enrich SBOM dependency with package info and deprecation status
    */
   private async enrichSbomDependency(
@@ -729,6 +720,8 @@ export class SBOMService {
         language,
       );
       const specificVersion = versionInfo.versions?.[0];
+      const license = versionLicense(pack, specificVersion);
+      if (license) sbomDependency.license = license;
       const extra = specificVersion?.extra;
       const deprecatedValue = extra?.["Deprecated"];
 

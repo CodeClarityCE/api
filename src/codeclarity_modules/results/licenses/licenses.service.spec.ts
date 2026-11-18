@@ -194,6 +194,7 @@ describe("LicensesService", () => {
             LicensesDepMap: {},
             NonSpdxLicensesDepMap: {
               "SEE LICENSE IN FEEL-FREE.md": ["rgbcolor@1.0.1"],
+              "Custom-Corp-1.0": ["corp-lib@2.0.0"],
               "": ["ghost@1.0.0"],
             },
             LicenseComplianceViolations: [],
@@ -218,12 +219,66 @@ describe("LicensesService", () => {
         expect.arrayContaining([
           {
             id: "SEE LICENSE IN FEEL-FREE.md",
-            name: "SEE LICENSE IN FEEL-FREE.md",
+            name: "Custom license (FEEL-FREE.md)",
           },
+          { id: "Custom-Corp-1.0", name: "Custom-Corp-1.0" },
           { id: "", name: "Unknown license" },
         ]),
       );
       for (const row of rows) expect(row.description).not.toBe("");
+    });
+
+    const customLicenseOutput = (licenseId: string): unknown => ({
+      ...mockLicensesOutput,
+      workspaces: {
+        default: {
+          LicensesDepMap: {},
+          NonSpdxLicensesDepMap: { [licenseId]: ["rgbcolor@1.0.1"] },
+          LicenseComplianceViolations: [],
+        },
+      },
+    });
+
+    it("names a SEE LICENSE IN reference as a custom license that needs review", async () => {
+      mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+      mockLicensesUtilsService.getLicensesResult.mockResolvedValue(
+        customLicenseOutput("see license in FEEL-FREE.md"),
+      );
+
+      const result = await service.getLicensesUsed(
+        "org-123",
+        "project-123",
+        "analysis-123",
+        mockUser,
+        { workspace: "default" },
+      );
+
+      expect(result.data).toEqual([
+        expect.objectContaining({
+          id: "see license in FEEL-FREE.md",
+          name: "Custom license (FEEL-FREE.md)",
+          description:
+            "This package gives its own license terms in FEEL-FREE.md. Check them by hand.",
+          unable_to_infer: true,
+        }),
+      ]);
+    });
+
+    it("finds a custom license row by its file name", async () => {
+      mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+      mockLicensesUtilsService.getLicensesResult.mockResolvedValue(
+        customLicenseOutput("SEE LICENSE IN FEEL-FREE.md"),
+      );
+
+      const result = await service.getLicensesUsed(
+        "org-123",
+        "project-123",
+        "analysis-123",
+        mockUser,
+        { workspace: "default", searchKey: "FEEL-FREE" },
+      );
+
+      expect(result.data).toHaveLength(1);
     });
 
     it("should throw error when checkAccess fails", async () => {

@@ -19,6 +19,8 @@ import type { TicketEvent } from "./ticket-event.entity";
 import type { TicketExternalLink } from "./ticket-external-link.entity";
 import type { TicketVulnerabilityOccurrence } from "./ticket-occurrence.entity";
 
+// The frontend copies TicketStatus in frontend/src/codeclarity_components/tickets/tickets.entity.ts.
+// The umbrella type-sync check (scripts/type-sync) fails CI when it lacks a value.
 export enum TicketStatus {
   OPEN = "OPEN",
   IN_PROGRESS = "IN_PROGRESS",
@@ -27,6 +29,8 @@ export enum TicketStatus {
   WONT_FIX = "WONT_FIX",
 }
 
+// The frontend copies TicketPriority in frontend/src/codeclarity_components/tickets/tickets.entity.ts.
+// The umbrella type-sync check (scripts/type-sync) fails CI when it lacks a value.
 export enum TicketPriority {
   CRITICAL = "CRITICAL",
   HIGH = "HIGH",
@@ -34,6 +38,8 @@ export enum TicketPriority {
   LOW = "LOW",
 }
 
+// The frontend copies TicketType in frontend/src/codeclarity_components/tickets/tickets.entity.ts.
+// The umbrella type-sync check (scripts/type-sync) fails CI when it lacks a value.
 export enum TicketType {
   VULNERABILITY = "VULNERABILITY",
   LICENSE = "LICENSE",

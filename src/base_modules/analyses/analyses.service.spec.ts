@@ -2,6 +2,7 @@ import { ConfigService } from "@nestjs/config";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 
+import { AnalyzerLanguagesService } from "src/base_modules/analyzers/analyzer-languages.service";
 import { Policy } from "src/codeclarity_modules/policies/policy.entity";
 import { LicensesRepository } from "src/codeclarity_modules/results/licenses/licenses.repository";
 import { AnalysisResultsRepository } from "src/codeclarity_modules/results/results.repository";
@@ -221,6 +222,10 @@ describe("AnalysesService", () => {
         {
           provide: OrganizationLoggerService,
           useValue: { addAuditLog: jest.fn() },
+        },
+        {
+          provide: AnalyzerLanguagesService,
+          useValue: { refresh: jest.fn() },
         },
         {
           provide: LanguageDetectionService,

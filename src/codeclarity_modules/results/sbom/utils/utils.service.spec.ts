@@ -118,6 +118,7 @@ describe("SbomUtilsService", () => {
   beforeEach(async () => {
     const mockResultRepository = {
       findOne: jest.fn(),
+      find: jest.fn(),
     };
 
     const mockVulnerabilitiesUtilsService = {
@@ -321,6 +322,7 @@ describe("SbomUtilsService", () => {
         latest_version: "1.1.0",
         dependencies: { lodash: "^4.0.0" },
         dev_dependencies: { jest: "^29.0.0" },
+        direct: true,
         transitive: false,
         source: { type: "npm", url: "https://npmjs.com/package/test-package" },
         package_manager: "npm",
@@ -346,6 +348,26 @@ describe("SbomUtilsService", () => {
       expect(vulnerabilitiesUtilsService.getVulnsResult).toHaveBeenCalledWith(
         mockAnalysisId,
       );
+    });
+
+    it("returns the version's license when the version records one", async () => {
+      const mockPackageInfo = createMockPackageVersionInfo();
+      mockPackageInfo.license = "BlueOak-1.0.0";
+      mockPackageInfo.versions[0]!.extra = { license_expression: "ISC" };
+      packageRepository.getVersionInfo.mockResolvedValue(mockPackageInfo);
+      vulnerabilitiesUtilsService.getVulnsResult.mockResolvedValue(
+        createMockVulnsOutput(),
+      );
+
+      const result = await service.getDependencyData(
+        mockAnalysisId,
+        mockWorkspace,
+        dependencyName,
+        dependencyVersion,
+        createMockSBOMOutput(),
+      );
+
+      expect(result.license).toBe("ISC");
     });
 
     it("should handle dependencies without vulnerabilities", async () => {
@@ -523,6 +545,134 @@ describe("SbomUtilsService", () => {
       expect(result.transitive).toBe(true);
     });
 
+    it("reports a dependency that is both direct and transitive as direct", async () => {
+      const mockSBOM = createMockSBOMOutput();
+      const dep =
+        mockSBOM.workspaces[mockWorkspace]!.dependencies[dependencyName]![
+          dependencyVersion
+        ]!;
+      dep.Direct = true;
+      dep.Transitive = true;
+
+      packageRepository.getVersionInfo.mockResolvedValue(
+        createMockPackageVersionInfo(),
+      );
+      vulnerabilitiesUtilsService.getVulnsResult.mockResolvedValue(
+        createMockVulnsOutput(),
+      );
+
+      const result = await service.getDependencyData(
+        mockAnalysisId,
+        mockWorkspace,
+        dependencyName,
+        dependencyVersion,
+        mockSBOM,
+      );
+
+      expect(result.direct).toBe(true);
+      expect(result.transitive).toBe(true);
+    });
+
+    it("reports a dependency missing from the workspace start as not direct", async () => {
+      const mockSBOM = createMockSBOMOutput();
+      mockSBOM.workspaces[mockWorkspace]!.start = {
+        dependencies: [
+          { name: dependencyName, version: "0.9.0", constraint: "^0.9.0" },
+        ],
+      };
+
+      packageRepository.getVersionInfo.mockResolvedValue(
+        createMockPackageVersionInfo(),
+      );
+      vulnerabilitiesUtilsService.getVulnsResult.mockResolvedValue(
+        createMockVulnsOutput(),
+      );
+
+      const result = await service.getDependencyData(
+        mockAnalysisId,
+        mockWorkspace,
+        dependencyName,
+        dependencyVersion,
+        mockSBOM,
+      );
+
+      expect(result.direct).toBe(false);
+    });
+
+    it("returns null dates when the knowledge base has no release time", async () => {
+      const packageInfo = createMockPackageVersionInfo();
+      packageInfo.time = undefined as unknown as Date;
+      packageInfo.versions[0]!.extra = { Engines: {} };
+
+      packageRepository.getVersionInfo.mockResolvedValue(packageInfo);
+      vulnerabilitiesUtilsService.getVulnsResult.mockResolvedValue(
+        createMockVulnsOutput(),
+      );
+
+      const result = await service.getDependencyData(
+        mockAnalysisId,
+        mockWorkspace,
+        dependencyName,
+        dependencyVersion,
+        createMockSBOMOutput(),
+      );
+
+      expect(result.release_date).toBeNull();
+      expect(result.lastest_release_date).toBeNull();
+    });
+
+    it("returns null dates when the package is not in the knowledge base", async () => {
+      packageRepository.getVersionInfo.mockRejectedValue(new Error("missing"));
+      vulnerabilitiesUtilsService.getVulnsResult.mockResolvedValue(
+        createMockVulnsOutput(),
+      );
+
+      const result = await service.getDependencyData(
+        mockAnalysisId,
+        mockWorkspace,
+        dependencyName,
+        dependencyVersion,
+        createMockSBOMOutput(),
+      );
+
+      expect(result.release_date).toBeNull();
+      expect(result.lastest_release_date).toBeNull();
+    });
+
+    it("reads a PHP version's release date from its lowercase time key", async () => {
+      const mockSBOM = createMockSBOMOutput();
+      mockSBOM.workspaces[mockWorkspace]!.dependencies[dependencyName]![
+        dependencyVersion
+      ] = {
+        ...mockSBOM.workspaces[mockWorkspace]!.dependencies[dependencyName]![
+          dependencyVersion
+        ]!,
+        ecosystem: "packagist",
+      } as never;
+      const packageInfo = createMockPackageVersionInfo();
+      packageInfo.versions[0]!.extra = { time: "2022-06-10T08:30:00+00:00" };
+
+      packageRepository.getVersionInfo.mockResolvedValue(packageInfo);
+      vulnerabilitiesUtilsService.getVulnsResult.mockResolvedValue(
+        createMockVulnsOutput(),
+      );
+
+      const result = await service.getDependencyData(
+        mockAnalysisId,
+        mockWorkspace,
+        dependencyName,
+        dependencyVersion,
+        mockSBOM,
+      );
+
+      expect(packageRepository.getVersionInfo).toHaveBeenCalledWith(
+        dependencyName,
+        dependencyVersion,
+        "php",
+      );
+      expect(result.release_date).toEqual(new Date("2022-06-10T08:30:00Z"));
+    });
+
     it("should handle missing dependency in SBOM", async () => {
       const mockSBOM = createMockSBOMOutput();
       const mockVulns = createMockVulnsOutput();
@@ -559,6 +709,74 @@ describe("SbomUtilsService", () => {
           mockSBOM,
         ),
       ).rejects.toThrow();
+    });
+  });
+
+  describe("a workspace with both npm and Composer dependencies", () => {
+    // A JS and a PHP SBOM that both name their root workspace ".".
+    const sbomWith = (
+      name: string,
+      version: string,
+      packageManager: string,
+    ): SBOMOutput => {
+      const sbom = createMockSBOMOutput();
+      sbom.analysis_info.package_manager = packageManager;
+      sbom.workspaces = {
+        ".": {
+          dependencies: {
+            [name]: {
+              [version]: {
+                ...sbom.workspaces[mockWorkspace]!.dependencies[
+                  "test-package"
+                ]!["1.0.0"]!,
+                Key: `${name}@${version}`,
+              },
+            },
+          },
+          start: { dependencies: [{ name, version, constraint: version }] },
+        },
+      };
+      return sbom;
+    };
+
+    beforeEach(() => {
+      resultRepository.find.mockResolvedValue([
+        {
+          ...createMockResult(sbomWith("lodash", "4.17.20", "NPM")),
+          plugin: "js-sbom",
+        },
+        {
+          ...createMockResult(sbomWith("monolog/monolog", "2.9.1", "COMPOSER")),
+          plugin: "php-sbom",
+        },
+      ] as Result[]);
+      packageRepository.getVersionInfo.mockRejectedValue(new Error("missing"));
+      vulnerabilitiesUtilsService.getVulnsResult.mockResolvedValue({
+        workspaces: { ".": { Vulnerabilities: [] } },
+      } as any);
+    });
+
+    it("gives each dependency the package manager of the SBOM that found it", async () => {
+      const { mergedSbom } = await service.getMergedSbomResults(mockAnalysisId);
+
+      const composer = await service.getDependencyData(
+        mockAnalysisId,
+        ".",
+        "monolog/monolog",
+        "2.9.1",
+        mergedSbom,
+      );
+      const npm = await service.getDependencyData(
+        mockAnalysisId,
+        ".",
+        "lodash",
+        "4.17.20",
+        mergedSbom,
+      );
+
+      expect(mergedSbom.analysis_info.package_manager).toBe("multi-language");
+      expect(composer.package_manager).toBe("COMPOSER");
+      expect(npm.package_manager).toBe("NPM");
     });
   });
 

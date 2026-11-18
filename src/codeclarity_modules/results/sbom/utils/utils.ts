@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
 
 import { PackageRepository } from "src/codeclarity_modules/knowledge/package/package.repository";
+import { versionLicense } from "src/codeclarity_modules/knowledge/package/version-license";
 import {
   NEWEST_RESULT_FIRST,
   Result,
@@ -30,6 +31,8 @@ import { EcosystemMapper } from "./ecosystem-mapper";
 interface EnhancedDependency extends Dependency {
   ecosystem?: string;
   source_plugin?: string;
+  // Package manager reported by the SBOM plugin that found the dependency
+  package_manager?: string;
   transitive?: boolean;
 }
 
@@ -42,6 +45,17 @@ export function sharedPackageManager(sboms: SBOMOutput[]): string {
     sboms.map((sbom) => sbom.analysis_info.package_manager),
   );
   return managers.size === 1 ? [...managers][0]! : MIXED_PACKAGE_MANAGERS;
+}
+
+/** Whether this name and version is listed in the workspace's start (direct) dependencies */
+export function isDirectDependency(
+  name: string,
+  version: string,
+  start: WorkSpaceData["start"],
+): boolean {
+  const listed = (deps: WorkSpaceDependency[] | undefined): boolean =>
+    deps?.some((d) => d.name === name && d.version === version) ?? false;
+  return listed(start.dependencies) || listed(start.dev_dependencies);
 }
 
 @Injectable()
@@ -242,10 +256,11 @@ export class SbomUtilsService {
 
         for (const [version, dependency] of Object.entries(versions)) {
           // Add ecosystem and source plugin information
-          const enhancedDependency = {
+          const enhancedDependency: EnhancedDependency = {
             ...dependency,
             ecosystem,
             source_plugin: plugin,
+            package_manager: sbom.analysis_info.package_manager,
           };
 
           mergedDependencies[depName][version] = enhancedDependency;
@@ -364,7 +379,9 @@ export class SbomUtilsService {
 
     const enginesExtra = version?.extra?.["Engines"] as
       Record<string, string> | undefined;
-    const timeExtra = version?.extra?.["Time"] as string | undefined;
+    // npm versions store the release time under "Time", PHP versions under "time"
+    const timeExtra = (version?.extra?.["Time"] ?? version?.extra?.["time"]) as
+      string | undefined;
 
     const dependency_details: DependencyDetails = {
       name: dependency_name,
@@ -372,14 +389,20 @@ export class SbomUtilsService {
       latest_version: package_version?.latest_version ?? dependency_version,
       dependencies: version?.dependencies ?? {},
       dev_dependencies: version?.dev_dependencies ?? {},
+      direct: isDirectDependency(
+        dependency_name,
+        dependency_version,
+        sbom.workspaces[workspace]!.start,
+      ),
       transitive: dependency.Transitive ?? enhancedDep.transitive ?? false,
-      package_manager: sbom.analysis_info.package_manager,
-      license: package_version?.license ?? "",
+      package_manager:
+        enhancedDep.package_manager ?? sbom.analysis_info.package_manager,
+      license: versionLicense(package_version, version) ?? "",
       engines: enginesExtra ?? {},
-      release_date: timeExtra ? new Date(timeExtra) : new Date(),
+      release_date: timeExtra ? new Date(timeExtra) : null,
       lastest_release_date: package_version?.time
         ? new Date(package_version.time)
-        : new Date(),
+        : null,
       vulnerabilities: [],
       severity_dist: {
         critical: 0,

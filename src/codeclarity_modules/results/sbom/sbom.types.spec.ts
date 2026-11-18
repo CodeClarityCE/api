@@ -162,6 +162,7 @@ describe("SBOM Types", () => {
         latest_version: "1.1.0",
         dependencies: { dep1: "^1.0.0" },
         dev_dependencies: { "dev-dep": "^1.0.0" },
+        direct: true,
         transitive: false,
         source: {
           type: "npm",
@@ -214,6 +215,7 @@ describe("SBOM Types", () => {
         latest_version: "1.1.0",
         dependencies: {},
         dev_dependencies: {},
+        direct: true,
         transitive: false,
         package_manager: "npm",
         license: "MIT",
@@ -554,6 +556,11 @@ describe("SBOM Types", () => {
         workspaces: ["default", "frontend", "backend"],
         package_manager: "npm",
         package_managers: { default: "npm", frontend: "npm", backend: "npm" },
+        ecosystem_package_managers: {
+          default: { npm: "npm" },
+          frontend: { npm: "npm" },
+          backend: { npm: "npm" },
+        },
       };
 
       expect(workspacesOutput.workspaces).toEqual([
@@ -569,6 +576,7 @@ describe("SBOM Types", () => {
         workspaces: [],
         package_manager: "npm",
         package_managers: {},
+        ecosystem_package_managers: {},
       };
 
       expect(workspacesOutput.workspaces).toEqual([]);
