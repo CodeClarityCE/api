@@ -1,6 +1,7 @@
 import { type DataSource } from "typeorm";
 
 import { Analyzer } from "../../src/base_modules/analyzers/analyzer.entity";
+import { AnalyzerLanguagesService } from "../../src/base_modules/analyzers/analyzer-languages.service";
 import { AnalyzersRepository } from "../../src/base_modules/analyzers/analyzers.repository";
 import { AnalyzersService } from "../../src/base_modules/analyzers/analyzers.service";
 import {
@@ -10,6 +11,8 @@ import {
 import { OrganizationMemberships } from "../../src/base_modules/organizations/memberships/organization.memberships.entity";
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import { Organization } from "../../src/base_modules/organizations/organization.entity";
+import type { PluginAvailabilityService } from "../../src/base_modules/plugin-availability/plugin-availability.service";
+import type { PluginsRepository } from "../../src/base_modules/plugins/plugin.repository";
 import {
   MembershipsRepository,
   OrganizationsRepository,
@@ -37,6 +40,14 @@ describe("create-default-analyzer job against Postgres", () => {
   beforeEach(async () => {
     await dataSource.synchronize(true);
     const unused = undefined as never;
+    const analyzers = new AnalyzersRepository(
+      dataSource.getRepository(Analyzer),
+    );
+    // No plugins are registered; every analyzer counts as available.
+    const plugins = { getAll: async () => [] } as unknown as PluginsRepository;
+    const pluginAvailability = {
+      ofAnalyzer: async () => undefined,
+    } as unknown as PluginAvailabilityService;
     service = new AnalyzersService(
       unused,
       new MembershipsRepository(
@@ -44,9 +55,11 @@ describe("create-default-analyzer job against Postgres", () => {
       ),
       new OrganizationsRepository(dataSource.getRepository(Organization)),
       new UsersRepository(dataSource.getRepository(User)),
-      new AnalyzersRepository(dataSource.getRepository(Analyzer)),
+      analyzers,
+      plugins,
+      pluginAvailability,
       unused,
-      unused,
+      new AnalyzerLanguagesService(analyzers, plugins),
     );
   });
 

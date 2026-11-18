@@ -5,6 +5,7 @@ import { AnalysesService } from "../../src/base_modules/analyses/analyses.servic
 import { Analysis } from "../../src/base_modules/analyses/analysis.entity";
 import { InMemoryAnalysisPublisher } from "../../src/base_modules/analyses/analysis-publisher";
 import { Analyzer } from "../../src/base_modules/analyzers/analyzer.entity";
+import { AnalyzerLanguagesService } from "../../src/base_modules/analyzers/analyzer-languages.service";
 import { AnalyzersRepository } from "../../src/base_modules/analyzers/analyzers.repository";
 import {
   AuthenticatedUser,
@@ -15,6 +16,7 @@ import { OrganizationMemberships } from "../../src/base_modules/organizations/me
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import { Organization } from "../../src/base_modules/organizations/organization.entity";
 import { type PluginAvailabilityService } from "../../src/base_modules/plugin-availability/plugin-availability.service";
+import type { PluginsRepository } from "../../src/base_modules/plugins/plugin.repository";
 import { Project } from "../../src/base_modules/projects/project.entity";
 import {
   MembershipsRepository,
@@ -57,6 +59,18 @@ describe("AnalysesService.create against Postgres", () => {
     const auditLog = {
       addAuditLog: async () => undefined,
     } as unknown as OrganizationLoggerService;
+    const analyzers = new AnalyzersRepository(
+      dataSource.getRepository(Analyzer),
+    );
+    // The plugins as they register, with js-patching reading only the JavaScript SBOM.
+    const plugins = {
+      getAll: async () => [
+        { name: "js-sbom", depends_on: [] },
+        { name: "vuln-finder", depends_on: ["js-sbom", "php-sbom"] },
+        { name: "license-finder", depends_on: ["js-sbom", "php-sbom"] },
+        { name: "js-patching", depends_on: ["js-sbom", "vuln-finder"] },
+      ],
+    } as unknown as PluginsRepository;
     service = new AnalysesService(
       publisher,
       pluginAvailability,
@@ -66,7 +80,7 @@ describe("AnalysesService.create against Postgres", () => {
       new UsersRepository(dataSource.getRepository(User)),
       new OrganizationsRepository(dataSource.getRepository(Organization)),
       new ProjectsRepository(dataSource.getRepository(Project)),
-      new AnalyzersRepository(dataSource.getRepository(Analyzer)),
+      analyzers,
       unused,
       unused,
       unused,
@@ -74,6 +88,7 @@ describe("AnalysesService.create against Postgres", () => {
       new AnalysesRepository(dataSource.getRepository(Analysis)),
       dataSource.getRepository(Policy),
       auditLog,
+      new AnalyzerLanguagesService(analyzers, plugins),
     );
 
     const creator = await dataSource.getRepository(User).save({

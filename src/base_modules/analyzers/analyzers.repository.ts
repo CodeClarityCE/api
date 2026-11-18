@@ -6,6 +6,7 @@ import { Analyzer } from "src/base_modules/analyzers/analyzer.entity";
 import { NotAuthorized } from "src/types/error.types";
 import { TypedPaginatedData } from "src/types/pagination.types";
 
+import type { LanguageConfig } from "./analyzer-languages";
 import { AnalyzerDoesNotExist } from "./analyzers.errors";
 
 /**
@@ -44,6 +45,23 @@ export class AnalyzersRepository {
    */
   async saveAnalyzer(analyzer: Analyzer): Promise<Analyzer> {
     return this.analyzerRepository.save(analyzer);
+  }
+
+  /** Saves only the languages of an analyzer, leaving its other columns as stored. */
+  async saveLanguages(
+    analyzerId: string,
+    languages: {
+      supported_languages: string[];
+      language_config: LanguageConfig;
+    },
+  ): Promise<void> {
+    await this.analyzerRepository.update(
+      { id: analyzerId },
+      {
+        supported_languages: languages.supported_languages,
+        language_config: languages.language_config,
+      },
+    );
   }
 
   /**

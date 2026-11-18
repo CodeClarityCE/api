@@ -23,6 +23,7 @@ import {
 
 import type { Analyzer } from "./analyzer.entity";
 import type { AnalyzerCreateBody } from "./analyzer.types";
+import { AnalyzerLanguagesService } from "./analyzer-languages.service";
 import { AnalyzersRepository } from "./analyzers.repository";
 import { AnalyzersService } from "./analyzers.service";
 
@@ -110,6 +111,7 @@ describe("AnalyzersService", () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AnalyzersService,
+        AnalyzerLanguagesService,
         {
           provide: PluginAvailabilityService,
           useValue: Object.assign(new PluginAvailabilityService(consumers), {
@@ -154,6 +156,7 @@ describe("AnalyzersService", () => {
             getManyAnalyzers: jest.fn(),
             deleteAnalyzer: jest.fn(),
             hasAnalyses: jest.fn().mockResolvedValue(false),
+            saveLanguages: jest.fn(),
           },
         },
         {
