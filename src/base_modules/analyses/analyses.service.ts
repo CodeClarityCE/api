@@ -196,11 +196,11 @@ export class AnalysesService {
       for (const step of stage) {
         // Define the initial state of each step with default values
         steps.push({
-          name: step.name,
-          version: step.version,
-          status: AnalysisStatus.REQUESTED,
-          result: undefined,
-          config: {},
+          Name: step.name,
+          Version: step.version,
+          Status: AnalysisStatus.REQUESTED,
+          Result: null,
+          Config: {},
         });
 
         // If the step requires configuration, add it to the config_structure object

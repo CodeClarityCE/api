@@ -20,11 +20,11 @@ describe("AnalysesRepository", () => {
     steps: [
       [
         {
-          name: "test",
-          version: "1.0",
-          config: {},
-          status: AnalysisStatus.COMPLETED,
-          result: {},
+          Name: "test",
+          Version: "1.0",
+          Config: {},
+          Status: AnalysisStatus.COMPLETED,
+          Result: {},
         },
       ],
     ],

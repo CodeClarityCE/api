@@ -36,11 +36,15 @@ export interface StageBase {
   config: object;
 }
 
-export interface AnalysisStage extends StageBase {
-  status: AnalysisStatus;
-  result: object | undefined;
-  started_on?: Date;
-  ended_on?: Date;
+// One step of a stored analysis, keyed as the Go dispatcher and plugins write it.
+export interface AnalysisStage {
+  Name: string;
+  Version: string;
+  Status: AnalysisStatus;
+  Result: object | null;
+  Config: object;
+  Started_on?: string;
+  Ended_on?: string;
 }
 
 @Entity()
