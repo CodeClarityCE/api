@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { MailerService } from "@nestjs-modules/mailer";
 
+import { INVITATION_LIFETIME_TEXT } from "src/base_modules/organizations/invitations/invitation.lifetime";
 import { User } from "src/base_modules/users/users.entity";
 
 /**
@@ -137,6 +138,7 @@ export class EmailService {
         organization_invite_url: url,
         organization_block_invites_url: orgInvitesBlockUrl,
         block_all_invites_url: allOrgInvitesBlockUrl,
+        invitation_lifetime: INVITATION_LIFETIME_TEXT,
         platform_name: this.platformName,
         web_host: this.webHost.split("//")[1],
       },
@@ -184,6 +186,7 @@ export class EmailService {
         organization_name: organizationName,
         organization_invite_url: url,
         block_email_url: unsubscribeUrl,
+        invitation_lifetime: INVITATION_LIFETIME_TEXT,
         platform_name: this.platformName,
         web_host: this.webHost.split("//")[1],
       },

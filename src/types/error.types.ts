@@ -684,7 +684,7 @@ export class FailedToSendOrganizationInviteEmail extends PublicAPIError {
     super(
       FailedToSendOrganizationInviteEmail.errorCode,
       FailedToSendOrganizationInviteEmail.errorMessage,
-      EntityNotFound.statusCode,
+      FailedToSendOrganizationInviteEmail.statusCode,
       cause,
     );
   }

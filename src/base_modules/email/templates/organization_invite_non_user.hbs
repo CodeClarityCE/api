@@ -7,11 +7,12 @@
     {{> button button_url=organization_invite_url button_text='Join organization' }}
 </p>
 
+<p>This invitation is valid for {{ invitation_lifetime }}.</p>
 <p style="margin-top:15px;">If you do not wish to use the {{platform_name}} platform and join this organization, then this email can safely be ignored.</p>
 {{> footer }}<br>
 
 {{> hr }}
 <div style="font-size:90%">
     <p>I do not wish to receive further emails from {{platform_name}}: {{> link link_url=block_email_url link_text='Block all emails from us' }}</p>
-    <p style="margin-top:15px;">Note that the link above is only valid for 30 days.</p>
+    <p style="margin-top:15px;">Note that the link above is only valid for {{ invitation_lifetime }}.</p>
 </div>

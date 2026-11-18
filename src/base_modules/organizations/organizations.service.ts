@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common";
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { Email, EmailType } from "src/base_modules/email/email.entity";
 import { Invitation } from "src/base_modules/organizations/invitations/invitation.entity";
+import { invitationExpiry } from "src/base_modules/organizations/invitations/invitation.lifetime";
 import { InviteCreateBody } from "src/base_modules/organizations/invitations/orgInvitation.types";
 import { ActionType } from "src/base_modules/organizations/log/orgAuditLog.types";
 import { OrganizationMemberships } from "src/base_modules/organizations/memberships/organization.memberships.entity";
@@ -27,6 +28,7 @@ import { TeamMember } from "src/base_modules/users/teamMember.types";
 import {
   CannotRevokeOwnMembership,
   EntityNotFound,
+  FailedToSendOrganizationInviteEmail,
   InvitationInvalidOrExpired,
   NotAMember,
   NotAuthorized,
@@ -274,14 +276,14 @@ export class OrganizationsService {
     invitation.user_email_digest = userEmailHash;
     invitation.user = invitedUser;
     invitation.organization = org;
-    invitation.ttl = new Date(new Date().getTime() + 30 * 60000);
+    invitation.ttl = invitationExpiry();
     await this.invitationsRepository.saveInvitation(invitation);
 
     const mail = new Email();
     mail.email_type = EmailType.ORGANIZATION_INVITE;
     mail.token_digest = activationTokenhash;
     mail.user_id_digest = userEmailHash;
-    mail.ttl = new Date(new Date().getTime() + 30 * 60000); // Expires after 30 mins
+    mail.ttl = invitation.ttl;
     mail.user = invitedUser;
 
     await this.emailRepository.saveMail(mail);
@@ -318,11 +320,61 @@ export class OrganizationsService {
    * @param user The authenticated user
    */
   async reSendOrganizationInviteEmail(
-    _orgId: string,
-    _inviteId: string,
-    _user: AuthenticatedUser,
+    orgId: string,
+    inviteId: string,
+    user: AuthenticatedUser,
   ): Promise<void> {
-    throw new Error("Method not implemented.");
+    // Same role as sending an invitation.
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.OWNER,
+    );
+
+    const org = await this.organizationsRepository.getOrganizationById(orgId);
+    if (org.personal) {
+      throw new PersonalOrgCannotBeModified();
+    }
+
+    const invitation = await this.invitationsRepository.getInvitationBy(
+      { id: inviteId, organization: { id: orgId } },
+      { user: true },
+    );
+    const inviter = await this.usersRepository.getUserById(user.userId, {});
+
+    // A new token voids the old link; the expiry restarts in full.
+    const previousToken = invitation.token_digest;
+    const newToken = await hash(await genRandomString(64), {});
+    invitation.token_digest = newToken;
+    invitation.ttl = invitationExpiry();
+    await this.invitationsRepository.saveInvitation(invitation);
+
+    const mail =
+      (await this.emailRepository.findInviteMail(
+        previousToken,
+        invitation.user_email_digest,
+      )) ?? new Email();
+    mail.email_type = EmailType.ORGANIZATION_INVITE;
+    mail.token_digest = newToken;
+    mail.user_id_digest = invitation.user_email_digest;
+    mail.ttl = invitation.ttl;
+    mail.user = invitation.user;
+    await this.emailRepository.saveMail(mail);
+
+    try {
+      await this.emailService.sendOrganizationInvite({
+        email: invitation.user.email,
+        inviteToken: newToken,
+        blockOrgInvitesToken: "",
+        blockAllOrgInvitesToken: "",
+        userEmailDigest: invitation.user_email_digest,
+        organizationName: org.name,
+        inviter: inviter,
+        orgId: org.id,
+      });
+    } catch (err) {
+      throw new FailedToSendOrganizationInviteEmail(err);
+    }
   }
 
   /**
