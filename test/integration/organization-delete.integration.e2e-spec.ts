@@ -2,7 +2,17 @@ import { EmailService } from "../../src/base_modules/email/email.service";
 import { OrganizationMemberships } from "../../src/base_modules/organizations/memberships/organization.memberships.entity";
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import { Organization } from "../../src/base_modules/organizations/organization.entity";
+import {
+  failOrganizationDeletes,
+  recordDeletedAnalysisStatuses,
+} from "../utils/deletion-fixtures";
 import { testHelper, type TestUser } from "../utils/integration-test-helper";
+import {
+  fillOrganization,
+  givePersonalOrg,
+  rowsLeft,
+  type UsedOrganization,
+} from "../utils/organization-fixtures";
 
 describe("Deleting an organization (e2e)", () => {
   let owner: TestUser;
@@ -105,19 +115,15 @@ describe("Deleting an organization (e2e)", () => {
 
   it("keeps every membership when the organization row cannot be deleted", async () => {
     await addMember("member@orgdelete.com", MemberRole.USER);
-    // An open invitation references the organization, so its delete fails.
-    const invite = await testHelper.makeAuthenticatedRequest(
-      "POST",
-      `/org/${owner.organization.id}/create_invite`,
-      owner.accessToken,
-      { user_email: "outsider@orgdelete.com", role: MemberRole.USER },
-    );
-    expect(invite.statusCode).toBe(201);
+    const allowDeletes = await failOrganizationDeletes();
+    try {
+      const response = await deleteOrg(owner);
 
-    const response = await deleteOrg(owner);
-
-    expect(response.statusCode).toBe(500);
-    expect(response.json().error_code).toBe("InternalError");
+      expect(response.statusCode).toBe(500);
+      expect(response.json().error_code).toBe("InternalError");
+    } finally {
+      await allowDeletes();
+    }
     expect(await orgRow()).not.toBeNull();
     expect(await membershipCount()).toBe(2);
   });
@@ -130,5 +136,94 @@ describe("Deleting an organization (e2e)", () => {
     expect(response.statusCode).toBe(200);
     expect(await orgRow()).toBeNull();
     expect(await membershipCount()).toBe(0);
+  });
+
+  describe("an organization in use", () => {
+    let held: UsedOrganization;
+    let member: TestUser;
+    let memberPersonalOrgId: string;
+
+    beforeEach(async () => {
+      member = await addMember("member@orgdelete.com", MemberRole.USER);
+      memberPersonalOrgId = await givePersonalOrg(member, owner.organization.id);
+      held = await fillOrganization(owner, outsider);
+    });
+
+    const db = () => testHelper.getDataSource();
+
+    it("starts with rows in every table it owns", async () => {
+      const before = await rowsLeft(owner.organization.id, held);
+      for (const [table, n] of Object.entries(before)) {
+        expect([table, n > 0]).toEqual([table, true]);
+      }
+    });
+
+    it("deletes everything the organization owns", async () => {
+      const response = await deleteOrg(owner);
+
+      expect(response.statusCode).toBe(200);
+      const after = await rowsLeft(owner.organization.id, held);
+      for (const [table, n] of Object.entries(after)) {
+        expect([table, n]).toEqual([table, 0]);
+      }
+    });
+
+    it("cancels the running analysis before deleting it", async () => {
+      const recorder = await recordDeletedAnalysisStatuses();
+      try {
+        expect((await deleteOrg(owner)).statusCode).toBe(200);
+        expect(await recorder.statuses()).toEqual({
+          [held.analysisId]: "cancelled",
+        });
+      } finally {
+        await recorder.stop();
+      }
+    });
+
+    it("keeps an integration and a policy also linked to another organization", async () => {
+      expect((await deleteOrg(owner)).statusCode).toBe(200);
+
+      const integrationLinks = await db().query(
+        `SELECT "organizationId" FROM organization_integrations_integration WHERE "integrationId" = $1`,
+        [held.sharedIntegrationId],
+      );
+      expect(integrationLinks).toEqual([
+        { organizationId: outsider.organization.id },
+      ]);
+      const policyLinks = await db().query(
+        `SELECT "organizationId" FROM organization_policies_policy WHERE "policyId" = $1`,
+        [held.sharedPolicyId],
+      );
+      expect(policyLinks).toEqual([
+        { organizationId: outsider.organization.id },
+      ]);
+    });
+
+    it("gives a member their personal organization as default", async () => {
+      expect((await deleteOrg(owner)).statusCode).toBe(200);
+
+      const [row] = await db().query(
+        `SELECT default_org FROM "user" WHERE id = $1`,
+        [member.user.id],
+      );
+      expect(row.default_org).toBe(memberPersonalOrgId);
+    });
+
+    it("deletes nothing when a step fails", async () => {
+      const before = await rowsLeft(owner.organization.id, held);
+      const allowDeletes = await failOrganizationDeletes();
+      try {
+        expect((await deleteOrg(owner)).statusCode).toBe(500);
+      } finally {
+        await allowDeletes();
+      }
+
+      expect(await rowsLeft(owner.organization.id, held)).toEqual(before);
+      const [analysis] = await db().query(
+        `SELECT status FROM analysis WHERE id = $1`,
+        [held.analysisId],
+      );
+      expect(analysis.status).toBe("started");
+    });
   });
 });
