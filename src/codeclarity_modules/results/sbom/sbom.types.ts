@@ -64,13 +64,15 @@ export interface DependencyDetails {
   latest_version: string;
   dependencies: Record<string, string>;
   dev_dependencies: Record<string, string>;
+  direct: boolean;
   transitive: boolean;
   source?: Source;
   package_manager: string;
   license: string;
   engines: Record<string, string>;
-  release_date: Date;
-  lastest_release_date: Date;
+  // Null when the knowledge base has no release time
+  release_date: Date | null;
+  lastest_release_date: Date | null;
   // file_path!: string;
   vulnerabilities: string[];
   severity_dist: SeverityDist;
