@@ -71,7 +71,6 @@ describe("GitlabIntegrationController", () => {
       addGitlabIntegration: jest.fn(),
       getGitlabIntegration: jest.fn(),
       modifyGitlabIntegration: jest.fn(),
-      removeGitlabIntegration: jest.fn(),
       getToken: jest.fn(),
     };
 

@@ -435,23 +435,4 @@ describe("IntegrationsService", () => {
       ).toHaveBeenCalledWith("integration-123", "org-123");
     });
   });
-
-  describe("markIntegrationAsInvalid", () => {
-    it("should throw not implemented error", async () => {
-      // Act & Assert
-      await expect(
-        service.markIntegrationAsInvalid("integration-123"),
-      ).rejects.toThrow("Method not implemented.");
-    });
-
-    it("should accept any integration ID", async () => {
-      // Act & Assert
-      await expect(service.markIntegrationAsInvalid("any-id")).rejects.toThrow(
-        "Method not implemented.",
-      );
-      await expect(service.markIntegrationAsInvalid("")).rejects.toThrow(
-        "Method not implemented.",
-      );
-    });
-  });
 });

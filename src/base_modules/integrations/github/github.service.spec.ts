@@ -611,49 +611,6 @@ describe("GithubIntegrationService", () => {
     });
   });
 
-  describe("removeGithubIntegration", () => {
-    const orgId = "test-org-id";
-    const integrationId = "test-integration-id";
-
-    it("should throw NotAuthorized when integration does not belong to organization", async () => {
-      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
-        false,
-      );
-
-      await expect(
-        service.removeGithubIntegration(
-          orgId,
-          integrationId,
-          mockAuthenticatedUser,
-        ),
-      ).rejects.toThrow(NotAuthorized);
-    });
-
-    it("should throw Error for not implemented functionality", async () => {
-      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
-        true,
-      );
-      jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
-
-      await expect(
-        service.removeGithubIntegration(
-          orgId,
-          integrationId,
-          mockAuthenticatedUser,
-        ),
-      ).rejects.toThrow("Not implemented");
-
-      expect(
-        organizationsRepository.doesIntegrationBelongToOrg,
-      ).toHaveBeenCalledWith(integrationId, orgId);
-      expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
-        orgId,
-        mockAuthenticatedUser.userId,
-        MemberRole.ADMIN,
-      );
-    });
-  });
-
   describe("getToken validation cache", () => {
     const integrationId = "test-integration-id";
     const T0 = new Date("2026-09-13T10:00:00Z").getTime();

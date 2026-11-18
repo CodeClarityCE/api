@@ -27,7 +27,6 @@ import {
   OrganizationSettingsUpdateBody,
 } from "src/base_modules/organizations/org.types";
 import { Organization } from "src/base_modules/organizations/organization.entity";
-import { TeamMember } from "src/base_modules/users/teamMember.types";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocCreatedResponseDecorator } from "src/decorators/CrudResponse";
 import { APIDocNoDataResponseDecorator } from "src/decorators/NoDataResponse";
@@ -219,27 +218,6 @@ export class OrganizationsController {
       sort_key,
       sort_direction,
     );
-  }
-
-  @ApiTags("Organizations")
-  @APIDocTypedResponseDecorator(TeamMember)
-  @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
-  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
-  @ApiErrorDecorator({ statusCode: 400, errors: [EntityNotFound] })
-  @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
-  @Get(":organization_id/members/:user_id")
-  async getOrgMember(
-    @AuthUser() user: AuthenticatedUser,
-    @Param("organization_id") organization_id: string,
-    @Param("user_id") user_id: string,
-  ): Promise<TypedResponse<TeamMember>> {
-    return {
-      data: await this.organizationsService.getOrgMember(
-        user_id,
-        organization_id,
-        user,
-      ),
-    };
   }
 
   @ApiTags("Organizations")

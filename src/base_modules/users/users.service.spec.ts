@@ -786,14 +786,6 @@ describe("UsersService", () => {
     });
   });
 
-  describe("existsUser", () => {
-    it("should throw not implemented error", async () => {
-      await expect(service.existsUser("test-user-id")).rejects.toThrow(
-        "Method not implemented.",
-      );
-    });
-  });
-
   describe("existsSocialUser", () => {
     it("should throw not implemented error", async () => {
       await expect(

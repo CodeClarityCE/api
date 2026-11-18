@@ -122,7 +122,6 @@ describe("GitlabRepositoriesService", () => {
       getGitlabIntegration: jest.fn(),
       addGitlabIntegration: jest.fn(),
       modifyGitlabIntegration: jest.fn(),
-      removeGitlabIntegration: jest.fn(),
     };
 
     const mockOrganizationsRepository = {

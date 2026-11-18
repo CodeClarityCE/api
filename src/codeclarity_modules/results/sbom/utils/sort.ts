@@ -9,15 +9,12 @@ function sort(
 ): SbomDependency[] {
   // Defaults
   const ALLOWED_SORT_BY = [
-    "combined_severity",
     "name",
     "version",
     "package_manager",
     "unlicensed",
     "deprecated",
     "outdated",
-    "licenses",
-    "newest_release",
     "last_published",
     "user_installed",
     "release",
@@ -60,17 +57,9 @@ function sort(
   }
 
   // Sorting
-  let sorted: SbomDependency[] = [];
+  let sorted: SbomDependency[];
 
-  if (sortBySafe === "licenses") {
-    sorted = dependencies.sort((_a: SbomDependency, _b: SbomDependency) => {
-      // if ((a.licenses[0] ?? '') > (b.licenses[0] ?? ''))
-      //     return sortDirectionSafe === 'DESC' ? 1 : -1;
-      // if ((a.licenses[0] ?? '') < (b.licenses[0] ?? ''))
-      //     return sortDirectionSafe === 'DESC' ? -1 : 1;
-      return 0;
-    });
-  } else if (
+  if (
     sortBySafe === "unlicensed" ||
     sortBySafe === "deprecated" ||
     sortBySafe === "outdated" ||
@@ -85,17 +74,6 @@ function sort(
       if (aVal < bVal) return sortDirectionSafe === "DESC" ? 1 : -1;
       return 0;
     });
-  } else if (sortBySafe === "combined_severity") {
-    sorted = dependencies.sort(() => {
-      return 0;
-    });
-    // sorted = dependencies.sort((a: SbomDependency, b: SbomDependency) => {
-    //     // if ((a.combined_severity ?? 0.0) > (b.combined_severity ?? 0.0))
-    //     //     return sortDirectionSafe === 'DESC' ? -1 : 1;
-    //     // if ((a.combined_severity ?? 0.0) < (b.combined_severity ?? 0.0))
-    //     //     return sortDirectionSafe === 'DESC' ? 1 : -1;
-    //     return 0;
-    // });
   } else if (sortBySafe === "last_published" || sortBySafe === "release") {
     sorted = dependencies.sort((a: SbomDependency, b: SbomDependency) => {
       const aRecord = a as unknown as Record<string, unknown>;
@@ -108,41 +86,6 @@ function sort(
       if (aDate < bDate) return sortDirectionSafe === "DESC" ? 1 : -1;
       return 0;
     });
-  } else if (sortBySafe === "newest_release") {
-    // sorted = dependencies
-    //     .map((dep) => {
-    //         if (dep['newest_release'] === dep['version']) {
-    //             if (dep['is_direct_count'] > 0) {
-    //                 return {
-    //                     ...dep,
-    //                     update_available: false,
-    //                     is_direct: true
-    //                 };
-    //             }
-    //             return {
-    //                 ...dep,
-    //                 update_available: false,
-    //                 is_direct: false
-    //             };
-    //         } else {
-    //             if (dep['is_direct_count'] > 0) {
-    //                 return {
-    //                     ...dep,
-    //                     update_available: true,
-    //                     is_direct: true
-    //                 };
-    //             }
-    //             return {
-    //                 ...dep,
-    //                 update_available: true,
-    //                 is_direct: false
-    //             };
-    //         }
-    //     })
-    //     .filter((dep) => dep.update_available)
-    //     .sort((a: any, b: any) => {
-    //         return b.is_direct - a.is_direct;
-    //     });
   } else if (sortBySafe === "dev") {
     sorted = dependencies.sort((a: SbomDependency, b: SbomDependency) => {
       return Number(b.dev) - Number(a.dev);

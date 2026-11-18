@@ -12,10 +12,8 @@ import { JWTPayload } from "src/base_modules/auth/guards/jwt.types";
 import { SKIP_AUTH_KEY } from "src/decorators/SkipAuthDecorator";
 import { AccountNotActivated, NotAuthenticated } from "src/types/error.types";
 
-// import { ApiKeysService } from 'src/codeclarity_modules/apiKeys/apiKeys.service';
-
 /**
- * This is a guard that combines JWT and API authentication.
+ * Guards every route that does not skip auth with a bearer JWT.
  */
 @Injectable()
 export class CombinedAuthGuard implements CanActivate {
@@ -25,7 +23,6 @@ export class CombinedAuthGuard implements CanActivate {
   constructor(
     private jwtService: JwtService,
     private reflector: Reflector,
-    // private apiKeyService: ApiKeysService
   ) {
     this.publicKey = readFileSync(
       join(process.cwd(), "jwt", "public.pem"),
@@ -45,7 +42,6 @@ export class CombinedAuthGuard implements CanActivate {
     }
 
     let authHeader: string | undefined;
-    let apiHeader: string | string[] | undefined = undefined;
     let request: Request | undefined = undefined;
     let socket: Socket | undefined = undefined;
     if (context.getType() === "ws") {
@@ -53,53 +49,24 @@ export class CombinedAuthGuard implements CanActivate {
       socket = context.switchToWs().getClient();
       authHeader = socket?.handshake.headers.authorization;
     } else {
-      // If the endpoint requires authentication, check jwt and api tokens
       request = context.switchToHttp().getRequest();
       authHeader = request?.headers.authorization;
-      apiHeader =
-        request?.headers["x-api-key"] ?? request?.headers["X-API-KEY"];
     }
 
     const jwtToken = this.extractJWTTokenFromHeader(authHeader);
-    const apiToken = this.extractAPITokenFromHeader(apiHeader);
-
-    // If neither api token nor jwt token are given, the user is not authenticated
-    if (!jwtToken && !apiToken) {
+    if (!jwtToken) {
       throw new NotAuthenticated();
     }
 
-    if (jwtToken) {
-      // 1. Verify jwt token (stateless no db lookup -> faster)
-      const [jwtTokenValid, userJWT] = await this.verifyJWTToken(jwtToken);
-      if (!jwtTokenValid) throw new NotAuthenticated();
-      if (!userJWT?.activated) throw new AccountNotActivated();
-      if (jwtTokenValid) {
-        if (request) {
-          request.user = userJWT;
-        } else if (socket) {
-          (socket.data as { user?: AuthenticatedUser }).user = userJWT;
-        }
-        return true;
-      }
+    const [jwtTokenValid, userJWT] = await this.verifyJWTToken(jwtToken);
+    if (!jwtTokenValid) throw new NotAuthenticated();
+    if (!userJWT?.activated) throw new AccountNotActivated();
+    if (request) {
+      request.user = userJWT;
+    } else if (socket) {
+      (socket.data as { user?: AuthenticatedUser }).user = userJWT;
     }
-
-    throw new Error("Not implemented");
-    // TODO: Implement API token verification
-    // if (apiToken) {
-    //     // 2. Verify api token (costly, requires db lookup)
-    //     const [apiTokenValid, userAPI] = await this.verifyAPIToken(apiToken);
-    //     if (!userAPI?.activated) throw new AccountNotActivated();
-    //     if (apiTokenValid) {
-    //         await this.apiKeyService.addApiKeyUsageLog(
-    //             await this.apiKeyService.getApiKeyDigest(apiToken),
-    //             request.originalUrl,
-    //             request.ip || ''
-    //         );
-    //         request['user'] = userAPI;
-    //         return true;
-    //     }
-    // }
-    // throw new NotAuthenticated();
+    return true;
   }
 
   /**
@@ -115,20 +82,6 @@ export class CombinedAuthGuard implements CanActivate {
       if (type === "Bearer") {
         return token;
       }
-    }
-    return undefined;
-  }
-
-  /**
-   * Extracts the API token from the HTTP headers
-   * @param request Request object
-   * @returns {Promise<[string | undefined]>} the api token, if present, otherwise undefined.
-   */
-  private extractAPITokenFromHeader(
-    apiHeader: string | string[] | undefined,
-  ): string | undefined {
-    if (apiHeader && typeof apiHeader === "string") {
-      return apiHeader;
     }
     return undefined;
   }

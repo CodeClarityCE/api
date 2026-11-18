@@ -116,22 +116,6 @@ export class GitlabIntegrationService {
   }
 
   /**
-   * Remove an existing gitlab integration from the organization
-   * @throws {NotAuthorized} If the authenticated user is not authorized to perform this action
-   * @param orgId The organization to which the integration belongs
-   * @param integrationId The integration id
-   * @param user The authenticated user
-   * @returns no data response
-   */
-  async removeGitlabIntegration(
-    _orgId: string,
-    _integrationId: string,
-    _user: AuthenticatedUser,
-  ): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-
-  /**
    * Add a gitlab integration to the organization
    * @throws {NotAuthorized} If the authenticated user is not authorized to perform this action
    * @throws {IntegrationWrongTokenType} In case the token appears to be of the incorrect form
