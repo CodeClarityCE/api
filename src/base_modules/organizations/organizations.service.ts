@@ -290,8 +290,6 @@ export class OrganizationsService {
     await this.emailService.sendOrganizationInvite({
       email: invitedUser.email,
       inviteToken: activationTokenhash,
-      blockOrgInvitesToken: "",
-      blockAllOrgInvitesToken: "",
       userEmailDigest: userEmailHash,
       organizationName: org.name,
       inviter: inviter,
@@ -364,8 +362,6 @@ export class OrganizationsService {
       await this.emailService.sendOrganizationInvite({
         email: invitation.user.email,
         inviteToken: newToken,
-        blockOrgInvitesToken: "",
-        blockAllOrgInvitesToken: "",
         userEmailDigest: invitation.user_email_digest,
         organizationName: org.name,
         inviter: inviter,
