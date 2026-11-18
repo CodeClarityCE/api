@@ -350,6 +350,26 @@ describe("SbomUtilsService", () => {
       );
     });
 
+    it("returns the version's license when the version records one", async () => {
+      const mockPackageInfo = createMockPackageVersionInfo();
+      mockPackageInfo.license = "BlueOak-1.0.0";
+      mockPackageInfo.versions[0]!.extra = { license_expression: "ISC" };
+      packageRepository.getVersionInfo.mockResolvedValue(mockPackageInfo);
+      vulnerabilitiesUtilsService.getVulnsResult.mockResolvedValue(
+        createMockVulnsOutput(),
+      );
+
+      const result = await service.getDependencyData(
+        mockAnalysisId,
+        mockWorkspace,
+        dependencyName,
+        dependencyVersion,
+        createMockSBOMOutput(),
+      );
+
+      expect(result.license).toBe("ISC");
+    });
+
     it("should handle dependencies without vulnerabilities", async () => {
       const mockSBOM = createMockSBOMOutput();
       const mockVulns = {

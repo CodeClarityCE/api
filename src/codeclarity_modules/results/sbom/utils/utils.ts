@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
 
 import { PackageRepository } from "src/codeclarity_modules/knowledge/package/package.repository";
+import { versionLicense } from "src/codeclarity_modules/knowledge/package/version-license";
 import {
   NEWEST_RESULT_FIRST,
   Result,
@@ -396,7 +397,7 @@ export class SbomUtilsService {
       transitive: dependency.Transitive ?? enhancedDep.transitive ?? false,
       package_manager:
         enhancedDep.package_manager ?? sbom.analysis_info.package_manager,
-      license: package_version?.license ?? "",
+      license: versionLicense(package_version, version) ?? "",
       engines: enginesExtra ?? {},
       release_date: timeExtra ? new Date(timeExtra) : null,
       lastest_release_date: package_version?.time

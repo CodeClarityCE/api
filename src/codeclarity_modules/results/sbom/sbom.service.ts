@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { PackageRepository } from "src/codeclarity_modules/knowledge/package/package.repository";
+import { versionLicense } from "src/codeclarity_modules/knowledge/package/version-license";
 import {
   Dependency,
   DependencyDetails,
@@ -719,6 +720,8 @@ export class SBOMService {
         language,
       );
       const specificVersion = versionInfo.versions?.[0];
+      const license = versionLicense(pack, specificVersion);
+      if (license) sbomDependency.license = license;
       const extra = specificVersion?.extra;
       const deprecatedValue = extra?.["Deprecated"];
 
