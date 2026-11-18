@@ -82,10 +82,7 @@ export class Package {
   @Expose()
   source!: Source;
 
-  @Column({
-    length: 50,
-    nullable: true,
-  })
+  @Column("text", { nullable: true })
   @ApiProperty()
   @Expose()
   license!: string;
