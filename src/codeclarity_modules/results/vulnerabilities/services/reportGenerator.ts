@@ -37,6 +37,7 @@ import {
   extractNVDRanges,
   extractOSVRanges,
   filterNVDByPackage,
+  filterOSVByPackage,
   mergeSourceRangeData,
 } from "./rangeExtractor";
 import { buildSourceComparison } from "./sourceComparison";
@@ -194,7 +195,7 @@ abstract class BaseReportGenerator {
         entries = extractNVDRanges(ctx.nvd);
         entries = filterNVDByPackage(entries, packageName);
       } else if (src === "OSV" && ctx.osv) {
-        entries = extractOSVRanges(ctx.osv);
+        entries = filterOSVByPackage(extractOSVRanges(ctx.osv), packageName);
       } else if (src === "GCVE" && ctx.gcve) {
         entries = extractGCVERanges(ctx.gcve);
       }

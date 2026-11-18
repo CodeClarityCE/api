@@ -15,6 +15,7 @@ import {
   extractNVDRanges,
   extractOSVRanges,
   filterNVDByPackage,
+  filterOSVByPackage,
   mergeSourceRangeData,
 } from "./rangeExtractor";
 import type { ComparisonResult, SourceVerdict } from "./types";
@@ -86,7 +87,10 @@ export function buildSourceComparison(
 
   // OSV
   if (osvItem) {
-    const osvEntries = extractOSVRanges(osvItem);
+    const osvEntries = filterOSVByPackage(
+      extractOSVRanges(osvItem),
+      packageName,
+    );
     const merged = mergeSourceRangeData(osvEntries);
     if (merged) {
       verdicts.push(buildSourceVerdict(installedVersion, merged));

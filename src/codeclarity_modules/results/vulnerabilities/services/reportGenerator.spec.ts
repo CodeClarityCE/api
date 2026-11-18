@@ -619,6 +619,44 @@ describe("ReportGenerator Services", () => {
     });
   });
 
+  describe("OSV affected ranges", () => {
+    const sharedOSV = {
+      ...mockOSV,
+      affected: [
+        {
+          package: { name: "jquery", ecosystem: "npm" },
+          ranges: [{ events: [{ introduced: "1.1.4" }, { fixed: "3.4.0" }] }],
+        },
+        {
+          package: { name: "django", ecosystem: "PyPI" },
+          ranges: [{ events: [{ introduced: "2.0" }, { fixed: "2.2.1" }] }],
+        },
+      ],
+    } as unknown as OSV;
+    const jqueryVuln: Vulnerability = {
+      ...mockVulnerability,
+      AffectedDependency: "jquery",
+      AffectedVersion: "3.3.1",
+    };
+
+    it("cover only the finding's package", async () => {
+      const report = await osvReportGenerator.genReport(
+        jqueryVuln,
+        "NPM",
+        undefined,
+        sharedOSV,
+      );
+
+      const { version_info } = report.vulnerability_info;
+      expect(version_info.affected_versions_string).toContain("3.4.0");
+      expect(version_info.affected_versions_string).not.toContain("2.2.1");
+      expect(version_info.source_comparison?.osvAllVersions).toContain("3.4.0");
+      expect(version_info.source_comparison?.osvAllVersions).not.toContain(
+        "2.2.1",
+      );
+    });
+  });
+
   describe("reports built on the same generator", () => {
     const lodashOSV = {
       ...mockOSV,
