@@ -264,6 +264,70 @@ describe("Vulnerabilities list (e2e)", () => {
     });
   });
 
+  describe("a vulnerability found in two versions", () => {
+    // qs 6.0.0 is matched by NVD at 4.0, qs 6.5.0 by OSV at 9.5.
+    const twoVersions = {
+      workspaces: {
+        ".": {
+          Vulnerabilities: [
+            finding("TEST-0004", "qs", "6.0.0", 4.0),
+            {
+              ...finding("TEST-0004", "qs", "6.5.0", 9.5),
+              Sources: ["OSV"],
+            },
+            finding("TEST-0005", "ms", "2.0.0", 7.0),
+          ],
+        },
+      },
+      analysis_info: { status: "success" },
+    };
+
+    interface Merged {
+      Vulnerability: string;
+      Sources: string[];
+      Severity: { Severity: number };
+    }
+
+    const list = async (query: string): Promise<Merged[]> => {
+      await testHelper
+        .getDataSource()
+        .query(
+          `UPDATE result SET result = $1 WHERE plugin = 'vuln-finder' AND "analysisId" = $2`,
+          [JSON.stringify(twoVersions), analysisId],
+        );
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `${url}&${query}`,
+        user.accessToken,
+      );
+      expect(response.statusCode).toBe(200);
+      return response.json().data as Merged[];
+    };
+
+    it("shows the worst severity of its versions", async () => {
+      const findings = await list("sort_by=severity&sort_direction=DESC");
+
+      expect(
+        findings.map((v) => [v.Vulnerability, v.Severity.Severity]),
+      ).toEqual([
+        ["TEST-0004", 9.5],
+        ["TEST-0005", 7.0],
+      ]);
+    });
+
+    it("lists the sources that matched any of its versions", async () => {
+      const findings = await list("sort_by=severity&sort_direction=DESC");
+
+      expect(findings[0]!.Sources).toEqual(["NVD", "OSV"]);
+    });
+
+    it("filters by the worst severity of its versions", async () => {
+      const findings = await list("active_filters=[severity_critical]");
+
+      expect(findings.map((v) => v.Vulnerability)).toEqual(["TEST-0004"]);
+    });
+  });
+
   it("sends only the AI assessments that have a score", async () => {
     const response = await testHelper.makeAuthenticatedRequest(
       "GET",
