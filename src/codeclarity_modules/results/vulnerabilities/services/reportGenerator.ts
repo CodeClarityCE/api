@@ -30,7 +30,7 @@ import type {
   WeaknessInfoReport,
 } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
 
-import { getCVSSNVDInfo, getCVSSOSVInfo } from "./cvssParser";
+import { getCVSSNVDInfo, getCVSSOSVInfo, hasCvssVector } from "./cvssParser";
 import {
   buildAffectedVersionsString,
   extractGCVERanges,
@@ -475,9 +475,12 @@ abstract class BaseReportGenerator {
     const [weaknesses, consequences] = await this.getWeaknessData(vuln);
 
     // Severity (primary then fallback)
+    // A vector from the other source beats a GHSA label, which is kept beside it.
     let severityInfo = await this.getPrimarySeverity(ctx);
-    if (!severityInfo.cvss_2 && !severityInfo.cvss_31 && !severityInfo.cvss_3) {
-      severityInfo = await this.getFallbackSeverity(ctx);
+    if (!hasCvssVector(severityInfo)) {
+      const fallback = await this.getFallbackSeverity(ctx);
+      const ghsa = severityInfo.ghsa ?? fallback.ghsa;
+      severityInfo = ghsa ? { ...fallback, ghsa } : fallback;
     }
 
     return {

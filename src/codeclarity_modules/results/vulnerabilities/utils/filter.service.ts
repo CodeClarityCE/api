@@ -1,12 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
-import {
-  isCriticalSeverity,
-  isHighSeverity,
-  isLowSeverity,
-  isMediumSeverity,
-  isNoneSeverity,
-} from "src/codeclarity_modules/results/utils/utils";
+import { severityBucket } from "src/codeclarity_modules/results/utils/utils";
 import {
   ConflictFlag,
   PatchType,
@@ -139,31 +133,20 @@ export class VulnerabilitiesFilterService {
       vulnerability: VulnerabilityMerged,
       filters: string[],
     ): boolean {
-      if (
-        filters.includes("severity_critical") &&
-        !isCriticalSeverity(vulnerability.Severity.Severity)
-      )
-        return false;
-      if (
-        filters.includes("severity_high") &&
-        !isHighSeverity(vulnerability.Severity.Severity)
-      )
-        return false;
-      if (
-        filters.includes("severity_medium") &&
-        !isMediumSeverity(vulnerability.Severity.Severity)
-      )
-        return false;
-      if (
-        filters.includes("severity_low") &&
-        !isLowSeverity(vulnerability.Severity.Severity)
-      )
-        return false;
-      if (
-        filters.includes("severity_none") &&
-        !isNoneSeverity(vulnerability.Severity.Severity)
-      )
-        return false;
+      const bucket = severityBucket(vulnerability.Severity);
+      for (const filter of [
+        "severity_critical",
+        "severity_high",
+        "severity_medium",
+        "severity_low",
+        "severity_none",
+      ]) {
+        if (
+          filters.includes(filter) &&
+          filter !== `severity_${bucket.toLowerCase()}`
+        )
+          return false;
+      }
       return true;
     }
 

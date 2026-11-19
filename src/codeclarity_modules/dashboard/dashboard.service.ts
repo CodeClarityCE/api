@@ -25,8 +25,8 @@ import {
   Output as SbomOutput,
 } from "src/codeclarity_modules/results/sbom/sbom.types";
 import {
+  severityBucket,
   SeverityClass,
-  severityClass,
 } from "src/codeclarity_modules/results/utils/utils";
 import {
   Output as VulnsOutput,
@@ -215,7 +215,7 @@ export class DashboardService {
       for (const vuln of this.findings([entry])) {
         const severity = vuln.Severity?.Severity;
         weekInfo.summed_severity += severity ?? 0;
-        const key = WEEK_COUNT_KEYS[severityClass(severity)];
+        const key = WEEK_COUNT_KEYS[severityBucket(vuln.Severity)];
         weekInfo[key]++;
       }
     }
@@ -399,7 +399,7 @@ export class DashboardService {
 
     // Counts findings, like the weekly exposure and the results pages do.
     for (const vuln of this.findings(latest)) {
-      const severity_class = severityClass(vuln.Severity?.Severity);
+      const severity_class = severityBucket(vuln.Severity);
       vulns.vulns[vuln.VulnerabilityId] = {
         severity: vuln.Severity?.Severity ?? 0,
         severity_class,

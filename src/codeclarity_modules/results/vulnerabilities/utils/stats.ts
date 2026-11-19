@@ -1,10 +1,7 @@
 import { type Dependency } from "src/codeclarity_modules/results/sbom/sbom.types";
 import {
-  isCriticalSeverity,
-  isHighSeverity,
-  isLowSeverity,
-  isMediumSeverity,
-  isNoneSeverity,
+  hasCvssScore,
+  severityBucket,
 } from "src/codeclarity_modules/results/utils/utils";
 import {
   newVulnerabilityAnalysisStats,
@@ -17,13 +14,18 @@ export type StatsFinding = Pick<
   Vulnerability,
   "VulnerabilityId" | "AffectedDependency" | "AffectedVersion" | "Weaknesses"
 > & {
-  Severity: Pick<
-    Vulnerability["Severity"],
-    | "Severity"
-    | "ConfidentialityImpact"
-    | "IntegrityImpact"
-    | "AvailabilityImpact"
-  > | null;
+  Severity:
+    | (Pick<
+        Vulnerability["Severity"],
+        | "Severity"
+        | "ConfidentialityImpact"
+        | "IntegrityImpact"
+        | "AvailabilityImpact"
+      > &
+        Partial<
+          Pick<Vulnerability["Severity"], "SeverityClass" | "SeverityType">
+        >)
+    | null;
 };
 
 /** SBOM dependency, where PHP SBOMs write lowercase role flags */
@@ -75,7 +77,7 @@ export function computeVulnerabilityStats(
 
   stats.number_of_issues = findings.length;
   for (const finding of findings) {
-    if (finding.Severity !== null) {
+    if (finding.Severity !== null && hasCvssScore(finding.Severity)) {
       sumConfidentiality += getContinuousFromDiscreteCIA(
         finding.Severity.ConfidentialityImpact,
       );
@@ -156,16 +158,14 @@ function incrementOwaspStats(
 /** Increment severity distribution stats based on severity value */
 function incrementSeverityStats(
   stats: VulnerabilityAnalysisStats,
-  severity: { Severity: number } | null | undefined,
+  severity: { Severity: number; SeverityClass?: string } | null | undefined,
 ): void {
-  if (severity === null || severity === undefined) {
-    stats.number_of_none += 1;
-    return;
-  }
-  const severityValue = severity.Severity;
-  if (isNoneSeverity(severityValue)) stats.number_of_none += 1;
-  else if (isLowSeverity(severityValue)) stats.number_of_low += 1;
-  else if (isMediumSeverity(severityValue)) stats.number_of_medium += 1;
-  else if (isHighSeverity(severityValue)) stats.number_of_high += 1;
-  else if (isCriticalSeverity(severityValue)) stats.number_of_critical += 1;
+  const counters = {
+    NONE: "number_of_none",
+    LOW: "number_of_low",
+    MEDIUM: "number_of_medium",
+    HIGH: "number_of_high",
+    CRITICAL: "number_of_critical",
+  } as const;
+  stats[counters[severityBucket(severity)]] += 1;
 }

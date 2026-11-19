@@ -1,7 +1,8 @@
-import type { CVSS2, CVSS3, CVSS31 } from "../../knowledge/cvss.types";
+import type { CVSS2, CVSS3, CVSS4, CVSS31 } from "../../knowledge/cvss.types";
 import type { OwaspTop10Info } from "../../knowledge/owasp/owasp.types";
 import type { PatchInfo } from "../patching/patching.types";
 import type { ParsedGitUrl, StatusError } from "../sbom/sbom.types";
+import type { SourceSeverity } from "../source-comparison/source-match.types";
 
 export interface VulnSourceInfo {
   name: string;
@@ -49,9 +50,12 @@ export interface PackageManagerLink {
 }
 
 export interface SeverityInfo {
+  cvss_4?: CVSS4;
   cvss_31?: CVSS31;
   cvss_3?: CVSS3;
   cvss_2?: CVSS2;
+  /** GHSA's qualitative severity, such as "HIGH"; it has no score. */
+  ghsa?: string;
 }
 
 export interface OwaspInfo {
@@ -189,12 +193,17 @@ export interface Severity {
   ConfidentialityImpactNumerical: number;
   IntegrityImpactNumerical: number;
   AvailabilityImpactNumerical: number;
+  /** Every CVSS vector of the shown record; absent on older analyses. */
+  Vectors?: SourceSeverity[];
 }
 
 export enum SeverityType {
   CvssV2 = "CVSS_V2",
   CvssV3 = "CVSS_V3",
   CvssV31 = "CVSS_V31",
+  CvssV40 = "CVSS_V40",
+  /** GHSA's qualitative label, used when a record has no vector; the score is 0. */
+  Ghsa = "GHSA",
 }
 
 export enum PatchType {

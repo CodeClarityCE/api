@@ -1,6 +1,7 @@
 import {
   ConflictFlag,
   PatchType,
+  SeverityType,
   type VulnerabilityMerged,
 } from "../vulnerabilities.types";
 
@@ -239,7 +240,11 @@ describe("VulnerabilitiesFilterService", () => {
     it("should filter by severity_none", () => {
       const vulnerabilities = [
         createMockVulnerability({
-          Severity: { ...createMockVulnerability().Severity, Severity: 0.0 },
+          Severity: {
+            ...createMockVulnerability().Severity,
+            Severity: 0.0,
+            SeverityClass: "NONE",
+          },
         }),
         createMockVulnerability({
           Severity: { ...createMockVulnerability().Severity, Severity: 5.0 },
@@ -250,6 +255,26 @@ describe("VulnerabilitiesFilterService", () => {
 
       expect(filtered).toHaveLength(1);
       expect(filtered[0]!.Severity.Severity).toBe(0.0);
+    });
+
+    it("filters a GHSA label without a score by its class", () => {
+      const vulnerabilities = [
+        createMockVulnerability({
+          Severity: {
+            ...createMockVulnerability().Severity,
+            Severity: 0,
+            SeverityClass: "CRITICAL",
+            SeverityType: SeverityType.Ghsa,
+          },
+        }),
+      ];
+
+      expect(
+        service.filter(vulnerabilities, "", ["severity_critical"])[0],
+      ).toHaveLength(1);
+      expect(
+        service.filter(vulnerabilities, "", ["severity_none"])[0],
+      ).toHaveLength(0);
     });
 
     it("should filter by OWASP Top 10 categories", () => {

@@ -11,6 +11,7 @@ export interface SourceAffected {
   universal: boolean;
 }
 
+// A GHSA label has type "GHSA", a class and a zero score.
 export interface SourceSeverity {
   score: number;
   type: string;
@@ -26,6 +27,8 @@ export interface SourceMatch {
   affected: SourceAffected;
   evidence: string;
   severity: SourceSeverity | null;
+  /** Every CVSS vector of the record; absent on older analyses. */
+  vectors?: SourceSeverity[];
   published?: string;
   modified?: string;
 }
