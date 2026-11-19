@@ -617,6 +617,7 @@ describe("FindingsController", () => {
         baseParams.user,
         baseParams.vulnerability_id,
         baseParams.workspace,
+        { dependency: undefined, version: undefined },
       );
       expect(result).toEqual({
         data: mockVulnerabilityResponse,
