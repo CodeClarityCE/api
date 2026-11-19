@@ -74,6 +74,8 @@ export const errorMessages: Record<string, string> = {
   RepositoryCannotBeFound:
     "The repository that you are trying to import does not exist in the integration.",
   IntegrationNotSupported: "The integration is not yet supported.",
+  ImportTargetNotAllowed:
+    "The repository url points at an internal or reserved address.",
   IntegrationDoesNotExist: "The integration does not exist.",
   IntegrationTokenExpired:
     "The requested action cannot be performed because the token has expired.",
@@ -300,6 +302,20 @@ export class IntegrationNotSupported extends PublicAPIError {
       IntegrationNotSupported.errorCode,
       IntegrationNotSupported.errorMessage,
       IntegrationNotSupported.statusCode,
+      cause,
+    );
+  }
+}
+
+export class ImportTargetNotAllowed extends PublicAPIError {
+  static errorCode = "ImportTargetNotAllowed";
+  static errorMessage = errorMessages[ImportTargetNotAllowed.errorCode]!;
+  static statusCode = 400;
+  constructor(cause?: unknown) {
+    super(
+      ImportTargetNotAllowed.errorCode,
+      ImportTargetNotAllowed.errorMessage,
+      ImportTargetNotAllowed.statusCode,
       cause,
     );
   }

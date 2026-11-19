@@ -29,6 +29,7 @@ import {
   TypedPaginatedData,
 } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
+import { assertPublicUrl } from "src/utils/outbound-url";
 import { validateAndJoinPath } from "src/utils/path-validator";
 
 import { AnalysesRepository } from "../analyses/analyses.repository";
@@ -101,15 +102,20 @@ export class ProjectService {
    * Check if a repository URL is publicly accessible and create a fallback RepositoryCache
    * @param url The repository URL
    * @param serviceDomain The domain (e.g., 'github.com', 'gitlab.com')
+   * @param integrationHost The integration's own host, allowed on a private address
    * @returns RepositoryCache for the public repository
+   * @throws {ImportTargetNotAllowed} If the url points at an internal address
    * @throws The original error if the repository is not public
    */
   private async checkPublicRepositoryAccess(
     url: string,
     serviceDomain: string,
+    integrationHost: string,
     originalError: Error,
   ): Promise<RepositoryCache> {
-    const response = await fetch(url);
+    const target = await assertPublicUrl(url, [integrationHost]);
+    // A redirect could lead to an internal address, so it counts as not public
+    const response = await fetch(target, { redirect: "manual" });
     if (!response.ok) {
       throw originalError;
     }
@@ -203,6 +209,7 @@ export class ProjectService {
           repo = await this.checkPublicRepositoryAccess(
             projectData.url,
             "gitlab.com",
+            integration.service_domain,
             err,
           );
         }
