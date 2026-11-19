@@ -324,6 +324,15 @@ export class VulnerabilitiesService {
       if (vuln) {
         vuln.Affected.push(affected);
         if (affected.Disputed) vuln.Disputed = true;
+        // A grouped vulnerability lists every matching source and its worst severity.
+        for (const source of finding.Sources) {
+          if (!vuln.Sources.includes(source)) vuln.Sources.push(source);
+        }
+        if (
+          (finding.Severity?.Severity ?? 0) > (vuln.Severity?.Severity ?? 0)
+        ) {
+          vuln.Severity = finding.Severity;
+        }
         findingsMerged.set(finding.VulnerabilityId, vuln);
       } else {
         const epss = await this.epssRepository.getByCVE(
@@ -331,7 +340,7 @@ export class VulnerabilitiesService {
         );
         const mergedFinding: VulnerabilityMerged = {
           Id: finding.Id,
-          Sources: finding.Sources,
+          Sources: [...finding.Sources],
           Vulnerability: finding.VulnerabilityId,
           Severity: finding.Severity,
           Affected: [affected],
@@ -484,17 +493,13 @@ export class VulnerabilitiesService {
         }
       }
 
-      // Fetch GCVE data from knowledge DB to add source + VLAI
+      // Fetch GCVE data from knowledge DB to add VLAI
       if (isCve) {
         const gcveVuln = await this.gcveRepository.getVulnByCVEId(
           finding.Vulnerability,
           { includeRetired: true },
         );
         if (gcveVuln) {
-          // Add GCVE to sources if not already present
-          if (!finding.Sources.includes(Source.Gcve)) {
-            finding.Sources.push(Source.Gcve);
-          }
           // Add VLAI score if available and not already present
           if (
             gcveVuln.vlai_score &&
