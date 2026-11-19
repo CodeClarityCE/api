@@ -316,10 +316,14 @@ export class VulnerabilitiesService {
       if (finding.PatchType) {
         affected.PatchType = finding.PatchType;
       }
+      if (finding.Disputed === true) {
+        affected.Disputed = true;
+      }
       // if vuln already in map
       const vuln = findingsMerged.get(finding.VulnerabilityId);
       if (vuln) {
         vuln.Affected.push(affected);
+        if (affected.Disputed) vuln.Disputed = true;
         findingsMerged.set(finding.VulnerabilityId, vuln);
       } else {
         const epss = await this.epssRepository.getByCVE(
@@ -342,6 +346,7 @@ export class VulnerabilitiesService {
         if (finding.Weaknesses) {
           mergedFinding.Weaknesses = finding.Weaknesses;
         }
+        if (affected.Disputed) mergedFinding.Disputed = true;
         for (const [source, match] of [
           [Source.Nvd, finding.NVDMatch],
           [Source.Osv, finding.OSVMatch],

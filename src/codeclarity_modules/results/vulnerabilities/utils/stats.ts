@@ -15,7 +15,11 @@ import {
 /** The finding fields the stats read; a null Severity means no severity data. */
 export type StatsFinding = Pick<
   Vulnerability,
-  "VulnerabilityId" | "AffectedDependency" | "AffectedVersion" | "Weaknesses"
+  | "VulnerabilityId"
+  | "AffectedDependency"
+  | "AffectedVersion"
+  | "Weaknesses"
+  | "Disputed"
 > & {
   Severity: Pick<
     Vulnerability["Severity"],
@@ -102,6 +106,7 @@ export function computeVulnerabilityStats(
   }
 
   countDependencyRoles(stats, findings, dependencies);
+  countGradeInputs(stats, findings);
 
   stats.number_of_vulnerable_dependencies = encounteredDeps.size;
   stats.number_of_vulnerabilities = encounteredVulns.size;
@@ -112,6 +117,29 @@ export function computeVulnerabilityStats(
     scored > 0 ? sumConfidentiality / scored : 0;
   stats.mean_integrity_impact = scored > 0 ? sumIntegrity / scored : 0;
   return stats;
+}
+
+/** Count disputed vulnerabilities, and the grade inputs without them. */
+function countGradeInputs(
+  stats: VulnerabilityAnalysisStats,
+  findings: StatsFinding[],
+): void {
+  const graded = newVulnerabilityAnalysisStats();
+  const disputed = new Set<string>();
+  const seen = new Set<string>();
+  for (const finding of findings) {
+    if (finding.Disputed === true) {
+      disputed.add(finding.VulnerabilityId);
+      continue;
+    }
+    if (seen.has(finding.VulnerabilityId)) continue;
+    seen.add(finding.VulnerabilityId);
+    incrementSeverityStats(graded, finding.Severity);
+  }
+  stats.number_of_disputed = disputed.size;
+  stats.graded_number_of_vulnerabilities = seen.size;
+  stats.graded_number_of_critical = graded.number_of_critical;
+  stats.graded_number_of_high = graded.number_of_high;
 }
 
 /** Count each vulnerable dependency version by its role in the SBOM. */
