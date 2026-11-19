@@ -39,6 +39,18 @@ const snapshot = {
   ],
 };
 
+// Keys in jsonb order (shorter first), as stored results give them back.
+const EVALUATED = {
+  exact: [],
+  ranges: [{ fixed: "2.0.0", introduced: "1.0.0" }],
+  universal: false,
+};
+const UNAFFECTED = {
+  exact: [],
+  ranges: [{ fixed: "2.0.0", introduced: "1.3.0" }],
+  universal: false,
+};
+
 const withVerdicts = {
   workspaces: {
     ".": {
@@ -54,6 +66,34 @@ const withVerdicts = {
             source: "gcve",
             verdict: "stale_or_failed",
             evidence: { source_status: "stale" },
+          },
+        ]),
+        finding("CVE-2099-0003", "left-pad", "1.3.0", [
+          {
+            source: "osv",
+            verdict: "names_another_product",
+            evidence: {
+              record_ids: ["GHSA-test-0004"],
+              names: [{ package: "left-pad", ecosystem: "PyPI" }],
+            },
+          },
+          {
+            source: "nvd",
+            verdict: "retired",
+            evidence: {
+              record_ids: ["CVE-2099-0003"],
+              retired_reason: "rejected",
+              retired_at: "2099-01-02T00:00:00Z",
+            },
+          },
+          {
+            source: "gcve",
+            verdict: "version_excluded",
+            evidence: {
+              record_ids: ["GCVE-1-2099-0003"],
+              evaluated: EVALUATED,
+              unaffected: UNAFFECTED,
+            },
           },
         ]),
       ],
@@ -80,6 +120,14 @@ const withoutVerdicts = {
   analysis_info: { status: "success" },
 };
 
+const NO_NEW_EVIDENCE = {
+  evidence_evaluated: null,
+  evidence_unaffected: null,
+  evidence_retired_reason: null,
+  evidence_retired_at: null,
+  evidence_names: null,
+};
+
 // Known-good rows for the analysis above, one per instance and source.
 const ROWS = [
   {
@@ -93,6 +141,7 @@ const ROWS = [
     source_stale_or_failed: false,
     evidence_record_ids: "GHSA-test-0001;GHSA-test-0002",
     evidence_source_status: null,
+    ...NO_NEW_EVIDENCE,
   },
   {
     workspace: ".",
@@ -105,6 +154,7 @@ const ROWS = [
     source_stale_or_failed: false,
     evidence_record_ids: null,
     evidence_source_status: null,
+    ...NO_NEW_EVIDENCE,
   },
   {
     workspace: ".",
@@ -117,7 +167,44 @@ const ROWS = [
     source_stale_or_failed: true,
     evidence_record_ids: null,
     evidence_source_status: "stale",
+    ...NO_NEW_EVIDENCE,
   },
+  ...(["osv", "nvd", "gcve"] as const).map((name) => ({
+    workspace: ".",
+    vulnerability_id: "CVE-2099-0003",
+    dependency: "left-pad",
+    version: "1.3.0",
+    source: name,
+    verdict: {
+      osv: "names_another_product",
+      nvd: "retired",
+      gcve: "version_excluded",
+    }[name],
+    source_status_at_analysis: name === "gcve" ? "stale" : "healthy",
+    source_stale_or_failed: name === "gcve",
+    evidence_record_ids: {
+      osv: "GHSA-test-0004",
+      nvd: "CVE-2099-0003",
+      gcve: "GCVE-1-2099-0003",
+    }[name],
+    evidence_source_status: null,
+    ...NO_NEW_EVIDENCE,
+    ...{
+      osv: {
+        evidence_names: JSON.stringify([
+          { package: "left-pad", ecosystem: "PyPI" },
+        ]),
+      },
+      nvd: {
+        evidence_retired_reason: "rejected",
+        evidence_retired_at: "2099-01-02T00:00:00Z",
+      },
+      gcve: {
+        evidence_evaluated: JSON.stringify(EVALUATED),
+        evidence_unaffected: JSON.stringify(UNAFFECTED),
+      },
+    }[name],
+  })),
   {
     workspace: "packages/web",
     vulnerability_id: "CVE-2099-0002",
@@ -129,24 +216,51 @@ const ROWS = [
     source_stale_or_failed: false,
     evidence_record_ids: "GHSA-test-0003",
     evidence_source_status: null,
+    ...NO_NEW_EVIDENCE,
   },
 ];
 
 const CSV = [
-  "workspace,vulnerability_id,dependency,version,source,verdict,source_status_at_analysis,source_stale_or_failed,evidence_record_ids,evidence_source_status",
-  ".,CVE-2099-0001,lodash,1.1.0,osv,matched,healthy,false,GHSA-test-0001;GHSA-test-0002,",
-  ".,CVE-2099-0001,lodash,1.1.0,nvd,no_record,healthy,false,,",
-  ".,CVE-2099-0001,lodash,1.1.0,gcve,stale_or_failed,stale,true,,stale",
-  "packages/web,CVE-2099-0002,minimist,0.0.8,osv,matched,healthy,false,GHSA-test-0003,",
+  "workspace,vulnerability_id,dependency,version,source,verdict,source_status_at_analysis,source_stale_or_failed,evidence_record_ids,evidence_source_status,evidence_evaluated,evidence_unaffected,evidence_retired_reason,evidence_retired_at,evidence_names",
+  ".,CVE-2099-0001,lodash,1.1.0,osv,matched,healthy,false,GHSA-test-0001;GHSA-test-0002,,,,,,",
+  ".,CVE-2099-0001,lodash,1.1.0,nvd,no_record,healthy,false,,,,,,,",
+  ".,CVE-2099-0001,lodash,1.1.0,gcve,stale_or_failed,stale,true,,stale,,,,,",
+  '.,CVE-2099-0003,left-pad,1.3.0,osv,names_another_product,healthy,false,GHSA-test-0004,,,,,,"[{""package"":""left-pad"",""ecosystem"":""PyPI""}]"',
+  ".,CVE-2099-0003,left-pad,1.3.0,nvd,retired,healthy,false,CVE-2099-0003,,,,rejected,2099-01-02T00:00:00Z,",
+  '.,CVE-2099-0003,left-pad,1.3.0,gcve,version_excluded,stale,true,GCVE-1-2099-0003,,"{""exact"":[],""ranges"":[{""fixed"":""2.0.0"",""introduced"":""1.0.0""}],""universal"":false}","{""exact"":[],""ranges"":[{""fixed"":""2.0.0"",""introduced"":""1.3.0""}],""universal"":false}",,,',
+  "packages/web,CVE-2099-0002,minimist,0.0.8,osv,matched,healthy,false,GHSA-test-0003,,,,,,",
   "",
 ].join("\r\n");
+
+// Splits one CSV line into cells, undoing the quoting of cells with commas or quotes.
+function splitCsvLine(line: string): string[] {
+  const cells: string[] = [];
+  let cell = "";
+  let quoted = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]!;
+    if (quoted && char === '"' && line[i + 1] === '"') {
+      cell += '"';
+      i++;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (char === "," && !quoted) {
+      cells.push(cell);
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+  cells.push(cell);
+  return cells;
+}
 
 // Parses the export's CSV back into rows typed like the JSON rows.
 function parseCsv(text: string): Record<string, unknown>[] {
   const [header, ...lines] = text.trimEnd().split("\r\n");
   const columns = header!.split(",");
   return lines.map((line) => {
-    const cells = line.split(",");
+    const cells = splitCsvLine(line);
     return Object.fromEntries(
       columns.map((column, i) => {
         const cell = cells[i]!;
@@ -250,7 +364,9 @@ describe("Source verdict export (e2e)", () => {
       "format=json&workspace=packages/web",
     );
 
-    expect(response.json().rows).toEqual([ROWS[3]]);
+    expect(response.json().rows).toEqual(
+      ROWS.filter((row) => row.workspace === "packages/web"),
+    );
   });
 
   it.each(["csv", "json"])(
