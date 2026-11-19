@@ -20,6 +20,11 @@ const finding = (
   ...(verdicts ? { SourceVerdicts: verdicts } : {}),
 });
 
+const withEcosystem = <T extends object>(ecosystem: string, f: T) => ({
+  ...f,
+  Ecosystem: ecosystem,
+});
+
 const source = (name: string, status: string) => ({
   source: name,
   status,
@@ -68,34 +73,37 @@ const withVerdicts = {
             evidence: { source_status: "stale" },
           },
         ]),
-        finding("CVE-2099-0003", "left-pad", "1.3.0", [
-          {
-            source: "osv",
-            verdict: "names_another_product",
-            evidence: {
-              record_ids: ["GHSA-test-0004"],
-              names: [{ package: "left-pad", ecosystem: "PyPI" }],
+        withEcosystem(
+          "npm",
+          finding("CVE-2099-0003", "left-pad", "1.3.0", [
+            {
+              source: "osv",
+              verdict: "names_another_product",
+              evidence: {
+                record_ids: ["GHSA-test-0004"],
+                names: [{ package: "left-pad", ecosystem: "PyPI" }],
+              },
             },
-          },
-          {
-            source: "nvd",
-            verdict: "retired",
-            evidence: {
-              record_ids: ["CVE-2099-0003"],
-              retired_reason: "rejected",
-              retired_at: "2099-01-02T00:00:00Z",
+            {
+              source: "nvd",
+              verdict: "retired",
+              evidence: {
+                record_ids: ["CVE-2099-0003"],
+                retired_reason: "rejected",
+                retired_at: "2099-01-02T00:00:00Z",
+              },
             },
-          },
-          {
-            source: "gcve",
-            verdict: "version_excluded",
-            evidence: {
-              record_ids: ["GCVE-1-2099-0003"],
-              evaluated: EVALUATED,
-              unaffected: UNAFFECTED,
+            {
+              source: "gcve",
+              verdict: "version_excluded",
+              evidence: {
+                record_ids: ["GCVE-1-2099-0003"],
+                evaluated: EVALUATED,
+                unaffected: UNAFFECTED,
+              },
             },
-          },
-        ]),
+          ]),
+        ),
       ],
     },
     "packages/web": {
@@ -120,6 +128,24 @@ const withoutVerdicts = {
   analysis_info: { status: "success" },
 };
 
+// An analysis whose snapshot did not record the sources' state.
+const withoutSnapshot = {
+  workspaces: {
+    ".": {
+      Vulnerabilities: [
+        finding("CVE-2099-0001", "lodash", "1.1.0", [
+          {
+            source: "osv",
+            verdict: "stale_or_failed",
+            evidence: { source_status: "unknown" },
+          },
+        ]),
+      ],
+    },
+  },
+  analysis_info: { status: "success" },
+};
+
 const NO_NEW_EVIDENCE = {
   evidence_evaluated: null,
   evidence_unaffected: null,
@@ -135,6 +161,7 @@ const ROWS = [
     vulnerability_id: "CVE-2099-0001",
     dependency: "lodash",
     version: "1.1.0",
+    ecosystem: null,
     source: "osv",
     verdict: "matched",
     source_status_at_analysis: "healthy",
@@ -148,6 +175,7 @@ const ROWS = [
     vulnerability_id: "CVE-2099-0001",
     dependency: "lodash",
     version: "1.1.0",
+    ecosystem: null,
     source: "nvd",
     verdict: "no_record",
     source_status_at_analysis: "healthy",
@@ -161,6 +189,7 @@ const ROWS = [
     vulnerability_id: "CVE-2099-0001",
     dependency: "lodash",
     version: "1.1.0",
+    ecosystem: null,
     source: "gcve",
     verdict: "stale_or_failed",
     source_status_at_analysis: "stale",
@@ -174,6 +203,7 @@ const ROWS = [
     vulnerability_id: "CVE-2099-0003",
     dependency: "left-pad",
     version: "1.3.0",
+    ecosystem: "npm",
     source: name,
     verdict: {
       osv: "names_another_product",
@@ -210,6 +240,7 @@ const ROWS = [
     vulnerability_id: "CVE-2099-0002",
     dependency: "minimist",
     version: "0.0.8",
+    ecosystem: null,
     source: "osv",
     verdict: "matched",
     source_status_at_analysis: "healthy",
@@ -221,14 +252,14 @@ const ROWS = [
 ];
 
 const CSV = [
-  "workspace,vulnerability_id,dependency,version,source,verdict,source_status_at_analysis,source_stale_or_failed,evidence_record_ids,evidence_source_status,evidence_evaluated,evidence_unaffected,evidence_retired_reason,evidence_retired_at,evidence_names",
-  ".,CVE-2099-0001,lodash,1.1.0,osv,matched,healthy,false,GHSA-test-0001;GHSA-test-0002,,,,,,",
-  ".,CVE-2099-0001,lodash,1.1.0,nvd,no_record,healthy,false,,,,,,,",
-  ".,CVE-2099-0001,lodash,1.1.0,gcve,stale_or_failed,stale,true,,stale,,,,,",
-  '.,CVE-2099-0003,left-pad,1.3.0,osv,names_another_product,healthy,false,GHSA-test-0004,,,,,,"[{""package"":""left-pad"",""ecosystem"":""PyPI""}]"',
-  ".,CVE-2099-0003,left-pad,1.3.0,nvd,retired,healthy,false,CVE-2099-0003,,,,rejected,2099-01-02T00:00:00Z,",
-  '.,CVE-2099-0003,left-pad,1.3.0,gcve,version_excluded,stale,true,GCVE-1-2099-0003,,"{""exact"":[],""ranges"":[{""fixed"":""2.0.0"",""introduced"":""1.0.0""}],""universal"":false}","{""exact"":[],""ranges"":[{""fixed"":""2.0.0"",""introduced"":""1.3.0""}],""universal"":false}",,,',
-  "packages/web,CVE-2099-0002,minimist,0.0.8,osv,matched,healthy,false,GHSA-test-0003,,,,,,",
+  "workspace,vulnerability_id,dependency,version,ecosystem,source,verdict,source_status_at_analysis,source_stale_or_failed,evidence_record_ids,evidence_source_status,evidence_evaluated,evidence_unaffected,evidence_retired_reason,evidence_retired_at,evidence_names",
+  ".,CVE-2099-0001,lodash,1.1.0,,osv,matched,healthy,false,GHSA-test-0001;GHSA-test-0002,,,,,,",
+  ".,CVE-2099-0001,lodash,1.1.0,,nvd,no_record,healthy,false,,,,,,,",
+  ".,CVE-2099-0001,lodash,1.1.0,,gcve,stale_or_failed,stale,true,,stale,,,,,",
+  '.,CVE-2099-0003,left-pad,1.3.0,npm,osv,names_another_product,healthy,false,GHSA-test-0004,,,,,,"[{""package"":""left-pad"",""ecosystem"":""PyPI""}]"',
+  ".,CVE-2099-0003,left-pad,1.3.0,npm,nvd,retired,healthy,false,CVE-2099-0003,,,,rejected,2099-01-02T00:00:00Z,",
+  '.,CVE-2099-0003,left-pad,1.3.0,npm,gcve,version_excluded,stale,true,GCVE-1-2099-0003,,"{""exact"":[],""ranges"":[{""fixed"":""2.0.0"",""introduced"":""1.0.0""}],""universal"":false}","{""exact"":[],""ranges"":[{""fixed"":""2.0.0"",""introduced"":""1.3.0""}],""universal"":false}",,,',
+  "packages/web,CVE-2099-0002,minimist,0.0.8,,osv,matched,healthy,false,GHSA-test-0003,,,,,,",
   "",
 ].join("\r\n");
 
@@ -278,6 +309,7 @@ describe("Source verdict export (e2e)", () => {
   let base: string;
   let withId: string;
   let withoutId: string;
+  let unknownId: string;
 
   beforeAll(async () => {
     await testHelper.setupTestApp();
@@ -306,9 +338,11 @@ describe("Source verdict export (e2e)", () => {
     const data = testHelper.getDataSource();
     withId = randomUUID();
     withoutId = randomUUID();
+    unknownId = randomUUID();
     for (const [id, output] of [
       [withId, withVerdicts],
       [withoutId, withoutVerdicts],
+      [unknownId, withoutSnapshot],
     ] as const) {
       await data.query(
         `INSERT INTO analysis (id, created_on, config, status, steps, branch, "projectId", "organizationId")
@@ -378,6 +412,19 @@ describe("Source verdict export (e2e)", () => {
       expect(response.json().error_code).toBe("SourceVerdictsNotAvailable");
     },
   );
+
+  it("flags a source of unknown state as stale or failed, as its verdict does", async () => {
+    const response = await exportOf(unknownId, "format=json");
+
+    expect(response.json().rows).toEqual([
+      expect.objectContaining({
+        source: "osv",
+        verdict: "stale_or_failed",
+        source_status_at_analysis: "unknown",
+        source_stale_or_failed: true,
+      }),
+    ]);
+  });
 
   it("rejects an unknown format", async () => {
     const response = await exportOf(withId, "format=xlsx");

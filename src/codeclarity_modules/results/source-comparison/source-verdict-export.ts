@@ -15,6 +15,7 @@ export const SOURCE_VERDICT_COLUMNS: readonly string[] = [
   "vulnerability_id",
   "dependency",
   "version",
+  "ecosystem",
   "source",
   "verdict",
   "source_status_at_analysis",
@@ -67,10 +68,12 @@ export function sourceVerdictExport(
           vulnerability_id: vuln.VulnerabilityId,
           dependency: vuln.AffectedDependency,
           version: vuln.AffectedVersion,
+          ecosystem: vuln.Ecosystem ?? null,
           source: verdict.source,
           verdict: verdict.verdict,
           source_status_at_analysis: status,
-          source_stale_or_failed: status === "stale" || status === "failed",
+          // vuln-finder gives stale or failed for any state but healthy, unknown included.
+          source_stale_or_failed: status !== "healthy",
         };
         for (const field of SOURCE_VERDICT_EVIDENCE_FIELDS) {
           row[`evidence_${field}`] = cell(verdict.evidence?.[field]);
