@@ -1,6 +1,10 @@
 import { randomUUID } from "crypto";
 
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
+import { NVDRepository } from "../../src/codeclarity_modules/knowledge/nvd/nvd.repository";
+import { OSVRepository } from "../../src/codeclarity_modules/knowledge/osv/osv.repository";
+import { PackageRepository } from "../../src/codeclarity_modules/knowledge/package/package.repository";
+import { NVDReportGenerator } from "../../src/codeclarity_modules/results/vulnerabilities/services/reportGenerator";
 import { testHelper, type TestUser } from "../utils/integration-test-helper";
 
 // One finding per dependency; ids are neither CVE nor GHSA so no knowledge lookups run.
@@ -104,7 +108,7 @@ const patchingOutput = {
   analysis_info: { status: "success" },
 };
 
-// Both suites share one app.
+// One app for the file: a second setup would register its metrics twice.
 beforeAll(async () => {
   await testHelper.setupTestApp();
 });
@@ -474,5 +478,193 @@ describe("Vulnerability stats with a policy exclusion (e2e)", () => {
       criticalDiff: 0,
       listTotal: 3,
     });
+  });
+});
+
+// An SBOM entry for one installed version.
+const sbomEntry = (name: string, version: string) => ({
+  [name]: {
+    [version]: {
+      Key: `${name}@${version}`,
+      Requires: {},
+      Dependencies: {},
+      Optional: false,
+      Bundled: false,
+      Dev: false,
+      Prod: true,
+      Direct: true,
+      Transitive: false,
+      Licenses: ["MIT"],
+    },
+  },
+});
+
+const sbomWorkspace = (name: string, version: string) => ({
+  dependencies: sbomEntry(name, version),
+  start: { dependencies: [{ name, version, constraint: version }] },
+});
+
+// The root and packages/app install different lodash versions with their own findings.
+// packages/docs has an SBOM but no vuln-finder workspace.
+const multiWorkspaceSbom = {
+  workspaces: {
+    ".": sbomWorkspace("lodash", "4.17.20"),
+    "packages/app": sbomWorkspace("lodash", "4.17.21"),
+    "packages/docs": sbomWorkspace("lodash", "4.17.21"),
+  },
+  analysis_info: {
+    status: "success",
+    project_name: "sample",
+    package_manager: "NPM",
+  },
+};
+
+const multiWorkspaceVulns = {
+  workspaces: {
+    ".": { Vulnerabilities: [finding("TEST-0001", "lodash", "4.17.20", 5.0)] },
+    "packages/app": {
+      Vulnerabilities: [
+        finding("TEST-0101", "lodash", "4.17.21", 6.0),
+        finding("TEST-0102", "lodash", "4.17.21", 4.0),
+      ],
+    },
+  },
+  analysis_info: { status: "success" },
+};
+
+describe("Vulnerability details and dependencies of a workspace (e2e)", () => {
+  let user: TestUser;
+  let analysisUrl: string;
+  let genReport: jest.SpyInstance;
+
+  beforeEach(async () => {
+    await testHelper.cleanDatabase();
+    user = await testHelper.createTestUser({
+      email: "admin@workspaces.com",
+      role: MemberRole.ADMIN,
+    });
+    const orgId = user.organization.id;
+    const project = await testHelper.makeAuthenticatedRequest(
+      "POST",
+      `/org/${orgId}/projects`,
+      user.accessToken,
+      { name: "Monorepo", description: "Has workspaces" },
+    );
+    const projectId = project.json().id as string;
+
+    const data = testHelper.getDataSource();
+    const analysisId = randomUUID();
+    await data.query(
+      `INSERT INTO analysis (id, created_on, config, status, steps, branch, "projectId", "organizationId")
+       VALUES ($1, now(), '{}', 'completed', '[]', 'main', $2, $3)`,
+      [analysisId, projectId, orgId],
+    );
+    for (const [plugin, output] of [
+      ["vuln-finder", multiWorkspaceVulns],
+      ["js-sbom", multiWorkspaceSbom],
+    ] as const) {
+      await data.query(
+        `INSERT INTO result (result, plugin, created_on, "analysisId") VALUES ($1, $2, now(), $3)`,
+        [JSON.stringify(output), plugin, analysisId],
+      );
+    }
+    analysisUrl = `/org/${orgId}/projects/${projectId}/analysis/${analysisId}`;
+
+    // Knowledge records are stubbed: these tests are about the workspace only.
+    const app = testHelper.getApp();
+    jest
+      .spyOn(app.get(NVDRepository), "getVulnWithoutFailing")
+      .mockResolvedValue({ cve_id: "stub" } as never);
+    jest
+      .spyOn(app.get(OSVRepository), "getVulnByOSVIDWithoutFailing")
+      .mockResolvedValue(null);
+    jest
+      .spyOn(app.get(PackageRepository), "getVersionInfo")
+      .mockRejectedValue(new Error("not in knowledge"));
+    genReport = jest
+      .spyOn(app.get(NVDReportGenerator), "genReport")
+      .mockResolvedValue({} as never);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  const get = (path: string) =>
+    testHelper.makeAuthenticatedRequest(
+      "GET",
+      `${analysisUrl}${path}`,
+      user.accessToken,
+    );
+
+  it("builds the detail from the selected workspace's finding and dependency", async () => {
+    const response = await get(
+      "/vulnerabilities/vulnerability/TEST-0101?workspace=packages/app",
+    );
+
+    expect(response.statusCode).toBe(200);
+    const [finding, , dependency] = genReport.mock.calls[0] as [
+      { VulnerabilityId: string; AffectedVersion: string },
+      string,
+      { Key: string },
+    ];
+    expect(finding.VulnerabilityId).toBe("TEST-0101");
+    expect(finding.AffectedVersion).toBe("4.17.21");
+    expect(dependency.Key).toBe("lodash@4.17.21");
+  });
+
+  it("does not find another workspace's finding", async () => {
+    const response = await get(
+      "/vulnerabilities/vulnerability/TEST-0101?workspace=.",
+    );
+
+    expect(response.statusCode).toBe(404);
+    expect(genReport).not.toHaveBeenCalled();
+  });
+
+  it("rejects a detail request for an unknown workspace", async () => {
+    const response = await get(
+      "/vulnerabilities/vulnerability/TEST-0101?workspace=packages/missing",
+    );
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()["error_code"]).toBe("UnknownWorkspace");
+  });
+
+  const dependencyOf = (workspace: string, dependency: string) =>
+    get(
+      `/sbom/dependency?workspace=${encodeURIComponent(workspace)}&dependency=${encodeURIComponent(dependency)}`,
+    );
+
+  it("lists the selected workspace's findings on a dependency", async () => {
+    const response = await dependencyOf("packages/app", "lodash@4.17.21");
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json() as {
+      data: { vulnerabilities: string[]; severity_dist: { medium: number } };
+    };
+    expect(body.data.vulnerabilities).toEqual(["TEST-0101", "TEST-0102"]);
+    expect(body.data.severity_dist.medium).toBe(2);
+  });
+
+  it("lists the root workspace's findings on its own dependency", async () => {
+    const response = await dependencyOf(".", "lodash@4.17.20");
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().data.vulnerabilities).toEqual(["TEST-0001"]);
+  });
+
+  it("rejects a dependency request for an unknown workspace", async () => {
+    const response = await dependencyOf("packages/missing", "lodash@4.17.21");
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()["error_code"]).toBe("UnknownWorkspace");
+  });
+
+  it("rejects a workspace the vulnerability results do not have", async () => {
+    const response = await dependencyOf("packages/docs", "lodash@4.17.21");
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()["error_code"]).toBe("UnknownWorkspace");
   });
 });
