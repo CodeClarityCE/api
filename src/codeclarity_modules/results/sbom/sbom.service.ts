@@ -49,6 +49,17 @@ function notAString(...params: string[]): ValidationFailed {
   );
 }
 
+// Returns the two query values once both are checked to be strings.
+function requireStringParams(
+  workspace: unknown,
+  dependency: unknown,
+): { workspace: string; dependency: string } {
+  if (typeof workspace !== "string" || typeof dependency !== "string") {
+    throw notAString("workspace", "dependency");
+  }
+  return { workspace, dependency };
+}
+
 /** Query options for SBOM list endpoint */
 export interface SbomQueryOptions {
   workspace: string;
@@ -403,9 +414,7 @@ export class SBOMService {
     dependency: string,
     user: AuthenticatedUser,
   ): Promise<DependencyDetails> {
-    if (typeof workspace !== "string" || typeof dependency !== "string") {
-      throw notAString("workspace", "dependency");
-    }
+    ({ workspace, dependency } = requireStringParams(workspace, dependency));
     await this.analysisResultsService.checkAccess(
       orgId,
       projectId,
@@ -458,9 +467,7 @@ export class SBOMService {
     dependency: string,
     user: AuthenticatedUser,
   ): Promise<GraphDependency[]> {
-    if (typeof workspace !== "string" || typeof dependency !== "string") {
-      throw notAString("workspace", "dependency");
-    }
+    ({ workspace, dependency } = requireStringParams(workspace, dependency));
     await this.analysisResultsService.checkAccess(
       orgId,
       projectId,

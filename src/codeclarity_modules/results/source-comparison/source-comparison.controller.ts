@@ -26,10 +26,11 @@ enum VerdictExportFormat {
   Json = "json",
 }
 
-const CONTENT_TYPES: Record<VerdictExportFormat, string> = {
+// Constant literals, so each response's content type is known statically.
+const CONTENT_TYPES = {
   csv: "text/csv; charset=utf-8",
   json: "application/json; charset=utf-8",
-};
+} as const satisfies Record<VerdictExportFormat, string>;
 
 @ApiTags("Results - Knowledge source comparison")
 @Controller("/org/:org_id/projects/:project_id/analysis")
@@ -92,10 +93,10 @@ export class SourceComparisonController {
       "content-disposition",
       `attachment; filename="source-verdicts-${safeId}.${format}"`,
     );
-    // Literal content types so the body is never served as HTML.
+    // Fixed content types so the body is never served as HTML.
     if (format === VerdictExportFormat.Csv) {
       await reply
-        .header("content-type", "text/csv; charset=utf-8")
+        .header("content-type", CONTENT_TYPES.csv)
         .send(
           encodeCsvHeader(columns) +
             rows.map((row) => encodeCsvRow(columns, row)).join(""),
@@ -103,7 +104,7 @@ export class SourceComparisonController {
       return;
     }
     await reply
-      .header("content-type", "application/json; charset=utf-8")
+      .header("content-type", CONTENT_TYPES.json)
       .send(JSON.stringify({ analysis_id: safeId, columns, rows }));
   }
 }

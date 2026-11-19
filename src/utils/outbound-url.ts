@@ -4,7 +4,7 @@ import { BlockList, isIP } from "net";
 import { ImportTargetNotAllowed } from "src/types/error.types";
 
 // Loopback, private, link-local (cloud metadata), shared and reserved ranges.
-const refused = new BlockList();
+const reservedRanges = new BlockList();
 for (const [network, prefix] of [
   ["0.0.0.0", 8],
   ["10.0.0.0", 8],
@@ -18,7 +18,7 @@ for (const [network, prefix] of [
   ["224.0.0.0", 4],
   ["240.0.0.0", 4],
 ] as const) {
-  refused.addSubnet(network, prefix, "ipv4");
+  reservedRanges.addSubnet(network, prefix, "ipv4");
 }
 for (const [network, prefix] of [
   ["::", 128],
@@ -30,14 +30,14 @@ for (const [network, prefix] of [
   ["fec0::", 10],
   ["ff00::", 8],
 ] as const) {
-  refused.addSubnet(network, prefix, "ipv6");
+  reservedRanges.addSubnet(network, prefix, "ipv6");
 }
 
 /** Whether an IP address is internal or reserved (IPv4-mapped IPv6 included) */
 export function isInternalAddress(address: string): boolean {
   const family = isIP(address);
   if (family === 0) return true;
-  return refused.check(address, family === 4 ? "ipv4" : "ipv6");
+  return reservedRanges.check(address, family === 4 ? "ipv4" : "ipv6");
 }
 
 function hostOf(entry: string): string | undefined {

@@ -301,6 +301,7 @@ export class TicketsService {
     // Fallback: fetch vulnerability data directly from knowledge database
     // This handles tickets without source_analysis or when the full service fails
     return this.getVulnerabilityFromKnowledge(
+      orgId,
       ticket.vulnerability_id,
       ticket.affected_package,
     );
@@ -311,6 +312,7 @@ export class TicketsService {
    * Used as fallback when ticket doesn't have a source_analysis
    */
   private async getVulnerabilityFromKnowledge(
+    orgId: string,
     vulnerabilityId: string,
     affectedPackage: string | undefined,
   ): Promise<VulnerabilityDetailsReport | null> {
@@ -396,7 +398,7 @@ export class TicketsService {
       this.logger.error(
         "Failed to fetch vulnerability from knowledge DB",
         error as Error,
-        { vulnerabilityId },
+        { vulnerabilityId, organizationId: orgId },
       );
       return null;
     }
