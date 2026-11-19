@@ -39,6 +39,8 @@ export class FindingsController {
     @Query("ecosystem_filter") ecosystem_filter?: string,
     @Query("show_blacklisted", new DefaultValuePipe("false"))
     show_blacklisted?: string,
+    @Query("show_contradicted") show_contradicted?: string,
+    @Query("show_retired") show_retired?: string,
   ): Promise<PaginatedResponse> {
     return await this.vulnerabilitiesService.getVulnerabilities(
       org_id,
@@ -54,6 +56,10 @@ export class FindingsController {
       search_key,
       ecosystem_filter,
       show_blacklisted === "true",
+      {
+        show_contradicted: show_contradicted === "true",
+        show_retired: show_retired === "true",
+      },
     );
   }
 
@@ -67,6 +73,8 @@ export class FindingsController {
     @Query("ecosystem_filter") ecosystem_filter?: string,
     @Query("show_blacklisted", new DefaultValuePipe("false"))
     show_blacklisted?: string,
+    @Query("show_contradicted") show_contradicted?: string,
+    @Query("show_retired") show_retired?: string,
   ): Promise<Response> {
     return {
       data: await this.vulnerabilitiesService.getStats(
@@ -77,6 +85,10 @@ export class FindingsController {
         workspace,
         ecosystem_filter,
         show_blacklisted === "true",
+        {
+          show_contradicted: show_contradicted === "true",
+          show_retired: show_retired === "true",
+        },
       ),
     };
   }

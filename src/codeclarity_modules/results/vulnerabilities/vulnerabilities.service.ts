@@ -34,7 +34,16 @@ import { VulnerabilitiesFilterService } from "./utils/filter.service";
 import { findFindingAdvisory } from "./utils/finding-advisory";
 import { VulnerabilitiesSortService } from "./utils/sort.service";
 import { computeVulnerabilityStats } from "./utils/stats";
-import { VulnerabilitiesUtilsService } from "./utils/utils.service";
+import {
+  type FindingsView,
+  type HiddenFilters,
+  VulnerabilitiesUtilsService,
+} from "./utils/utils.service";
+
+/** What the default view hid, sent beside the list and the stats. */
+type HiddenSummary = Partial<
+  Pick<FindingsView, "hidden_counts" | "source_verdicts_available">
+>;
 
 /** NVD vulnerability description entry */
 interface NvdDescription {
@@ -105,7 +114,8 @@ export class VulnerabilitiesService {
     workspace: string,
     ecosystem_filter?: string,
     show_blacklisted?: boolean,
-  ): Promise<VulnerabilityAnalysisStats> {
+    hidden: HiddenFilters = {},
+  ): Promise<VulnerabilityAnalysisStats & HiddenSummary> {
     // Check if the user is allowed to view this analysis result
     await this.analysisResultsService.checkAccess(
       orgId,
@@ -121,11 +131,12 @@ export class VulnerabilitiesService {
       throw new UnknownWorkspace();
     }
 
-    const findings: Vulnerability[] =
-      await this.findingsUtilsService.getFindingsData(
+    const { findings, hidden_counts, source_verdicts_available }: FindingsView =
+      await this.findingsUtilsService.getFindingsView(
         analysisId,
         workspace,
         ecosystem_filter,
+        hidden,
       );
 
     const { findings: findingsPrevious, dependencies: dependencyMapPrevious } =
@@ -134,6 +145,7 @@ export class VulnerabilitiesService {
         analysisId,
         workspace,
         ecosystem_filter,
+        hidden,
       );
 
     // Both scans drop this analysis's policy exclusions, so the diffs compare like with like.
@@ -219,7 +231,7 @@ export class VulnerabilitiesService {
       wStats.mean_confidentiality_impact -
       wBeforeStats.mean_confidentiality_impact;
 
-    return wStats;
+    return { ...wStats, hidden_counts, source_verdicts_available };
   }
 
   async getMaliciousPackageAdvisories(
@@ -273,7 +285,8 @@ export class VulnerabilitiesService {
     search_key: string | undefined,
     ecosystem_filter?: string,
     show_blacklisted?: boolean,
-  ): Promise<PaginatedResponse> {
+    hidden: HiddenFilters = {},
+  ): Promise<PaginatedResponse & HiddenSummary> {
     // Check if the user is allowed to view this analysis result
     await this.analysisResultsService.checkAccess(
       orgId,
@@ -295,11 +308,12 @@ export class VulnerabilitiesService {
     // for (const dep of dependenciesArray) {
     //     dependenciesMap[dep.key] = dep;
     // }
-    const findings: Vulnerability[] =
-      await this.findingsUtilsService.getFindingsData(
+    const { findings, hidden_counts, source_verdicts_available }: FindingsView =
+      await this.findingsUtilsService.getFindingsView(
         analysisId,
         workspace,
         ecosystem_filter,
+        hidden,
       );
 
     const findingsMerged: Map<string, VulnerabilityMerged> = new Map<
@@ -329,6 +343,10 @@ export class VulnerabilitiesService {
       }
       if (finding.Disputed === true) {
         affected.Disputed = true;
+      }
+      if (finding.Hidden) affected.Hidden = finding.Hidden;
+      if (finding.ContradictedBy) {
+        affected.ContradictedBy = finding.ContradictedBy;
       }
       // if vuln already in map
       const vuln = findingsMerged.get(finding.VulnerabilityId);
@@ -601,7 +619,7 @@ export class VulnerabilitiesService {
     }
 
     paginated.data = paginatedVulns;
-    return paginated;
+    return { ...paginated, hidden_counts, source_verdicts_available };
   }
 
   // Package manager of the analysis's SBOMs, or undefined when they cannot be read.
@@ -712,6 +730,7 @@ export class VulnerabilitiesService {
     analysisId: string,
     workspace: string,
     ecosystem_filter?: string,
+    hidden: HiddenFilters = {},
   ): Promise<{
     findings: Vulnerability[];
     dependencies: Record<string, Record<string, Dependency>>;
@@ -732,6 +751,7 @@ export class VulnerabilitiesService {
             previous.id,
             workspace,
             ecosystem_filter,
+            hidden,
           );
           return { findings, dependencies: previousWorkspace.dependencies };
         }

@@ -296,6 +296,7 @@ describe("FindingsController", () => {
         undefined, // search_key
         undefined, // ecosystem_filter
         false, // show_blacklisted (default: 'false' -> false)
+        { show_contradicted: false, show_retired: false },
       );
       expect(result).toEqual(mockPaginatedResponse);
     });
@@ -344,6 +345,7 @@ describe("FindingsController", () => {
         "test search", // search_key
         undefined, // ecosystem_filter
         false, // show_blacklisted (default: 'false' -> false)
+        { show_contradicted: false, show_retired: false },
       );
       expect(result).toEqual(mockPaginatedResponse);
     });
@@ -380,6 +382,7 @@ describe("FindingsController", () => {
         undefined, // search_key
         undefined, // ecosystem_filter
         false, // show_blacklisted (default: 'false' -> false)
+        { show_contradicted: false, show_retired: false },
       );
       expect(result).toEqual(mockPaginatedResponse);
     });
@@ -420,6 +423,7 @@ describe("FindingsController", () => {
         "", // search_key
         undefined, // ecosystem_filter
         false, // show_blacklisted (default: 'false' -> false)
+        { show_contradicted: false, show_retired: false },
       );
       expect(result).toEqual(mockPaginatedResponse);
     });
@@ -509,6 +513,7 @@ describe("FindingsController", () => {
         baseParams.workspace,
         undefined, // ecosystem_filter
         false, // show_blacklisted
+        { show_contradicted: false, show_retired: false },
       );
       expect(result).toEqual({
         data: mockStatsResponse,
@@ -947,6 +952,7 @@ describe("FindingsController", () => {
         undefined, // search_key
         undefined, // ecosystem_filter
         false, // show_blacklisted (default: 'false' -> false)
+        { show_contradicted: false, show_retired: false },
       );
       expect(result).toEqual(mockPaginatedResponse);
     });
@@ -988,6 +994,7 @@ describe("FindingsController", () => {
         "search", // search_key
         undefined, // ecosystem_filter
         false, // show_blacklisted (default: 'false' -> false)
+        { show_contradicted: false, show_retired: false },
       );
       expect(result).toEqual(mockPaginatedResponse);
     });
@@ -1029,6 +1036,7 @@ describe("FindingsController", () => {
         specialChars, // search_key
         undefined, // ecosystem_filter
         false, // show_blacklisted (default: 'false' -> false)
+        { show_contradicted: false, show_retired: false },
       );
       expect(result).toEqual(mockPaginatedResponse);
     });

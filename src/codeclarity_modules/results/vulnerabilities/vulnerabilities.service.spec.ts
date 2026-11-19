@@ -51,6 +51,8 @@ describe("VulnerabilitiesService", () => {
     checkAccess: jest.fn(),
   };
 
+  const getFindingsDataMock = (): jest.Mock =>
+    mockFindingsUtilsService.getFindingsData;
   const mockFindingsUtilsService = {
     getVulnsResult: jest.fn(),
     getMaliciousPackageAdvisories: jest.fn(),
@@ -69,6 +71,12 @@ describe("VulnerabilitiesService", () => {
         Id: "vuln-1",
       },
     ]),
+    // The view wraps whatever the getFindingsData mock returns.
+    getFindingsView: jest.fn(async (...args: unknown[]): Promise<object> => ({
+      findings: (await getFindingsDataMock()(...args)) as unknown,
+      hidden_counts: { contradicted: 0, retired_all: 0 },
+      source_verdicts_available: false,
+    })),
   };
 
   const mockFindingsSortService = {
@@ -536,6 +544,7 @@ describe("VulnerabilitiesService", () => {
         "analysis-123",
         "default",
         undefined, // ecosystem_filter
+        {}, // hidden filters
       );
     });
 
@@ -883,6 +892,7 @@ describe("VulnerabilitiesService", () => {
         "analysis-123",
         "default",
         undefined, // ecosystem_filter
+        {}, // hidden filters
       );
     });
 

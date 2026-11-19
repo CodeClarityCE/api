@@ -7,6 +7,8 @@ import type {
   SourceVerdict,
 } from "../source-comparison/source-match.types";
 
+import type { HiddenReason } from "./utils/instance-status";
+
 export interface VulnSourceInfo {
   name: string;
   vuln_url: string;
@@ -232,6 +234,10 @@ export interface Vulnerability {
   Disputed?: boolean;
   /** One verdict per knowledge source; absent on older analyses. */
   SourceVerdicts?: SourceVerdict[];
+  /** Why the instance is hidden by default; absent when it is not. */
+  Hidden?: HiddenReason;
+  /** Sources that withdrew or contradicted one of its source matches. */
+  ContradictedBy?: string[];
 }
 
 /** Vulnerability info containing VLAI scores from matching */
@@ -296,6 +302,8 @@ export interface AffectedVuln {
   PatchType?: PatchType;
   Disputed?: boolean;
   SourceVerdicts?: SourceVerdict[];
+  Hidden?: HiddenReason;
+  ContradictedBy?: string[];
 }
 
 export enum ConflictFlag {
