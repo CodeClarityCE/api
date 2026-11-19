@@ -104,18 +104,19 @@ const patchingOutput = {
   analysis_info: { status: "success" },
 };
 
+// Both suites share one app.
+beforeAll(async () => {
+  await testHelper.setupTestApp();
+});
+
+afterAll(async () => {
+  await testHelper.teardownTestApp();
+});
+
 describe("Vulnerabilities list (e2e)", () => {
   let user: TestUser;
   let url: string;
   let analysisId: string;
-
-  beforeAll(async () => {
-    await testHelper.setupTestApp();
-  });
-
-  afterAll(async () => {
-    await testHelper.teardownTestApp();
-  });
 
   beforeEach(async () => {
     await testHelper.cleanDatabase();
@@ -336,5 +337,142 @@ describe("Vulnerabilities list (e2e)", () => {
       [],
       [],
     ]);
+  });
+});
+
+const sbomDependency = {
+  Key: "",
+  Requires: {},
+  Dependencies: {},
+  Optional: false,
+  Bundled: false,
+  Dev: false,
+  Prod: true,
+  Direct: true,
+  Transitive: false,
+  Licenses: [],
+};
+
+const sbomOutput = {
+  workspaces: {
+    ".": {
+      dependencies: {
+        lodash: { "4.17.20": sbomDependency },
+        axios: { "0.21.1": sbomDependency },
+        minimist: { "1.2.5": sbomDependency },
+      },
+      start: { dependencies: [], dev_dependencies: [] },
+    },
+  },
+  analysis_info: { status: "success", package_manager: "NPM" },
+};
+
+describe("Vulnerability stats with a policy exclusion (e2e)", () => {
+  let user: TestUser;
+  let base: string;
+
+  // A previous scan with the same findings, and the current one with a policy excluding axios's TEST-0002.
+  beforeEach(async () => {
+    await testHelper.cleanDatabase();
+    user = await testHelper.createTestUser({
+      email: "admin@vuln-policy.com",
+      role: MemberRole.ADMIN,
+    });
+    const orgId = user.organization.id;
+    const request = async (path: string, body: object) =>
+      (
+        await testHelper.makeAuthenticatedRequest(
+          "POST",
+          `/org/${orgId}${path}`,
+          user.accessToken,
+          body,
+        )
+      ).json().id as string;
+
+    const projectId = await request("/projects", {
+      name: "Policy project",
+      description: "Has an excluded finding",
+    });
+    const analyzerId = await request("/analyzers", {
+      name: "Policy analyzer",
+      description: "Runs vuln-finder",
+      steps: [[{ name: "js-sbom", version: "1.0.0", config: {} }]],
+    });
+    const policyId = await request("/policies/vulnerability_policy", {
+      name: "Accepted risks",
+      description: "",
+      type: "BLACKLIST",
+      vulnerabilities: ["TEST-0002"],
+      default: false,
+    });
+
+    const data = testHelper.getDataSource();
+    const seedAnalysis = async (age: string, config: object) => {
+      const id = randomUUID();
+      await data.query(
+        `INSERT INTO analysis (id, created_on, config, status, steps, branch, "projectId", "organizationId", "analyzerId")
+         VALUES ($1, now() - $2::interval, $3, 'completed', '[]', 'main', $4, $5, $6)`,
+        [id, age, JSON.stringify(config), projectId, orgId, analyzerId],
+      );
+      for (const [plugin, result] of [
+        ["js-sbom", sbomOutput],
+        ["vuln-finder", vulnsOutput],
+      ] as const) {
+        await data.query(
+          `INSERT INTO result (result, plugin, created_on, "analysisId") VALUES ($1, $2, now(), $3)`,
+          [JSON.stringify(result), plugin, id],
+        );
+      }
+      return id;
+    };
+    await seedAnalysis("1 day", {});
+    const analysisId = await seedAnalysis("0 seconds", {
+      "vuln-finder": { vulnerabilityPolicy: [policyId] },
+    });
+    base = `/org/${orgId}/projects/${projectId}/analysis/${analysisId}/vulnerabilities`;
+  });
+
+  const get = async (path: string): Promise<Record<string, unknown>> => {
+    const response = await testHelper.makeAuthenticatedRequest(
+      "GET",
+      path,
+      user.accessToken,
+    );
+    expect(response.statusCode).toBe(200);
+    return response.json() as Record<string, unknown>;
+  };
+
+  const counts = async (query: string) => {
+    const stats = (await get(`${base}/stats?workspace=.${query}`))[
+      "data"
+    ] as Record<string, number>;
+    const list = await get(`${base}?workspace=.${query}`);
+    return {
+      vulnerabilities: stats["number_of_vulnerabilities"],
+      critical: stats["number_of_critical"],
+      vulnerabilitiesDiff: stats["number_of_vulnerabilities_diff"],
+      criticalDiff: stats["number_of_critical_diff"],
+      listTotal: list["total_entries"],
+    };
+  };
+
+  it("leaves the excluded vulnerability out of the stats and the list", async () => {
+    expect(await counts("")).toEqual({
+      vulnerabilities: 2,
+      critical: 0,
+      vulnerabilitiesDiff: 0,
+      criticalDiff: 0,
+      listTotal: 2,
+    });
+  });
+
+  it("counts the excluded vulnerability when asked to show it", async () => {
+    expect(await counts("&show_blacklisted=true")).toEqual({
+      vulnerabilities: 3,
+      critical: 1,
+      vulnerabilitiesDiff: 0,
+      criticalDiff: 0,
+      listTotal: 3,
+    });
   });
 });
