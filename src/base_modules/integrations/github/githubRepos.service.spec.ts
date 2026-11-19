@@ -681,7 +681,7 @@ describe("GithubRepositoriesService", () => {
         "ghp_test_token",
       );
 
-      expect(result).toEqual([[mockGithubRepository], 1]); // URL parsing doesn't work correctly in the current implementation
+      expect(result).toEqual([[mockGithubRepository], 3]);
       expect(
         mockOctokit.rest.repos.listForAuthenticatedUser,
       ).toHaveBeenCalledWith({
@@ -690,6 +690,39 @@ describe("GithubRepositoriesService", () => {
         sort: "updated",
         since: undefined,
       });
+    });
+
+    it.each([
+      [
+        "repeated angle brackets",
+        '<<https://api.github.com/user/repos?page=5>>; rel="last"',
+        1,
+      ],
+      [
+        "a last link with no page",
+        '<https://api.github.com/user/repos>; rel="last"',
+        1,
+      ],
+      ["a last link that is not a URL", '<page=4>; rel="last"', 1],
+      [
+        "a long run of opening brackets",
+        `${"<".repeat(50_000)}; rel="last"`,
+        1,
+      ],
+    ])("reads the last page from %s", async (_label, link, expected) => {
+      mockOctokit.rest.repos.listForAuthenticatedUser.mockResolvedValue({
+        data: [mockGithubRepository],
+        headers: { link },
+      });
+
+      const result = await (service as any).githubApiFetchPage(
+        1,
+        100,
+        undefined,
+        "ghp_test_token",
+      );
+
+      expect(result).toEqual([[mockGithubRepository], expected]);
     });
 
     it("should handle no link header", async () => {
