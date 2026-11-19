@@ -60,7 +60,7 @@ export class VulnerabilitiesFilterService {
       "integrity_impact",
       "hide_correct_matching",
       "hide_incorrect_matching",
-      "hide_possibly_incorrect_matching",
+      "hide_uncorroborated",
       ...Object.keys(PATCH_FILTER_MAP),
     ];
 
@@ -193,8 +193,8 @@ export class VulnerabilitiesFilterService {
       )
         return false;
       if (
-        filters.includes("hide_possibly_incorrect_matching") &&
-        flag === ConflictFlag.MATCH_POSSIBLE_INCORRECT
+        filters.includes("hide_uncorroborated") &&
+        vulnerability.Uncorroborated === true
       )
         return false;
       return true;
