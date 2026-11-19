@@ -11,8 +11,20 @@ import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { AuthUser } from "src/decorators/UserDecorator";
 import { PaginatedResponse, Response } from "src/types/apiResponses.types";
 
+import type { HiddenFilters } from "./utils/utils.service";
 import { VulnerabilitiesService } from "./vulnerabilities.service";
 import { VulnerabilityService } from "./vulnerability.service";
+
+/** The hidden filters from their query parameters; only "true" shows. */
+function hiddenFilters(
+  show_contradicted?: string,
+  show_retired?: string,
+): HiddenFilters {
+  return {
+    show_contradicted: show_contradicted === "true",
+    show_retired: show_retired === "true",
+  };
+}
 
 @Controller("/org/:org_id/projects/:project_id/analysis")
 export class FindingsController {
@@ -56,10 +68,7 @@ export class FindingsController {
       search_key,
       ecosystem_filter,
       show_blacklisted === "true",
-      {
-        show_contradicted: show_contradicted === "true",
-        show_retired: show_retired === "true",
-      },
+      hiddenFilters(show_contradicted, show_retired),
     );
   }
 
@@ -85,10 +94,7 @@ export class FindingsController {
         workspace,
         ecosystem_filter,
         show_blacklisted === "true",
-        {
-          show_contradicted: show_contradicted === "true",
-          show_retired: show_retired === "true",
-        },
+        hiddenFilters(show_contradicted, show_retired),
       ),
     };
   }
