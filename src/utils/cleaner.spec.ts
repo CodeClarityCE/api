@@ -14,11 +14,11 @@ describe("escapeString", () => {
   });
 
   it("should escape less than symbols", () => {
-    expect(escapeString("test<value")).toBe("test&amp;lt;value");
+    expect(escapeString("test<value")).toBe("test&lt;value");
   });
 
   it("should escape greater than symbols", () => {
-    expect(escapeString("test>value")).toBe("test&amp;gt;value");
+    expect(escapeString("test>value")).toBe("test&gt;value");
   });
 
   it("should escape ampersands", () => {
@@ -37,7 +37,7 @@ describe("escapeString", () => {
   it("should handle multiple special characters", () => {
     const input = "test\"value'<script>&alert();</script>../path";
     const expected =
-      "test\\\"value\\'&amp;lt;script&amp;gt;&amp;alert();&amp;lt;\\/script&amp;gt;path";
+      "test\\\"value\\'&lt;script&gt;&amp;alert();&lt;\\/script&gt;path";
     expect(escapeString(input)).toBe(expected);
   });
 
@@ -50,8 +50,22 @@ describe("escapeString", () => {
   });
 
   it("should handle string with only special characters", () => {
-    expect(escapeString("\"'<>&/\\")).toBe(
-      "\\\"\\'&amp;lt;&amp;gt;&amp;\\/\\\\",
-    );
+    expect(escapeString("\"'<>&/\\")).toBe("\\\"\\'&lt;&gt;&amp;\\/\\\\");
+  });
+
+  it("escapes an existing entity once, without double escaping", () => {
+    expect(escapeString("&lt;")).toBe("&amp;lt;");
+    expect(escapeString("<&>")).toBe("&lt;&amp;&gt;");
+  });
+
+  it("removes traversal sequences that reappear after one pass", () => {
+    expect(escapeString("....//etc")).toBe("etc");
+    expect(escapeString(".../...//x")).toBe("x");
+    expect(escapeString("..././..././")).toBe("");
+  });
+
+  it("removes a long run of nested traversal sequences", () => {
+    const nested = `${"..".repeat(2000) + "/".repeat(2000)}secret`;
+    expect(escapeString(nested)).toBe("secret");
   });
 });
