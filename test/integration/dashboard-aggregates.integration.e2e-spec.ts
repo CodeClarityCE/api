@@ -212,6 +212,25 @@ describe("Dashboard aggregates against Postgres", () => {
     expect(recent.vulns["NEW-9"]!.severity_class).toBe("CRITICAL");
   });
 
+  it("leaves disputed vulnerabilities out of the grade", async () => {
+    const o = await org("Disputed org");
+    const widget = await project(o, "widget");
+    const output = vulnOutput([9.8, 0], "DISPUTED") as {
+      workspaces: Record<string, { Vulnerabilities: object[] }>;
+    };
+    output.workspaces["."]!.Vulnerabilities[0] = {
+      ...output.workspaces["."]!.Vulnerabilities[0],
+      Disputed: true,
+    };
+    await analysis(widget, new Date(Date.now() - DAY), AnalysisStatus.SUCCESS, [
+      { plugin: "vuln-finder", result: output },
+    ]);
+
+    const quick = await service.getQuickStats(o.id, user);
+
+    expect(quick.max_grade.score).toBe(10);
+  });
+
   it("counts only each project's latest completed analysis", async () => {
     const orgId = await seedOrganisation();
 

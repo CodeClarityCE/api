@@ -327,10 +327,14 @@ export class VulnerabilitiesService {
       if (finding.PatchType) {
         affected.PatchType = finding.PatchType;
       }
+      if (finding.Disputed === true) {
+        affected.Disputed = true;
+      }
       // if vuln already in map
       const vuln = findingsMerged.get(finding.VulnerabilityId);
       if (vuln) {
         vuln.Affected.push(affected);
+        if (affected.Disputed) vuln.Disputed = true;
         // A grouped vulnerability lists every matching source and its worst severity.
         for (const source of finding.Sources) {
           if (!vuln.Sources.includes(source)) vuln.Sources.push(source);
@@ -362,6 +366,7 @@ export class VulnerabilitiesService {
         if (finding.Weaknesses) {
           mergedFinding.Weaknesses = finding.Weaknesses;
         }
+        if (affected.Disputed) mergedFinding.Disputed = true;
         for (const [source, match] of [
           [Source.Nvd, finding.NVDMatch],
           [Source.Osv, finding.OSVMatch],
