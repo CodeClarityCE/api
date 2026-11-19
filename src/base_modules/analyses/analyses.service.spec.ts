@@ -614,7 +614,7 @@ describe("AnalysesService", () => {
   });
 
   describe("getChart", () => {
-    it("should retrieve chart data successfully", async () => {
+    it("should retrieve chart data, counting only the vulnerabilities shown by default", async () => {
       // Arrange
       const mockSbomOutput = {
         workspaces: {
@@ -634,7 +634,18 @@ describe("AnalysesService", () => {
       const mockVulnsOutput = {
         workspaces: {
           default: {
-            Vulnerabilities: [{ id: "vuln1" }, { id: "vuln2" }],
+            Vulnerabilities: [
+              { id: "vuln1" },
+              { id: "vuln2" },
+              // Contradicted by another source, so hidden by default.
+              {
+                id: "vuln3",
+                SourceVerdicts: [
+                  { source: "gcve", verdict: "matched" },
+                  { source: "osv", verdict: "version_excluded" },
+                ],
+              },
+            ],
           },
         },
         analysis_info: {

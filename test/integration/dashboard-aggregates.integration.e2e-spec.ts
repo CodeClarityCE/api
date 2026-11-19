@@ -231,6 +231,42 @@ describe("Dashboard aggregates against Postgres", () => {
     expect(quick.max_grade.score).toBe(10);
   });
 
+  it("leaves instances hidden by default out of every aggregate", async () => {
+    const o = await org("Hidden org");
+    const widget = await project(o, "widget");
+    const output = vulnOutput([9.8, 9.5, 5.0], "HIDDEN") as {
+      workspaces: Record<string, { Vulnerabilities: object[] }>;
+    };
+    const [contradicted, retired, shown] = output.workspaces["."]!
+      .Vulnerabilities as Record<string, unknown>[];
+    contradicted!["SourceVerdicts"] = [
+      { source: "gcve", verdict: "matched" },
+      { source: "osv", verdict: "version_excluded" },
+      { source: "nvd", verdict: "no_record" },
+    ];
+    retired!["SourceVerdicts"] = [
+      { source: "gcve", verdict: "retired" },
+      { source: "osv", verdict: "retired" },
+      { source: "nvd", verdict: "no_record" },
+    ];
+    shown!["SourceVerdicts"] = [
+      { source: "gcve", verdict: "matched" },
+      { source: "osv", verdict: "matched" },
+      { source: "nvd", verdict: "no_record" },
+    ];
+    await analysis(widget, new Date(Date.now() - DAY), AnalysisStatus.SUCCESS, [
+      { plugin: "vuln-finder", result: output },
+    ]);
+
+    const quick = await service.getQuickStats(o.id, user);
+    const recent = await service.getRecentVuls(o.id, user);
+    const weeks = await service.getWeeklySeverityInfo(o.id, user);
+
+    expect(Object.keys(recent.vulns)).toEqual(["HIDDEN-2"]);
+    expect(weekTotals(weeks)).toMatchObject({ critical: 0, medium: 1 });
+    expect(quick.max_grade.score).toBe(5);
+  });
+
   it("counts only each project's latest completed analysis", async () => {
     const orgId = await seedOrganisation();
 

@@ -28,6 +28,7 @@ import {
   severityBucket,
   SeverityClass,
 } from "src/codeclarity_modules/results/utils/utils";
+import { shownByDefault } from "src/codeclarity_modules/results/vulnerabilities/utils/instance-status";
 import {
   Output as VulnsOutput,
   Vulnerability,
@@ -143,12 +144,12 @@ export class DashboardService {
     return latest;
   }
 
-  /** Every vulnerability finding in the given results, workspace by workspace. */
+  /** The findings default views show in the given results, workspace by workspace. */
   private findings(latest: LatestResult[]): Vulnerability[] {
     return latest.flatMap(({ result }) => {
       const output = result.result as unknown as VulnsOutput;
-      return Object.values(output.workspaces ?? {}).flatMap(
-        (workspace) => workspace.Vulnerabilities ?? [],
+      return Object.values(output.workspaces ?? {}).flatMap((workspace) =>
+        shownByDefault(workspace.Vulnerabilities ?? []),
       );
     });
   }
