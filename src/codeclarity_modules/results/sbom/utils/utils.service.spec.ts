@@ -6,6 +6,7 @@ import type { Package } from "src/codeclarity_modules/knowledge/package/package.
 import { PackageRepository } from "src/codeclarity_modules/knowledge/package/package.repository";
 import { Result } from "src/codeclarity_modules/results/result.entity";
 import {
+  EntityNotFound,
   PluginFailed,
   PluginResultNotAvailable,
   UnknownWorkspace,
@@ -88,7 +89,7 @@ describe("SbomUtilsService", () => {
   const createMockVulnsOutput = (): VulnsOutput =>
     ({
       workspaces: {
-        ".": {
+        [mockWorkspace]: {
           Vulnerabilities: [
             {
               VulnerabilityId: "CVE-2023-1234",
@@ -374,7 +375,7 @@ describe("SbomUtilsService", () => {
       const mockSBOM = createMockSBOMOutput();
       const mockVulns = {
         workspaces: {
-          ".": {
+          [mockWorkspace]: {
             Vulnerabilities: [],
           },
         },
@@ -406,7 +407,7 @@ describe("SbomUtilsService", () => {
       const mockSBOM = createMockSBOMOutput();
       const mockVulns = {
         workspaces: {
-          ".": {
+          [mockWorkspace]: {
             Vulnerabilities: [
               {
                 VulnerabilityId: "CVE-2023-1001",
@@ -475,7 +476,7 @@ describe("SbomUtilsService", () => {
       const mockSBOM = createMockSBOMOutput();
       const mockVulns = {
         workspaces: {
-          ".": {
+          [mockWorkspace]: {
             Vulnerabilities: [
               {
                 VulnerabilityId: "CVE-2023-1001",
@@ -689,7 +690,7 @@ describe("SbomUtilsService", () => {
           "1.0.0",
           mockSBOM,
         ),
-      ).rejects.toThrow();
+      ).rejects.toThrow(EntityNotFound);
     });
 
     it("should handle missing version in SBOM", async () => {
@@ -708,7 +709,38 @@ describe("SbomUtilsService", () => {
           "2.0.0",
           mockSBOM,
         ),
-      ).rejects.toThrow();
+      ).rejects.toThrow(EntityNotFound);
+    });
+
+    it("throws UnknownWorkspace for a workspace the SBOM does not have", async () => {
+      await expect(
+        service.getDependencyData(
+          mockAnalysisId,
+          "missing-workspace",
+          dependencyName,
+          dependencyVersion,
+          createMockSBOMOutput(),
+        ),
+      ).rejects.toThrow(UnknownWorkspace);
+    });
+
+    it("throws UnknownWorkspace for a workspace the vulnerability results do not have", async () => {
+      packageRepository.getVersionInfo.mockResolvedValue(
+        createMockPackageVersionInfo(),
+      );
+      vulnerabilitiesUtilsService.getVulnsResult.mockResolvedValue({
+        workspaces: {},
+      } as any);
+
+      await expect(
+        service.getDependencyData(
+          mockAnalysisId,
+          mockWorkspace,
+          dependencyName,
+          dependencyVersion,
+          createMockSBOMOutput(),
+        ),
+      ).rejects.toThrow(UnknownWorkspace);
     });
   });
 
