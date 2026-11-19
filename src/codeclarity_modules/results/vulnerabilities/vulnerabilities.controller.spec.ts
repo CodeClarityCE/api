@@ -12,7 +12,7 @@ import { VulnerabilitiesService } from "./vulnerabilities.service";
 import {
   newVulnerabilityAnalysisStats,
   type VulnerabilityAnalysisStats,
-  type VulnerabilityDetailsReport,
+  type VulnerabilityDetails,
 } from "./vulnerabilities.types";
 import { VulnerabilityService } from "./vulnerability.service";
 
@@ -124,7 +124,9 @@ describe("FindingsController", () => {
     mean_availability_impact_diff: 0.3,
   };
 
-  const mockVulnerabilityResponse: VulnerabilityDetailsReport = {
+  const mockVulnerabilityResponse: VulnerabilityDetails = {
+    source_verdicts: [],
+    source_verdicts_available: false,
     vulnerability_info: {
       vulnerability_id: "CVE-2023-1234",
       description: "Detailed vulnerability description",
@@ -631,7 +633,9 @@ describe("FindingsController", () => {
 
     it("should handle vulnerability with minimal fields", async () => {
       // Arrange
-      const vulnerabilityWithMinimalFields: VulnerabilityDetailsReport = {
+      const vulnerabilityWithMinimalFields: VulnerabilityDetails = {
+        source_verdicts: [],
+        source_verdicts_available: false,
         vulnerability_info: {
           vulnerability_id: "vuln-123",
           description: "Vulnerability with minimal fields",

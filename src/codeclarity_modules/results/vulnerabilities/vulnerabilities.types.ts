@@ -2,7 +2,10 @@ import type { CVSS2, CVSS3, CVSS4, CVSS31 } from "../../knowledge/cvss.types";
 import type { OwaspTop10Info } from "../../knowledge/owasp/owasp.types";
 import type { PatchInfo } from "../patching/patching.types";
 import type { ParsedGitUrl, StatusError } from "../sbom/sbom.types";
-import type { SourceSeverity } from "../source-comparison/source-match.types";
+import type {
+  SourceSeverity,
+  SourceVerdict,
+} from "../source-comparison/source-match.types";
 
 export interface VulnSourceInfo {
   name: string;
@@ -227,6 +230,8 @@ export interface Vulnerability {
   PatchType?: PatchType;
   /** True when a matched CVE record says its vendor disputes it. */
   Disputed?: boolean;
+  /** One verdict per knowledge source; absent on older analyses. */
+  SourceVerdicts?: SourceVerdict[];
 }
 
 /** Vulnerability info containing VLAI scores from matching */
@@ -290,6 +295,7 @@ export interface AffectedVuln {
   Conflict: Conflict;
   PatchType?: PatchType;
   Disputed?: boolean;
+  SourceVerdicts?: SourceVerdict[];
 }
 
 export enum ConflictFlag {
@@ -386,6 +392,13 @@ export interface VulnerabilityDetailsReport {
   references: ReferenceInfo[];
   location: string[];
   other: OtherInfo;
+}
+
+/** The detail of one affected version, with what each knowledge source said about it. */
+export interface VulnerabilityDetails extends VulnerabilityDetailsReport {
+  source_verdicts: SourceVerdict[];
+  /** False for analyses made before source verdicts were recorded; re-running explains them. */
+  source_verdicts_available: boolean;
 }
 
 /** Analysis statistics for vulnerabilities */
