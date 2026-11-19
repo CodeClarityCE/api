@@ -13,7 +13,6 @@ import { StatusResponse } from "src/codeclarity_modules/results/status.types";
 import { paginate } from "src/codeclarity_modules/results/utils/utils";
 import {
   AffectedVuln,
-  ConflictFlag,
   KnowledgeSnapshot,
   MaliciousPackageAdvisory,
   Output as VulnsOutput,
@@ -34,6 +33,7 @@ import { VulnerabilitiesFilterService } from "./utils/filter.service";
 import { findFindingAdvisory } from "./utils/finding-advisory";
 import { VulnerabilitiesSortService } from "./utils/sort.service";
 import { computeVulnerabilityStats } from "./utils/stats";
+import { isUncorroborated } from "./utils/uncorroborated";
 import {
   type FindingsView,
   type HiddenFilters,
@@ -51,12 +51,6 @@ interface NvdDescription {
   value: string;
 }
 
-/** OSV affected entry with version/range information */
-interface OsvAffected {
-  ranges?: unknown[];
-  versions?: unknown[];
-}
-
 /** Analysis config structure for vuln-finder */
 interface VulnFinderConfig {
   vulnerabilityPolicy?: string[];
@@ -65,12 +59,6 @@ interface VulnFinderConfig {
 /** Analysis config record type */
 interface AnalysisConfig {
   "vuln-finder"?: VulnFinderConfig;
-}
-
-/** Check if conflict flag indicates no conflict (including empty string from malformed data) */
-function isNoConflict(flag: ConflictFlag | string): boolean {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
-  return flag === ConflictFlag.NO_CONFLICT || flag === "";
 }
 
 /** The AI assessment of a match, or null when it has no score. */
@@ -344,6 +332,10 @@ export class VulnerabilitiesService {
       if (finding.Disputed === true) {
         affected.Disputed = true;
       }
+      if (finding.SourceVerdicts) {
+        affected.SourceVerdicts = finding.SourceVerdicts;
+      }
+      affected.Uncorroborated = isUncorroborated(finding.SourceVerdicts);
       if (finding.Hidden) affected.Hidden = finding.Hidden;
       if (finding.ContradictedBy) {
         affected.ContradictedBy = finding.ContradictedBy;
@@ -353,6 +345,7 @@ export class VulnerabilitiesService {
       if (vuln) {
         vuln.Affected.push(affected);
         if (affected.Disputed) vuln.Disputed = true;
+        if (affected.Uncorroborated) vuln.Uncorroborated = true;
         // A grouped vulnerability lists every matching source and its worst severity.
         for (const source of finding.Sources) {
           if (!vuln.Sources.includes(source)) vuln.Sources.push(source);
@@ -375,6 +368,7 @@ export class VulnerabilitiesService {
           Affected: [affected],
           Description: "",
           Conflict: finding.Conflict,
+          Uncorroborated: affected.Uncorroborated,
           VLAI: [],
           EPSS: {
             Score: epss.score,
@@ -392,22 +386,6 @@ export class VulnerabilitiesService {
         ] as const) {
           const vlai = scoredVlai(match?.Vulnerability);
           if (vlai) mergedFinding.VLAI.push({ Source: source, ...vlai });
-        }
-
-        // Check for source disagreements
-        // For PHP vulnerabilities, the OSVMatch is often missing even when OSV data exists
-        // So we check if both NVD data exists and it's a CVE (which likely has OSV data)
-        const isCve = finding.VulnerabilityId.includes("CVE-");
-
-        if (
-          finding.NVDMatch &&
-          isCve &&
-          isNoConflict(mergedFinding.Conflict.ConflictFlag)
-        ) {
-          // For CVEs with NVD data, assume potential source disagreement
-          // This is a workaround for the OSV matching issue in PHP vulnerabilities
-          mergedFinding.Conflict.ConflictFlag =
-            ConflictFlag.MATCH_POSSIBLE_INCORRECT;
         }
 
         findingsMerged.set(finding.VulnerabilityId, mergedFinding);
@@ -476,11 +454,9 @@ export class VulnerabilitiesService {
       let nvdDescription = "";
       let osvDescription = "";
       let osvSummary = "";
-      let nvdVuln = null;
-      let osvVuln = null;
 
       if (isCve) {
-        nvdVuln = await this.nvdRepository.getVulnWithoutFailing(
+        const nvdVuln = await this.nvdRepository.getVulnWithoutFailing(
           finding.Vulnerability,
           { includeRetired: true },
         );
@@ -493,7 +469,7 @@ export class VulnerabilitiesService {
 
         // Describe the finding with the first affected package's advisory, as its report does.
         const affected = finding.Affected[0];
-        osvVuln = await findFindingAdvisory(
+        const osvVuln = await findFindingAdvisory(
           this.osvRepository,
           {
             vulnerabilityId: finding.Vulnerability,
@@ -511,7 +487,7 @@ export class VulnerabilitiesService {
       }
 
       if (isGhsa) {
-        osvVuln = await this.osvRepository.getVulnByOSVIDWithoutFailing(
+        const osvVuln = await this.osvRepository.getVulnByOSVIDWithoutFailing(
           finding.Vulnerability,
           { includeRetired: true },
         );
@@ -540,21 +516,6 @@ export class VulnerabilitiesService {
               Confidence: gcveVuln.vlai_confidence ?? 0,
             });
           }
-        }
-      }
-
-      // Check for source disagreements when both NVD and OSV data exist
-      if (nvdVuln && osvVuln && isNoConflict(finding.Conflict.ConflictFlag)) {
-        // Check if OSV has specific version/range data
-        const affected = osvVuln.affected as OsvAffected[] | undefined;
-        const osvHasRanges = affected?.some(
-          (a) => (a.ranges?.length ?? 0) > 0 || (a.versions?.length ?? 0) > 0,
-        );
-
-        // When OSV has specific version data and both sources exist,
-        // mark as potential disagreement since they often have different interpretations
-        if (osvHasRanges) {
-          finding.Conflict.ConflictFlag = ConflictFlag.MATCH_POSSIBLE_INCORRECT;
         }
       }
 

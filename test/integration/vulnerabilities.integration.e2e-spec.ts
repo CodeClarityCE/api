@@ -328,6 +328,112 @@ describe("Vulnerabilities list (e2e)", () => {
     });
   });
 
+  describe("uncorroborated vulnerability instances", () => {
+    const verdicts = (osv: string, nvd: string, gcve: string) => [
+      { source: "osv", verdict: osv },
+      { source: "nvd", verdict: nvd },
+      { source: "gcve", verdict: gcve },
+    ];
+    // A GCVE-only match, an NVD and GCVE pair, a corroborated match and an older result.
+    const labelled = {
+      workspaces: {
+        ".": {
+          Vulnerabilities: [
+            {
+              ...finding("CVE-2099-0001", "qs", "6.0.0", 9.0),
+              Sources: ["GCVE"],
+              NVDMatch: { Vulnerability: null },
+              SourceVerdicts: verdicts(
+                "no_package_data",
+                "no_record",
+                "matched",
+              ),
+            },
+            {
+              ...finding("TEST-0006", "ms", "2.0.0", 8.0),
+              Sources: ["NVD", "GCVE"],
+              SourceVerdicts: verdicts("no_record", "matched", "matched"),
+            },
+            {
+              ...finding("TEST-0007", "debug", "2.6.8", 7.0),
+              Sources: ["NVD", "OSV"],
+              SourceVerdicts: verdicts("matched", "matched", "no_record"),
+            },
+            finding("TEST-0008", "minimist", "1.2.5", 6.0),
+          ],
+        },
+      },
+      analysis_info: { status: "success" },
+    };
+
+    interface Labelled {
+      Vulnerability: string;
+      Uncorroborated?: boolean;
+      Conflict: { ConflictFlag: string };
+      Affected: { Uncorroborated?: boolean; SourceVerdicts?: unknown[] }[];
+    }
+
+    const list = async (query: string) => {
+      await testHelper
+        .getDataSource()
+        .query(
+          `UPDATE result SET result = $1 WHERE plugin = 'vuln-finder' AND "analysisId" = $2`,
+          [JSON.stringify(labelled), analysisId],
+        );
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `${url}&sort_by=severity&sort_direction=DESC&${query}`,
+        user.accessToken,
+      );
+      expect(response.statusCode).toBe(200);
+      return response.json() as {
+        data: Labelled[];
+        total_entries: number;
+        filter_count: Record<string, number>;
+      };
+    };
+
+    it("labels instances matched by one source origin only, and keeps them listed", async () => {
+      const { data, total_entries } = await list("");
+
+      expect(total_entries).toBe(4);
+      expect(data.map((v) => [v.Vulnerability, v.Uncorroborated])).toEqual([
+        ["CVE-2099-0001", true],
+        ["TEST-0006", true],
+        ["TEST-0007", false],
+        ["TEST-0008", false],
+      ]);
+      expect(data[0]!.Affected[0]!.Uncorroborated).toBe(true);
+    });
+
+    it("sends each source's verdict for the hover", async () => {
+      const { data } = await list("");
+
+      expect(data[0]!.Affected[0]!.SourceVerdicts).toEqual(
+        verdicts("no_package_data", "no_record", "matched"),
+      );
+      expect(data[3]!.Affected[0]!.SourceVerdicts).toBeUndefined();
+    });
+
+    it("no longer marks a CVE with an NVD match as possibly incorrect", async () => {
+      const { data } = await list("");
+
+      expect(data[0]!.Conflict.ConflictFlag).toBe("NO_CONFLICT");
+    });
+
+    it("hides and counts uncorroborated instances by filter", async () => {
+      const { data, filter_count } = await list(
+        "active_filters=[hide_uncorroborated]",
+      );
+
+      expect(data.map((v) => v.Vulnerability)).toEqual([
+        "TEST-0007",
+        "TEST-0008",
+      ]);
+      expect(filter_count.hide_uncorroborated).toBe(2);
+    });
+  });
+
   it("sends only the AI assessments that have a score", async () => {
     const response = await testHelper.makeAuthenticatedRequest(
       "GET",

@@ -275,6 +275,8 @@ export interface VulnerabilityMerged {
   blacklisted_by_policies?: string[];
   /** True when any affected entry is vendor-disputed. */
   Disputed?: boolean;
+  /** True when any affected entry is uncorroborated (see GLOSSARY.md). */
+  Uncorroborated?: boolean;
 }
 
 export interface VLAI {
@@ -304,6 +306,8 @@ export interface AffectedVuln {
   SourceVerdicts?: SourceVerdict[];
   Hidden?: HiddenReason;
   ContradictedBy?: string[];
+  /** Matched by one source origin only; false when the analysis has no verdicts. */
+  Uncorroborated?: boolean;
 }
 
 export enum ConflictFlag {
