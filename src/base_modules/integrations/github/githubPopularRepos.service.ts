@@ -114,29 +114,28 @@ type RepositoryComparator = (
 ) => number;
 
 /**
- * Ascending comparator per supported sort key. A Map rather than an object
- * literal: the key comes from the query string, and an object lookup would
- * also match Object.prototype members such as "hasOwnProperty".
+ * Ascending comparator for a supported sort key, or undefined. A switch over
+ * fixed keys, so a query-string value can never pick an arbitrary function.
  */
-const ASCENDING_COMPARATORS = new Map<string, RepositoryComparator>([
-  [AllowedOrderBy.STARS, (a, b) => a.stargazers_count - b.stargazers_count],
-  [
-    AllowedOrderBy.FULLY_QUALIFIED_NAME,
-    (a, b) => a.fully_qualified_name.localeCompare(b.fully_qualified_name),
-  ],
-  [
-    AllowedOrderBy.DESCRIPTION,
-    (a, b) => a.description.localeCompare(b.description),
-  ],
-  [
-    AllowedOrderBy.CREATED,
-    (a, b) => a.created_at.getTime() - b.created_at.getTime(),
-  ],
-  [
-    AllowedOrderBy.IMPORTED,
-    (a, b) => Number(a.imported_already) - Number(b.imported_already),
-  ],
-]);
+function ascendingComparator(
+  sortKey: string,
+): RepositoryComparator | undefined {
+  switch (sortKey as AllowedOrderBy) {
+    case AllowedOrderBy.STARS:
+      return (a, b) => a.stargazers_count - b.stargazers_count;
+    case AllowedOrderBy.FULLY_QUALIFIED_NAME:
+      return (a, b) =>
+        a.fully_qualified_name.localeCompare(b.fully_qualified_name);
+    case AllowedOrderBy.DESCRIPTION:
+      return (a, b) => a.description.localeCompare(b.description);
+    case AllowedOrderBy.CREATED:
+      return (a, b) => a.created_at.getTime() - b.created_at.getTime();
+    case AllowedOrderBy.IMPORTED:
+      return (a, b) => Number(a.imported_already) - Number(b.imported_already);
+    default:
+      return undefined;
+  }
+}
 
 /** Keys sorted descending when no direction is given: stars are the ranking. */
 const DESCENDING_BY_DEFAULT = new Set<string>([AllowedOrderBy.STARS]);
@@ -554,7 +553,7 @@ export class GithubPopularReposService {
     // An empty sort_key ("?sort_key=") means no preference, like a missing one.
     const sortKey =
       sortBy === undefined || sortBy === "" ? AllowedOrderBy.STARS : sortBy;
-    const compareAscending = ASCENDING_COMPARATORS.get(sortKey);
+    const compareAscending = ascendingComparator(sortKey);
     if (!compareAscending) return repositories;
 
     const defaultDirection = DESCENDING_BY_DEFAULT.has(sortKey)

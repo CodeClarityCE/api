@@ -428,6 +428,42 @@ describe("GithubPopularReposService", () => {
     expect(unknown.data.map((repo) => repo.id)).toEqual(["2", "1", "3"]);
   });
 
+  it.each([
+    ["description", { description: "zeta" }, { description: "alpha" }],
+    [
+      "created_at",
+      { created_at: "2022-01-01T00:00:00Z" },
+      { created_at: "2021-01-01T00:00:00Z" },
+    ],
+  ])(
+    "sorts ascending by %s",
+    async (sortBy, firstOverrides, secondOverrides) => {
+      mockSearchRepos.mockResolvedValue(
+        searchResponse([
+          searchItem({
+            id: 1,
+            full_name: "a/one",
+            stargazers_count: 2000,
+            ...firstOverrides,
+          }),
+          searchItem({
+            id: 2,
+            full_name: "b/two",
+            stargazers_count: 1000,
+            ...secondOverrides,
+          }),
+        ]),
+      );
+
+      const result = await list(["PHP"], {
+        sortBy,
+        sortDirection: SortDirection.ASC,
+      });
+
+      expect(result.data.map((repo) => repo.id)).toEqual(["2", "1"]);
+    },
+  );
+
   it("treats an empty sort key like a missing one and sorts by stars", async () => {
     mockSearchRepos.mockResolvedValue(
       searchResponse([
