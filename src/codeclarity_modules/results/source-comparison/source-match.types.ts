@@ -33,6 +33,30 @@ export interface SourceMatch {
   modified?: string;
 }
 
+// What one knowledge source said about a vulnerability instance.
+export enum SourceVerdictValue {
+  Matched = "matched",
+  /** The source was healthy and had no matching record. */
+  NoRecord = "no_record",
+  /** The source had no match while stale, failed or of unknown state. */
+  StaleOrFailed = "stale_or_failed",
+}
+
+// What a verdict rests on; fields a verdict does not use are absent.
+export interface SourceVerdictEvidence {
+  /** The matched records, for a matched verdict. */
+  record_ids?: string[];
+  /** The source's sync state ("stale", "failed" or "unknown"), for a stale or failed verdict. */
+  source_status?: string;
+}
+
+// One knowledge source's verdict on a vulnerability instance.
+export interface SourceVerdict {
+  source: string;
+  verdict: SourceVerdictValue;
+  evidence?: SourceVerdictEvidence;
+}
+
 // The fields of a vulnerability instance the comparison reads.
 export interface ComparedVulnerability {
   VulnerabilityId: string;
