@@ -7,6 +7,7 @@ import {
   EntityNotFound,
   PluginResultNotAvailable,
   UnknownWorkspace,
+  ValidationFailed,
 } from "src/types/error.types";
 
 import { Result } from "../result.entity";
@@ -554,6 +555,28 @@ describe("SBOMService", () => {
         ),
       ).rejects.toThrow(EntityNotFound);
     });
+    it.each([
+      ["dependency", "default", ["package1@1.0.0"]],
+      ["dependency", "default", ["package1@1.0.0", "package2@2.0.0"]],
+      ["workspace", ["default"], "package1@1.0.0"],
+    ])(
+      "rejects a %s query sent as an array",
+      async (_param, workspace, dependency) => {
+        mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+
+        await expect(
+          service.getDependency(
+            "org-123",
+            "project-123",
+            "analysis-123",
+            workspace as string,
+            dependency as string,
+            mockUser,
+          ),
+        ).rejects.toThrow(ValidationFailed);
+        expect(mockSbomUtilsService.getDependencyData).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe("getStatus", () => {
@@ -917,5 +940,26 @@ describe("SBOMService", () => {
         ),
       ).rejects.toThrow(EntityNotFound);
     });
+
+    it.each([
+      ["dependency", "default", ["package1@1.0.0"]],
+      ["workspace", ["default"], "package1@1.0.0"],
+    ])(
+      "rejects a %s query sent as an array",
+      async (_param, workspace, dependency) => {
+        mockAnalysisResultsService.checkAccess.mockResolvedValue(undefined);
+
+        await expect(
+          service.getDependencyGraph(
+            "org-123",
+            "project-123",
+            "analysis-123",
+            workspace as string,
+            dependency as string,
+            mockUser,
+          ),
+        ).rejects.toThrow(ValidationFailed);
+      },
+    );
   });
 });
