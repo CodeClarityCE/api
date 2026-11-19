@@ -28,7 +28,11 @@ import { TicketsModule } from "./tickets/tickets.module";
         name: "knowledge",
         ...defaultOptions,
         autoLoadEntities: true,
-        database: "knowledge",
+        // Tests that seed knowledge rows point this at a scratch database.
+        database:
+          process.env["ENV"] === "test"
+            ? (process.env["KNOWLEDGE_TEST_DB_NAME"] ?? "knowledge")
+            : "knowledge",
         migrations: ["dist/migrations/knowledge/*.js"],
       }),
     }),

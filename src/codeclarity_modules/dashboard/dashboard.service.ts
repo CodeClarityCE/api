@@ -464,7 +464,8 @@ export class DashboardService {
       };
     }
 
-    const findings = this.findings(latest);
+    // Vendor-disputed findings do not count towards the grade.
+    const findings = this.findings(latest).filter((vuln) => !vuln.Disputed);
     const totalVulnSeverity = findings.reduce(
       (sum, vuln) => sum + (vuln.Severity?.Severity ?? 0),
       0,

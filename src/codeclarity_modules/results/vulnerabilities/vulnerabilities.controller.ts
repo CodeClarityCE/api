@@ -65,6 +65,8 @@ export class FindingsController {
     @AuthUser() user: AuthenticatedUser,
     @Query("workspace") workspace: string,
     @Query("ecosystem_filter") ecosystem_filter?: string,
+    @Query("show_blacklisted", new DefaultValuePipe("false"))
+    show_blacklisted?: string,
   ): Promise<Response> {
     return {
       data: await this.vulnerabilitiesService.getStats(
@@ -74,6 +76,7 @@ export class FindingsController {
         user,
         workspace,
         ecosystem_filter,
+        show_blacklisted === "true",
       ),
     };
   }
@@ -123,6 +126,8 @@ export class FindingsController {
     @Param("vulnerability_id") vulnerability_id: string,
     @AuthUser() user: AuthenticatedUser,
     @Query("workspace") workspace: string,
+    @Query("dependency") dependency?: string,
+    @Query("version") version?: string,
   ): Promise<Response> {
     return {
       data: await this.vulnerabilityService.getVulnerability(
@@ -132,6 +137,7 @@ export class FindingsController {
         user,
         vulnerability_id,
         workspace,
+        { dependency, version },
       ),
     };
   }

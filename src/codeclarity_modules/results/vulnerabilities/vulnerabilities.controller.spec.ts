@@ -91,6 +91,10 @@ describe("FindingsController", () => {
     number_of_medium: 20,
     number_of_low: 10,
     number_of_none: 0,
+    number_of_disputed: 0,
+    graded_number_of_vulnerabilities: 0,
+    graded_number_of_critical: 0,
+    graded_number_of_high: 0,
     mean_confidentiality_impact: 4.5,
     mean_integrity_impact: 3.8,
     mean_availability_impact: 4.2,
@@ -502,6 +506,7 @@ describe("FindingsController", () => {
         baseParams.user,
         baseParams.workspace,
         undefined, // ecosystem_filter
+        false, // show_blacklisted
       );
       expect(result).toEqual({
         data: mockStatsResponse,
@@ -617,6 +622,7 @@ describe("FindingsController", () => {
         baseParams.user,
         baseParams.vulnerability_id,
         baseParams.workspace,
+        { dependency: undefined, version: undefined },
       );
       expect(result).toEqual({
         data: mockVulnerabilityResponse,

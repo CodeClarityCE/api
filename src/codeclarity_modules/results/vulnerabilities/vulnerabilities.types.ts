@@ -225,6 +225,8 @@ export interface Vulnerability {
   GCVEMatch?: Vuln;
   Conflict: Conflict;
   PatchType?: PatchType;
+  /** True when a matched CVE record says its vendor disputes it. */
+  Disputed?: boolean;
 }
 
 /** Vulnerability info containing VLAI scores from matching */
@@ -260,6 +262,8 @@ export interface VulnerabilityMerged {
   EPSS: EPSS;
   is_blacklisted?: boolean;
   blacklisted_by_policies?: string[];
+  /** True when any affected entry is vendor-disputed. */
+  Disputed?: boolean;
 }
 
 export interface VLAI {
@@ -285,6 +289,7 @@ export interface AffectedVuln {
   GCVEMatch?: Vuln;
   Conflict: Conflict;
   PatchType?: PatchType;
+  Disputed?: boolean;
 }
 
 export enum ConflictFlag {
@@ -411,6 +416,13 @@ export interface VulnerabilityAnalysisStats {
   number_of_low: number;
   number_of_none: number;
 
+  /** Distinct vendor-disputed vulnerabilities; they stay in the counts above. */
+  number_of_disputed: number;
+  /** Grade inputs: the same counts without disputed vulnerabilities. */
+  graded_number_of_vulnerabilities: number;
+  graded_number_of_critical: number;
+  graded_number_of_high: number;
+
   mean_confidentiality_impact: number;
   mean_integrity_impact: number;
   mean_availability_impact: number;
@@ -469,6 +481,10 @@ export function newVulnerabilityAnalysisStats(): VulnerabilityAnalysisStats {
     number_of_medium: 0,
     number_of_low: 0,
     number_of_none: 0,
+    number_of_disputed: 0,
+    graded_number_of_vulnerabilities: 0,
+    graded_number_of_critical: 0,
+    graded_number_of_high: 0,
     mean_confidentiality_impact: 0,
     mean_integrity_impact: 0,
     mean_availability_impact: 0,
