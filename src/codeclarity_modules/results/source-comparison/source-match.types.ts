@@ -50,6 +50,15 @@ export interface SourceVerdictEvidence {
   source_status?: string;
 }
 
+// Every evidence field, in export column order; the type makes this list complete.
+export const SOURCE_VERDICT_EVIDENCE_FIELDS = Object.keys({
+  record_ids: true,
+  source_status: true,
+} satisfies Record<
+  keyof SourceVerdictEvidence,
+  true
+>) as (keyof SourceVerdictEvidence)[];
+
 // One knowledge source's verdict on a vulnerability instance.
 export interface SourceVerdict {
   source: string;
@@ -63,6 +72,7 @@ export interface ComparedVulnerability {
   AffectedDependency: string;
   AffectedVersion: string;
   SourceMatches?: SourceMatch[];
+  SourceVerdicts?: SourceVerdict[];
 }
 
 export interface ComparedWorkspace {
