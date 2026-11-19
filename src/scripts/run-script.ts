@@ -1,7 +1,10 @@
 import * as dotenv from "dotenv";
 import type { DataSource } from "typeorm";
 
-import { CodeClarityLogger } from "../services/logger.service";
+import {
+  CodeClarityLogger,
+  isSensitiveField,
+} from "../services/logger.service";
 
 import "reflect-metadata";
 
@@ -17,12 +20,25 @@ export function runScript(
     quiet: true,
   });
   main().catch((error: unknown) => {
+    const details =
+      error instanceof Error ? (error.stack ?? error.message) : String(error);
     CodeClarityLogger.forService(name).error(
       `${name} failed`,
-      error instanceof Error ? error : String(error),
+      redactSecrets(details),
     );
     process.exit(1);
   });
+}
+
+// Replaces the values of secret-looking environment variables in text.
+function redactSecrets(text: string): string {
+  let redacted = text;
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value && isSensitiveField(key)) {
+      redacted = redacted.replaceAll(value, "[REDACTED]");
+    }
+  }
+  return redacted;
 }
 
 // Runs fn on the codeclarity datasource, connected for the call only.
