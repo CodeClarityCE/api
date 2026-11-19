@@ -502,6 +502,7 @@ describe("FindingsController", () => {
         baseParams.user,
         baseParams.workspace,
         undefined, // ecosystem_filter
+        false, // show_blacklisted
       );
       expect(result).toEqual({
         data: mockStatsResponse,
