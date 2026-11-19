@@ -12,6 +12,7 @@
 import {
   type SourceVerdict,
   SourceVerdictValue,
+  VerdictSource,
 } from "../results/source-comparison/source-match.types";
 import {
   type HiddenReason,
@@ -75,9 +76,9 @@ export interface VulnerabilityInstanceRow {
   /** Affected versions of every source that matched, null when none did */
   vulnerable_versions: VulnerableVersions | null;
   /** Each source's verdict, null when the result has none from that source */
-  osv_verdict: string | null;
-  nvd_verdict: string | null;
-  gcve_verdict: string | null;
+  osv_verdict: SourceVerdictValue | null;
+  nvd_verdict: SourceVerdictValue | null;
+  gcve_verdict: SourceVerdictValue | null;
   /** Visible, or why it is hidden by default; null without source verdicts */
   instance_status: InstanceStatusValue | null;
   /** Matched by one source origin only; null without source verdicts */
@@ -177,7 +178,7 @@ function instanceRow(
     ),
     withdrawn_date: stringOrNull(osv["withdrawn"]),
     vulnerable_versions: vulnerableVersions(instance),
-    ...verdictColumns(instance["SourceVerdicts"]),
+    ...verdictColumns(instance["SourceVerdicts"], instance["Ecosystem"]),
     disputed: instance["Disputed"] === true,
   };
 }
@@ -195,6 +196,7 @@ function sourceVerdicts(value: unknown): SourceVerdict[] | null {
           {
             source: v["source"].toLowerCase(),
             verdict: v["verdict"] as SourceVerdictValue,
+            ...(isObject(v["evidence"]) ? { evidence: v["evidence"] } : {}),
           },
         ]
       : [],
@@ -204,6 +206,7 @@ function sourceVerdicts(value: unknown): SourceVerdict[] | null {
 /** One verdict column per source plus the status derived from them. */
 function verdictColumns(
   value: unknown,
+  ecosystem: unknown,
 ): Pick<
   VulnerabilityInstanceRow,
   | "osv_verdict"
@@ -213,14 +216,16 @@ function verdictColumns(
   | "uncorroborated"
 > {
   const verdicts = sourceVerdicts(value);
-  const of = (source: string): string | null =>
-    verdicts?.find((v) => v.source === source)?.verdict ?? null;
+  const of = (source: VerdictSource): SourceVerdictValue | null =>
+    verdicts?.find((v) => (v.source as VerdictSource) === source)?.verdict ??
+    null;
   return {
-    osv_verdict: of("osv"),
-    nvd_verdict: of("nvd"),
-    gcve_verdict: of("gcve"),
+    osv_verdict: of(VerdictSource.Osv),
+    nvd_verdict: of(VerdictSource.Nvd),
+    gcve_verdict: of(VerdictSource.Gcve),
     instance_status: verdicts
-      ? (instanceStatus(verdicts).hidden ?? "visible")
+      ? (instanceStatus(verdicts, stringOrNull(ecosystem) ?? undefined)
+          .hidden ?? "visible")
       : null,
     uncorroborated: verdicts ? isUncorroborated(verdicts) : null,
   };

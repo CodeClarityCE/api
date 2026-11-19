@@ -426,6 +426,24 @@ describe("mapRunRows source verdicts", () => {
     });
   });
 
+  it("hides an instance only when the other origin names a package of its own ecosystem", () => {
+    const namesAnother = (ecosystem: string): unknown[] => [
+      {
+        source: "osv",
+        verdict: "names_another_product",
+        evidence: { names: [{ ecosystem, package: "@fastify/passport" }] },
+      },
+      { source: "nvd", verdict: "matched" },
+      { source: "gcve", verdict: "no_record" },
+    ];
+    expect(
+      rowOf({ Ecosystem: "npm", SourceVerdicts: namesAnother("npm") }),
+    ).toMatchObject({ instance_status: "contradicted" });
+    expect(
+      rowOf({ Ecosystem: "npm", SourceVerdicts: namesAnother("PyPI") }),
+    ).toMatchObject({ instance_status: "visible" });
+  });
+
   it("leaves verdicts and status empty for results without source verdicts", () => {
     for (const SourceVerdicts of [undefined, null, "matched", {}]) {
       expect(rowOf({ SourceVerdicts })).toMatchObject({

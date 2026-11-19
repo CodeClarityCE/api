@@ -52,7 +52,7 @@ export enum SourceVerdictValue {
 
 // A product or package a record names; fields a source does not use are absent.
 export interface SourceProduct {
-  /** An OSV package's ecosystem, like "npm". */
+  /** The OSV ecosystem the name belongs to, like "npm"; absent when the record gives none. */
   ecosystem?: string;
   /** An OSV package's name. */
   package?: string;
@@ -96,6 +96,13 @@ export const SOURCE_VERDICT_EVIDENCE_FIELDS = Object.keys({
   true
 >) as (keyof SourceVerdictEvidence)[];
 
+// The knowledge sources that give a verdict on every instance, as source verdicts name them.
+export enum VerdictSource {
+  Osv = "osv",
+  Nvd = "nvd",
+  Gcve = "gcve",
+}
+
 // One knowledge source's verdict on a vulnerability instance.
 export interface SourceVerdict {
   source: string;
@@ -108,6 +115,8 @@ export interface ComparedVulnerability {
   VulnerabilityId: string;
   AffectedDependency: string;
   AffectedVersion: string;
+  /** The instance's OSV ecosystem, like "npm"; absent on older analyses. */
+  Ecosystem?: string;
   SourceMatches?: SourceMatch[];
   SourceVerdicts?: SourceVerdict[];
 }

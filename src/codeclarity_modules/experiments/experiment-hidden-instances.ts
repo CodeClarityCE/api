@@ -1,9 +1,10 @@
-/**
- * Instances hidden by default (ADR 0013): every source match contradicted by
- * another source origin, or retired on every source. Experiment metrics leave
- * them out unless a Figure asks to include them. Pure.
- */
-import { HiddenReason } from "../results/vulnerabilities/utils/instance-status";
+// Instances hidden by default (ADR 0013), which experiment metrics leave out
+// unless a Figure includes them. Pure.
+import {
+  emptyHiddenCounts,
+  HIDDEN_REASONS,
+  HiddenReason,
+} from "../results/vulnerabilities/utils/instance-status";
 
 import type { InstanceStatusValue } from "./experiment-row-copy";
 
@@ -22,10 +23,7 @@ interface Judged {
 
 /** Rows copied without source verdicts (null status) count as visible. */
 export function isHiddenInstance(v: Judged): boolean {
-  return (
-    v.instance_status === HiddenReason.Contradicted ||
-    v.instance_status === HiddenReason.RetiredAll
-  );
+  return HIDDEN_REASONS.includes(v.instance_status as HiddenReason);
 }
 
 /** The instances metrics count by default. */
@@ -38,7 +36,7 @@ export function visibleInstances<T extends Judged>(
 export function hiddenInstanceCounts(
   vulnerabilities: readonly Judged[],
 ): HiddenInstanceCounts {
-  const counts: HiddenInstanceCounts = { contradicted: 0, retired_all: 0 };
+  const counts = emptyHiddenCounts();
   for (const v of vulnerabilities) {
     if (isHiddenInstance(v)) counts[v.instance_status as `${HiddenReason}`]++;
   }
@@ -47,18 +45,13 @@ export function hiddenInstanceCounts(
 
 /** One caption phrase per reason that hid something. */
 export function hiddenInstancePhrases(counts: HiddenInstanceCounts): string[] {
-  return (Object.keys(REASON_TEXT) as `${HiddenReason}`[])
-    .filter((reason) => counts[reason] > 0)
-    .map(
-      (reason) =>
-        `${counts[reason]} ${counts[reason] === 1 ? "instance" : "instances"} hidden as ${REASON_TEXT[reason]}`,
-    );
+  return HIDDEN_REASONS.filter((reason) => counts[reason] > 0).map(
+    (reason) =>
+      `${counts[reason]} ${counts[reason] === 1 ? "instance" : "instances"} hidden as ${REASON_TEXT[reason]}`,
+  );
 }
 
-/**
- * Rows without hidden instances, with each run summary's instance total
- * lowered by the instances it hid, so summary metrics agree.
- */
+/** Rows without hidden instances; each run's instance total drops by what it hid. */
 export function withoutHiddenInstances<
   T extends {
     vulnerabilities: readonly (Judged & { run_id: string })[];

@@ -5,16 +5,8 @@ import {
   SourceVerdictValue,
 } from "src/codeclarity_modules/results/source-comparison/source-match.types";
 
-import { type SourceOrigin, sourceOrigin } from "./source-origin";
-
-// Verdicts saying a source has a record that names packages for this vulnerability.
-// No package data, no record and stale or failed say nothing about the package.
-const HOLDS_PACKAGE_DATA: ReadonlySet<SourceVerdictValue> = new Set([
-  SourceVerdictValue.Matched,
-  SourceVerdictValue.VersionExcluded,
-  SourceVerdictValue.NamesAnotherProduct,
-  SourceVerdictValue.Retired,
-]);
+import { type SourceOrigin, sourceOrigin } from "./origin-by-source";
+import { VERDICT_TRAITS } from "./verdict-traits";
 
 // True when sources of one origin only matched and no source of another origin
 // holds package data. False for older analyses without verdicts.
@@ -34,7 +26,7 @@ export function isUncorroborated(
     return (
       other !== undefined &&
       other !== origin &&
-      HOLDS_PACKAGE_DATA.has(v.verdict)
+      VERDICT_TRAITS[v.verdict]?.holdsPackageData === true
     );
   });
 }

@@ -5,7 +5,8 @@ import {
   SourceVerdictValue,
 } from "src/codeclarity_modules/results/source-comparison/source-match.types";
 
-import { differentOrigins } from "./source-origin";
+import { differentOrigins } from "./origin-by-source";
+import { contradicts, VERDICT_TRAITS } from "./verdict-traits";
 
 export enum HiddenReason {
   /** Every source match is contradicted by a source of another origin. */
@@ -14,33 +15,32 @@ export enum HiddenReason {
   RetiredAll = "retired_all",
 }
 
+export const HIDDEN_REASONS: readonly HiddenReason[] =
+  Object.values(HiddenReason);
+
+/** Hidden vulnerability instances by reason. */
+export type HiddenCounts = Record<HiddenReason, number>;
+
+export function emptyHiddenCounts(): HiddenCounts {
+  return Object.fromEntries(
+    HIDDEN_REASONS.map((reason) => [reason, 0]),
+  ) as HiddenCounts;
+}
+
 export interface InstanceStatus {
   hidden: HiddenReason | null;
   /** Sources that withdrew or contradicted a source match, sorted. */
   contradicted_by: string[];
 }
 
-// Verdicts that deny a match made by a source of another origin.
-const CONTRADICTING = new Set<SourceVerdictValue>([
-  SourceVerdictValue.VersionExcluded,
-  SourceVerdictValue.Retired,
-  SourceVerdictValue.NamesAnotherProduct,
-]);
-
-// Verdicts saying the source holds a live record for the instance.
-const LIVE_RECORD = new Set<SourceVerdictValue>([
-  SourceVerdictValue.Matched,
-  SourceVerdictValue.VersionExcluded,
-  SourceVerdictValue.NamesAnotherProduct,
-]);
-
-// Derives the hidden reason from an instance's stored source verdicts; none hides nothing.
+// Derives the hidden reason from an instance's stored source verdicts and OSV ecosystem; none hides nothing.
 export function instanceStatus(
   verdicts: readonly SourceVerdict[] | undefined | null,
+  ecosystem: string | undefined,
 ): InstanceStatus {
   const list = (verdicts ?? []).map((v) => ({
+    ...v,
     source: v.source.toLowerCase(),
-    verdict: v.verdict,
   }));
   const matched = list.filter((v) => v.verdict === SourceVerdictValue.Matched);
 
@@ -49,8 +49,7 @@ export function instanceStatus(
   for (const match of matched) {
     const against = list.filter(
       (v) =>
-        CONTRADICTING.has(v.verdict) &&
-        differentOrigins(match.source, v.source),
+        contradicts(v, ecosystem) && differentOrigins(match.source, v.source),
     );
     if (against.length > 0) contradictedMatches++;
     for (const v of against) contradictedBy.add(v.source);
@@ -61,8 +60,23 @@ export function instanceStatus(
     return { hidden: HiddenReason.Contradicted, contradicted_by };
   }
   const retired = list.some((v) => v.verdict === SourceVerdictValue.Retired);
-  if (retired && !list.some((v) => LIVE_RECORD.has(v.verdict))) {
+  if (retired && !list.some((v) => VERDICT_TRAITS[v.verdict]?.liveRecord)) {
     return { hidden: HiddenReason.RetiredAll, contradicted_by };
   }
   return { hidden: null, contradicted_by };
+}
+
+/** The fields of a vulnerability instance the derivation reads. */
+export interface JudgedInstance {
+  SourceVerdicts?: readonly SourceVerdict[] | null;
+  Ecosystem?: string;
+}
+
+/** The instances default views, counts and the grade use: hidden ones are left out. */
+export function shownByDefault<T extends JudgedInstance>(
+  instances: readonly T[],
+): T[] {
+  return instances.filter(
+    (v) => instanceStatus(v.SourceVerdicts, v.Ecosystem).hidden === null,
+  );
 }

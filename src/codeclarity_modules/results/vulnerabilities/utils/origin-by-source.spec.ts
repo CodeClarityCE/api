@@ -1,4 +1,8 @@
-import { differentOrigins, SourceOrigin, sourceOrigin } from "./source-origin";
+import {
+  differentOrigins,
+  SourceOrigin,
+  sourceOrigin,
+} from "./origin-by-source";
 
 describe("source origin", () => {
   it("puts OSV in its own origin and NVD and GCVE in the CVE List", () => {

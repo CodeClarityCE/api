@@ -23,16 +23,20 @@ import {
   UnknownWorkspace,
 } from "src/types/error.types";
 
-import { HiddenReason, instanceStatus } from "./instance-status";
+import {
+  emptyHiddenCounts,
+  type HiddenCounts,
+  HiddenReason,
+  instanceStatus,
+} from "./instance-status";
+
+export type { HiddenCounts } from "./instance-status";
 
 /** Filters that show instances hidden by default. */
 export interface HiddenFilters {
   show_contradicted?: boolean;
   show_retired?: boolean;
 }
-
-/** Instances of each hidden reason, whether or not a filter shows them. */
-export type HiddenCounts = Record<HiddenReason, number>;
 
 /** A workspace's findings after the hidden filters, with what they hid. */
 export interface FindingsView {
@@ -150,17 +154,14 @@ export class VulnerabilitiesUtilsService {
     }
 
     // Judge each instance from its source verdicts, then drop the hidden ones
-    const hidden_counts: HiddenCounts = {
-      [HiddenReason.Contradicted]: 0,
-      [HiddenReason.RetiredAll]: 0,
-    };
-    const shown = {
+    const hidden_counts = emptyHiddenCounts();
+    const shown: Record<HiddenReason, boolean> = {
       [HiddenReason.Contradicted]: filters.show_contradicted === true,
       [HiddenReason.RetiredAll]: filters.show_retired === true,
     };
     const visible: Vulnerability[] = [];
     for (const vuln of vulnerabilities) {
-      const status = instanceStatus(vuln.SourceVerdicts);
+      const status = instanceStatus(vuln.SourceVerdicts, vuln.Ecosystem);
       if (status.contradicted_by.length > 0) {
         vuln.ContradictedBy = status.contradicted_by;
       }

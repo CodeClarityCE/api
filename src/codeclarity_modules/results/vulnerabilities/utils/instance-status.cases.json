@@ -41,14 +41,110 @@
     "contradicted_by": []
   },
   {
-    "name": "an OSV record naming another package contradicts the CVE List matches",
+    "name": "an OSV record naming another package of the same ecosystem contradicts the CVE List matches",
     "verdicts": [
       { "source": "gcve", "verdict": "matched" },
       { "source": "nvd", "verdict": "matched" },
-      { "source": "osv", "verdict": "names_another_product" }
+      {
+        "source": "osv",
+        "verdict": "names_another_product",
+        "evidence": {
+          "names": [{ "ecosystem": "npm", "package": "@fastify/passport" }]
+        }
+      }
     ],
     "hidden": "contradicted",
-    "contradicted_by": ["osv"]
+    "contradicted_by": ["osv"],
+    "ecosystem": "npm"
+  },
+  {
+    "name": "a record naming a product of another ecosystem does not contradict",
+    "ecosystem": "npm",
+    "verdicts": [
+      { "source": "osv", "verdict": "matched" },
+      {
+        "source": "nvd",
+        "verdict": "names_another_product",
+        "evidence": {
+          "names": [{ "vendor": "gnu", "product": "tar", "target_sw": "*" }]
+        }
+      },
+      { "source": "gcve", "verdict": "no_record" }
+    ],
+    "hidden": null,
+    "contradicted_by": []
+  },
+  {
+    "name": "an OSV record naming a package of another ecosystem does not contradict",
+    "ecosystem": "npm",
+    "verdicts": [
+      { "source": "gcve", "verdict": "matched" },
+      { "source": "nvd", "verdict": "no_record" },
+      {
+        "source": "osv",
+        "verdict": "names_another_product",
+        "evidence": {
+          "names": [{ "ecosystem": "PyPI", "package": "left-pad" }]
+        }
+      }
+    ],
+    "hidden": null,
+    "contradicted_by": []
+  },
+  {
+    "name": "a GCVE record without an ecosystem signal does not contradict",
+    "ecosystem": "npm",
+    "verdicts": [
+      { "source": "osv", "verdict": "matched" },
+      { "source": "nvd", "verdict": "no_record" },
+      {
+        "source": "gcve",
+        "verdict": "names_another_product",
+        "evidence": {
+          "names": [{ "vendor": "Acme Themes", "product": "left-pad" }]
+        }
+      }
+    ],
+    "hidden": null,
+    "contradicted_by": []
+  },
+  {
+    "name": "an NVD record naming another npm package contradicts an OSV match",
+    "ecosystem": "npm",
+    "verdicts": [
+      { "source": "osv", "verdict": "matched" },
+      {
+        "source": "nvd",
+        "verdict": "names_another_product",
+        "evidence": {
+          "names": [
+            {
+              "ecosystem": "npm",
+              "vendor": "fastify",
+              "product": "passport",
+              "target_sw": "node.js"
+            }
+          ]
+        }
+      },
+      { "source": "gcve", "verdict": "no_record" }
+    ],
+    "hidden": "contradicted",
+    "contradicted_by": ["nvd"]
+  },
+  {
+    "name": "a record naming another package does not contradict an instance of unknown ecosystem",
+    "verdicts": [
+      { "source": "osv", "verdict": "matched" },
+      {
+        "source": "nvd",
+        "verdict": "names_another_product",
+        "evidence": { "names": [{ "ecosystem": "npm", "product": "passport" }] }
+      },
+      { "source": "gcve", "verdict": "no_record" }
+    ],
+    "hidden": null,
+    "contradicted_by": []
   },
   {
     "name": "no package data never contradicts",
@@ -85,10 +181,17 @@
     "verdicts": [
       { "source": "osv", "verdict": "matched" },
       { "source": "nvd", "verdict": "version_excluded" },
-      { "source": "gcve", "verdict": "names_another_product" }
+      {
+        "source": "gcve",
+        "verdict": "names_another_product",
+        "evidence": {
+          "names": [{ "ecosystem": "npm", "product": "left-pad-cli" }]
+        }
+      }
     ],
     "hidden": "contradicted",
-    "contradicted_by": ["gcve", "nvd"]
+    "contradicted_by": ["gcve", "nvd"],
+    "ecosystem": "npm"
   },
   {
     "name": "an instance retired on all sources is hidden as retired",

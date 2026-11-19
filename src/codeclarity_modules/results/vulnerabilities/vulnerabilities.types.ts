@@ -234,6 +234,8 @@ export interface Vulnerability {
   Disputed?: boolean;
   /** One verdict per knowledge source; absent on older analyses. */
   SourceVerdicts?: SourceVerdict[];
+  /** The instance's OSV ecosystem, like "npm"; absent on older analyses. */
+  Ecosystem?: string;
   /** Why the instance is hidden by default; absent when it is not. */
   Hidden?: HiddenReason;
   /** Sources that withdrew or contradicted one of its source matches. */
