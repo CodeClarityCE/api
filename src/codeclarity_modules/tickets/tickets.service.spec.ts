@@ -20,13 +20,16 @@ describe("TicketsService vulnerability details from knowledge", () => {
   };
 
   // A service whose only ticket is about the given package, with no analysis behind it.
-  function serviceFor(affectedPackage: string): TicketsService {
+  function serviceFor(
+    affectedPackage: string,
+    analysis: { id: string } | null = null,
+  ): TicketsService {
     const ticket = {
       id: "ticket-1",
       vulnerability_id: "CVE-2019-11358",
       affected_package: affectedPackage,
       project: { id: "project-1" },
-      source_analysis: null,
+      source_analysis: analysis,
     };
     const osvRows = {
       find: jest.fn().mockResolvedValue([drupal, jquery]),
@@ -36,6 +39,9 @@ describe("TicketsService vulnerability details from knowledge", () => {
       nvd: { getVulnWithoutFailing: jest.fn().mockResolvedValue(null) },
       epss: { getByCVE: jest.fn().mockResolvedValue(null) },
       tickets: { findOne: jest.fn().mockResolvedValue(ticket) },
+      vulnerabilities: {
+        getVulnerability: jest.fn().mockRejectedValue(new Error("no result")),
+      },
     };
     const unused = {} as never;
     return new TicketsService(
@@ -43,7 +49,7 @@ describe("TicketsService vulnerability details from knowledge", () => {
       unused,
       unused,
       unused,
-      unused,
+      deps.vulnerabilities as never,
       unused,
       deps.nvd as never,
       new OSVRepository(osvRows),
@@ -77,5 +83,27 @@ describe("TicketsService vulnerability details from knowledge", () => {
     );
 
     expect(details).toBeNull();
+  });
+
+  it("logs a ticket id with format directives verbatim when the analysis lookup fails", async () => {
+    const lines: string[] = [];
+    const log = jest
+      .spyOn(console, "log")
+      .mockImplementation((line: string) => lines.push(line));
+
+    await serviceFor("jquery", { id: "analysis-1" }).getVulnerabilityDetails(
+      "org-1",
+      "%s%o ticket",
+      user,
+    );
+    log.mockRestore();
+
+    const entry = lines
+      .map((line) => JSON.parse(line) as Record<string, any>)
+      .find((e) => e["level"] === "error");
+    expect(entry).toMatchObject({
+      msg: "Failed to fetch vulnerability details for ticket",
+      fields: { ticketId: "%s%o ticket", error: "no result" },
+    });
   });
 });

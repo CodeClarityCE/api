@@ -32,9 +32,7 @@ export function splitName(name: string): { first: string; last: string } {
   const last = words.length > 1 ? (words.pop() ?? "") : "";
   const first = words.join(" ");
   if (!first || !last) {
-    throw new Error(
-      `name must be a first and a last name, like "Jane Roe" (got "${name}")`,
-    );
+    throw new Error('name must be a first and a last name, like "Jane Roe"');
   }
   if (first.length > 25)
     throw new Error("first name must be 1 to 25 characters");
@@ -140,7 +138,7 @@ export function parseArgs(
   const password = given.password ?? env["CREATE_USER_PASSWORD"];
   const name = (given.name ?? env["CREATE_USER_NAME"])?.trim();
   if (!email) throw new Error("email is required");
-  if (!isEmail(email)) throw new Error(`email ${email} is not a valid address`);
+  if (!isEmail(email)) throw new Error("email is not a valid address");
   if (!password || password.length < 10 || password.length > 75) {
     throw new Error("password must be 10 to 75 characters");
   }

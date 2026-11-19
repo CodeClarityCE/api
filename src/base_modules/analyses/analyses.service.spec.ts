@@ -1,6 +1,7 @@
 import { ConfigService } from "@nestjs/config";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
+import type { Repository } from "typeorm";
 
 import { AnalyzerLanguagesService } from "src/base_modules/analyzers/analyzer-languages.service";
 import { Policy } from "src/codeclarity_modules/policies/policy.entity";
@@ -46,6 +47,7 @@ describe("AnalysesService", () => {
   let vulnerabilitiesRepository: VulnerabilitiesRepository;
   let licensesRepository: LicensesRepository;
   let analysesRepository: AnalysesRepository;
+  let policyRepository: Repository<Policy>;
 
   // Mock data
   const mockUser = new AuthenticatedUser("user-123", [ROLE.USER], true);
@@ -261,6 +263,7 @@ describe("AnalysesService", () => {
     );
     licensesRepository = module.get<LicensesRepository>(LicensesRepository);
     analysesRepository = module.get<AnalysesRepository>(AnalysesRepository);
+    policyRepository = module.get(getRepositoryToken(Policy, "codeclarity"));
 
     // Reset mocks
     jest.clearAllMocks();
@@ -317,6 +320,61 @@ describe("AnalysesService", () => {
           project_id: "project-123",
         },
       ]);
+    });
+
+    it("logs a policy id with format directives verbatim when linking it fails", async () => {
+      jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
+      jest
+        .spyOn(projectsRepository, "doesProjectBelongToOrg")
+        .mockResolvedValue();
+      jest
+        .spyOn(analyzersRepository, "getAnalyzerById")
+        .mockResolvedValue(mockAnalyzer as any);
+      jest
+        .spyOn(projectsRepository, "getProjectById")
+        .mockResolvedValue(mockProject as any);
+      jest
+        .spyOn(usersRepository, "getUserById")
+        .mockResolvedValue(mockCreator as any);
+      jest
+        .spyOn(organizationsRepository, "getOrganizationById")
+        .mockResolvedValue(mockOrganization as any);
+      jest
+        .spyOn(analysesRepository, "saveAnalysis")
+        .mockResolvedValue(mockAnalysis);
+      jest
+        .spyOn(policyRepository, "findOne")
+        .mockRejectedValue(new Error("db down"));
+      const lines: string[] = [];
+      const log = jest
+        .spyOn(console, "log")
+        .mockImplementation((line: string) => lines.push(line));
+
+      await service.create(
+        "org-123",
+        "project-123",
+        {
+          ...mockAnalysisCreateBody,
+          config: {
+            ...mockAnalysisCreateBody.config,
+            "vuln-finder": { vulnerabilityPolicy: ["%s%o policy"] },
+          },
+        },
+        mockUser,
+      );
+      log.mockRestore();
+
+      const entry = lines
+        .map((line) => JSON.parse(line) as Record<string, any>)
+        .find((e) => e["level"] === "warn");
+      expect(entry).toMatchObject({
+        msg: "Failed to link policy to analysis",
+        fields: {
+          policyId: "%s%o policy",
+          analysisId: "analysis-123",
+          error: "db down",
+        },
+      });
     });
 
     it("refuses an analyzer whose CodeQL is off, saving and queuing nothing", async () => {

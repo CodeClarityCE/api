@@ -1053,10 +1053,11 @@ export class AnalysesService {
         }
       }
     } catch (err) {
-      console.warn(
-        `Failed to process policy linking for analysis ${analysisId}:`,
-        (err as Error).message,
-      );
+      this.logger.warn("Failed to process policy linking for analysis", {
+        analysisId,
+        organizationId: orgId,
+        error: (err as Error).message,
+      });
     }
   }
 
@@ -1083,10 +1084,12 @@ export class AnalysesService {
         );
       }
     } catch (err) {
-      console.warn(
-        `Failed to link policy ${policyId} to analysis ${analysisId}:`,
-        (err as Error).message,
-      );
+      this.logger.warn("Failed to link policy to analysis", {
+        policyId,
+        analysisId,
+        organizationId: orgId,
+        error: (err as Error).message,
+      });
     }
   }
 }

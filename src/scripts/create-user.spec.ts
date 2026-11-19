@@ -45,7 +45,7 @@ describe("create-user arguments", () => {
     ],
     [
       ["--email", "nope", "--password", "Correct-Horse-42!", "--name", "Jane"],
-      "email nope is not a valid address",
+      "email is not a valid address",
     ],
     [
       ["--email", "jane@example.com", "--password", "short", "--name", "Jane"],
