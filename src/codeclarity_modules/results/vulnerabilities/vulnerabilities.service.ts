@@ -12,7 +12,6 @@ import { Dependency } from "src/codeclarity_modules/results/sbom/sbom.types";
 import { StatusResponse } from "src/codeclarity_modules/results/status.types";
 import { paginate } from "src/codeclarity_modules/results/utils/utils";
 import {
-  AffectedVuln,
   KnowledgeSnapshot,
   MaliciousPackageAdvisory,
   Output as VulnsOutput,
@@ -31,9 +30,9 @@ import { SbomUtilsService } from "../sbom/utils/utils";
 
 import { VulnerabilitiesFilterService } from "./utils/filter.service";
 import { findFindingAdvisory } from "./utils/finding-advisory";
+import { addAffected, affectedOf } from "./utils/merge-affected";
 import { VulnerabilitiesSortService } from "./utils/sort.service";
 import { computeVulnerabilityStats } from "./utils/stats";
-import { isUncorroborated } from "./utils/uncorroborated";
 import {
   type FindingsView,
   type HiddenFilters,
@@ -308,54 +307,11 @@ export class VulnerabilitiesService {
       string,
       VulnerabilityMerged
     >();
-    // For each finding
     for (const finding of findings) {
-      const affected: AffectedVuln = {
-        Sources: finding.Sources,
-        AffectedDependency: finding.AffectedDependency,
-        AffectedVersion: finding.AffectedVersion,
-        VulnerabilityId: finding.VulnerabilityId,
-        OSVMatch: finding.OSVMatch,
-        NVDMatch: finding.NVDMatch,
-        Severity: finding.Severity,
-        Conflict: finding.Conflict,
-      };
-      if (finding.GCVEMatch) {
-        affected.GCVEMatch = finding.GCVEMatch;
-      }
-      if (finding.Weaknesses) {
-        affected.Weaknesses = finding.Weaknesses;
-      }
-      if (finding.PatchType) {
-        affected.PatchType = finding.PatchType;
-      }
-      if (finding.Disputed === true) {
-        affected.Disputed = true;
-      }
-      if (finding.SourceVerdicts) {
-        affected.SourceVerdicts = finding.SourceVerdicts;
-      }
-      affected.Uncorroborated = isUncorroborated(finding.SourceVerdicts);
-      if (finding.Hidden) affected.Hidden = finding.Hidden;
-      if (finding.ContradictedBy) {
-        affected.ContradictedBy = finding.ContradictedBy;
-      }
-      // if vuln already in map
+      const affected = affectedOf(finding);
       const vuln = findingsMerged.get(finding.VulnerabilityId);
       if (vuln) {
-        vuln.Affected.push(affected);
-        if (affected.Disputed) vuln.Disputed = true;
-        if (affected.Uncorroborated) vuln.Uncorroborated = true;
-        // A grouped vulnerability lists every matching source and its worst severity.
-        for (const source of finding.Sources) {
-          if (!vuln.Sources.includes(source)) vuln.Sources.push(source);
-        }
-        if (
-          (finding.Severity?.Severity ?? 0) > (vuln.Severity?.Severity ?? 0)
-        ) {
-          vuln.Severity = finding.Severity;
-        }
-        findingsMerged.set(finding.VulnerabilityId, vuln);
+        addAffected(vuln, affected);
       } else {
         const epss = await this.epssRepository.getByCVE(
           finding.VulnerabilityId,
@@ -365,10 +321,10 @@ export class VulnerabilitiesService {
           Sources: [...finding.Sources],
           Vulnerability: finding.VulnerabilityId,
           Severity: finding.Severity,
-          Affected: [affected],
+          Affected: [],
           Description: "",
           Conflict: finding.Conflict,
-          Uncorroborated: affected.Uncorroborated,
+          Uncorroborated: false,
           VLAI: [],
           EPSS: {
             Score: epss.score,
@@ -378,7 +334,7 @@ export class VulnerabilitiesService {
         if (finding.Weaknesses) {
           mergedFinding.Weaknesses = finding.Weaknesses;
         }
-        if (affected.Disputed) mergedFinding.Disputed = true;
+        addAffected(mergedFinding, affected);
         for (const [source, match] of [
           [Source.Nvd, finding.NVDMatch],
           [Source.Osv, finding.OSVMatch],

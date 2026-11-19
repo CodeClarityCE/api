@@ -1,6 +1,7 @@
 import { type Dependency } from "src/codeclarity_modules/results/sbom/sbom.types";
 import {
   hasCvssScore,
+  isWorseSeverity,
   severityBucket,
 } from "src/codeclarity_modules/results/utils/utils";
 import {
@@ -102,9 +103,11 @@ export function computeVulnerabilityStats(
     // Only count unique vulnerabilities
     if (!encounteredVulns.has(finding.VulnerabilityId)) {
       incrementOwaspStats(stats, finding.Weaknesses);
-      incrementSeverityStats(stats, finding.Severity);
     }
     encounteredVulns.add(finding.VulnerabilityId);
+  }
+  for (const severity of worstSeverities(findings).values()) {
+    incrementSeverityStats(stats, severity);
   }
 
   countDependencyRoles(stats, findings, dependencies);
@@ -128,20 +131,31 @@ function countGradeInputs(
 ): void {
   const graded = newVulnerabilityAnalysisStats();
   const disputed = new Set<string>();
-  const seen = new Set<string>();
   for (const finding of findings) {
-    if (finding.Disputed === true) {
-      disputed.add(finding.VulnerabilityId);
-      continue;
-    }
-    if (seen.has(finding.VulnerabilityId)) continue;
-    seen.add(finding.VulnerabilityId);
-    incrementSeverityStats(graded, finding.Severity);
+    if (finding.Disputed === true) disputed.add(finding.VulnerabilityId);
+  }
+  const worst = worstSeverities(findings.filter((f) => f.Disputed !== true));
+  for (const severity of worst.values()) {
+    incrementSeverityStats(graded, severity);
   }
   stats.number_of_disputed = disputed.size;
-  stats.graded_number_of_vulnerabilities = seen.size;
+  stats.graded_number_of_vulnerabilities = worst.size;
   stats.graded_number_of_critical = graded.number_of_critical;
   stats.graded_number_of_high = graded.number_of_high;
+}
+
+/** The worst severity of each vulnerability among its findings, as its card shows. */
+function worstSeverities(
+  findings: StatsFinding[],
+): Map<string, StatsFinding["Severity"]> {
+  const worst = new Map<string, StatsFinding["Severity"]>();
+  for (const finding of findings) {
+    const id = finding.VulnerabilityId;
+    if (!worst.has(id) || isWorseSeverity(finding.Severity, worst.get(id))) {
+      worst.set(id, finding.Severity);
+    }
+  }
+  return worst;
 }
 
 /** Count each vulnerable dependency version by its role in the SBOM. */
