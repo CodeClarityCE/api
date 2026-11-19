@@ -9,6 +9,7 @@ import {
 } from "src/base_modules/analyses/analysis-outcome";
 import { Organization } from "src/base_modules/organizations/organization.entity";
 import { Result } from "src/codeclarity_modules/results/result.entity";
+import { shownByDefault } from "src/codeclarity_modules/results/vulnerabilities/utils/instance-status";
 import { Output as VulnsOutput } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
 
 import { Ticket, TicketStatus } from "../ticket.entity";
@@ -250,9 +251,11 @@ export class TicketAutomationService {
         return [];
       }
 
-      // Extract vulnerability IDs from all workspaces using flatMap to reduce nesting
+      // The IDs of the instances default views show, from every workspace
       const vulnIds = Object.values(vulnsOutput.workspaces)
-        .flatMap((workspace) => workspace?.Vulnerabilities ?? [])
+        .flatMap((workspace) =>
+          shownByDefault(workspace?.Vulnerabilities ?? []),
+        )
         .map((vuln) => vuln.VulnerabilityId)
         .filter((id): id is string => Boolean(id));
 

@@ -319,6 +319,10 @@ function introducedFinding(
     Severity: hasSeverity
       ? {
           Severity: severity?.Severity ?? 0,
+          SeverityClass: severity?.SeverityClass ?? "",
+          ...(severity?.SeverityType && {
+            SeverityType: severity.SeverityType,
+          }),
           ConfidentialityImpact: severity?.ConfidentialityImpact ?? "",
           IntegrityImpact: severity?.IntegrityImpact ?? "",
           AvailabilityImpact: severity?.AvailabilityImpact ?? "",

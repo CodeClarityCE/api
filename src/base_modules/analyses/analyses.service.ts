@@ -27,6 +27,7 @@ import { Output as LicensesOutput } from "src/codeclarity_modules/results/licens
 import { AnalysisResultsRepository } from "src/codeclarity_modules/results/results.repository";
 import { SBOMRepository } from "src/codeclarity_modules/results/sbom/sbom.repository";
 import { Output as SbomOutput } from "src/codeclarity_modules/results/sbom/sbom.types";
+import { shownByDefault } from "src/codeclarity_modules/results/vulnerabilities/utils/instance-status";
 import { VulnerabilitiesRepository } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.repository";
 import { Output as VulnsOuptut } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
 import { CodeClarityLogger } from "src/services/logger.service";
@@ -412,9 +413,10 @@ export class AnalysesService {
       {
         x: "Latest",
         y: "Vulnerabilities",
-        v:
+        v: shownByDefault(
           vulnOutput.workspaces[vulnOutput.analysis_info.default_workspace_name]
-            ?.Vulnerabilities?.length ?? 0,
+            ?.Vulnerabilities ?? [],
+        ).length,
       },
       {
         x: "Latest",

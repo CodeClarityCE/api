@@ -12,7 +12,7 @@ import { VulnerabilitiesService } from "./vulnerabilities.service";
 import {
   newVulnerabilityAnalysisStats,
   type VulnerabilityAnalysisStats,
-  type VulnerabilityDetailsReport,
+  type VulnerabilityDetails,
 } from "./vulnerabilities.types";
 import { VulnerabilityService } from "./vulnerability.service";
 
@@ -91,6 +91,10 @@ describe("FindingsController", () => {
     number_of_medium: 20,
     number_of_low: 10,
     number_of_none: 0,
+    number_of_disputed: 0,
+    graded_number_of_vulnerabilities: 0,
+    graded_number_of_critical: 0,
+    graded_number_of_high: 0,
     mean_confidentiality_impact: 4.5,
     mean_integrity_impact: 3.8,
     mean_availability_impact: 4.2,
@@ -120,7 +124,9 @@ describe("FindingsController", () => {
     mean_availability_impact_diff: 0.3,
   };
 
-  const mockVulnerabilityResponse: VulnerabilityDetailsReport = {
+  const mockVulnerabilityResponse: VulnerabilityDetails = {
+    source_verdicts: [],
+    source_verdicts_available: false,
     vulnerability_info: {
       vulnerability_id: "CVE-2023-1234",
       description: "Detailed vulnerability description",
@@ -290,6 +296,7 @@ describe("FindingsController", () => {
         undefined, // search_key
         undefined, // ecosystem_filter
         false, // show_blacklisted (default: 'false' -> false)
+        { show_contradicted: false, show_retired: false },
       );
       expect(result).toEqual(mockPaginatedResponse);
     });
@@ -338,6 +345,7 @@ describe("FindingsController", () => {
         "test search", // search_key
         undefined, // ecosystem_filter
         false, // show_blacklisted (default: 'false' -> false)
+        { show_contradicted: false, show_retired: false },
       );
       expect(result).toEqual(mockPaginatedResponse);
     });
@@ -374,6 +382,7 @@ describe("FindingsController", () => {
         undefined, // search_key
         undefined, // ecosystem_filter
         false, // show_blacklisted (default: 'false' -> false)
+        { show_contradicted: false, show_retired: false },
       );
       expect(result).toEqual(mockPaginatedResponse);
     });
@@ -414,6 +423,7 @@ describe("FindingsController", () => {
         "", // search_key
         undefined, // ecosystem_filter
         false, // show_blacklisted (default: 'false' -> false)
+        { show_contradicted: false, show_retired: false },
       );
       expect(result).toEqual(mockPaginatedResponse);
     });
@@ -502,6 +512,8 @@ describe("FindingsController", () => {
         baseParams.user,
         baseParams.workspace,
         undefined, // ecosystem_filter
+        false, // show_blacklisted
+        { show_contradicted: false, show_retired: false },
       );
       expect(result).toEqual({
         data: mockStatsResponse,
@@ -617,6 +629,7 @@ describe("FindingsController", () => {
         baseParams.user,
         baseParams.vulnerability_id,
         baseParams.workspace,
+        { dependency: undefined, version: undefined },
       );
       expect(result).toEqual({
         data: mockVulnerabilityResponse,
@@ -625,7 +638,9 @@ describe("FindingsController", () => {
 
     it("should handle vulnerability with minimal fields", async () => {
       // Arrange
-      const vulnerabilityWithMinimalFields: VulnerabilityDetailsReport = {
+      const vulnerabilityWithMinimalFields: VulnerabilityDetails = {
+        source_verdicts: [],
+        source_verdicts_available: false,
         vulnerability_info: {
           vulnerability_id: "vuln-123",
           description: "Vulnerability with minimal fields",
@@ -937,6 +952,7 @@ describe("FindingsController", () => {
         undefined, // search_key
         undefined, // ecosystem_filter
         false, // show_blacklisted (default: 'false' -> false)
+        { show_contradicted: false, show_retired: false },
       );
       expect(result).toEqual(mockPaginatedResponse);
     });
@@ -978,6 +994,7 @@ describe("FindingsController", () => {
         "search", // search_key
         undefined, // ecosystem_filter
         false, // show_blacklisted (default: 'false' -> false)
+        { show_contradicted: false, show_retired: false },
       );
       expect(result).toEqual(mockPaginatedResponse);
     });
@@ -1019,6 +1036,7 @@ describe("FindingsController", () => {
         specialChars, // search_key
         undefined, // ecosystem_filter
         false, // show_blacklisted (default: 'false' -> false)
+        { show_contradicted: false, show_retired: false },
       );
       expect(result).toEqual(mockPaginatedResponse);
     });

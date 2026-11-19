@@ -12,8 +12,6 @@ import { Dependency } from "src/codeclarity_modules/results/sbom/sbom.types";
 import { StatusResponse } from "src/codeclarity_modules/results/status.types";
 import { paginate } from "src/codeclarity_modules/results/utils/utils";
 import {
-  AffectedVuln,
-  ConflictFlag,
   KnowledgeSnapshot,
   MaliciousPackageAdvisory,
   Output as VulnsOutput,
@@ -32,20 +30,24 @@ import { SbomUtilsService } from "../sbom/utils/utils";
 
 import { VulnerabilitiesFilterService } from "./utils/filter.service";
 import { findFindingAdvisory } from "./utils/finding-advisory";
+import { addAffected, affectedOf } from "./utils/merge-affected";
 import { VulnerabilitiesSortService } from "./utils/sort.service";
 import { computeVulnerabilityStats } from "./utils/stats";
-import { VulnerabilitiesUtilsService } from "./utils/utils.service";
+import {
+  type FindingsView,
+  type HiddenFilters,
+  VulnerabilitiesUtilsService,
+} from "./utils/utils.service";
+
+/** What the default view hid, sent beside the list and the stats. */
+type HiddenSummary = Partial<
+  Pick<FindingsView, "hidden_counts" | "source_verdicts_available">
+>;
 
 /** NVD vulnerability description entry */
 interface NvdDescription {
   lang: string;
   value: string;
-}
-
-/** OSV affected entry with version/range information */
-interface OsvAffected {
-  ranges?: unknown[];
-  versions?: unknown[];
 }
 
 /** Analysis config structure for vuln-finder */
@@ -56,12 +58,6 @@ interface VulnFinderConfig {
 /** Analysis config record type */
 interface AnalysisConfig {
   "vuln-finder"?: VulnFinderConfig;
-}
-
-/** Check if conflict flag indicates no conflict (including empty string from malformed data) */
-function isNoConflict(flag: ConflictFlag | string): boolean {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
-  return flag === ConflictFlag.NO_CONFLICT || flag === "";
 }
 
 /** The AI assessment of a match, or null when it has no score. */
@@ -104,7 +100,9 @@ export class VulnerabilitiesService {
     user: AuthenticatedUser,
     workspace: string,
     ecosystem_filter?: string,
-  ): Promise<VulnerabilityAnalysisStats> {
+    show_blacklisted?: boolean,
+    hidden: HiddenFilters = {},
+  ): Promise<VulnerabilityAnalysisStats & HiddenSummary> {
     // Check if the user is allowed to view this analysis result
     await this.analysisResultsService.checkAccess(
       orgId,
@@ -120,22 +118,34 @@ export class VulnerabilitiesService {
       throw new UnknownWorkspace();
     }
 
-    const findingsArray: Vulnerability[] =
-      await this.findingsUtilsService.getFindingsData(
+    const { findings, hidden_counts, source_verdicts_available }: FindingsView =
+      await this.findingsUtilsService.getFindingsView(
         analysisId,
         workspace,
         ecosystem_filter,
+        hidden,
       );
 
-    const {
-      findings: findingsArrayPrevious,
-      dependencies: dependencyMapPrevious,
-    } = await this.getPreviousScan(
-      projectId,
-      analysisId,
-      workspace,
-      ecosystem_filter,
-    );
+    const { findings: findingsPrevious, dependencies: dependencyMapPrevious } =
+      await this.getPreviousScan(
+        projectId,
+        analysisId,
+        workspace,
+        ecosystem_filter,
+        hidden,
+      );
+
+    // Both scans drop this analysis's policy exclusions, so the diffs compare like with like.
+    let findingsArray = findings;
+    let findingsArrayPrevious = findingsPrevious;
+    if (show_blacklisted === false) {
+      const { vulnerabilities: excluded } =
+        await this.getBlacklistedVulnerabilities(analysisId, orgId, user);
+      const kept = (finding: Vulnerability): boolean =>
+        !excluded.has(finding.VulnerabilityId);
+      findingsArray = findings.filter(kept);
+      findingsArrayPrevious = findingsPrevious.filter(kept);
+    }
 
     const wStats = computeVulnerabilityStats(
       findingsArray,
@@ -208,7 +218,7 @@ export class VulnerabilitiesService {
       wStats.mean_confidentiality_impact -
       wBeforeStats.mean_confidentiality_impact;
 
-    return wStats;
+    return { ...wStats, hidden_counts, source_verdicts_available };
   }
 
   async getMaliciousPackageAdvisories(
@@ -262,7 +272,8 @@ export class VulnerabilitiesService {
     search_key: string | undefined,
     ecosystem_filter?: string,
     show_blacklisted?: boolean,
-  ): Promise<PaginatedResponse> {
+    hidden: HiddenFilters = {},
+  ): Promise<PaginatedResponse & HiddenSummary> {
     // Check if the user is allowed to view this analysis result
     await this.analysisResultsService.checkAccess(
       orgId,
@@ -284,55 +295,36 @@ export class VulnerabilitiesService {
     // for (const dep of dependenciesArray) {
     //     dependenciesMap[dep.key] = dep;
     // }
-    const findings: Vulnerability[] =
-      await this.findingsUtilsService.getFindingsData(
+    const { findings, hidden_counts, source_verdicts_available }: FindingsView =
+      await this.findingsUtilsService.getFindingsView(
         analysisId,
         workspace,
         ecosystem_filter,
+        hidden,
       );
 
     const findingsMerged: Map<string, VulnerabilityMerged> = new Map<
       string,
       VulnerabilityMerged
     >();
-    // For each finding
     for (const finding of findings) {
-      const affected: AffectedVuln = {
-        Sources: finding.Sources,
-        AffectedDependency: finding.AffectedDependency,
-        AffectedVersion: finding.AffectedVersion,
-        VulnerabilityId: finding.VulnerabilityId,
-        OSVMatch: finding.OSVMatch,
-        NVDMatch: finding.NVDMatch,
-        Severity: finding.Severity,
-        Conflict: finding.Conflict,
-      };
-      if (finding.GCVEMatch) {
-        affected.GCVEMatch = finding.GCVEMatch;
-      }
-      if (finding.Weaknesses) {
-        affected.Weaknesses = finding.Weaknesses;
-      }
-      if (finding.PatchType) {
-        affected.PatchType = finding.PatchType;
-      }
-      // if vuln already in map
+      const affected = affectedOf(finding);
       const vuln = findingsMerged.get(finding.VulnerabilityId);
       if (vuln) {
-        vuln.Affected.push(affected);
-        findingsMerged.set(finding.VulnerabilityId, vuln);
+        addAffected(vuln, affected);
       } else {
         const epss = await this.epssRepository.getByCVE(
           finding.VulnerabilityId,
         );
         const mergedFinding: VulnerabilityMerged = {
           Id: finding.Id,
-          Sources: finding.Sources,
+          Sources: [...finding.Sources],
           Vulnerability: finding.VulnerabilityId,
           Severity: finding.Severity,
-          Affected: [affected],
+          Affected: [],
           Description: "",
           Conflict: finding.Conflict,
+          Uncorroborated: false,
           VLAI: [],
           EPSS: {
             Score: epss.score,
@@ -342,6 +334,7 @@ export class VulnerabilitiesService {
         if (finding.Weaknesses) {
           mergedFinding.Weaknesses = finding.Weaknesses;
         }
+        addAffected(mergedFinding, affected);
         for (const [source, match] of [
           [Source.Nvd, finding.NVDMatch],
           [Source.Osv, finding.OSVMatch],
@@ -351,29 +344,13 @@ export class VulnerabilitiesService {
           if (vlai) mergedFinding.VLAI.push({ Source: source, ...vlai });
         }
 
-        // Check for source disagreements
-        // For PHP vulnerabilities, the OSVMatch is often missing even when OSV data exists
-        // So we check if both NVD data exists and it's a CVE (which likely has OSV data)
-        const isCve = finding.VulnerabilityId.includes("CVE-");
-
-        if (
-          finding.NVDMatch &&
-          isCve &&
-          isNoConflict(mergedFinding.Conflict.ConflictFlag)
-        ) {
-          // For CVEs with NVD data, assume potential source disagreement
-          // This is a workaround for the OSV matching issue in PHP vulnerabilities
-          mergedFinding.Conflict.ConflictFlag =
-            ConflictFlag.MATCH_POSSIBLE_INCORRECT;
-        }
-
         findingsMerged.set(finding.VulnerabilityId, mergedFinding);
       }
     }
 
     // Get blacklisted vulnerabilities from policies
     const { vulnerabilities: blacklistedVulns, policies: policyNames } =
-      await this.getBlacklistedVulnerabilities(analysisId, orgId);
+      await this.getBlacklistedVulnerabilities(analysisId, orgId, user);
 
     // Mark blacklisted vulnerabilities and apply filtering
     const allFindings = Array.from(findingsMerged.values()).map((finding) => {
@@ -433,11 +410,9 @@ export class VulnerabilitiesService {
       let nvdDescription = "";
       let osvDescription = "";
       let osvSummary = "";
-      let nvdVuln = null;
-      let osvVuln = null;
 
       if (isCve) {
-        nvdVuln = await this.nvdRepository.getVulnWithoutFailing(
+        const nvdVuln = await this.nvdRepository.getVulnWithoutFailing(
           finding.Vulnerability,
           { includeRetired: true },
         );
@@ -450,7 +425,7 @@ export class VulnerabilitiesService {
 
         // Describe the finding with the first affected package's advisory, as its report does.
         const affected = finding.Affected[0];
-        osvVuln = await findFindingAdvisory(
+        const osvVuln = await findFindingAdvisory(
           this.osvRepository,
           {
             vulnerabilityId: finding.Vulnerability,
@@ -468,7 +443,7 @@ export class VulnerabilitiesService {
       }
 
       if (isGhsa) {
-        osvVuln = await this.osvRepository.getVulnByOSVIDWithoutFailing(
+        const osvVuln = await this.osvRepository.getVulnByOSVIDWithoutFailing(
           finding.Vulnerability,
           { includeRetired: true },
         );
@@ -479,17 +454,13 @@ export class VulnerabilitiesService {
         }
       }
 
-      // Fetch GCVE data from knowledge DB to add source + VLAI
+      // Fetch GCVE data from knowledge DB to add VLAI
       if (isCve) {
         const gcveVuln = await this.gcveRepository.getVulnByCVEId(
           finding.Vulnerability,
           { includeRetired: true },
         );
         if (gcveVuln) {
-          // Add GCVE to sources if not already present
-          if (!finding.Sources.includes(Source.Gcve)) {
-            finding.Sources.push(Source.Gcve);
-          }
           // Add VLAI score if available and not already present
           if (
             gcveVuln.vlai_score &&
@@ -501,21 +472,6 @@ export class VulnerabilitiesService {
               Confidence: gcveVuln.vlai_confidence ?? 0,
             });
           }
-        }
-      }
-
-      // Check for source disagreements when both NVD and OSV data exist
-      if (nvdVuln && osvVuln && isNoConflict(finding.Conflict.ConflictFlag)) {
-        // Check if OSV has specific version/range data
-        const affected = osvVuln.affected as OsvAffected[] | undefined;
-        const osvHasRanges = affected?.some(
-          (a) => (a.ranges?.length ?? 0) > 0 || (a.versions?.length ?? 0) > 0,
-        );
-
-        // When OSV has specific version data and both sources exist,
-        // mark as potential disagreement since they often have different interpretations
-        if (osvHasRanges) {
-          finding.Conflict.ConflictFlag = ConflictFlag.MATCH_POSSIBLE_INCORRECT;
         }
       }
 
@@ -580,7 +536,7 @@ export class VulnerabilitiesService {
     }
 
     paginated.data = paginatedVulns;
-    return paginated;
+    return { ...paginated, hidden_counts, source_verdicts_available };
   }
 
   // Package manager of the analysis's SBOMs, or undefined when they cannot be read.
@@ -691,6 +647,7 @@ export class VulnerabilitiesService {
     analysisId: string,
     workspace: string,
     ecosystem_filter?: string,
+    hidden: HiddenFilters = {},
   ): Promise<{
     findings: Vulnerability[];
     dependencies: Record<string, Record<string, Dependency>>;
@@ -711,6 +668,7 @@ export class VulnerabilitiesService {
             previous.id,
             workspace,
             ecosystem_filter,
+            hidden,
           );
           return { findings, dependencies: previousWorkspace.dependencies };
         }
@@ -731,6 +689,7 @@ export class VulnerabilitiesService {
   private async getBlacklistedVulnerabilities(
     analysisId: string,
     orgId: string,
+    user: AuthenticatedUser,
   ): Promise<{ vulnerabilities: Set<string>; policies: Map<string, string> }> {
     try {
       // Get the analysis to access its configuration
@@ -766,6 +725,7 @@ export class VulnerabilitiesService {
         await this.fetchPolicyVulnerabilities(
           orgId,
           policyId,
+          user,
           blacklistedVulns,
           policyNames,
         );
@@ -773,10 +733,10 @@ export class VulnerabilitiesService {
 
       return { vulnerabilities: blacklistedVulns, policies: policyNames };
     } catch (err) {
-      console.warn(
-        `Could not get blacklisted vulnerabilities for analysis ${analysisId}:`,
-        (err as Error).message,
-      );
+      this.logger.warn("Could not read the analysis vulnerability policies", {
+        analysisId,
+        error: (err as Error).message,
+      });
       return { vulnerabilities: new Set(), policies: new Map() };
     }
   }
@@ -787,19 +747,17 @@ export class VulnerabilitiesService {
   private async fetchPolicyVulnerabilities(
     orgId: string,
     policyId: string,
+    user: AuthenticatedUser,
     blacklistedVulns: Set<string>,
     policyNames: Map<string, string>,
   ): Promise<void> {
     try {
       // Get policy directly from the unified policy table
+      // The caller already has access to the analysis, so it may read the org's policies.
       const policy = await this.vulnerabilityPolicyService.get(
         orgId,
         policyId,
-        {
-          userId: "system",
-          roles: [],
-          activated: true,
-        } as unknown as AuthenticatedUser,
+        user,
       );
       if (policy?.content && Array.isArray(policy.content)) {
         for (const vuln of policy.content) {
@@ -809,10 +767,10 @@ export class VulnerabilitiesService {
       }
     } catch (err) {
       // Skip invalid policy IDs
-      console.warn(
-        `Could not fetch vulnerability policy ${policyId}:`,
-        (err as Error).message,
-      );
+      this.logger.warn("Could not fetch a vulnerability policy", {
+        policyId,
+        error: (err as Error).message,
+      });
     }
   }
 }

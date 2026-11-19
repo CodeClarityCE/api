@@ -15,6 +15,7 @@ interface EntryOptions {
   severity?: string;
   published?: string | null;
   flag?: string;
+  status?: ResultsVulnerabilityInput["instance_status"];
 }
 
 /** One entry with one vulnerability, present (P) or absent (A) per snapshot. */
@@ -49,6 +50,7 @@ function entry(
         conflict_flag: options.flag ?? "MATCH_CORRECT",
         winning_source: "OSV",
         withdrawn_date: null,
+        instance_status: options.status ?? null,
       });
     }
   });
@@ -205,6 +207,53 @@ describe("the sweep subset filter on survival and fix lag", () => {
     const data = computeFigureData(ROWS, SURVIVAL);
 
     expect(data.series[0]!.censored).toEqual([0, 1]);
+  });
+});
+
+describe("hidden instances on survival and fix lag", () => {
+  const ROWS = rowsOf([
+    entry("kept", ["P", "A", "A", "A"]),
+    entry("contradicted", ["P", "P", "P", "P"], { status: "contradicted" }),
+    entry("retired", ["P", "P", "P", "P"], { status: "retired_all" }),
+  ]);
+
+  it.each([SURVIVAL, FIX_LAG])(
+    "leaves them out by default and says how many it hid and why",
+    (definition) => {
+      const data = computeFigureData(ROWS, definition);
+
+      expect(data.series[0]!.censored).toEqual([0]);
+      expect(data.caption.exclusions).toEqual([
+        "4 instances hidden as contradicted by another source",
+        "4 instances hidden as retired on every source",
+      ]);
+    },
+  );
+
+  it.each([SURVIVAL, FIX_LAG])(
+    "includes them with the hidden instances filter",
+    (definition) => {
+      const data = computeFigureData(ROWS, {
+        ...definition,
+        filters: { hidden: "include" },
+      });
+
+      expect(data.series[0]!.censored).toEqual([0, 2]);
+      expect(data.caption.exclusions).toEqual([]);
+    },
+  );
+
+  it("accepts the filter on every Figure metric", () => {
+    for (const metric of ["survival", "fix_lag"]) {
+      expect(
+        parseFigureDefinition({
+          metric,
+          chart_form: "step",
+          group_by: null,
+          filters: { hidden: "include" },
+        }).filters,
+      ).toEqual({ hidden: "include" });
+    }
   });
 });
 

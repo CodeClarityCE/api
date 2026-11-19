@@ -62,6 +62,8 @@ export const errorMessages: Record<string, string> = {
   NotAuthorized: "You are not authorized to perform this action.",
   Unsupported: "The action you requested is not supported.",
   UnknownWorkspace: "The referenced workspace does not exist on the project.",
+  SourceVerdictsNotAvailable:
+    "This analysis predates source verdicts. Re-run it to export them.",
   PluginFailed: "The plugin failed to run.",
   PluginResultNotAvailable:
     "The plugin result is not available, and thus either not finished or failed to finish properly.",
@@ -200,6 +202,20 @@ export class UnknownWorkspace extends PublicAPIError {
       UnknownWorkspace.errorCode,
       UnknownWorkspace.errorMessage,
       UnknownWorkspace.statusCode,
+      cause,
+    );
+  }
+}
+
+export class SourceVerdictsNotAvailable extends PublicAPIError {
+  static errorCode = "SourceVerdictsNotAvailable";
+  static errorMessage = errorMessages[SourceVerdictsNotAvailable.errorCode]!;
+  static statusCode = 409;
+  constructor(cause?: unknown) {
+    super(
+      SourceVerdictsNotAvailable.errorCode,
+      SourceVerdictsNotAvailable.errorMessage,
+      SourceVerdictsNotAvailable.statusCode,
       cause,
     );
   }

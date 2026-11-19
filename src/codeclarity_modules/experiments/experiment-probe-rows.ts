@@ -79,6 +79,7 @@ export const INSTANCE_COLUMNS = [
   "winning_source",
   "withdrawn_date",
   "vulnerable_versions",
+  "instance_status",
 ] as const;
 
 /** Probe outcome rows of the experiment, or of some of its entries only. */

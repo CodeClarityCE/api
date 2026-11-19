@@ -15,6 +15,11 @@ import {
   SWEEP_FILTER,
 } from "./experiment-figure-catalog";
 import { gridDay, publishedDay } from "./experiment-grid";
+import {
+  hiddenInstanceCounts,
+  hiddenInstancePhrases,
+  withoutHiddenInstances,
+} from "./experiment-hidden-instances";
 import { loadOverTime, type LoadRow } from "./experiment-load";
 import { residenceBlock } from "./experiment-residence";
 import {
@@ -750,10 +755,29 @@ const FIGURE_BUILDERS: Record<
   fix_lag: fixLagFigure,
 };
 
-/** The data of a Figure whose definition the catalog has already accepted. */
+/**
+ * The data of a Figure whose definition the catalog has already accepted.
+ * Hidden instances are left out, and the caption says so, unless included.
+ */
 export function computeFigureData(
   rows: FigureRows,
   definition: FigureDefinition,
 ): FigureData {
-  return FIGURE_BUILDERS[definition.metric](rows, definition);
+  const build = FIGURE_BUILDERS[definition.metric];
+  if (definition.filters["hidden"] === "include") {
+    return build({ ...rows, include_hidden: true }, definition);
+  }
+  const data = build(withoutHiddenInstances(rows), definition);
+  const hidden = hiddenInstancePhrases(
+    hiddenInstanceCounts(rows.vulnerabilities),
+  );
+  return hidden.length === 0
+    ? data
+    : {
+        ...data,
+        caption: {
+          ...data.caption,
+          exclusions: [...data.caption.exclusions, ...hidden],
+        },
+      };
 }

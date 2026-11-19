@@ -36,12 +36,14 @@ import { User } from "../../src/base_modules/users/users.entity";
 import { Dataset } from "../../src/codeclarity_modules/datasets/dataset.entity";
 import { DatasetEntry } from "../../src/codeclarity_modules/datasets/dataset-entry.entity";
 import { Experiment } from "../../src/codeclarity_modules/experiments/experiment.entity";
+import { mapRunRows } from "../../src/codeclarity_modules/experiments/experiment-row-copy";
 import {
   ExperimentRun,
   ExperimentRunStatus,
 } from "../../src/codeclarity_modules/experiments/experiment-run.entity";
 import { ExperimentRunSubmission } from "../../src/codeclarity_modules/experiments/experiment-run-submission";
 import { TypeOrmExperimentStore } from "../../src/codeclarity_modules/experiments/experiment-store";
+import { ExperimentVulnerabilityInstance } from "../../src/codeclarity_modules/experiments/experiment-vulnerability-instance.entity";
 import { Policy } from "../../src/codeclarity_modules/policies/policy.entity";
 import { Result } from "../../src/codeclarity_modules/results/result.entity";
 import {
@@ -66,6 +68,7 @@ describe("ExperimentRunSubmission against Postgres", () => {
   let runs: ExperimentRun[];
   let integrationId: string;
   let creator: AuthenticatedUser;
+  let store: TypeOrmExperimentStore;
 
   beforeAll(async () => {
     dataSource = await openScratchDatabase("codeclarity_run_submission_it");
@@ -124,7 +127,7 @@ describe("ExperimentRunSubmission against Postgres", () => {
       analyses,
       projects,
     );
-    const store = new TypeOrmExperimentStore(
+    store = new TypeOrmExperimentStore(
       repo(Experiment),
       repo(ExperimentRun),
       repo(Result),
@@ -243,6 +246,52 @@ describe("ExperimentRunSubmission against Postgres", () => {
     });
     return run.analysis?.id;
   }
+
+  it("stores each copied instance's source verdicts and status", async () => {
+    const rows = mapRunRows(null, {
+      workspaces: {
+        ".": {
+          Vulnerabilities: [
+            {
+              VulnerabilityId: "CVE-2025-0001",
+              AffectedDependency: "passport",
+              AffectedVersion: "0.6.0",
+              Disputed: true,
+              SourceVerdicts: [
+                { source: "osv", verdict: "version_excluded" },
+                { source: "nvd", verdict: "matched" },
+              ],
+            },
+            { VulnerabilityId: "CVE-2025-0002", AffectedDependency: "lodash" },
+          ],
+        },
+      },
+    });
+
+    expect(await store.copyRunRows(experiment.id, runs[0]!.id, rows)).toBe(
+      true,
+    );
+
+    const stored = await dataSource
+      .getRepository(ExperimentVulnerabilityInstance)
+      .find({ order: { vulnerability_id: "ASC" } });
+    expect(stored).toMatchObject([
+      {
+        osv_verdict: "version_excluded",
+        nvd_verdict: "matched",
+        gcve_verdict: null,
+        instance_status: "contradicted",
+        uncorroborated: false,
+        disputed: true,
+      },
+      {
+        osv_verdict: null,
+        instance_status: null,
+        uncorroborated: null,
+        disputed: false,
+      },
+    ]);
+  });
 
   it("links the run to an analysis pinned at the SHA, then publishes it", async () => {
     const analysisId = await submit(0);

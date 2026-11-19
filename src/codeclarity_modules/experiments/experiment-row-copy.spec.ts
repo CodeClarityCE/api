@@ -146,6 +146,12 @@ describe("mapRunRows", () => {
         modified_date: "2024-01-01T00:00:00Z",
         withdrawn_date: null,
         vulnerable_versions: null,
+        osv_verdict: null,
+        nvd_verdict: null,
+        gcve_verdict: null,
+        instance_status: null,
+        uncorroborated: null,
+        disputed: false,
       },
       expect.objectContaining({
         workspace: "tests/kit",
@@ -369,6 +375,105 @@ describe("mapRunRows", () => {
     for (const row of rows.vulnerabilities) {
       expect(row).toMatchObject({ epss_score: null, epss_percentile: null });
     }
+  });
+});
+
+describe("mapRunRows source verdicts", () => {
+  const verdicts = (osv: string, nvd: string, gcve: string): unknown[] => [
+    { source: "osv", verdict: osv, evidence: { record_ids: ["GHSA-1"] } },
+    { source: "nvd", verdict: nvd },
+    { source: "gcve", verdict: gcve },
+  ];
+
+  function rowOf(overrides: Record<string, unknown>): Record<string, unknown> {
+    const rows = mapRunRows(
+      EMPTY_SBOM,
+      vulnFinder({ ".": [instance(overrides)] }),
+    );
+    return rows.vulnerabilities[0] as unknown as Record<string, unknown>;
+  }
+
+  it("copies one verdict column per source and marks an instance another origin contradicts", () => {
+    expect(
+      rowOf({
+        SourceVerdicts: verdicts("version_excluded", "matched", "no_record"),
+        Disputed: true,
+      }),
+    ).toMatchObject({
+      osv_verdict: "version_excluded",
+      nvd_verdict: "matched",
+      gcve_verdict: "no_record",
+      instance_status: "contradicted",
+      uncorroborated: false,
+      disputed: true,
+    });
+  });
+
+  it("marks an instance retired on every source", () => {
+    expect(
+      rowOf({ SourceVerdicts: verdicts("retired", "no_record", "no_record") }),
+    ).toMatchObject({ instance_status: "retired_all" });
+  });
+
+  it("keeps an instance one origin matched visible, labelled uncorroborated", () => {
+    expect(
+      rowOf({ SourceVerdicts: verdicts("matched", "no_record", "no_record") }),
+    ).toMatchObject({
+      osv_verdict: "matched",
+      instance_status: "visible",
+      uncorroborated: true,
+      disputed: false,
+    });
+  });
+
+  it("hides an instance only when the other origin names a package of its own ecosystem", () => {
+    const namesAnother = (ecosystem: string): unknown[] => [
+      {
+        source: "osv",
+        verdict: "names_another_product",
+        evidence: { names: [{ ecosystem, package: "@fastify/passport" }] },
+      },
+      { source: "nvd", verdict: "matched" },
+      { source: "gcve", verdict: "no_record" },
+    ];
+    expect(
+      rowOf({ Ecosystem: "npm", SourceVerdicts: namesAnother("npm") }),
+    ).toMatchObject({ instance_status: "contradicted" });
+    expect(
+      rowOf({ Ecosystem: "npm", SourceVerdicts: namesAnother("PyPI") }),
+    ).toMatchObject({ instance_status: "visible" });
+  });
+
+  it("leaves verdicts and status empty for results without source verdicts", () => {
+    for (const SourceVerdicts of [undefined, null, "matched", {}]) {
+      expect(rowOf({ SourceVerdicts })).toMatchObject({
+        osv_verdict: null,
+        nvd_verdict: null,
+        gcve_verdict: null,
+        instance_status: null,
+        uncorroborated: null,
+      });
+    }
+  });
+
+  it("ignores malformed verdict entries and unknown verdicts", () => {
+    expect(
+      rowOf({
+        SourceVerdicts: [
+          null,
+          "osv",
+          { source: "osv", verdict: "maybe" },
+          { source: 3, verdict: "matched" },
+          { source: "NVD", verdict: "matched" },
+        ],
+      }),
+    ).toMatchObject({
+      osv_verdict: null,
+      nvd_verdict: "matched",
+      gcve_verdict: null,
+      instance_status: "visible",
+      uncorroborated: true,
+    });
   });
 });
 

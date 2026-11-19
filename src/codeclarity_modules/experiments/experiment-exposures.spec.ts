@@ -745,3 +745,98 @@ describe("published dates with a UTC offset", () => {
     ).toMatchObject({ hindsight: 1, as_of: 0 });
   });
 });
+
+describe("hidden instances (ADR 0013)", () => {
+  const MINIMIST: Vuln = {
+    id: "DEMO-minimist-1",
+    pkg: "minimist",
+    fixed: "1.2.6",
+    published: "2025-02-10T08:00:00Z",
+    severity: "CRITICAL",
+  };
+  const commits = (): Commit[] => [
+    C("a1f", "2024-11-05", ch("lodash", "4.17.15"), ch("minimist", "1.2.5")),
+    C("d4e", "2025-03-12", ch("lodash", "4.17.21")),
+  ];
+
+  /** Rows of the world with one run summary per run that owns rows. */
+  function summarised(rows: ExperimentResultsInput): ExperimentResultsInput {
+    const owners = new Set(rows.runs.map((run) => run.rows_run_id!));
+    return {
+      ...rows,
+      summaries: [...owners].map((run_id) => ({
+        run_id,
+        rank: 0,
+        total_dependencies: 2,
+        total_vulnerabilities: rows.vulnerabilities.filter(
+          (v) => v.run_id === run_id,
+        ).length,
+        package_manager: "NPM",
+      })),
+    };
+  }
+
+  /** The world with each vulnerability's instances given a status. */
+  function judged(
+    status: Record<string, ResultsVulnerabilityInput["instance_status"]>,
+  ): ExperimentResultsInput {
+    const rows = summarised(input(world("e1", commits(), [LODASH, MINIMIST])));
+    return {
+      ...rows,
+      vulnerabilities: rows.vulnerabilities.map((v) => ({
+        ...v,
+        instance_status: status[v.vulnerability_id!] ?? null,
+      })),
+    };
+  }
+  const ids = (exposures: { vulnerability_id: string }[]): string[] =>
+    exposures.map((e) => e.vulnerability_id);
+
+  it("leaves contradicted and all-retired instances out of exposures", () => {
+    for (const hidden of ["contradicted", "retired_all"] as const) {
+      expect(
+        ids(deriveExposures(judged({ "DEMO-minimist-1": hidden }))),
+      ).toEqual(["DEMO-lodash-1"]);
+    }
+  });
+
+  it("counts visible instances and rows copied without verdicts", () => {
+    expect(
+      ids(deriveExposures(judged({ "DEMO-lodash-1": "visible" }))),
+    ).toEqual(["DEMO-lodash-1", "DEMO-minimist-1"]);
+  });
+
+  it("keeps hidden instances when asked to include them", () => {
+    expect(
+      ids(
+        deriveExposures({
+          ...judged({ "DEMO-minimist-1": "contradicted" }),
+          include_hidden: true,
+        }),
+      ),
+    ).toEqual(["DEMO-lodash-1", "DEMO-minimist-1"]);
+  });
+
+  it("leaves hidden instances out of every results block and counts them by reason", () => {
+    const results = aggregateExperimentResults(
+      judged({ "DEMO-minimist-1": "contradicted" }),
+    );
+    const visibleOnly = aggregateExperimentResults(
+      summarised(input(world("e1", commits(), [LODASH]))),
+    );
+
+    expect(results.rqd).toEqual(visibleOnly.rqd);
+    expect(results.exposures).toEqual(visibleOnly.exposures);
+    expect(results.exposure_survival).toEqual(visibleOnly.exposure_survival);
+    expect(results.load_over_time).toEqual(visibleOnly.load_over_time);
+    expect(results.headline).toEqual(visibleOnly.headline);
+    expect(results.hidden_instances).toEqual({
+      contradicted: 1,
+      retired_all: 0,
+    });
+    expect(visibleOnly.hidden_instances).toEqual({
+      contradicted: 0,
+      retired_all: 0,
+    });
+  });
+});

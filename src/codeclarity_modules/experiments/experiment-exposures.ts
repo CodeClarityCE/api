@@ -8,6 +8,7 @@ import {
   instancesByRun,
   publishedDay,
 } from "./experiment-grid";
+import { visibleInstances } from "./experiment-hidden-instances";
 import {
   type DatingTask,
   type ProbeDating,
@@ -86,6 +87,8 @@ export interface ExposuresInput extends ProbeRows {
   runs: readonly ResultsRunInput[];
   vulnerabilities: readonly ResultsVulnerabilityInput[];
   probes?: readonly ResultsProbeInput[];
+  /** Count instances hidden by default too (ADR 0013) */
+  include_hidden?: boolean;
 }
 
 type Observation = "present" | "absent" | "gap";
@@ -196,7 +199,11 @@ export function deriveExposures(
   input: ExposuresInput,
   search: ProbeSearch = new ProbeSearch(input),
 ): Exposure[] {
-  const byRun = instancesByRun(input.vulnerabilities);
+  const byRun = instancesByRun(
+    input.include_hidden
+      ? input.vulnerabilities
+      : visibleInstances(input.vulnerabilities),
+  );
   const packagesAt = new Map<string, ResolvedPackage[]>();
   for (const probe of input.probes ?? []) {
     packagesAt.set(
@@ -362,8 +369,10 @@ export function planProbes(input: ExposuresInput): ProbePlan {
       .filter((run) => run.status === "pending")
       .map((run) => run.dataset_entry_id),
   );
+  // Probes cover hidden instances too, so a Figure can include them
   const ready = {
     ...input,
+    include_hidden: true,
     runs: input.runs.filter((run) => !unfinished.has(run.dataset_entry_id)),
   };
   const search = new ProbeSearch(ready);

@@ -1137,6 +1137,19 @@ describe("ExperimentResultsService", () => {
           );
         });
 
+        it("says which instances every estimate leaves out and how many at HEAD", async () => {
+          twoInstances();
+          const [kept, contradicted] = (await vulnerabilityRows()) as object[];
+          vulnerabilityRows.mockResolvedValue([
+            kept,
+            { ...contradicted, instance_status: "contradicted" },
+          ]);
+
+          expect(await methodsOf()).toContain(
+            "Every estimate leaves out hidden vulnerability instances: those whose every source match is contradicted by a source of another source origin, and those retired on every source. At HEAD, 1 contradicted and 0 retired instances were left out.",
+          );
+        });
+
         it("gives the top-10 concentration with its interval and both caveats", async () => {
           twoInstances();
 
@@ -1586,6 +1599,54 @@ describe("ExperimentResultsService", () => {
         expect(versions.map((version) => version.metric_version)).toEqual([
           2, 1,
         ]);
+      });
+
+      it("keeps a version 1 publish that counted contradicted instances once version 2 hides them", async () => {
+        doneRun();
+        storeVersions();
+        const instance = {
+          run_id: "r1",
+          affected_dependency: "lodash",
+          vulnerability_id: "CVE-2021-23337",
+          severity_class: "HIGH",
+          epss_score: null,
+          conflict_flag: "MATCH_CORRECT",
+          winning_source: "NVD",
+          withdrawn_date: null,
+        };
+        // Version 1 counted both instances: their rows had no status yet
+        vulnerabilityRows.mockResolvedValue([
+          instance,
+          { ...instance, vulnerability_id: "CVE-2020-8203" },
+        ]);
+        await service.publish("org-1", "exp-1", user);
+        const before = JSON.stringify(
+          await service.getPublished("org-1", "exp-1", 1, user),
+        );
+
+        vulnerabilityRows.mockResolvedValue([
+          instance,
+          {
+            ...instance,
+            vulnerability_id: "CVE-2020-8203",
+            instance_status: "contradicted",
+          },
+        ]);
+        mockMetricVersion = 2;
+        await service.publish("org-1", "exp-1", user);
+
+        const v1 = await service.getPublished("org-1", "exp-1", 1, user);
+        const v2 = await service.getPublished("org-1", "exp-1", 2, user);
+        expect(JSON.stringify(v1)).toBe(before);
+        expect(v1.headline.instances).toBe(2);
+        expect(v2.headline.instances).toBe(1);
+        expect(v2.hidden_instances).toEqual({
+          contradicted: 1,
+          retired_all: 0,
+        });
+        expect(
+          (await service.exportResults("org-1", "exp-1", user, 1)).results,
+        ).toEqual(v1);
       });
 
       it("still refuses a repeat publish once the new version is stored", async () => {

@@ -22,6 +22,7 @@ import {
   getCVSSOSVInfo,
   parseCVSS2Vector,
   parseCVSS3Vector,
+  parseCVSS4Vector,
   parseCVSS31Vector,
 } from "./cvssParser";
 import { NVDReportGenerator, OSVReportGenerator } from "./reportGenerator";
@@ -1020,6 +1021,97 @@ describe("ReportGenerator Services", () => {
         expect(result.confidentiality_impact).toBe("HIGH");
         expect(result.integrity_impact).toBe("HIGH");
         expect(result.availability_impact).toBe("HIGH");
+      });
+    });
+
+    describe("parseCVSS4Vector", () => {
+      it("scores a CVSS 4.0 vector", async () => {
+        const result = await parseCVSS4Vector(
+          "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+        );
+
+        expect(result.base_score).toBe(9.3);
+        expect(result.attack_vector).toBe("NETWORK");
+        expect(result.confidentiality_impact_vulnerable).toBe("HIGH");
+      });
+    });
+
+    describe("CVSS 4.0 and GHSA severities", () => {
+      const v4 =
+        "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N";
+
+      it("reads an OSV record with only a CVSS 4.0 vector", async () => {
+        const result = await getCVSSOSVInfo({
+          ...mockOSV,
+          severity: [{ type: "CVSS_V4", score: v4 }],
+        });
+
+        expect(result.cvss_4?.base_score).toBe(9.3);
+        expect(result.cvss_3).toBeUndefined();
+      });
+
+      it("keeps the CVSS 3.1 score beside the CVSS 4.0 one", async () => {
+        const result = await getCVSSOSVInfo({
+          ...mockOSV,
+          severity: [
+            {
+              type: "CVSS_V3",
+              score: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            },
+            { type: "CVSS_V4", score: v4 },
+          ],
+        });
+
+        expect(result.cvss_4?.base_score).toBe(9.3);
+        expect(result.cvss_3?.base_score).toBe(9.8);
+      });
+
+      it("reads GHSA's severity, MODERATE as MEDIUM, when there is no vector", async () => {
+        const result = await getCVSSOSVInfo({
+          ...mockOSV,
+          severity: [],
+          database_specific: { severity: "MODERATE" },
+        });
+
+        expect(result).toEqual({ ghsa: "MEDIUM" });
+      });
+
+      it("reads NVD's primary CVSS 4.0 metric", async () => {
+        const result = await getCVSSNVDInfo({
+          ...mockNVD,
+          metrics: {
+            cvssMetricV40: [
+              {
+                source: "cna@example.com",
+                type: "Secondary",
+                cvssData: {
+                  vectorString:
+                    "CVSS:4.0/AV:L/AC:H/AT:P/PR:H/UI:A/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N",
+                },
+              },
+              {
+                source: "nvd@nist.gov",
+                type: "Primary",
+                cvssData: { vectorString: v4 },
+              },
+            ],
+          },
+        });
+
+        expect(result.cvss_4?.base_score).toBe(9.3);
+      });
+
+      it("shows the other source's vector with the GHSA label kept", async () => {
+        const result = await osvReportGenerator.genReport(
+          mockVulnerability,
+          "NPM",
+          mockDependency,
+          { ...mockOSV, severity: [], database_specific: { severity: "HIGH" } },
+          mockNVD,
+        );
+
+        expect(result.severities.cvss_31).toBeDefined();
+        expect(result.severities.ghsa).toBe("HIGH");
       });
     });
 
