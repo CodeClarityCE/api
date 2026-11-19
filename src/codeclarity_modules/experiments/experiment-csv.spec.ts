@@ -146,6 +146,12 @@ describe("experiment CSV encoding", () => {
         "published_date",
         "modified_date",
         "withdrawn_date",
+        "osv_verdict",
+        "nvd_verdict",
+        "gcve_verdict",
+        "instance_status",
+        "uncorroborated",
+        "disputed",
       ]);
     });
   });

@@ -1,7 +1,13 @@
-import type { CVSS2, CVSS3, CVSS31 } from "../../knowledge/cvss.types";
+import type { CVSS2, CVSS3, CVSS4, CVSS31 } from "../../knowledge/cvss.types";
 import type { OwaspTop10Info } from "../../knowledge/owasp/owasp.types";
 import type { PatchInfo } from "../patching/patching.types";
 import type { ParsedGitUrl, StatusError } from "../sbom/sbom.types";
+import type {
+  SourceSeverity,
+  SourceVerdict,
+} from "../source-comparison/source-match.types";
+
+import type { HiddenReason } from "./utils/instance-status";
 
 export interface VulnSourceInfo {
   name: string;
@@ -49,9 +55,12 @@ export interface PackageManagerLink {
 }
 
 export interface SeverityInfo {
+  cvss_4?: CVSS4;
   cvss_31?: CVSS31;
   cvss_3?: CVSS3;
   cvss_2?: CVSS2;
+  /** GHSA's qualitative severity, such as "HIGH"; it has no score. */
+  ghsa?: string;
 }
 
 export interface OwaspInfo {
@@ -189,12 +198,17 @@ export interface Severity {
   ConfidentialityImpactNumerical: number;
   IntegrityImpactNumerical: number;
   AvailabilityImpactNumerical: number;
+  /** Every CVSS vector of the shown record; absent on older analyses. */
+  Vectors?: SourceSeverity[];
 }
 
 export enum SeverityType {
   CvssV2 = "CVSS_V2",
   CvssV3 = "CVSS_V3",
   CvssV31 = "CVSS_V31",
+  CvssV40 = "CVSS_V40",
+  /** GHSA's qualitative label, used when a record has no vector; the score is 0. */
+  Ghsa = "GHSA",
 }
 
 export enum PatchType {
@@ -216,6 +230,16 @@ export interface Vulnerability {
   GCVEMatch?: Vuln;
   Conflict: Conflict;
   PatchType?: PatchType;
+  /** True when a matched CVE record says its vendor disputes it. */
+  Disputed?: boolean;
+  /** One verdict per knowledge source; absent on older analyses. */
+  SourceVerdicts?: SourceVerdict[];
+  /** The instance's OSV ecosystem, like "npm"; absent on older analyses. */
+  Ecosystem?: string;
+  /** Why the instance is hidden by default; absent when it is not. */
+  Hidden?: HiddenReason;
+  /** Sources that withdrew or contradicted one of its source matches. */
+  ContradictedBy?: string[];
 }
 
 /** Vulnerability info containing VLAI scores from matching */
@@ -251,6 +275,10 @@ export interface VulnerabilityMerged {
   EPSS: EPSS;
   is_blacklisted?: boolean;
   blacklisted_by_policies?: string[];
+  /** True when any affected entry is vendor-disputed. */
+  Disputed?: boolean;
+  /** True when any affected entry is uncorroborated (see GLOSSARY.md). */
+  Uncorroborated?: boolean;
 }
 
 export interface VLAI {
@@ -276,6 +304,12 @@ export interface AffectedVuln {
   GCVEMatch?: Vuln;
   Conflict: Conflict;
   PatchType?: PatchType;
+  Disputed?: boolean;
+  SourceVerdicts?: SourceVerdict[];
+  Hidden?: HiddenReason;
+  ContradictedBy?: string[];
+  /** Matched by one source origin only; false when the analysis has no verdicts. */
+  Uncorroborated?: boolean;
 }
 
 export enum ConflictFlag {
@@ -374,6 +408,13 @@ export interface VulnerabilityDetailsReport {
   other: OtherInfo;
 }
 
+/** The detail of one affected version, with what each knowledge source said about it. */
+export interface VulnerabilityDetails extends VulnerabilityDetailsReport {
+  source_verdicts: SourceVerdict[];
+  /** False for analyses made before source verdicts were recorded; re-running explains them. */
+  source_verdicts_available: boolean;
+}
+
 /** Analysis statistics for vulnerabilities */
 export interface VulnerabilityAnalysisStats {
   number_of_issues: number;
@@ -401,6 +442,13 @@ export interface VulnerabilityAnalysisStats {
   number_of_medium: number;
   number_of_low: number;
   number_of_none: number;
+
+  /** Distinct vendor-disputed vulnerabilities; they stay in the counts above. */
+  number_of_disputed: number;
+  /** Grade inputs: the same counts without disputed vulnerabilities. */
+  graded_number_of_vulnerabilities: number;
+  graded_number_of_critical: number;
+  graded_number_of_high: number;
 
   mean_confidentiality_impact: number;
   mean_integrity_impact: number;
@@ -460,6 +508,10 @@ export function newVulnerabilityAnalysisStats(): VulnerabilityAnalysisStats {
     number_of_medium: 0,
     number_of_low: 0,
     number_of_none: 0,
+    number_of_disputed: 0,
+    graded_number_of_vulnerabilities: 0,
+    graded_number_of_critical: 0,
+    graded_number_of_high: 0,
     mean_confidentiality_impact: 0,
     mean_integrity_impact: 0,
     mean_availability_impact: 0,

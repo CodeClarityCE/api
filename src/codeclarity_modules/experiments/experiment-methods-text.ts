@@ -117,6 +117,13 @@ function limitations(results: ExperimentResults): string[] {
   ];
 }
 
+/** Which instances the estimates leave out (ADR 0013). */
+function hiddenStatement({
+  hidden_instances: hidden,
+}: ExperimentResults): string {
+  return `Every estimate leaves out hidden vulnerability instances: those whose every source match is contradicted by a source of another source origin, and those retired on every source. At HEAD, ${hidden.contradicted} contradicted and ${hidden.retired_all} retired instances were left out.`;
+}
+
 function studyDescription(results: ExperimentResults): string {
   const steps = results.provenance.analyzer_steps;
   const analyzer = steps
@@ -222,6 +229,7 @@ export function methodsText(input: MethodsInput): string {
     `Published results, metric version ${input.metric_version}, published ${input.published_on.toISOString().slice(0, 10)}.`,
     "## Study",
     studyDescription(results),
+    hiddenStatement(results),
     ...knowledgeDescription(results),
     ...headlineEstimates(results),
     "## Statistical methods",

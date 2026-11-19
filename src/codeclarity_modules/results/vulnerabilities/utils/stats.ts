@@ -1,10 +1,8 @@
 import { type Dependency } from "src/codeclarity_modules/results/sbom/sbom.types";
 import {
-  isCriticalSeverity,
-  isHighSeverity,
-  isLowSeverity,
-  isMediumSeverity,
-  isNoneSeverity,
+  hasCvssScore,
+  isWorseSeverity,
+  severityBucket,
 } from "src/codeclarity_modules/results/utils/utils";
 import {
   newVulnerabilityAnalysisStats,
@@ -15,15 +13,24 @@ import {
 /** The finding fields the stats read; a null Severity means no severity data. */
 export type StatsFinding = Pick<
   Vulnerability,
-  "VulnerabilityId" | "AffectedDependency" | "AffectedVersion" | "Weaknesses"
+  | "VulnerabilityId"
+  | "AffectedDependency"
+  | "AffectedVersion"
+  | "Weaknesses"
+  | "Disputed"
 > & {
-  Severity: Pick<
-    Vulnerability["Severity"],
-    | "Severity"
-    | "ConfidentialityImpact"
-    | "IntegrityImpact"
-    | "AvailabilityImpact"
-  > | null;
+  Severity:
+    | (Pick<
+        Vulnerability["Severity"],
+        | "Severity"
+        | "ConfidentialityImpact"
+        | "IntegrityImpact"
+        | "AvailabilityImpact"
+      > &
+        Partial<
+          Pick<Vulnerability["Severity"], "SeverityClass" | "SeverityType">
+        >)
+    | null;
 };
 
 /** SBOM dependency, where PHP SBOMs write lowercase role flags */
@@ -75,7 +82,7 @@ export function computeVulnerabilityStats(
 
   stats.number_of_issues = findings.length;
   for (const finding of findings) {
-    if (finding.Severity !== null) {
+    if (finding.Severity !== null && hasCvssScore(finding.Severity)) {
       sumConfidentiality += getContinuousFromDiscreteCIA(
         finding.Severity.ConfidentialityImpact,
       );
@@ -96,12 +103,15 @@ export function computeVulnerabilityStats(
     // Only count unique vulnerabilities
     if (!encounteredVulns.has(finding.VulnerabilityId)) {
       incrementOwaspStats(stats, finding.Weaknesses);
-      incrementSeverityStats(stats, finding.Severity);
     }
     encounteredVulns.add(finding.VulnerabilityId);
   }
+  for (const severity of worstSeverities(findings).values()) {
+    incrementSeverityStats(stats, severity);
+  }
 
   countDependencyRoles(stats, findings, dependencies);
+  countGradeInputs(stats, findings);
 
   stats.number_of_vulnerable_dependencies = encounteredDeps.size;
   stats.number_of_vulnerabilities = encounteredVulns.size;
@@ -112,6 +122,40 @@ export function computeVulnerabilityStats(
     scored > 0 ? sumConfidentiality / scored : 0;
   stats.mean_integrity_impact = scored > 0 ? sumIntegrity / scored : 0;
   return stats;
+}
+
+/** Count disputed vulnerabilities, and the grade inputs without them. */
+function countGradeInputs(
+  stats: VulnerabilityAnalysisStats,
+  findings: StatsFinding[],
+): void {
+  const graded = newVulnerabilityAnalysisStats();
+  const disputed = new Set<string>();
+  for (const finding of findings) {
+    if (finding.Disputed === true) disputed.add(finding.VulnerabilityId);
+  }
+  const worst = worstSeverities(findings.filter((f) => f.Disputed !== true));
+  for (const severity of worst.values()) {
+    incrementSeverityStats(graded, severity);
+  }
+  stats.number_of_disputed = disputed.size;
+  stats.graded_number_of_vulnerabilities = worst.size;
+  stats.graded_number_of_critical = graded.number_of_critical;
+  stats.graded_number_of_high = graded.number_of_high;
+}
+
+/** The worst severity of each vulnerability among its findings, as its card shows. */
+function worstSeverities(
+  findings: StatsFinding[],
+): Map<string, StatsFinding["Severity"]> {
+  const worst = new Map<string, StatsFinding["Severity"]>();
+  for (const finding of findings) {
+    const id = finding.VulnerabilityId;
+    if (!worst.has(id) || isWorseSeverity(finding.Severity, worst.get(id))) {
+      worst.set(id, finding.Severity);
+    }
+  }
+  return worst;
 }
 
 /** Count each vulnerable dependency version by its role in the SBOM. */
@@ -156,16 +200,14 @@ function incrementOwaspStats(
 /** Increment severity distribution stats based on severity value */
 function incrementSeverityStats(
   stats: VulnerabilityAnalysisStats,
-  severity: { Severity: number } | null | undefined,
+  severity: { Severity: number; SeverityClass?: string } | null | undefined,
 ): void {
-  if (severity === null || severity === undefined) {
-    stats.number_of_none += 1;
-    return;
-  }
-  const severityValue = severity.Severity;
-  if (isNoneSeverity(severityValue)) stats.number_of_none += 1;
-  else if (isLowSeverity(severityValue)) stats.number_of_low += 1;
-  else if (isMediumSeverity(severityValue)) stats.number_of_medium += 1;
-  else if (isHighSeverity(severityValue)) stats.number_of_high += 1;
-  else if (isCriticalSeverity(severityValue)) stats.number_of_critical += 1;
+  const counters = {
+    NONE: "number_of_none",
+    LOW: "number_of_low",
+    MEDIUM: "number_of_medium",
+    HIGH: "number_of_high",
+    CRITICAL: "number_of_critical",
+  } as const;
+  stats[counters[severityBucket(severity)]] += 1;
 }

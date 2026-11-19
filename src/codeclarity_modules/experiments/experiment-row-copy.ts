@@ -9,6 +9,17 @@
  * read back from jsonb and are only as well-formed as the plugin that wrote
  * them, so every field is checked rather than trusted.
  */
+import {
+  type SourceVerdict,
+  SourceVerdictValue,
+  VerdictSource,
+} from "../results/source-comparison/source-match.types";
+import {
+  type HiddenReason,
+  instanceStatus,
+} from "../results/vulnerabilities/utils/instance-status";
+import { isUncorroborated } from "../results/vulnerabilities/utils/uncorroborated";
+
 import type { VulnerableVersions } from "./experiment-vulnerable-versions";
 
 /** The run summary columns (analyses.parquet). */
@@ -64,7 +75,20 @@ export interface VulnerabilityInstanceRow {
   withdrawn_date: string | null;
   /** Affected versions of every source that matched, null when none did */
   vulnerable_versions: VulnerableVersions | null;
+  /** Each source's verdict, null when the result has none from that source */
+  osv_verdict: SourceVerdictValue | null;
+  nvd_verdict: SourceVerdictValue | null;
+  gcve_verdict: SourceVerdictValue | null;
+  /** Visible, or why it is hidden by default; null without source verdicts */
+  instance_status: InstanceStatusValue | null;
+  /** Matched by one source origin only; null without source verdicts */
+  uncorroborated: boolean | null;
+  /** A matched CVE record says its vendor disputes it; null on older rows */
+  disputed: boolean | null;
 }
+
+/** An instance's status: "visible", "contradicted" or "retired_all" (ADR 0013). */
+export type InstanceStatusValue = "visible" | `${HiddenReason}`;
 
 /** One package resolved in one workspace at a commit. */
 export interface ProbePackage {
@@ -154,6 +178,56 @@ function instanceRow(
     ),
     withdrawn_date: stringOrNull(osv["withdrawn"]),
     vulnerable_versions: vulnerableVersions(instance),
+    ...verdictColumns(instance["SourceVerdicts"], instance["Ecosystem"]),
+    disputed: instance["Disputed"] === true,
+  };
+}
+
+const VERDICT_VALUES = new Set<string>(Object.values(SourceVerdictValue));
+
+/** The well-formed verdicts of an instance, null when it has no verdict list. */
+function sourceVerdicts(value: unknown): SourceVerdict[] | null {
+  if (!Array.isArray(value)) return null;
+  return value.filter(isObject).flatMap((v) =>
+    typeof v["source"] === "string" &&
+    typeof v["verdict"] === "string" &&
+    VERDICT_VALUES.has(v["verdict"])
+      ? [
+          {
+            source: v["source"].toLowerCase(),
+            verdict: v["verdict"] as SourceVerdictValue,
+            ...(isObject(v["evidence"]) ? { evidence: v["evidence"] } : {}),
+          },
+        ]
+      : [],
+  );
+}
+
+/** One verdict column per source plus the status derived from them. */
+function verdictColumns(
+  value: unknown,
+  ecosystem: unknown,
+): Pick<
+  VulnerabilityInstanceRow,
+  | "osv_verdict"
+  | "nvd_verdict"
+  | "gcve_verdict"
+  | "instance_status"
+  | "uncorroborated"
+> {
+  const verdicts = sourceVerdicts(value);
+  const of = (source: VerdictSource): SourceVerdictValue | null =>
+    verdicts?.find((v) => (v.source as VerdictSource) === source)?.verdict ??
+    null;
+  return {
+    osv_verdict: of(VerdictSource.Osv),
+    nvd_verdict: of(VerdictSource.Nvd),
+    gcve_verdict: of(VerdictSource.Gcve),
+    instance_status: verdicts
+      ? (instanceStatus(verdicts, stringOrNull(ecosystem) ?? undefined)
+          .hidden ?? "visible")
+      : null,
+    uncorroborated: verdicts ? isUncorroborated(verdicts) : null,
   };
 }
 

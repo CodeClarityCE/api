@@ -18,6 +18,7 @@ import {
 } from "src/codeclarity_modules/results/sbom/sbom.types";
 import { Output as VulnsOutput } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
 import {
+  EntityNotFound,
   PluginFailed,
   PluginResultNotAvailable,
   UnknownWorkspace,
@@ -347,10 +348,15 @@ export class SbomUtilsService {
     dependency_version: string,
     sbom: SBOMOutput,
   ): Promise<DependencyDetails> {
+    const workspaceData = sbom.workspaces[workspace];
+    if (!workspaceData) {
+      throw new UnknownWorkspace();
+    }
     const dependency =
-      sbom.workspaces[workspace]!.dependencies[dependency_name]![
-        dependency_version
-      ]!;
+      workspaceData.dependencies[dependency_name]?.[dependency_version];
+    if (!dependency) {
+      throw new EntityNotFound();
+    }
     const enhancedDep = dependency as EnhancedDependency;
 
     // Determine the language based on the ecosystem
@@ -392,7 +398,7 @@ export class SbomUtilsService {
       direct: isDirectDependency(
         dependency_name,
         dependency_version,
-        sbom.workspaces[workspace]!.start,
+        workspaceData.start,
       ),
       transitive: dependency.Transitive ?? enhancedDep.transitive ?? false,
       package_manager:
@@ -419,6 +425,7 @@ export class SbomUtilsService {
     // Attach vulnerability info if the service has finished
     await this.attachVulnerabilityInfo(
       analysis_id,
+      workspace,
       dependency_name,
       dependency_version,
       dependency_details,
@@ -432,16 +439,21 @@ export class SbomUtilsService {
    */
   private async attachVulnerabilityInfo(
     analysis_id: string,
+    workspace: string,
     dependency_name: string,
     dependency_version: string,
     dependency_details: DependencyDetails,
   ): Promise<void> {
     const vulns: VulnsOutput =
       await this.vulnerabilitiesUtilsService.getVulnsResult(analysis_id);
+    const workspaceVulns = vulns.workspaces[workspace];
+    if (!workspaceVulns) {
+      throw new UnknownWorkspace();
+    }
 
     dependency_details.vulnerabilities = [];
 
-    for (const vuln of vulns.workspaces["."]!.Vulnerabilities) {
+    for (const vuln of workspaceVulns.Vulnerabilities) {
       if (
         vuln.AffectedDependency === dependency_name &&
         vuln.AffectedVersion === dependency_version

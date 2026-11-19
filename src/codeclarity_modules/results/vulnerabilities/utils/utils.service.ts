@@ -23,6 +23,29 @@ import {
   UnknownWorkspace,
 } from "src/types/error.types";
 
+import {
+  emptyHiddenCounts,
+  type HiddenCounts,
+  HiddenReason,
+  instanceStatus,
+} from "./instance-status";
+
+export type { HiddenCounts } from "./instance-status";
+
+/** Filters that show instances hidden by default. */
+export interface HiddenFilters {
+  show_contradicted?: boolean;
+  show_retired?: boolean;
+}
+
+/** A workspace's findings after the hidden filters, with what they hid. */
+export interface FindingsView {
+  findings: Vulnerability[];
+  hidden_counts: HiddenCounts;
+  /** False for analyses made before source verdicts; they hide nothing. */
+  source_verdicts_available: boolean;
+}
+
 @Injectable()
 export class VulnerabilitiesUtilsService {
   constructor(
@@ -68,11 +91,29 @@ export class VulnerabilitiesUtilsService {
     return vulns;
   }
 
+  /** The workspace's findings without the instances hidden by default, unless a filter shows them. */
   async getFindingsData(
     analysis_id: string,
     workspace: string,
     ecosystem_filter?: string,
+    filters: HiddenFilters = {},
   ): Promise<Vulnerability[]> {
+    return (
+      await this.getFindingsView(
+        analysis_id,
+        workspace,
+        ecosystem_filter,
+        filters,
+      )
+    ).findings;
+  }
+
+  async getFindingsView(
+    analysis_id: string,
+    workspace: string,
+    ecosystem_filter?: string,
+    filters: HiddenFilters = {},
+  ): Promise<FindingsView> {
     const findings: VulnsOutput = await this.getVulnsResult(analysis_id);
 
     // Validate that the workspace exists
@@ -112,7 +153,33 @@ export class VulnerabilitiesUtilsService {
       if (patchType) vuln.PatchType = patchType;
     }
 
-    return vulnerabilities;
+    // Judge each instance from its source verdicts, then drop the hidden ones
+    const hidden_counts = emptyHiddenCounts();
+    const shown: Record<HiddenReason, boolean> = {
+      [HiddenReason.Contradicted]: filters.show_contradicted === true,
+      [HiddenReason.RetiredAll]: filters.show_retired === true,
+    };
+    const visible: Vulnerability[] = [];
+    for (const vuln of vulnerabilities) {
+      const status = instanceStatus(vuln.SourceVerdicts, vuln.Ecosystem);
+      if (status.contradicted_by.length > 0) {
+        vuln.ContradictedBy = status.contradicted_by;
+      }
+      if (status.hidden) {
+        vuln.Hidden = status.hidden;
+        hidden_counts[status.hidden]++;
+        if (!shown[status.hidden]) continue;
+      }
+      visible.push(vuln);
+    }
+
+    return {
+      findings: visible,
+      hidden_counts,
+      source_verdicts_available: Object.values(findings.workspaces).some((ws) =>
+        (ws.Vulnerabilities ?? []).some((f) => f.SourceVerdicts),
+      ),
+    };
   }
 
   /**

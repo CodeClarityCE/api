@@ -22,6 +22,8 @@ const VULNERABILITY = "Identifier of the vulnerability (for example a CVE).";
 const AFFECTED = "Name of the package the vulnerability affects.";
 const SEVERITY_OF_EXPOSURE = "Severity class of the vulnerability.";
 const PUBLISHED = "Publication date of the advisory; blank when unknown.";
+const VERDICTS =
+  "matched, no_record, stale_or_failed, version_excluded, retired, names_another_product or no_package_data; blank when the analysis predates source verdicts";
 
 const RUNS: Described<typeof RUN_CSV_COLUMNS> = {
   rank: ENTRY_RANK,
@@ -44,7 +46,7 @@ const RUNS: Described<typeof RUN_CSV_COLUMNS> = {
   prod_dependencies: "Production dependencies resolved at the snapshot.",
   package_manager: "Package manager of the project at the snapshot.",
   total_vulnerabilities:
-    "Load of the project: its vulnerability instances at the snapshot.",
+    "Vulnerability instances at the snapshot, hidden ones included (see instance_status in vulnerabilities.csv).",
   vulnerable_dependencies:
     "Dependencies with at least one vulnerability instance.",
   direct_vulnerabilities: "Vulnerability instances on direct dependencies.",
@@ -86,6 +88,15 @@ const VULNERABILITIES: Described<typeof VULNERABILITY_CSV_COLUMNS> = {
   modified_date:
     "Last modification date of the advisory, as its source gives it.",
   withdrawn_date: "Withdrawal date of the advisory; blank unless withdrawn.",
+  osv_verdict: `Source verdict of OSV: ${VERDICTS}.`,
+  nvd_verdict: `Source verdict of NVD: ${VERDICTS}.`,
+  gcve_verdict: `Source verdict of GCVE: ${VERDICTS}.`,
+  instance_status:
+    "visible, contradicted (every source match is contradicted by a source of another source origin) or retired_all (retired on every source); blank when the analysis predates source verdicts. Contradicted and retired_all instances are hidden: left out of exposures, fixes, load and every result unless a Figure includes them.",
+  uncorroborated:
+    "true when sources of one source origin only matched and no source of another origin holds package data; blank when the analysis predates source verdicts.",
+  disputed:
+    "true when a matched CVE record says its vendor disputes it; blank on rows copied before this column existed.",
 };
 
 const EXPOSURES: Described<typeof EXPOSURE_CSV_COLUMNS> = {
@@ -144,8 +155,12 @@ const FILES: readonly [string, string, Record<string, string>][] = [
     "One row per vulnerability instance, once per analyzed commit.",
     VULNERABILITIES,
   ],
-  ["exposures.csv", "One row per exposure.", EXPOSURES],
-  ["fixes.csv", "One row per fix.", FIXES],
+  [
+    "exposures.csv",
+    "One row per exposure of a visible vulnerability instance.",
+    EXPOSURES,
+  ],
+  ["fixes.csv", "One row per fix of a visible vulnerability instance.", FIXES],
 ];
 
 /** data_dictionary.md: one table of column descriptions per CSV. */

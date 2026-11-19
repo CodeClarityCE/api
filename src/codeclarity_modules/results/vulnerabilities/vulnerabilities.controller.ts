@@ -11,8 +11,20 @@ import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { AuthUser } from "src/decorators/UserDecorator";
 import { PaginatedResponse, Response } from "src/types/apiResponses.types";
 
+import type { HiddenFilters } from "./utils/utils.service";
 import { VulnerabilitiesService } from "./vulnerabilities.service";
 import { VulnerabilityService } from "./vulnerability.service";
+
+/** The hidden filters from their query parameters; only "true" shows. */
+function hiddenFilters(
+  show_contradicted?: string,
+  show_retired?: string,
+): HiddenFilters {
+  return {
+    show_contradicted: show_contradicted === "true",
+    show_retired: show_retired === "true",
+  };
+}
 
 @Controller("/org/:org_id/projects/:project_id/analysis")
 export class FindingsController {
@@ -39,6 +51,8 @@ export class FindingsController {
     @Query("ecosystem_filter") ecosystem_filter?: string,
     @Query("show_blacklisted", new DefaultValuePipe("false"))
     show_blacklisted?: string,
+    @Query("show_contradicted") show_contradicted?: string,
+    @Query("show_retired") show_retired?: string,
   ): Promise<PaginatedResponse> {
     return await this.vulnerabilitiesService.getVulnerabilities(
       org_id,
@@ -54,6 +68,7 @@ export class FindingsController {
       search_key,
       ecosystem_filter,
       show_blacklisted === "true",
+      hiddenFilters(show_contradicted, show_retired),
     );
   }
 
@@ -65,6 +80,10 @@ export class FindingsController {
     @AuthUser() user: AuthenticatedUser,
     @Query("workspace") workspace: string,
     @Query("ecosystem_filter") ecosystem_filter?: string,
+    @Query("show_blacklisted", new DefaultValuePipe("false"))
+    show_blacklisted?: string,
+    @Query("show_contradicted") show_contradicted?: string,
+    @Query("show_retired") show_retired?: string,
   ): Promise<Response> {
     return {
       data: await this.vulnerabilitiesService.getStats(
@@ -74,6 +93,8 @@ export class FindingsController {
         user,
         workspace,
         ecosystem_filter,
+        show_blacklisted === "true",
+        hiddenFilters(show_contradicted, show_retired),
       ),
     };
   }
@@ -123,6 +144,8 @@ export class FindingsController {
     @Param("vulnerability_id") vulnerability_id: string,
     @AuthUser() user: AuthenticatedUser,
     @Query("workspace") workspace: string,
+    @Query("dependency") dependency?: string,
+    @Query("version") version?: string,
   ): Promise<Response> {
     return {
       data: await this.vulnerabilityService.getVulnerability(
@@ -132,6 +155,7 @@ export class FindingsController {
         user,
         vulnerability_id,
         workspace,
+        { dependency, version },
       ),
     };
   }

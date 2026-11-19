@@ -238,3 +238,41 @@ describe("loadOverTime", () => {
     expect(row).toMatchObject({ hindsight: 0, as_of: 0 });
   });
 });
+
+describe("loadOverTime hidden instances", () => {
+  const head = new Date("2025-04-02T09:00:00Z");
+  const vulnerabilities = [
+    instance("a1", MID_GRID),
+    instance("a1", MID_GRID, {
+      vulnerability_id: "GHSA-contradicted",
+      instance_status: "contradicted",
+    }),
+    instance("a1", MID_GRID, {
+      vulnerability_id: "GHSA-retired",
+      instance_status: "retired_all",
+    }),
+    instance("a1", MID_GRID, {
+      vulnerability_id: "GHSA-visible",
+      instance_status: "visible",
+    }),
+  ];
+
+  it("leaves contradicted and all-retired instances out of the load", () => {
+    const [row] = loadOverTime({
+      runs: [run("a1", null)],
+      vulnerabilities,
+      head_cutoff: head,
+    });
+    expect(row).toMatchObject({ hindsight: 2 });
+  });
+
+  it("counts them when asked to include hidden instances", () => {
+    const [row] = loadOverTime({
+      runs: [run("a1", null)],
+      vulnerabilities,
+      head_cutoff: head,
+      include_hidden: true,
+    });
+    expect(row).toMatchObject({ hindsight: 4 });
+  });
+});

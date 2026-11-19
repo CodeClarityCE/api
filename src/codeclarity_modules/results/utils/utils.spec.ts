@@ -14,6 +14,7 @@ import {
   NoPreviousAnalysis,
   NoProjectAssociatedWithAnalysis,
   paginate,
+  severityBucket,
 } from "./utils";
 
 describe("utils", () => {
@@ -123,6 +124,31 @@ describe("utils", () => {
         expect(isHighSeverity(9.0)).toBe(false);
         expect(isCriticalSeverity(9.0)).toBe(true);
       });
+    });
+  });
+
+  describe("severityBucket", () => {
+    it("buckets CVSS 3 and 4 scores with the same thresholds", () => {
+      expect(severityBucket({ Severity: 9.3, SeverityClass: "CRITICAL" })).toBe(
+        "CRITICAL",
+      );
+      expect(severityBucket({ Severity: 8.7 })).toBe("HIGH");
+    });
+
+    it("uses the class of a GHSA label that has no score", () => {
+      expect(severityBucket({ Severity: 0, SeverityClass: "HIGH" })).toBe(
+        "HIGH",
+      );
+    });
+
+    it("is none without a score or a known class", () => {
+      expect(severityBucket({ Severity: 0, SeverityClass: "NONE" })).toBe(
+        "NONE",
+      );
+      expect(severityBucket({ Severity: 0, SeverityClass: "BOGUS" })).toBe(
+        "NONE",
+      );
+      expect(severityBucket(null)).toBe("NONE");
     });
   });
 

@@ -51,6 +51,8 @@ describe("VulnerabilitiesService", () => {
     checkAccess: jest.fn(),
   };
 
+  const getFindingsDataMock = (): jest.Mock =>
+    mockFindingsUtilsService.getFindingsData;
   const mockFindingsUtilsService = {
     getVulnsResult: jest.fn(),
     getMaliciousPackageAdvisories: jest.fn(),
@@ -69,6 +71,12 @@ describe("VulnerabilitiesService", () => {
         Id: "vuln-1",
       },
     ]),
+    // The view wraps whatever the getFindingsData mock returns.
+    getFindingsView: jest.fn(async (...args: unknown[]): Promise<object> => ({
+      findings: (await getFindingsDataMock()(...args)) as unknown,
+      hidden_counts: { contradicted: 0, retired_all: 0 },
+      source_verdicts_available: false,
+    })),
   };
 
   const mockFindingsSortService = {
@@ -536,6 +544,7 @@ describe("VulnerabilitiesService", () => {
         "analysis-123",
         "default",
         undefined, // ecosystem_filter
+        {}, // hidden filters
       );
     });
 
@@ -883,6 +892,7 @@ describe("VulnerabilitiesService", () => {
         "analysis-123",
         "default",
         undefined, // ecosystem_filter
+        {}, // hidden filters
       );
     });
 
@@ -1166,6 +1176,54 @@ describe("VulnerabilitiesService", () => {
       expect((result.data as { Description: string }[])[0]!.Description).toBe(
         "#### .\n\n",
       );
+    });
+
+    it("lists GCVE only when GCVE matched, keeping its AI assessment", async () => {
+      mockFindingsUtilsService.getFindingsData.mockResolvedValue([
+        {
+          Id: "vuln-1",
+          VulnerabilityId: "CVE-2024-9999",
+          AffectedDependency: "clone",
+          AffectedVersion: "2.1.2",
+          Sources: ["NVD"],
+          Severity: { Severity: 9.8 },
+          OSVMatch: null,
+          NVDMatch: null,
+          Conflict: { ConflictFlag: "NO_CONFLICT", ConflictWinner: "NVD" },
+        },
+      ]);
+      mockFindingsFilterService.filter.mockImplementation(
+        (findings: unknown[]) => [findings, {}],
+      );
+      mockFindingsSortService.sort.mockImplementation(
+        (findings: unknown[]) => findings,
+      );
+      mockNVDRepository.getVulnWithoutFailing.mockResolvedValue(null);
+      mockGCVERepository.getVulnByCVEId.mockResolvedValueOnce({
+        vlai_score: "high",
+        vlai_confidence: 0.7,
+      });
+
+      const result = await service.getVulnerabilities(
+        "org-123",
+        "project-123",
+        "analysis-123",
+        mockUser,
+        "default",
+        0,
+        20,
+        "severity",
+        "desc",
+        undefined,
+        undefined,
+      );
+      const [vuln] = result.data as {
+        Sources: string[];
+        VLAI: { Source: string }[];
+      }[];
+
+      expect(vuln!.Sources).toEqual(["NVD"]);
+      expect(vuln!.VLAI.map((v) => v.Source)).toContain("GCVE");
     });
 
     describe("a CVE shared by several OSV records", () => {

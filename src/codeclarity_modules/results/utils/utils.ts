@@ -1,5 +1,6 @@
 import { satisfies } from "semver";
 
+import { SeverityType } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
 import type {
   PaginationConfig,
   PaginationUserSuppliedConf,
@@ -38,6 +39,51 @@ export function severityClass(
   if (isMediumSeverity(severity)) return "MEDIUM";
   if (isLowSeverity(severity)) return "LOW";
   return "NONE";
+}
+
+const SEVERITY_CLASSES: readonly string[] = [
+  "CRITICAL",
+  "HIGH",
+  "MEDIUM",
+  "LOW",
+  "NONE",
+];
+
+// The bucket of a finding: its CVSS score, else its class, which a GHSA label carries without a score.
+export function severityBucket(
+  severity:
+    | { Severity?: number | null; SeverityClass?: string | null }
+    | null
+    | undefined,
+): SeverityClass {
+  const byScore = severityClass(severity?.Severity);
+  if (byScore !== "NONE") return byScore;
+  const label = (severity?.SeverityClass ?? "").toUpperCase();
+  return SEVERITY_CLASSES.includes(label) ? (label as SeverityClass) : "NONE";
+}
+
+// True when severity a is worse than b: a higher bucket, or the same bucket and a higher score.
+export function isWorseSeverity(
+  a:
+    | { Severity?: number | null; SeverityClass?: string | null }
+    | null
+    | undefined,
+  b:
+    | { Severity?: number | null; SeverityClass?: string | null }
+    | null
+    | undefined,
+): boolean {
+  const rank = (s: typeof a): number =>
+    SEVERITY_CLASSES.length - SEVERITY_CLASSES.indexOf(severityBucket(s));
+  if (rank(a) !== rank(b)) return rank(a) > rank(b);
+  return (a?.Severity ?? 0) > (b?.Severity ?? 0);
+}
+
+// A GHSA label has a class but no score, so it stays out of score sums and means.
+export function hasCvssScore(
+  severity: { SeverityType?: string | null } | null | undefined,
+): boolean {
+  return severity?.SeverityType !== SeverityType.Ghsa;
 }
 
 export function getVersionsSatisfyingConstraint(
