@@ -123,6 +123,8 @@ export class FindingsController {
     @Param("vulnerability_id") vulnerability_id: string,
     @AuthUser() user: AuthenticatedUser,
     @Query("workspace") workspace: string,
+    @Query("dependency") dependency?: string,
+    @Query("version") version?: string,
   ): Promise<Response> {
     return {
       data: await this.vulnerabilityService.getVulnerability(
@@ -132,6 +134,7 @@ export class FindingsController {
         user,
         vulnerability_id,
         workspace,
+        { dependency, version },
       ),
     };
   }
