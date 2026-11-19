@@ -85,6 +85,12 @@ export const VULNERABILITY_CSV_COLUMNS = [
   "published_date",
   "modified_date",
   "withdrawn_date",
+  "osv_verdict",
+  "nvd_verdict",
+  "gcve_verdict",
+  "instance_status",
+  "uncorroborated",
+  "disputed",
 ] as const;
 
 /**

@@ -13,6 +13,11 @@ import {
 } from "./experiment-exposures";
 import { groupByGridDate, isHead } from "./experiment-grid";
 import {
+  type HiddenInstanceCounts,
+  hiddenInstanceCounts,
+  withoutHiddenInstances,
+} from "./experiment-hidden-instances";
+import {
   BOOTSTRAP_SETTINGS,
   type ResultIntervals,
   resultIntervalsSteps,
@@ -86,6 +91,7 @@ export type ResultsVulnerabilityInput = Pick<
       | "direct_dependency"
       | "published_date"
       | "vulnerable_versions"
+      | "instance_status"
     >
   > & { run_id: string };
 
@@ -405,6 +411,8 @@ export interface ExperimentResults {
   exposure_survival: ExposureSurvivalBlock;
   /** Packages to clear per grid date, removed_transitive share per interval */
   upstream_leverage: UpstreamLeverageBlock;
+  /** HEAD instances left out of every block above, by reason (ADR 0013) */
+  hidden_instances: HiddenInstanceCounts;
   /** Bootstrap intervals; null while the experiment has not ended */
   bootstrap_intervals: ResultIntervals | null;
   provenance: ProvenanceBlock;
@@ -889,8 +897,9 @@ function gridOnlyRunIds(runs: readonly ResultsRunInput[]): Set<string> {
  * project universe (load 0 without instances); grid blocks use every run.
  */
 export function aggregateExperimentResults(
-  input: ExperimentResultsInput,
+  copied: ExperimentResultsInput,
 ): ExperimentResults {
+  const input = withoutHiddenInstances(copied);
   const exposures = deriveExposures(input);
   const head = headCutoff(
     input.provenance.ended_on,
@@ -955,6 +964,9 @@ export function aggregateExperimentResults(
     residence: residenceBlock(exposures),
     exposure_survival: exposureSurvival(exposures, head),
     upstream_leverage: leverage,
+    hidden_instances: hiddenInstanceCounts(
+      copied.vulnerabilities.filter((v) => inUniverse.has(v.run_id)),
+    ),
     bootstrap_intervals:
       input.bootstrap_intervals === undefined
         ? computeResultIntervals(input)
@@ -972,7 +984,8 @@ function transitiveInterval(counts: FixKindCounts): ConfidenceInterval | null {
 }
 
 /** The bootstrap intervals of the results, for the HEAD universe of projects. */
-function intervalSteps(input: ExperimentResultsInput): Steps<ResultIntervals> {
+function intervalSteps(copied: ExperimentResultsInput): Steps<ResultIntervals> {
+  const input = withoutHiddenInstances(copied);
   const gridOnly = gridOnlyRunIds(input.runs);
   const summaries = input.summaries.filter((s) => !gridOnly.has(s.run_id));
   const inUniverse = new Set(summaries.map((s) => s.run_id));

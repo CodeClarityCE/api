@@ -10,6 +10,8 @@ export interface FigureChoice {
 export interface FigureFilter extends FigureChoice {
   /** A date range instead of a list of options */
   kind?: "date_range";
+  /** What the choice of no option is called; "No filter" when not given */
+  none_label?: string;
   options: readonly FigureChoice[];
 }
 
@@ -54,6 +56,14 @@ export const SWEEP_FILTER: FigureFilter = {
   ],
 };
 
+/** Without it, instances hidden by default (ADR 0013) are left out. */
+export const HIDDEN_FILTER: FigureFilter = {
+  id: "hidden",
+  label: "Hidden instances",
+  none_label: "Left out",
+  options: [{ id: "include", label: "Include contradicted and retired" }],
+};
+
 export const DATING_PRECISION_FILTER: FigureFilter = {
   id: "dating_precision",
   label: "Dating precision",
@@ -85,7 +95,7 @@ export const FIGURE_CATALOG = {
       label: "Load over time",
       chart_forms: [LINE],
       group_by: [],
-      filters: [VIEW_FILTER],
+      filters: [VIEW_FILTER, HIDDEN_FILTER],
     },
     {
       id: "residence",
@@ -95,28 +105,33 @@ export const FIGURE_CATALOG = {
         { id: "quartiles", label: "Quartiles", mark: "bar" },
       ],
       group_by: [BY_SEVERITY],
-      filters: [SWEEP_FILTER, DATING_PRECISION_FILTER, DATE_RANGE_FILTER],
+      filters: [
+        SWEEP_FILTER,
+        HIDDEN_FILTER,
+        DATING_PRECISION_FILTER,
+        DATE_RANGE_FILTER,
+      ],
     },
     {
       id: "concentration",
       label: "Concentration (Lorenz curve)",
       chart_forms: [LINE],
       group_by: [],
-      filters: [SWEEP_FILTER, VIEW_FILTER],
+      filters: [SWEEP_FILTER, HIDDEN_FILTER, VIEW_FILTER],
     },
     {
       id: "severity_mix",
       label: "Severity mix",
       chart_forms: [{ id: "bar", label: "Bar", mark: "bar" }],
       group_by: [PACKAGE_MANAGER_GROUP, STAR_RANK_GROUP],
-      filters: [SWEEP_FILTER, VIEW_FILTER],
+      filters: [SWEEP_FILTER, HIDDEN_FILTER, VIEW_FILTER],
     },
     {
       id: "stars_vs_load",
       label: "Stars vs load",
       chart_forms: [{ id: "scatter", label: "Scatter", mark: "point" }],
       group_by: [PACKAGE_MANAGER_GROUP],
-      filters: [SWEEP_FILTER, VIEW_FILTER],
+      filters: [SWEEP_FILTER, HIDDEN_FILTER, VIEW_FILTER],
     },
     {
       id: "upstream_leverage",
@@ -126,26 +141,31 @@ export const FIGURE_CATALOG = {
           id: "line",
           label: "Packages to clear",
           group_by: [],
-          filters: ["sweep", "date_range"],
+          filters: ["sweep", "hidden", "date_range"],
         },
         { id: "bar", label: "Fixes per interval", mark: "bar" },
       ],
       group_by: [FIX_KIND_GROUP],
-      filters: [SWEEP_FILTER, DATING_PRECISION_FILTER, DATE_RANGE_FILTER],
+      filters: [
+        SWEEP_FILTER,
+        HIDDEN_FILTER,
+        DATING_PRECISION_FILTER,
+        DATE_RANGE_FILTER,
+      ],
     },
     {
       id: "survival",
       label: "Survival",
       chart_forms: [STEP],
       group_by: [BY_SEVERITY],
-      filters: [SWEEP_FILTER],
+      filters: [SWEEP_FILTER, HIDDEN_FILTER],
     },
     {
       id: "fix_lag",
       label: "Fix lag",
       chart_forms: [STEP],
       group_by: [BY_SEVERITY],
-      filters: [SWEEP_FILTER],
+      filters: [SWEEP_FILTER, HIDDEN_FILTER],
     },
   ],
 } as const satisfies FigureCatalog;

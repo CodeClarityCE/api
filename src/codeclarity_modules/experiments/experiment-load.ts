@@ -5,6 +5,7 @@ import {
   instancesByRun,
   publishedDay,
 } from "./experiment-grid";
+import { visibleInstances } from "./experiment-hidden-instances";
 import type {
   ResultsRunInput,
   ResultsVulnerabilityInput,
@@ -32,6 +33,8 @@ export interface LoadInput {
   vulnerabilities: readonly ResultsVulnerabilityInput[];
   /** HEAD's as-of cutoff, from headCutoff */
   head_cutoff: Date;
+  /** Count instances hidden by default too (ADR 0013) */
+  include_hidden?: boolean;
 }
 
 /**
@@ -40,8 +43,11 @@ export interface LoadInput {
  * nothing; empty ones count as projects with no load.
  */
 export function loadOverTime(input: LoadInput): LoadRow[] {
+  const counted = input.include_hidden
+    ? input.vulnerabilities
+    : visibleInstances(input.vulnerabilities);
   const byRun = instancesByRun(
-    input.vulnerabilities.filter((v) => v.affected_dependency !== null),
+    counted.filter((v) => v.affected_dependency !== null),
   );
   const headDay = gridDay(input.head_cutoff);
   return groupByGridDate(input.runs).map(({ grid_date, runs }) => {
