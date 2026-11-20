@@ -30,6 +30,8 @@ services:
         condition: service_completed_successfully
       default-analyzer:
         condition: service_completed_successfully
+      vulnerability-instance-backfill:
+        condition: service_completed_successfully
       dev-user:
         condition: service_completed_successfully
       migrate-test:
@@ -99,6 +101,33 @@ services:
       - -r
       - tsconfig-paths/register
       - src/scripts/create-default-analyzer.ts
+    env_file:
+      - ../../.cloud/env/.env.dev
+    environment:
+      - PG_DB_HOST=db
+      - PG_DB_PORT=5432
+    volumes:
+      - ../../api:/app
+      - api_node_modules:/app/node_modules
+      - ../../.cloud/env:/app/env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # One-shot job: writes the vulnerability instance rows of past analyses that
+  # have none, one analysis at a time, then exits. Reuses the migrate job's install.
+  vulnerability-instance-backfill:
+    build:
+      context: ../../api
+      dockerfile: .cloud/docker/Dockerfile
+      target: api-dev
+    image: codeclarityce/api-dev:latest
+    restart: "no"
+    entrypoint:
+      - node_modules/.bin/ts-node
+      - -r
+      - tsconfig-paths/register
+      - src/scripts/backfill-vulnerability-instances.ts
     env_file:
       - ../../.cloud/env/.env.dev
     environment:
