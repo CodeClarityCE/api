@@ -34,6 +34,8 @@ interface InstanceRow {
   prod: boolean;
   severity_class: SeverityClass;
   severity_score: number | null;
+  known_exploited: boolean;
+  aliases: string[];
   fixed_version: string | null;
   package_manager: string | null;
   top_level_dependencies: TopLevelDependency[];
@@ -91,7 +93,8 @@ export class RemediationsService {
       `SELECT i.id, i."projectId" AS project_id, i."analysisId" AS analysis_id,
               i.vulnerability_id, i.analysis_vulnerability_id, i.package,
               i.ecosystem, i.installed_version, i.workspace, i.prod,
-              i.severity_class, i.severity_score, i.fixed_version,
+              i.severity_class, i.severity_score, i.known_exploited,
+              i.aliases, i.fixed_version,
               i.package_manager, i.top_level_dependencies
        FROM (${matchingInstancesSql("$1", filters, bind)}) i
        WHERE ${shownSql({})}
@@ -121,6 +124,8 @@ export class RemediationsService {
         prod: row.prod,
         severity_class: row.severity_class,
         severity_score: row.severity_score,
+        known_exploited: row.known_exploited,
+        aliases: row.aliases,
         ecosystem: row.ecosystem,
         package_manager: toPackageManager(row.package_manager),
         fixed_version: row.fixed_version,

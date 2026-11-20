@@ -67,6 +67,8 @@ const toInstance = (instance: PlannedInstance): RemediationInstance => ({
   prod: instance.prod,
   severity_class: instance.severity_class,
   severity_score: instance.severity_score,
+  known_exploited: instance.known_exploited,
+  aliases: instance.aliases,
 });
 
 // The patcher's upgrade of the only top-level dependency installing the instance, when it removes it.
