@@ -49,6 +49,8 @@ import {
   TicketDashboardStats,
   TicketDetails,
   TicketFilters,
+  TicketInstance,
+  TicketRemediation,
   TicketSortField,
   TicketSummary,
   UpdateTicketBody,
@@ -72,6 +74,62 @@ interface RawProjectCount {
 
 interface RawAverageResolutionTime {
   avg_days: string | null;
+}
+
+const SEVERITY_ORDER = ["NONE", "LOW", "MEDIUM", "HIGH", "CRITICAL"];
+const severityRank = (severity: string): number =>
+  SEVERITY_ORDER.indexOf(severity);
+
+function ticketInstance(o: TicketVulnerabilityOccurrence): TicketInstance {
+  return {
+    id: o.id,
+    analysis_id: o.analysis?.id ?? "",
+    vulnerability_id: o.vulnerability_id,
+    analysis_vulnerability_id: o.analysis_vulnerability_id,
+    package: o.package,
+    ecosystem: o.ecosystem,
+    installed_version: o.installed_version,
+    workspace: o.workspace,
+    prod: o.prod,
+    severity_class: o.severity_class,
+    severity_score: o.severity_score,
+    fixed_version: o.fixed_version,
+    top_level_dependencies: o.top_level_dependencies,
+    is_active: o.is_active,
+    detected_on: o.detected_on,
+    resolved_on: o.resolved_on ?? null,
+  };
+}
+
+// The remediation a ticket tracks; null for one-vulnerability tickets.
+function ticketRemediation(
+  ticket: Ticket,
+  instances: TicketInstance[],
+): TicketRemediation | null {
+  if (!ticket.remediation_kind) return null;
+  // The package is either the vulnerable one or the top-level dependency that installs it.
+  const installed = new Set<string>();
+  for (const instance of instances.filter((i) => i.is_active)) {
+    if (instance.package === ticket.remediation_package) {
+      installed.add(instance.installed_version);
+    }
+    for (const top of instance.top_level_dependencies) {
+      if (top.name === ticket.remediation_package) installed.add(top.version);
+    }
+  }
+  return {
+    kind: ticket.remediation_kind,
+    workspace: ticket.remediation_workspace ?? ".",
+    package: ticket.remediation_package ?? "",
+    installed_versions: [...installed].sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true }),
+    ),
+    target_version: ticket.recommended_version ?? "",
+    potentially_breaking: ticket.potentially_breaking ?? false,
+    package_manager: ticket.package_manager ?? null,
+    command: ticket.remediation_command ?? null,
+    manifest_edit: ticket.remediation_manifest_edit ?? null,
+  };
 }
 
 // Helper to get full name from user-like objects
@@ -222,21 +280,12 @@ export class TicketsService {
       throw new EntityNotFound();
     }
 
-    // Get occurrence counts
-    const [occurrenceCount, activeOccurrenceCount] = await Promise.all([
-      this.ticketOccurrenceRepository.count({
-        where: { ticket: { id: ticketId } },
-      }),
-      this.ticketOccurrenceRepository.count({
-        where: { ticket: { id: ticketId }, is_active: true },
-      }),
-    ]);
+    const occurrences = await this.ticketOccurrenceRepository.find({
+      where: { ticket: { id: ticketId } },
+      relations: { analysis: true },
+    });
 
-    return this.mapTicketToDetails(
-      ticket,
-      occurrenceCount,
-      activeOccurrenceCount,
-    );
+    return this.mapTicketToDetails(ticket, occurrences);
   }
 
   /**
@@ -1184,9 +1233,17 @@ export class TicketsService {
    */
   private mapTicketToDetails(
     ticket: Ticket,
-    occurrenceCount: number,
-    activeOccurrenceCount: number,
+    occurrences: TicketVulnerabilityOccurrence[],
   ): TicketDetails {
+    const instances = occurrences
+      .map(ticketInstance)
+      .sort(
+        (a, b) =>
+          Number(b.is_active) - Number(a.is_active) ||
+          severityRank(b.severity_class) - severityRank(a.severity_class) ||
+          (b.severity_score ?? -1) - (a.severity_score ?? -1) ||
+          a.vulnerability_id.localeCompare(b.vulnerability_id),
+      );
     return {
       id: ticket.id,
       title: ticket.title,
@@ -1225,8 +1282,10 @@ export class TicketsService {
       })),
       has_external_links: (ticket.external_links?.length || 0) > 0,
       external_status: ticket.external_status,
-      occurrence_count: occurrenceCount,
-      active_occurrence_count: activeOccurrenceCount,
+      occurrence_count: instances.length,
+      active_occurrence_count: instances.filter((i) => i.is_active).length,
+      remediation: ticketRemediation(ticket, instances),
+      instances,
     };
   }
 }

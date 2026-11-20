@@ -14,6 +14,8 @@ import type { Analysis } from "../../base_modules/analyses/analysis.entity";
 import type { Organization } from "../../base_modules/organizations/organization.entity";
 import type { Project } from "../../base_modules/projects/project.entity";
 import type { User } from "../../base_modules/users/users.entity";
+import type { ManifestEdit } from "../remediations/package-manager-commands";
+import { RemediationKind } from "../remediations/remediation.types";
 
 import type { TicketEvent } from "./ticket-event.entity";
 import type { TicketExternalLink } from "./ticket-external-link.entity";
@@ -47,6 +49,13 @@ export enum TicketType {
 }
 
 @Entity()
+// Finds the open ticket of a remediation (ADR 0016).
+@Index([
+  "project",
+  "remediation_kind",
+  "remediation_workspace",
+  "remediation_package",
+])
 export class Ticket {
   @ApiProperty()
   @Expose()
@@ -123,6 +132,42 @@ export class Ticket {
   @Expose()
   @Column("text", { nullable: true })
   remediation_notes?: string;
+
+  // The remediation the ticket tracks; null for tickets that track one vulnerability.
+  @ApiProperty({ enum: RemediationKind })
+  @Expose()
+  @Column({ type: "varchar", length: 30, nullable: true })
+  remediation_kind?: RemediationKind | null;
+
+  @ApiProperty()
+  @Expose()
+  @Column({ type: "varchar", length: 200, nullable: true })
+  remediation_workspace?: string | null;
+
+  @ApiProperty()
+  @Expose()
+  @Column({ type: "varchar", length: 200, nullable: true })
+  remediation_package?: string | null;
+
+  @ApiProperty()
+  @Expose()
+  @Column({ type: "boolean", nullable: true })
+  potentially_breaking?: boolean | null;
+
+  @ApiProperty()
+  @Expose()
+  @Column({ type: "varchar", length: 20, nullable: true })
+  package_manager?: string | null;
+
+  @ApiProperty()
+  @Expose()
+  @Column({ type: "text", nullable: true })
+  remediation_command?: string | null;
+
+  @ApiProperty()
+  @Expose()
+  @Column({ type: "jsonb", nullable: true })
+  remediation_manifest_edit?: ManifestEdit | null;
 
   @ApiProperty()
   @Expose()
