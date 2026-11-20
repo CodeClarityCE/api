@@ -1,6 +1,15 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Expose } from "class-transformer";
-import { IsDefined, IsNotEmpty, IsString, Length } from "class-validator";
+import {
+  IsDefined,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Length,
+  Max,
+  Min,
+} from "class-validator";
 
 import { User } from "src/base_modules/users/users.entity";
 
@@ -101,6 +110,14 @@ export class InviteeInfoQuery {
 export class OrganizationSettingsUpdateBody {
   @ApiProperty({ required: false })
   auto_resolve_tickets?: boolean;
+
+  /** Days after which a project's current analysis counts as stale */
+  @ApiProperty({ required: false, minimum: 1, maximum: 365 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  freshness_threshold_days?: number;
 }
 
 /********************************************/

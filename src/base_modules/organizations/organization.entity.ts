@@ -63,6 +63,12 @@ export class Organization {
   @Column({ default: false })
   auto_resolve_tickets!: boolean;
 
+  /** Days after which a project's current analysis counts as stale */
+  @ApiProperty()
+  @Expose()
+  @Column({ type: "integer", default: 14 })
+  freshness_threshold_days!: number;
+
   // Foreign keys
   @ApiProperty()
   @Expose()
