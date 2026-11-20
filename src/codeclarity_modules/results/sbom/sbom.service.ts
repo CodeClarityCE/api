@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { ValidationError } from "class-validator";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { PackageRepository } from "src/codeclarity_modules/knowledge/package/package.repository";
@@ -24,13 +25,40 @@ import {
 import { StatusResponse } from "src/codeclarity_modules/results/status.types";
 import { paginate } from "src/codeclarity_modules/results/utils/utils";
 import { PaginatedResponse } from "src/types/apiResponses.types";
-import { EntityNotFound, UnknownWorkspace } from "src/types/error.types";
+import {
+  EntityNotFound,
+  UnknownWorkspace,
+  ValidationFailed,
+} from "src/types/error.types";
 
 import { AnalysisResultsService } from "../results.service";
 
 import { GraphDependency, GraphTraversalUtils } from "./sbom_graph.types";
 import { filter } from "./utils/filter";
 import { sort } from "./utils/sort";
+
+// A repeated query key arrives as an array; answer 400 instead of coercing it.
+function notAString(...params: string[]): ValidationFailed {
+  return new ValidationFailed(
+    params.map((property) =>
+      Object.assign(new ValidationError(), {
+        property,
+        constraints: { isString: `${property} must be a string` },
+      }),
+    ),
+  );
+}
+
+// Returns the two query values once both are checked to be strings.
+function requireStringParams(
+  workspace: unknown,
+  dependency: unknown,
+): { workspace: string; dependency: string } {
+  if (typeof workspace !== "string" || typeof dependency !== "string") {
+    throw notAString("workspace", "dependency");
+  }
+  return { workspace, dependency };
+}
 
 /** Query options for SBOM list endpoint */
 export interface SbomQueryOptions {
@@ -386,6 +414,7 @@ export class SBOMService {
     dependency: string,
     user: AuthenticatedUser,
   ): Promise<DependencyDetails> {
+    ({ workspace, dependency } = requireStringParams(workspace, dependency));
     await this.analysisResultsService.checkAccess(
       orgId,
       projectId,
@@ -438,6 +467,7 @@ export class SBOMService {
     dependency: string,
     user: AuthenticatedUser,
   ): Promise<GraphDependency[]> {
+    ({ workspace, dependency } = requireStringParams(workspace, dependency));
     await this.analysisResultsService.checkAccess(
       orgId,
       projectId,

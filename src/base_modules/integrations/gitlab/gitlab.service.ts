@@ -265,7 +265,11 @@ export class GitlabIntegrationService {
     }
 
     // Moving an integration to another server would break its projects
-    const withoutSlash = (url: string): string => url.replace(/\/+$/, "");
+    const withoutSlash = (url: string): string => {
+      let end = url.length;
+      while (end > 0 && url[end - 1] === "/") end--;
+      return url.slice(0, end);
+    };
     if (
       withoutSlash(linkGitlabCreate.gitlab_instance_url) !==
       withoutSlash(integration.service_domain)

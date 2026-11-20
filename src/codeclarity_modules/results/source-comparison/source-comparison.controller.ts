@@ -3,6 +3,7 @@ import {
   Get,
   Param,
   ParseEnumPipe,
+  ParseUUIDPipe,
   Query,
   Res,
 } from "@nestjs/common";
@@ -72,7 +73,7 @@ export class SourceComparisonController {
   async exportVerdicts(
     @Param("org_id") orgId: string,
     @Param("project_id") projectId: string,
-    @Param("analysis_id") analysisId: string,
+    @Param("analysis_id", ParseUUIDPipe) analysisId: string,
     @AuthUser() user: AuthenticatedUser,
     @Query("format", new ParseEnumPipe(VerdictExportFormat))
     format: VerdictExportFormat,
@@ -86,18 +87,23 @@ export class SourceComparisonController {
       user,
       workspace,
     );
-    const body =
-      format === VerdictExportFormat.Csv
-        ? encodeCsvHeader(columns) +
-          rows.map((row) => encodeCsvRow(columns, row)).join("")
-        : JSON.stringify({ analysis_id: analysisId, columns, rows });
     const safeId = analysisId.replace(/[^A-Za-z0-9._-]/g, "_");
+    reply.header(
+      "content-disposition",
+      `attachment; filename="source-verdicts-${safeId}.${format}"`,
+    );
+    // Literal content types so the body is never served as HTML.
+    if (format === VerdictExportFormat.Csv) {
+      await reply
+        .header("content-type", "text/csv; charset=utf-8")
+        .send(
+          encodeCsvHeader(columns) +
+            rows.map((row) => encodeCsvRow(columns, row)).join(""),
+        );
+      return;
+    }
     await reply
-      .header("content-type", CONTENT_TYPES[format])
-      .header(
-        "content-disposition",
-        `attachment; filename="source-verdicts-${safeId}.${format}"`,
-      )
-      .send(body);
+      .header("content-type", "application/json; charset=utf-8")
+      .send(JSON.stringify({ analysis_id: safeId, columns, rows }));
   }
 }
