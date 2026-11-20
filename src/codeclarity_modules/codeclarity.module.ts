@@ -11,6 +11,7 @@ import { KnowledgeModule } from "./knowledge/knowledge.module";
 import { PolicyModule } from "./policies/policy.module";
 import { ResultsModule } from "./results/results.module";
 import { TicketsModule } from "./tickets/tickets.module";
+import { VulnerabilityInstancesModule } from "./vulnerability_instances/vulnerability-instances.module";
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { TicketsModule } from "./tickets/tickets.module";
     TicketsModule,
     DatasetsModule,
     ExperimentsModule,
+    VulnerabilityInstancesModule,
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       name: "knowledge",

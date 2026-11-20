@@ -122,6 +122,10 @@ export class Analysis {
   })
   failure_reason?: string;
 
+  /** When its vulnerability instance rows were written; null until then */
+  @Column("timestamptz", { nullable: true })
+  vulnerability_instances_stored_on?: Date | null;
+
   // Foreign keys
   @ManyToMany(() => Policy, (policy) => policy.analyses)
   policies!: Relation<Policy[]>;
