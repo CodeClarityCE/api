@@ -291,6 +291,32 @@ describe("extractOSVRanges", () => {
     expect(result[0]!.ranges[0]!.introduced).toBe("0");
   });
 
+  it("keeps the introduced version when the closing event stores an empty introduced", () => {
+    // The knowledge mirror stores every event key, unused ones as "".
+    const event = { introduced: "", fixed: "", last_affected: "", limit: "" };
+    const osv = makeOSV([
+      {
+        ranges: [
+          {
+            events: [
+              { ...event, introduced: "4.0.0" },
+              { ...event, fixed: "6.0.1" },
+            ],
+          },
+        ],
+      },
+    ]);
+    const result = extractOSVRanges(osv);
+    expect(result[0]!.ranges).toEqual([
+      {
+        introduced: "4.0.0",
+        introducedInclusive: true,
+        fixed: "6.0.1",
+        fixedInclusive: false,
+      },
+    ]);
+  });
+
   it("should ignore empty string fixed events", () => {
     const osv = makeOSV([
       {

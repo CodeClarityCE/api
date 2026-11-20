@@ -611,6 +611,58 @@ describe("Organization vulnerability list (e2e)", () => {
       expect(counts(response)[1]).toMatchObject({ projects: 1 });
     });
 
+    it("narrows to instances with a fixed version, or to those without one", async () => {
+      const api = await seed.project("api");
+      const web = await seed.project("web");
+      const lodash = { id: "CVE-2024-0001", dependency: "lodash", score: 9.8 };
+      await seed.analysis({
+        projectId: api,
+        workspaces: {
+          ".": {
+            findings: [
+              { ...lodash, ranges: [{ source: "OSV", fixed: "4.17.21" }] },
+              {
+                id: "CVE-2024-0002",
+                dependency: "guzzlehttp/guzzle",
+                ecosystem: "Packagist",
+                score: 7.5,
+                ranges: [{ source: "NVD", fixed: "7.4.5" }],
+              },
+            ],
+          },
+        },
+      });
+      // No source names a fix for this install of lodash.
+      await seed.analysis({
+        projectId: web,
+        workspaces: {
+          ".": { findings: [{ ...lodash, ranges: [{ source: "OSV" }] }] },
+        },
+      });
+      await seed.store();
+
+      const fixed = await list("&fix=available");
+      const unfixed = await list("&fix=none");
+
+      expect(counts(fixed)).toEqual([
+        { id: "CVE-2024-0001", projects: 1, instances: 1 },
+        { id: "CVE-2024-0002", projects: 1, instances: 1 },
+      ]);
+      expect(counts(unfixed)).toEqual([
+        { id: "CVE-2024-0001", projects: 1, instances: 1 },
+      ]);
+    });
+
+    it("refuses an unknown fix filter", async () => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `/org/${user.organization.id}/vulnerabilities?fix=maybe`,
+        user.accessToken,
+      );
+
+      expect(response.statusCode).toBe(400);
+    });
+
     it("refuses an unknown severity class", async () => {
       const response = await testHelper.makeAuthenticatedRequest(
         "GET",
