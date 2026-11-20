@@ -47,6 +47,7 @@ import { KnowledgeStatusController } from "./status/knowledge-status.controller"
 import { KnowledgeStatusService } from "./status/knowledge-status.service";
 import { VulnerabilityController } from "./vulnerability/vulnerability.controller";
 import { VulnerabilitySearchService } from "./vulnerability/vulnerability.service";
+import { VulnerabilityPublicationRepository } from "./vulnerability/vulnerability-publication.repository";
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { VulnerabilitySearchService } from "./vulnerability/vulnerability.servic
     FriendsOfPhpRepository,
     GCVERepository,
     KevRepository,
+    VulnerabilityPublicationRepository,
     VulnerabilitySearchService,
     OutdatedCheckService,
     VulnerabilityCheckService,
@@ -105,6 +107,7 @@ import { VulnerabilitySearchService } from "./vulnerability/vulnerability.servic
     FriendsOfPhpRepository,
     GCVERepository,
     KevRepository,
+    VulnerabilityPublicationRepository,
     VulnerabilitySearchService,
     OutdatedCheckService,
     VulnerabilityCheckService,

@@ -745,6 +745,10 @@ export class OrganizationsService {
     if (settingsBody.auto_resolve_tickets !== undefined) {
       organization.auto_resolve_tickets = settingsBody.auto_resolve_tickets;
     }
+    if (settingsBody.freshness_threshold_days !== undefined) {
+      organization.freshness_threshold_days =
+        settingsBody.freshness_threshold_days;
+    }
 
     await this.organizationsRepository.saveOrganization(organization);
   }
