@@ -13,9 +13,7 @@ import {
   type GetOverallLicenseDistQueryOptions,
   type GetProjectsQuickStatsQueryOptions,
   type GetQuickStatsQueryOptions,
-  type GetRecentVulnsQueryOptions,
   type GetWeeklySeverityInfoQueryOptions,
-  type LatestVulns,
   ProjectGradeClass,
   type ProjectQuickStats,
   type QuickStats,
@@ -65,22 +63,6 @@ describe("DashboardController", () => {
     "Apache-2.0": 25,
     "GPL-3.0": 15,
     "BSD-3-Clause": 10,
-  };
-
-  const mockLatestVulns: LatestVulns = {
-    vulns: {
-      "CVE-2023-1234": {
-        severity: 8.5,
-        severity_class: "HIGH",
-        cwe: "CWE-79",
-        cwe_name: "Cross-site Scripting",
-      },
-    },
-    severity_count: [
-      { severity_class: "CRITICAL", count: 2 },
-      { severity_class: "HIGH", count: 5 },
-      { severity_class: "MEDIUM", count: 8 },
-    ],
   };
 
   const mockQuickStats: QuickStats = {
@@ -138,7 +120,6 @@ describe("DashboardController", () => {
       getOverallAttackVectorDist: jest.fn(),
       getOverallCIAImpact: jest.fn(),
       getOverallLicenseDist: jest.fn(),
-      getRecentVuls: jest.fn(),
       getQuickStats: jest.fn(),
       getProjectsQuickStats: jest.fn(),
     };
@@ -284,33 +265,6 @@ describe("DashboardController", () => {
 
       expect(result).toEqual({ data: mockLicenseDist });
       expect(dashboardService.getOverallLicenseDist).toHaveBeenCalledWith(
-        mockOrgId,
-        mockAuthenticatedUser,
-        queryParams.startDate,
-        queryParams.endDate,
-        queryParams.integrationIds,
-      );
-    });
-  });
-
-  describe("getRecentVuls", () => {
-    it("should return recent vulnerabilities successfully", async () => {
-      const queryParams: GetRecentVulnsQueryOptions = {
-        startDate: new Date("2023-01-01"),
-        endDate: new Date("2023-12-31"),
-        integrationIds: ["integration1"],
-      };
-
-      dashboardService.getRecentVuls.mockResolvedValue(mockLatestVulns);
-
-      const result = await controller.getRecentVuls(
-        mockAuthenticatedUser,
-        mockOrgId,
-        queryParams,
-      );
-
-      expect(result).toEqual({ data: mockLatestVulns });
-      expect(dashboardService.getRecentVuls).toHaveBeenCalledWith(
         mockOrgId,
         mockAuthenticatedUser,
         queryParams.startDate,

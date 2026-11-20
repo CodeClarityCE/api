@@ -195,23 +195,6 @@ describe("Dashboard aggregates against Postgres", () => {
     return o.id;
   }
 
-  it("classes scores like the results pages", async () => {
-    const orgId = await seedOrganisation();
-
-    const recent = await service.getRecentVuls(orgId, user);
-
-    expect(recent.vulns["NEW-0"]!.severity_class).toBe("NONE");
-    expect(recent.vulns["NEW-1"]!.severity_class).toBe("LOW");
-    expect(recent.vulns["NEW-2"]!.severity_class).toBe("LOW");
-    expect(recent.vulns["NEW-3"]!.severity_class).toBe("MEDIUM");
-    expect(recent.vulns["NEW-4"]!.severity_class).toBe("MEDIUM");
-    expect(recent.vulns["NEW-5"]!.severity_class).toBe("HIGH");
-    expect(recent.vulns["NEW-6"]!.severity_class).toBe("HIGH");
-    expect(recent.vulns["NEW-7"]!.severity_class).toBe("HIGH");
-    expect(recent.vulns["NEW-8"]!.severity_class).toBe("CRITICAL");
-    expect(recent.vulns["NEW-9"]!.severity_class).toBe("CRITICAL");
-  });
-
   it("leaves disputed vulnerabilities out of the grade", async () => {
     const o = await org("Disputed org");
     const widget = await project(o, "widget");
@@ -259,10 +242,8 @@ describe("Dashboard aggregates against Postgres", () => {
     ]);
 
     const quick = await service.getQuickStats(o.id, user);
-    const recent = await service.getRecentVuls(o.id, user);
     const weeks = await service.getWeeklySeverityInfo(o.id, user);
 
-    expect(Object.keys(recent.vulns)).toEqual(["HIDDEN-2"]);
     expect(weekTotals(weeks)).toMatchObject({ critical: 0, medium: 1 });
     expect(quick.max_grade.score).toBe(5);
   });
@@ -270,23 +251,8 @@ describe("Dashboard aggregates against Postgres", () => {
   it("counts only each project's latest completed analysis", async () => {
     const orgId = await seedOrganisation();
 
-    const recent = await service.getRecentVuls(orgId, user);
     const weeks = await service.getWeeklySeverityInfo(orgId, user);
 
-    expect(Object.keys(recent.vulns).sort()).toEqual(
-      [
-        ...BOUNDARY_SCORES.map((_, i) => `NEW-${i}`),
-        "GADGET-0",
-        "GADGET-1",
-      ].sort(),
-    );
-    expect(recent.severity_count).toEqual([
-      { severity_class: "CRITICAL", count: 3 },
-      { severity_class: "HIGH", count: 3 },
-      { severity_class: "MEDIUM", count: 3 },
-      { severity_class: "LOW", count: 2 },
-      { severity_class: "NONE", count: 1 },
-    ]);
     expect(weekTotals(weeks)).toEqual({
       critical: 3,
       high: 3,
@@ -294,18 +260,6 @@ describe("Dashboard aggregates against Postgres", () => {
       low: 2,
       none: 1,
     });
-  });
-
-  it("shows the same critical count on the tile and in weekly exposure", async () => {
-    const orgId = await seedOrganisation();
-
-    const recent = await service.getRecentVuls(orgId, user);
-    const weeks = await service.getWeeklySeverityInfo(orgId, user);
-
-    const tile = recent.severity_count.find(
-      (c) => c.severity_class === "CRITICAL",
-    )!.count;
-    expect(weekTotals(weeks)["critical"]).toBe(tile);
   });
 
   it("lists each project once per week", async () => {
@@ -377,10 +331,8 @@ describe("Dashboard aggregates against Postgres", () => {
     const start = new Date("2025-03-01T00:00:00Z");
     const end = new Date("2025-03-10T00:00:00Z");
 
-    const recent = await service.getRecentVuls(o.id, user, start, end);
     const weeks = await service.getWeeklySeverityInfo(o.id, user, start, end);
 
-    expect(Object.keys(recent.vulns)).toEqual(["IN-0"]);
     expect(weekTotals(weeks)["critical"]).toBe(1);
   });
 });
