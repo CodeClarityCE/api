@@ -63,6 +63,31 @@ export class OSVRepository {
     );
   }
 
+  /** Every record of one vulnerability: the record with this id and those listing it as a CVE alias. */
+  async getVulnsOfVulnerability(
+    id: string,
+    options?: KnowledgeLookupOptions,
+  ): Promise<OSV[]> {
+    const retired = activeRecordFilter(options);
+    return this.osvRepository.find({
+      where: [
+        { osv_id: id, ...retired },
+        {
+          cve_aliases: Raw(
+            (alias) => `${alias} @> to_jsonb(CAST(:id AS text))`,
+            { id },
+          ),
+          ...retired,
+        },
+      ],
+      order: {
+        kind: "DESC",
+        retired_at: { direction: "ASC", nulls: "FIRST" },
+        osv_id: "ASC",
+      },
+    });
+  }
+
   async getVulnByOSVIDWithoutFailing(
     osv_id: string,
     options?: KnowledgeLookupOptions,
