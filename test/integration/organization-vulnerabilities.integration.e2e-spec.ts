@@ -12,12 +12,14 @@ interface ListRow {
   severity_score: number;
   project_count: number;
   instance_count: number;
+  uncorroborated_count: number;
 }
 
 interface ListResponse {
   data: ListRow[];
   total_entries: number;
   severity_counts: Record<string, number>;
+  hidden_counts: Record<string, number>;
 }
 
 describe("Organization vulnerability list (e2e)", () => {
@@ -243,32 +245,117 @@ describe("Organization vulnerability list (e2e)", () => {
     ]);
   });
 
-  it("leaves out instances hidden by default", async () => {
-    const api = await seed.project("api");
-    await seed.analysis({
-      projectId: api,
-      workspaces: {
-        ".": {
-          findings: [
-            {
-              id: "CVE-2024-0001",
-              dependency: "lodash",
-              verdicts: [
-                { source: "gcve", verdict: "matched" },
-                { source: "osv", verdict: "version_excluded" },
-                { source: "nvd", verdict: "no_record" },
-              ],
-            },
-            { id: "CVE-2024-0002", dependency: "qs" },
-          ],
+  describe("hidden instances", () => {
+    const contradicted = [
+      { source: "gcve", verdict: "matched" },
+      { source: "osv", verdict: "version_excluded" },
+      { source: "nvd", verdict: "no_record" },
+    ];
+    const retired = [
+      { source: "osv", verdict: "retired" },
+      { source: "nvd", verdict: "retired" },
+    ];
+    // One shown, one contradicted, one retired everywhere, one excluded by policy
+    // and one both contradicted and excluded.
+    const seedHidden = async (): Promise<string> => {
+      const api = await seed.project("api");
+      await seed.analysis({
+        projectId: api,
+        policyExcludes: ["CVE-2024-0004", "CVE-2024-0005"],
+        workspaces: {
+          ".": {
+            findings: [
+              { id: "CVE-2024-0001", dependency: "qs", score: 9.8 },
+              {
+                id: "CVE-2024-0002",
+                dependency: "lodash",
+                score: 7.5,
+                verdicts: contradicted,
+              },
+              {
+                id: "CVE-2024-0003",
+                dependency: "minimist",
+                score: 7.5,
+                verdicts: retired,
+              },
+              { id: "CVE-2024-0004", dependency: "express", score: 7.5 },
+              {
+                id: "CVE-2024-0005",
+                dependency: "debug",
+                score: 5.3,
+                verdicts: contradicted,
+              },
+            ],
+          },
         },
-      },
-    });
-    await seed.store();
+      });
+      await seed.store();
+      return api;
+    };
+    const ids = (response: ListResponse): string[] =>
+      response.data.map((row) => row.vulnerability_id);
 
-    expect(counts(await list()).map((row) => row.id)).toEqual([
-      "CVE-2024-0002",
-    ]);
+    it("leaves out contradicted, retired and policy-excluded instances and counts them per reason", async () => {
+      await seedHidden();
+
+      const response = await list();
+
+      expect(ids(response)).toEqual(["CVE-2024-0001"]);
+      expect(response.hidden_counts).toEqual({
+        contradicted: 2,
+        retired_all: 1,
+        excluded_by_policy: 2,
+      });
+      expect(response.severity_counts).toMatchObject({ CRITICAL: 1, HIGH: 0 });
+    });
+
+    it("shows the instances hidden for the reasons asked for, still counting them", async () => {
+      await seedHidden();
+
+      const contradictedOnly = await list("&show=contradicted");
+      const both = await list("&show=contradicted,excluded_by_policy");
+
+      // CVE-2024-0005 stays hidden until its policy exclusion is shown too.
+      expect(ids(contradictedOnly)).toEqual(["CVE-2024-0001", "CVE-2024-0002"]);
+      expect(contradictedOnly.severity_counts).toMatchObject({
+        CRITICAL: 1,
+        HIGH: 1,
+      });
+      expect(ids(both)).toEqual([
+        "CVE-2024-0001",
+        "CVE-2024-0002",
+        "CVE-2024-0004",
+        "CVE-2024-0005",
+      ]);
+      expect(both.hidden_counts).toEqual({
+        contradicted: 2,
+        retired_all: 1,
+        excluded_by_policy: 2,
+      });
+    });
+
+    it("counts only the hidden instances the other filters keep", async () => {
+      await seedHidden();
+
+      const response = await list("&severity=HIGH");
+
+      expect(response.data).toEqual([]);
+      expect(response.hidden_counts).toEqual({
+        contradicted: 1,
+        retired_all: 1,
+        excluded_by_policy: 1,
+      });
+    });
+
+    it("refuses an unknown reason to show", async () => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `/org/${user.organization.id}/vulnerabilities?show=everything`,
+        user.accessToken,
+      );
+
+      expect(response.statusCode).toBe(400);
+    });
   });
 
   it("tells listeners about each stored analysis once, and retries one whose listener failed", async () => {
@@ -310,6 +397,68 @@ describe("Organization vulnerability list (e2e)", () => {
     ]);
   });
 
+  it("keeps uncorroborated instances and counts them on their vulnerability", async () => {
+    const api = await seed.project("api");
+    const web = await seed.project("web");
+    const oneOrigin = [
+      { source: "osv", verdict: "matched" },
+      { source: "nvd", verdict: "no_record" },
+    ];
+    const twoOrigins = [
+      { source: "osv", verdict: "matched" },
+      { source: "nvd", verdict: "matched" },
+    ];
+    await seed.analysis({
+      projectId: api,
+      workspaces: {
+        ".": {
+          findings: [
+            {
+              id: "CVE-2024-0001",
+              dependency: "lodash",
+              score: 9.8,
+              verdicts: oneOrigin,
+            },
+            {
+              id: "CVE-2024-0002",
+              dependency: "qs",
+              score: 7.5,
+              verdicts: twoOrigins,
+            },
+          ],
+        },
+      },
+    });
+    await seed.analysis({
+      projectId: web,
+      workspaces: {
+        ".": {
+          findings: [
+            {
+              id: "CVE-2024-0001",
+              dependency: "lodash",
+              score: 9.8,
+              verdicts: twoOrigins,
+            },
+          ],
+        },
+      },
+    });
+    await seed.store();
+
+    const response = await list();
+
+    expect(
+      response.data.map((row) => [
+        row.vulnerability_id,
+        row.uncorroborated_count,
+      ]),
+    ).toEqual([
+      ["CVE-2024-0001", 1],
+      ["CVE-2024-0002", 0],
+    ]);
+  });
+
   it("pages the list", async () => {
     const api = await seed.project("api");
     await seed.analysis({
@@ -338,6 +487,138 @@ describe("Organization vulnerability list (e2e)", () => {
       entries_per_page: 2,
       total_entries: 3,
       total_pages: 2,
+    });
+  });
+
+  describe("filters", () => {
+    // Two projects: a prod npm critical in api, a dev-only Packagist high in web.
+    const seedTwoProjects = async (): Promise<{ api: string; web: string }> => {
+      const api = await seed.project("api");
+      const web = await seed.project("web");
+      await seed.analysis({
+        projectId: api,
+        workspaces: {
+          ".": {
+            findings: [
+              {
+                id: "CVE-2024-0001",
+                dependency: "lodash",
+                score: 9.8,
+                ecosystem: "npm",
+              },
+              {
+                id: "CVE-2024-0003",
+                dependency: "qs",
+                score: 5.3,
+                ecosystem: "npm",
+              },
+            ],
+          },
+        },
+      });
+      await seed.analysis({
+        projectId: web,
+        workspaces: {
+          ".": {
+            devOnly: ["guzzlehttp/guzzle"],
+            findings: [
+              {
+                id: "CVE-2024-0002",
+                dependency: "guzzlehttp/guzzle",
+                score: 7.5,
+                ecosystem: "Packagist",
+              },
+              {
+                id: "CVE-2024-0003",
+                dependency: "qs",
+                score: 5.3,
+                ecosystem: "npm",
+              },
+            ],
+          },
+        },
+      });
+      await seed.store();
+      return { api, web };
+    };
+
+    it("narrows the list and the counts to one project", async () => {
+      const { web } = await seedTwoProjects();
+
+      const response = await list(`&project=${web}`);
+
+      expect(counts(response)).toEqual([
+        { id: "CVE-2024-0002", projects: 1, instances: 1 },
+        { id: "CVE-2024-0003", projects: 1, instances: 1 },
+      ]);
+      expect(response.total_entries).toBe(2);
+      expect(response.severity_counts).toMatchObject({
+        CRITICAL: 0,
+        HIGH: 1,
+        MEDIUM: 1,
+      });
+    });
+
+    it("narrows to instances of the chosen severity classes", async () => {
+      await seedTwoProjects();
+
+      const response = await list("&severity=CRITICAL&severity=HIGH");
+
+      expect(counts(response).map((row) => row.id)).toEqual([
+        "CVE-2024-0001",
+        "CVE-2024-0002",
+      ]);
+      expect(response.severity_counts).toMatchObject({
+        CRITICAL: 1,
+        HIGH: 1,
+        MEDIUM: 0,
+      });
+    });
+
+    it("narrows to instances of the chosen ecosystems", async () => {
+      await seedTwoProjects();
+
+      const response = await list("&ecosystem=Packagist");
+
+      expect(counts(response)).toEqual([
+        { id: "CVE-2024-0002", projects: 1, instances: 1 },
+      ]);
+    });
+
+    it("narrows to dev-only or to prod instances", async () => {
+      await seedTwoProjects();
+
+      const dev = await list("&scope=dev");
+      const prod = await list("&scope=prod");
+
+      expect(counts(dev).map((row) => row.id)).toEqual(["CVE-2024-0002"]);
+      expect(counts(prod)).toEqual([
+        { id: "CVE-2024-0001", projects: 1, instances: 1 },
+        { id: "CVE-2024-0003", projects: 2, instances: 2 },
+      ]);
+      expect(prod.severity_counts).toMatchObject({ HIGH: 0, CRITICAL: 1 });
+    });
+
+    it("combines filters", async () => {
+      const { api } = await seedTwoProjects();
+
+      const response = await list(`&project=${api}&ecosystem=npm&scope=prod`);
+
+      expect(counts(response).map((row) => row.id)).toEqual([
+        "CVE-2024-0001",
+        "CVE-2024-0003",
+      ]);
+      expect(counts(response)[1]).toMatchObject({ projects: 1 });
+    });
+
+    it("refuses an unknown severity class", async () => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `/org/${user.organization.id}/vulnerabilities?severity=SEVERE`,
+        user.accessToken,
+      );
+
+      expect(response.statusCode).toBe(400);
     });
   });
 
