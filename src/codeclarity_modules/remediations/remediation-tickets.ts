@@ -27,12 +27,13 @@ export abstract class RemediationTicketLookup {
 }
 
 /**
- * Matches the newest ticket of the project whose vulnerability is one the
- * remediation resolves. Replace it with a match on the remediation target
- * once tickets reference remediations.
+ * Matches the ticket created from the remediation (same project, kind,
+ * workspace and package), open ones first, then the newest. A remediation
+ * without one falls back to the newest one-vulnerability ticket of the
+ * project for a vulnerability it resolves (ADR 0016).
  */
 @Injectable()
-export class VulnerabilityTicketLookup extends RemediationTicketLookup {
+export class TicketRemediationLookup extends RemediationTicketLookup {
   constructor(
     @InjectDataSource("codeclarity") private readonly dataSource: DataSource,
   ) {
@@ -53,25 +54,42 @@ export class VulnerabilityTicketLookup extends RemediationTicketLookup {
       id: string;
       status: TicketStatus;
       project_id: string;
-      vulnerability_id: string;
+      vulnerability_id: string | null;
+      remediation_kind: string | null;
+      remediation_workspace: string | null;
+      remediation_package: string | null;
     }[] = await this.dataSource.query(
-      `SELECT t.id, t.status, t."projectId" AS project_id, t.vulnerability_id
+      `SELECT t.id, t.status, t."projectId" AS project_id, t.vulnerability_id,
+              t.remediation_kind, t.remediation_workspace, t.remediation_package
        FROM ticket t
        WHERE t."organizationId" = $1
          AND t."projectId" = ANY($2::uuid[])
-         AND t.vulnerability_id = ANY($3::varchar[])
-       ORDER BY t.created_on DESC, t.id`,
+         AND (t.remediation_package = ANY($3::varchar[])
+              OR (t.remediation_kind IS NULL AND t.vulnerability_id = ANY($4::varchar[])))
+       ORDER BY t.status IN ('OPEN', 'IN_PROGRESS') DESC, t.created_on DESC, t.id`,
       [
         orgId,
         [...new Set(remediations.map((r) => r.project_id))],
+        [...new Set(remediations.map((r) => r.remediation.package))],
         [...new Set(remediations.flatMap((r) => ids(r.remediation)))],
       ],
     );
     return remediations.map(({ project_id, remediation }) => {
       const wanted = new Set(ids(remediation));
-      const ticket = tickets.find(
-        (t) => t.project_id === project_id && wanted.has(t.vulnerability_id),
-      );
+      const ofProject = tickets.filter((t) => t.project_id === project_id);
+      const ticket =
+        ofProject.find(
+          (t) =>
+            t.remediation_kind === remediation.kind &&
+            t.remediation_workspace === remediation.workspace &&
+            t.remediation_package === remediation.package,
+        ) ??
+        ofProject.find(
+          (t) =>
+            t.remediation_kind === null &&
+            t.vulnerability_id !== null &&
+            wanted.has(t.vulnerability_id),
+        );
       return ticket ? { id: ticket.id, status: ticket.status } : null;
     });
   }

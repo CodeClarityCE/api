@@ -338,4 +338,53 @@ describe("Tickets from remediations (e2e)", () => {
     await seedProject();
     expect(await ticketCount()).toBe(0);
   });
+
+  describe("ticket state of remediations", () => {
+    interface FixNextEntry {
+      package: string;
+      remediations: { ticket: { id: string; status: string } | null }[];
+    }
+    const ticketsInFixNext = async (): Promise<[string, unknown][]> => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `/org/${user.organization.id}/remediations/fix-next`,
+        user.accessToken,
+      );
+      expect(response.statusCode).toBe(200);
+      return (response.json().data as FixNextEntry[]).map((e) => [
+        e.package,
+        e.remediations[0]!.ticket,
+      ]);
+    };
+
+    it("shows the ticket created from a remediation, and only on that remediation", async () => {
+      const projectId = await seedProject();
+      const result = (await create(projectId, QS_FORCE)).json()
+        .data as CreateResult;
+
+      expect(await ticketsInFixNext()).toEqual([
+        ["qs", { id: result.ticket_id, status: "OPEN" }],
+        ["lodash", null],
+      ]);
+    });
+
+    it("prefers the open remediation ticket over a resolved one", async () => {
+      const projectId = await seedProject();
+      const first = (await create(projectId, QS_FORCE)).json()
+        .data as CreateResult;
+      await testHelper.makeAuthenticatedRequest(
+        "PATCH",
+        `/org/${user.organization.id}/tickets/${first.ticket_id}`,
+        user.accessToken,
+        { status: "RESOLVED" },
+      );
+      const second = (await create(projectId, QS_FORCE)).json()
+        .data as CreateResult;
+
+      expect((await ticketsInFixNext())[0]).toEqual([
+        "qs",
+        { id: second.ticket_id, status: "OPEN" },
+      ]);
+    });
+  });
 });

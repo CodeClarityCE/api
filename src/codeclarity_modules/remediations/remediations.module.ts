@@ -7,7 +7,7 @@ import { FixNextController } from "./fix-next.controller";
 import { FixNextService } from "./fix-next.service";
 import {
   RemediationTicketLookup,
-  VulnerabilityTicketLookup,
+  TicketRemediationLookup,
 } from "./remediation-tickets";
 import { RemediationsService } from "./remediations.service";
 import {
@@ -22,8 +22,7 @@ import {
     // A language-agnostic patcher replaces this source.
     { provide: TopLevelUpgradeSource, useClass: JsPatchingUpgradeSource },
     FixNextService,
-    // Tickets that reference remediations replace this lookup.
-    { provide: RemediationTicketLookup, useClass: VulnerabilityTicketLookup },
+    { provide: RemediationTicketLookup, useClass: TicketRemediationLookup },
   ],
   controllers: [FixNextController],
   exports: [RemediationsService, RemediationTicketLookup],
