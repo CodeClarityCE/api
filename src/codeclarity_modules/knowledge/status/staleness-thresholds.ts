@@ -5,6 +5,7 @@ export const DEFAULT_STALE_AFTER_HOURS = {
   epss: 24,
   friends_of_php: 168,
   gcve: 48,
+  kev: 48,
   licenses: 168,
   nvd: 48,
   osv: 24,

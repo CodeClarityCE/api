@@ -23,10 +23,13 @@ async function admin(sql: string): Promise<void> {
   await client.end();
 }
 
-// Every knowledge migration class, oldest first.
+// Every knowledge migration class up to this one, oldest first, so it is the last to undo.
 function migrations(): (new () => MigrationInterface)[] {
   return readdirSync(MIGRATIONS_DIR)
-    .filter((file) => file.endsWith(".ts"))
+    .filter(
+      (file) =>
+        file.endsWith(".ts") && file <= "1795392000000-WidenPackageLicense.ts",
+    )
     .sort()
     .map(
       (file) =>
