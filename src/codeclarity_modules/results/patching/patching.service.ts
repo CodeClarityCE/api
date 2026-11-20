@@ -8,7 +8,6 @@ import {
   PatchedManifestData,
   PatchInfo,
   PatchingAnalysisStats,
-  SemVer,
   Workspace,
 } from "src/codeclarity_modules/results/patching/patching.types";
 import {
@@ -33,6 +32,7 @@ import {
   VulnerabilityAnalysisStats,
 } from "../vulnerabilities/vulnerabilities.types";
 
+import { semverString } from "./semver";
 import { PatchingUtilsService } from "./utils/utils";
 
 /** Query options for patching list endpoint */
@@ -229,11 +229,6 @@ function manifestUpgrades(
     };
   }
   return upgrades;
-}
-
-function semverString(version: SemVer): string {
-  const base = `${version.Major}.${version.Minor}.${version.Patch}`;
-  return version.PreReleaseTag ? `${base}-${version.PreReleaseTag}` : base;
 }
 
 /**
