@@ -3,28 +3,15 @@ import { ApiTags } from "@nestjs/swagger";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import {
-  AttackVectorDist,
   CIAImpact,
-  GetOverallAttackVectorDistQueryOptions,
   GetOverallCIADistQueryOptions,
   GetOverallLicenseDistQueryOptions,
-  GetProjectsQuickStatsQueryOptions,
-  GetQuickStatsQueryOptions,
-  GetWeeklySeverityInfoQueryOptions,
-  ProjectQuickStats,
-  QuickStats,
-  SeverityInfoByWeek,
 } from "src/codeclarity_modules/dashboard/dashboard.types";
 import { LicenseDist } from "src/codeclarity_modules/results/sbom/sbom.types";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocTypedManyResponseDecorator } from "src/decorators/TypedManyResponse";
-import { APIDocTypedPaginatedResponseDecorator } from "src/decorators/TypedPaginatedResponse";
-import { APIDocTypedResponseDecorator } from "src/decorators/TypedResponse";
 import { AuthUser } from "src/decorators/UserDecorator";
-import {
-  TypedPaginatedResponse,
-  TypedResponse,
-} from "src/types/apiResponses.types";
+import { TypedResponse } from "src/types/apiResponses.types";
 import {
   InternalError,
   NotAuthenticated,
@@ -36,50 +23,6 @@ import { DashboardService } from "./dashboard.service";
 @Controller("/org/:org_id/dashboard")
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
-
-  @ApiTags("Dashboard")
-  @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
-  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
-  @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
-  @APIDocTypedManyResponseDecorator(SeverityInfoByWeek)
-  @Get("weekly_severity_info")
-  async getWeeklySeverityInfo(
-    @AuthUser() user: AuthenticatedUser,
-    @Param("org_id") orgId: string,
-    @Query() queryParams: GetWeeklySeverityInfoQueryOptions,
-  ): Promise<TypedResponse<SeverityInfoByWeek[]>> {
-    return {
-      data: await this.dashboardService.getWeeklySeverityInfo(
-        orgId,
-        user,
-        queryParams.startDate,
-        queryParams.endDate,
-        queryParams.integrationIds,
-      ),
-    };
-  }
-
-  @ApiTags("Dashboard")
-  @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
-  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
-  @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
-  @APIDocTypedManyResponseDecorator(AttackVectorDist)
-  @Get("overall_av_dist")
-  async getOverallAttackVectorDist(
-    @AuthUser() user: AuthenticatedUser,
-    @Param("org_id") orgId: string,
-    @Query() queryParams: GetOverallAttackVectorDistQueryOptions,
-  ): Promise<TypedResponse<AttackVectorDist[]>> {
-    return {
-      data: await this.dashboardService.getOverallAttackVectorDist(
-        orgId,
-        user,
-        queryParams.startDate,
-        queryParams.endDate,
-        queryParams.integrationIds,
-      ),
-    };
-  }
 
   @ApiTags("Dashboard")
   @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
@@ -123,53 +66,5 @@ export class DashboardController {
         queryParams.integrationIds,
       ),
     };
-  }
-
-  @ApiTags("Dashboard")
-  @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
-  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
-  @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
-  @APIDocTypedResponseDecorator(QuickStats)
-  @Get("quick_stats")
-  async getQuickStats(
-    @AuthUser() user: AuthenticatedUser,
-    @Param("org_id") orgId: string,
-    @Query() queryParams: GetQuickStatsQueryOptions,
-  ): Promise<TypedResponse<QuickStats>> {
-    return {
-      data: await this.dashboardService.getQuickStats(
-        orgId,
-        user,
-        queryParams.startDate,
-        queryParams.endDate,
-        queryParams.integrationIds,
-      ),
-    };
-  }
-
-  @ApiTags("Dashboard")
-  @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
-  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
-  @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
-  @APIDocTypedPaginatedResponseDecorator(ProjectQuickStats)
-  @Get("project_quick_stats")
-  async getProjectsQuickStats(
-    @AuthUser() user: AuthenticatedUser,
-    @Param("org_id") orgId: string,
-    @Query() queryParams: GetProjectsQuickStatsQueryOptions,
-  ): Promise<TypedPaginatedResponse<ProjectQuickStats>> {
-    return await this.dashboardService.getProjectsQuickStats(
-      orgId,
-      user,
-      {
-        currentPage: queryParams.page,
-        entriesPerPage: queryParams.entries_per_page,
-      },
-      queryParams.startDate,
-      queryParams.endDate,
-      queryParams.integrationIds,
-      queryParams.sort_key,
-      queryParams.sort_direction,
-    );
   }
 }

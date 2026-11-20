@@ -15,6 +15,20 @@ export class KevRepository {
     private kevRepository: Repository<Kev>,
   ) {}
 
+  /** Every CVE the catalog lists, uppercase. */
+  async listedCves(): Promise<Set<string>> {
+    const entries = await this.kevRepository.find({ select: { cve: true } });
+    return new Set(entries.map((entry) => normalize(entry.cve)));
+  }
+
+  /** Changes whenever the catalog's list of CVEs does; null when it is empty. */
+  async catalogVersion(): Promise<string | null> {
+    const [row]: { version: string | null }[] = await this.kevRepository.query(
+      `SELECT md5(string_agg(cve, ',' ORDER BY cve)) AS version FROM kev`,
+    );
+    return row?.version ?? null;
+  }
+
   /** Maps each canonical vulnerability's id to the KEV entry its id or an alias names; the earliest added wins. */
   async findForVulnerabilities(
     vulnerabilities: AliasedRecord[],
