@@ -37,6 +37,8 @@ interface ToPatch {
   DependencyVersion: string;
   Path: string[];
   Vulnerability: Vulnerability;
+  /** The fixed version the advisory names; absent when it names none and in older results */
+  AdvisoryFix?: SemVer;
 }
 
 interface AnalysisInfo {
