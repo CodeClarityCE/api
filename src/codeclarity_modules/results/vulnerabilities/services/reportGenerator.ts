@@ -758,7 +758,7 @@ export function uniqueReferences(refs: ReferenceInfo[]): ReferenceInfo[] {
   return [...byUrl.values()];
 }
 
-function cleanOsvDescription(description: string): string {
+export function cleanOsvDescription(description: string): string {
   const sections: string[] = [];
   let parsingHeader = false;
   let text = "";
