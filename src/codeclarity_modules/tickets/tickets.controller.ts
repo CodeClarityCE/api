@@ -44,6 +44,7 @@ import {
 } from "./integrations/integration-credentials";
 import { ConnectionTestResult } from "./integrations/integration-provider.interface";
 import { TicketIntegrationService } from "./integrations/ticket-integration.service";
+import { RemediationTicketsService } from "./remediation-tickets.service";
 import { TicketPriority, TicketStatus, TicketType } from "./ticket.entity";
 import { TicketEventFrontend } from "./ticket-event.entity";
 import {
@@ -62,6 +63,8 @@ import {
   BulkUpdateTicketsBody,
   CheckDuplicateBody,
   ConfigureClickUpBody,
+  CreateRemediationTicketBody,
+  CreateRemediationTicketResult,
   CreateTicketBody,
   DuplicateCheckResult,
   IntegrationConfigSummary,
@@ -1135,7 +1138,39 @@ export class TicketsController {
 @ApiTags("Project Tickets")
 @Controller("org/:org_id/projects/:project_id/tickets")
 export class ProjectTicketsController {
-  constructor(private readonly ticketsService: TicketsService) {}
+  constructor(
+    private readonly ticketsService: TicketsService,
+    private readonly remediationTickets: RemediationTicketsService,
+  ) {}
+
+  @Post("from-remediation")
+  @ApiOperation({
+    summary:
+      "Create a ticket from a remediation of the project's current analysis",
+  })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "project_id", description: "Project ID" })
+  @ApiResponse({
+    status: 201,
+    description:
+      "The created ticket, or the open ticket that already tracks the remediation",
+  })
+  @ApiResponse({ status: 404, description: "No such remediation" })
+  async createFromRemediation(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("project_id") project_id: string,
+    @Body() body: CreateRemediationTicketBody,
+  ): Promise<TypedResponse<CreateRemediationTicketResult>> {
+    return {
+      data: await this.remediationTickets.create(
+        org_id,
+        project_id,
+        body,
+        user,
+      ),
+    };
+  }
 
   @Get("")
   @ApiOperation({ summary: "Get all tickets for a specific project" })
