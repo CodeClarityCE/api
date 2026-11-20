@@ -10,6 +10,24 @@ export interface LogContext {
   [key: string]: unknown;
 }
 
+const SENSITIVE_PATTERNS = [
+  "password",
+  "token",
+  "key",
+  "secret",
+  "auth",
+  "credential",
+  "session",
+  "cookie",
+  "bearer",
+];
+
+// True when a field or variable name suggests its value is a secret.
+export function isSensitiveField(fieldName: string): boolean {
+  const lowerFieldName = fieldName.toLowerCase();
+  return SENSITIVE_PATTERNS.some((pattern) => lowerFieldName.includes(pattern));
+}
+
 /**
  * Structured logging service that outputs JSON logs compatible with Grafana Loki
  * Matches the format used by Go services for consistency across the stack
@@ -98,7 +116,7 @@ export class CodeClarityLogger implements NestLoggerService {
         if (key === "service") continue;
 
         // Sanitize sensitive fields
-        if (this.isSensitiveField(key)) {
+        if (isSensitiveField(key)) {
           sanitized[key] = "[REDACTED]";
         } else {
           sanitized[key] = value;
@@ -107,28 +125,6 @@ export class CodeClarityLogger implements NestLoggerService {
     }
 
     return sanitized;
-  }
-
-  /**
-   * Check if field contains sensitive information
-   */
-  private isSensitiveField(fieldName: string): boolean {
-    const sensitivePatterns = [
-      "password",
-      "token",
-      "key",
-      "secret",
-      "auth",
-      "credential",
-      "session",
-      "cookie",
-      "bearer",
-    ];
-
-    const lowerFieldName = fieldName.toLowerCase();
-    return sensitivePatterns.some((pattern) =>
-      lowerFieldName.includes(pattern),
-    );
   }
 
   /**

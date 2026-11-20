@@ -28,6 +28,7 @@ import {
   VulnSourceInfo,
 } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
 import { VulnerabilityService } from "src/codeclarity_modules/results/vulnerabilities/vulnerability.service";
+import { CodeClarityLogger } from "src/services/logger.service";
 import { EntityNotFound } from "src/types/error.types";
 import {
   PaginationConfig,
@@ -83,6 +84,8 @@ function getUserFullName(
 
 @Injectable()
 export class TicketsService {
+  private readonly logger = CodeClarityLogger.forService("Tickets");
+
   constructor(
     private readonly membershipsRepository: MembershipsRepository,
     private readonly organizationsRepository: OrganizationsRepository,
@@ -286,9 +289,10 @@ export class TicketsService {
         return vulnDetails;
       } catch (error) {
         // If vulnerability details can't be fetched, try fallback
-        console.error(
-          `Failed to fetch vulnerability details for ticket ${ticketId}:`,
-          (error as Error).message,
+        this.logger.error(
+          "Failed to fetch vulnerability details for ticket",
+          error as Error,
+          { ticketId, organizationId: orgId },
         );
         // Fall through to knowledge DB fallback
       }
@@ -297,6 +301,7 @@ export class TicketsService {
     // Fallback: fetch vulnerability data directly from knowledge database
     // This handles tickets without source_analysis or when the full service fails
     return this.getVulnerabilityFromKnowledge(
+      orgId,
       ticket.vulnerability_id,
       ticket.affected_package,
     );
@@ -307,6 +312,7 @@ export class TicketsService {
    * Used as fallback when ticket doesn't have a source_analysis
    */
   private async getVulnerabilityFromKnowledge(
+    orgId: string,
     vulnerabilityId: string,
     affectedPackage: string | undefined,
   ): Promise<VulnerabilityDetailsReport | null> {
@@ -389,9 +395,10 @@ export class TicketsService {
         other: otherInfo as unknown as VulnerabilityDetailsReport["other"],
       };
     } catch (error) {
-      console.error(
-        `Failed to fetch vulnerability from knowledge DB for ${vulnerabilityId}:`,
-        (error as Error).message,
+      this.logger.error(
+        "Failed to fetch vulnerability from knowledge DB",
+        error as Error,
+        { vulnerabilityId, organizationId: orgId },
       );
       return null;
     }
@@ -841,7 +848,11 @@ export class TicketsService {
         .updateExternalTicketStatus(ticketId, newStatus)
         .catch((error) => {
           // Log but don't fail the update
-          console.error("Failed to sync status to external provider:", error);
+          this.logger.error(
+            "Failed to sync status to external provider",
+            error as Error,
+            { ticketId },
+          );
         });
     }
   }

@@ -1,4 +1,5 @@
 import { Test, type TestingModule } from "@nestjs/testing";
+import { lookup } from "dns/promises";
 import { mkdir } from "fs/promises";
 
 import {
@@ -12,6 +13,7 @@ import {
 import { AnalysisResultsRepository } from "../../codeclarity_modules/results/results.repository";
 import {
   EntityNotFound,
+  ImportTargetNotAllowed,
   IntegrationNotSupported,
   NotAuthorized,
 } from "../../types/error.types";
@@ -39,6 +41,10 @@ jest.mock("fs/promises", () => ({
   ...jest.requireActual("fs/promises"),
   mkdir: jest.fn().mockResolvedValue(undefined),
 }));
+
+// Name resolution is the network boundary of the import's public-repo check.
+jest.mock("dns/promises", () => ({ lookup: jest.fn() }));
+const mockedLookup = lookup as unknown as jest.Mock;
 
 describe("ProjectService", () => {
   let service: ProjectService;
@@ -261,27 +267,162 @@ describe("ProjectService", () => {
       expect(projectsRepository.saveProject).not.toHaveBeenCalled();
     });
 
-    it("keeps the typed url for a public GitLab repository outside the cache", async () => {
-      const body = arrangeGithubImport();
-      body.url = "https://gitlab.com/octo/legacy";
-      integrationsRepository.getIntegrationByIdAndOrganizationAndUser.mockResolvedValue(
-        {
-          id: mockIntegrationId,
-          integration_provider: "GITLAB" as IntegrationProvider,
-        } as any,
-      );
-      gitlabRepositoriesService.getGitlabRepository.mockRejectedValue(
-        new EntityNotFound(),
-      );
-      const fetchSpy = jest
-        .spyOn(global, "fetch")
-        .mockResolvedValue(new Response("<html>octo/legacy</html>"));
+    describe("of a GitLab url outside the repository cache", () => {
+      let fetchSpy: jest.SpyInstance;
 
-      await service.import(mockOrgId, body, mockAuthenticatedUser);
+      function arrangeGitlabFallback(
+        url: string,
+        resolvesTo: string[],
+        serviceDomain = "https://gitlab.com",
+      ): ProjectImportBody {
+        const body = { ...arrangeGithubImport(), url };
+        integrationsRepository.getIntegrationByIdAndOrganizationAndUser.mockResolvedValue(
+          {
+            id: mockIntegrationId,
+            integration_provider: "GITLAB" as IntegrationProvider,
+            service_domain: serviceDomain,
+          } as any,
+        );
+        gitlabRepositoriesService.getGitlabRepository.mockRejectedValue(
+          new EntityNotFound(),
+        );
+        mockedLookup.mockResolvedValue(
+          resolvesTo.map((address) => ({
+            address,
+            family: address.includes(":") ? 6 : 4,
+          })),
+        );
+        fetchSpy = jest
+          .spyOn(global, "fetch")
+          .mockResolvedValue(new Response("<html>octo/legacy</html>"));
+        return body;
+      }
 
-      const saved = projectsRepository.saveProject.mock.calls[0]![0];
-      expect(saved.url).toBe("https://gitlab.com/octo/legacy");
-      fetchSpy.mockRestore();
+      afterEach(() => {
+        fetchSpy.mockRestore();
+        mockedLookup.mockReset();
+      });
+
+      it("keeps the typed url of a public gitlab.com repository", async () => {
+        const body = arrangeGitlabFallback("https://gitlab.com/octo/legacy", [
+          "172.65.251.78",
+          "2606:4700:90:0:f22e:fbec:5bed:a9b9",
+        ]);
+
+        await service.import(mockOrgId, body, mockAuthenticatedUser);
+
+        const saved = projectsRepository.saveProject.mock.calls[0]![0];
+        expect(saved.url).toBe("https://gitlab.com/octo/legacy");
+      });
+
+      it("refuses a host that resolves to a loopback address", async () => {
+        const body = arrangeGitlabFallback("https://evil.example/a/b", [
+          "127.0.0.1",
+        ]);
+
+        await expect(
+          service.import(mockOrgId, body, mockAuthenticatedUser),
+        ).rejects.toThrow(ImportTargetNotAllowed);
+        expect(fetchSpy).not.toHaveBeenCalled();
+        expect(projectsRepository.saveProject).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        ["private IPv4", "https://evil.example/a/b", ["10.1.2.3"]],
+        ["private 172.16/12", "https://evil.example/a/b", ["172.20.0.5"]],
+        ["private 192.168/16", "https://evil.example/a/b", ["192.168.1.1"]],
+        ["cloud metadata", "https://evil.example/a/b", ["169.254.169.254"]],
+        [
+          "shared address space",
+          "https://evil.example/a/b",
+          ["100.100.100.200"],
+        ],
+        ["unspecified", "https://evil.example/a/b", ["0.0.0.0"]],
+        ["IPv6 loopback", "https://evil.example/a/b", ["::1"]],
+        ["IPv6 unique local", "https://evil.example/a/b", ["fd00:ec2::254"]],
+        ["IPv6 link-local", "https://evil.example/a/b", ["fe80::1"]],
+        ["IPv4-mapped IPv6", "https://evil.example/a/b", ["::ffff:10.0.0.1"]],
+        [
+          "one internal address among public ones",
+          "https://evil.example/a/b",
+          ["8.8.8.8", "127.0.0.1"],
+        ],
+        ["an IPv4 literal", "http://127.0.0.1:8080/a/b", []],
+        ["a decimal IPv4 literal", "http://2130706433/a/b", []],
+        ["an IPv4-mapped IPv6 literal", "http://[::ffff:169.254.169.254]/", []],
+        ["an IPv6 literal", "http://[::1]/a/b", []],
+      ])("refuses %s", async (_label, url, resolvesTo) => {
+        const body = arrangeGitlabFallback(url, resolvesTo);
+
+        await expect(
+          service.import(mockOrgId, body, mockAuthenticatedUser),
+        ).rejects.toThrow(ImportTargetNotAllowed);
+        expect(fetchSpy).not.toHaveBeenCalled();
+      });
+
+      it("refuses a url that is not http(s)", async () => {
+        const body = arrangeGitlabFallback("file:///etc/passwd", []);
+
+        await expect(
+          service.import(mockOrgId, body, mockAuthenticatedUser),
+        ).rejects.toThrow(ImportTargetNotAllowed);
+        expect(fetchSpy).not.toHaveBeenCalled();
+      });
+
+      it("refuses a host that does not resolve", async () => {
+        const body = arrangeGitlabFallback("https://nowhere.invalid/a/b", []);
+        mockedLookup.mockRejectedValue(new Error("ENOTFOUND"));
+
+        await expect(
+          service.import(mockOrgId, body, mockAuthenticatedUser),
+        ).rejects.toThrow(ImportTargetNotAllowed);
+        expect(fetchSpy).not.toHaveBeenCalled();
+      });
+
+      it("allows the integration's self-hosted GitLab on a private address", async () => {
+        const body = arrangeGitlabFallback(
+          "https://gitlab.internal.lan/team/app",
+          ["10.0.0.7"],
+          "https://gitlab.internal.lan/",
+        );
+
+        await service.import(mockOrgId, body, mockAuthenticatedUser);
+
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+        const saved = projectsRepository.saveProject.mock.calls[0]![0];
+        expect(saved.url).toBe("https://gitlab.internal.lan/team/app");
+      });
+
+      it("still refuses other private hosts when a self-hosted GitLab is configured", async () => {
+        const body = arrangeGitlabFallback(
+          "https://other.internal.lan/team/app",
+          ["10.0.0.8"],
+          "https://gitlab.internal.lan",
+        );
+
+        await expect(
+          service.import(mockOrgId, body, mockAuthenticatedUser),
+        ).rejects.toThrow(ImportTargetNotAllowed);
+      });
+
+      it("does not follow redirects of the public check", async () => {
+        const body = arrangeGitlabFallback("https://gitlab.com/octo/legacy", [
+          "172.65.251.78",
+        ]);
+        fetchSpy.mockResolvedValue(
+          new Response(null, {
+            status: 302,
+            headers: { location: "http://169.254.169.254/" },
+          }),
+        );
+
+        await expect(
+          service.import(mockOrgId, body, mockAuthenticatedUser),
+        ).rejects.toThrow(EntityNotFound);
+        expect(fetchSpy.mock.calls[0]![1]).toMatchObject({
+          redirect: "manual",
+        });
+      });
     });
 
     it("propagates the error when the GitHub repository cannot be resolved", async () => {

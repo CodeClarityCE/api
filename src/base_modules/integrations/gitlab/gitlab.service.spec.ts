@@ -47,6 +47,7 @@ describe("GitlabIntegrationService", () => {
   let integrationsRepository: jest.Mocked<IntegrationsRepository>;
   let usersRepository: jest.Mocked<UsersRepository>;
   let organizationLoggerService: jest.Mocked<OrganizationLoggerService>;
+  let gitlabIntegrationTokenService: jest.Mocked<GitlabIntegrationTokenService>;
 
   const mockAuthenticatedUser: AuthenticatedUser = new AuthenticatedUser(
     "test-user-id",
@@ -166,6 +167,7 @@ describe("GitlabIntegrationService", () => {
     integrationsRepository = module.get(IntegrationsRepository);
     usersRepository = module.get(UsersRepository);
     organizationLoggerService = module.get(OrganizationLoggerService);
+    gitlabIntegrationTokenService = module.get(GitlabIntegrationTokenService);
   });
 
   it("should be defined", () => {
@@ -508,6 +510,53 @@ describe("GitlabIntegrationService", () => {
         ),
       ).rejects.toThrow(IntegrationInstanceUrlChanged);
       expect(integrationsRepository.saveIntegration).not.toHaveBeenCalled();
+    });
+
+    const allowModify = (): void => {
+      organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+        true,
+      );
+      jest
+        .spyOn(membershipsRepository, "hasRequiredRole")
+        .mockResolvedValue(undefined);
+      integrationsRepository.getIntegrationById.mockResolvedValue({
+        ...mockIntegration,
+      });
+      gitlabIntegrationTokenService.getPersonalAccessTokenExpiryRemote.mockResolvedValue(
+        [false, undefined],
+      );
+    };
+
+    it("accepts the same instance URL with trailing slashes", async () => {
+      allowModify();
+
+      await service.modifyGitlabIntegration(
+        "test-org-id",
+        "test-integration-id",
+        {
+          ...linkGitlabPatchBody,
+          gitlab_instance_url: "https://gitlab.com///",
+        },
+        mockAuthenticatedUser,
+      );
+
+      expect(integrationsRepository.saveIntegration).toHaveBeenCalled();
+    });
+
+    it("refuses a long run of slashes not at the end, quickly", async () => {
+      allowModify();
+      const url = `https://gitlab.com${"/".repeat(100_000)}x`;
+      const started = Date.now();
+
+      await expect(
+        service.modifyGitlabIntegration(
+          "test-org-id",
+          "test-integration-id",
+          { ...linkGitlabPatchBody, gitlab_instance_url: url },
+          mockAuthenticatedUser,
+        ),
+      ).rejects.toThrow(IntegrationInstanceUrlChanged);
+      expect(Date.now() - started).toBeLessThan(500);
     });
   });
 

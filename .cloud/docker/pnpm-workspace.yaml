@@ -27,6 +27,11 @@ verifyDepsBeforeRun: false
 # Keep this in sync with the fastify version in package.json.
 overrides:
   fastify: 5.12.8
+  # glob < 14.0.2 and minimatch < 11.0.1 have no patched release in the old
+  # majors (GHSA-3g3m-2fjr-6pw4, GHSA-g3hv-75wg-m249). jest, the mailer and
+  # babel-plugin-istanbul still pin those majors, so force the fixed ones.
+  "glob@>=9.0.0 <14.0.2": ^14.0.2
+  "minimatch@>=7.0.0 <11.0.1": ^11.0.1
 
 # Mirror the root workspace's allowBuilds verdicts so lifecycle scripts
 # (bcrypt native build, esbuild binary download, etc.) run for the right packages.

@@ -86,6 +86,17 @@ interface OctokitRepoResponse {
   };
 }
 
+/** Matches the URL of the rel="last" entry in a GitHub Link header. */
+const LAST_LINK = /<([^<>]*)>\s*;\s*rel="last"/;
+
+/** Reads the page number of the last page from a GitHub Link header, or 1. */
+function lastPageFromLinkHeader(linkHeader: string | undefined): number {
+  const url = linkHeader ? LAST_LINK.exec(linkHeader)?.[1] : undefined;
+  if (!url || !URL.canParse(url)) return 1;
+  const page = Number.parseInt(new URL(url).searchParams.get("page") ?? "", 10);
+  return Number.isInteger(page) && page > 1 ? page : 1;
+}
+
 @Injectable()
 export class GithubRepositoriesService {
   /** In-flight force syncs keyed by integration id (see forceSyncGithubRepos). */
@@ -507,29 +518,7 @@ export class GithubRepositoriesService {
         since: lastUpdated ? lastUpdated.toISOString() : undefined,
       })) as OctokitReposResponse;
 
-      const linkHeader = response.headers.link;
-
-      let lastPage = 1;
-
-      // Just why github, just why...
-      if (linkHeader) {
-        const links = linkHeader.split(",");
-        const lastLinkEntry = links.find((link: string) =>
-          link.includes('rel="last"'),
-        );
-        if (lastLinkEntry) {
-          const cleanedLink = lastLinkEntry
-            .replace('; rel="last"', "")
-            .replace("<", "")
-            .replace(">", "")
-            .trim();
-          const urlParams = new URLSearchParams(cleanedLink);
-          const lastPageQuery = urlParams.get("page");
-          if (lastPageQuery) {
-            lastPage = parseInt(lastPageQuery);
-          }
-        }
-      }
+      const lastPage = lastPageFromLinkHeader(response.headers.link);
 
       return [response.data, lastPage];
     } catch (err) {
