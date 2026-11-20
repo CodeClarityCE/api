@@ -39,7 +39,6 @@ export class GetWeeklySeverityInfoQueryOptions extends DashboardQueryOptions {}
 export class GetOverallAttackVectorDistQueryOptions extends DashboardQueryOptions {}
 export class GetOverallCIADistQueryOptions extends DashboardQueryOptions {}
 export class GetOverallLicenseDistQueryOptions extends DashboardQueryOptions {}
-export class GetRecentVulnsQueryOptions extends DashboardQueryOptions {}
 export class GetQuickStatsQueryOptions extends DashboardQueryOptions {}
 export class GetProjectsQuickStatsQueryOptions extends DashboardQueryOptions {
   @IsOptional()
@@ -124,34 +123,6 @@ export class CIAImpactInternal {
   c!: number;
   i!: number;
   a!: number;
-}
-
-export class LatestVulnInfo {
-  @ApiProperty()
-  @OptionalTransform((v) => v)
-  severity!: number;
-  @ApiProperty()
-  @OptionalTransform((v) => v)
-  severity_class!: string;
-  @ApiProperty()
-  @OptionalTransform((v) => v)
-  cwe!: string;
-  @ApiProperty()
-  cwe_name!: string;
-}
-
-export class SeverityClassCount {
-  @ApiProperty()
-  severity_class!: string | null;
-  @ApiProperty()
-  count!: number;
-}
-
-export class LatestVulns {
-  // @ApiProperty({ type: [LatestVuln] })
-  vulns!: Record<string, LatestVulnInfo>;
-  @ApiProperty({ type: [SeverityClassCount] })
-  severity_count!: SeverityClassCount[];
 }
 
 export interface QuickStatsInternal {

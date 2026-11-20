@@ -10,9 +10,7 @@ import {
   GetOverallLicenseDistQueryOptions,
   GetProjectsQuickStatsQueryOptions,
   GetQuickStatsQueryOptions,
-  GetRecentVulnsQueryOptions,
   GetWeeklySeverityInfoQueryOptions,
-  LatestVulns,
   ProjectQuickStats,
   QuickStats,
   SeverityInfoByWeek,
@@ -118,28 +116,6 @@ export class DashboardController {
   ): Promise<TypedResponse<LicenseDist>> {
     return {
       data: await this.dashboardService.getOverallLicenseDist(
-        orgId,
-        user,
-        queryParams.startDate,
-        queryParams.endDate,
-        queryParams.integrationIds,
-      ),
-    };
-  }
-
-  @ApiTags("Dashboard")
-  @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
-  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
-  @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
-  @APIDocTypedResponseDecorator(LatestVulns)
-  @Get("recent_vulns")
-  async getRecentVuls(
-    @AuthUser() user: AuthenticatedUser,
-    @Param("org_id") orgId: string,
-    @Query() queryParams: GetRecentVulnsQueryOptions,
-  ): Promise<TypedResponse<LatestVulns>> {
-    return {
-      data: await this.dashboardService.getRecentVuls(
         orgId,
         user,
         queryParams.startDate,

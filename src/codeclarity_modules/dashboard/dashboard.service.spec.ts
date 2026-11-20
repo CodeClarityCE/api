@@ -480,69 +480,6 @@ describe("DashboardService", () => {
     });
   });
 
-  describe("getRecentVuls", () => {
-    it("should return recent vulnerabilities successfully", async () => {
-      membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
-
-      const mockQueryBuilder = {
-        where: jest.fn().mockReturnThis(),
-        leftJoinAndSelect: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        getOne: jest.fn().mockResolvedValue(mockOrganization),
-      };
-
-      organizationRepository.createQueryBuilder.mockReturnValue(
-        mockQueryBuilder as any,
-      );
-
-      const result = await service.getRecentVuls(
-        mockOrgId,
-        mockAuthenticatedUser,
-        new Date("2023-01-01"),
-        new Date("2023-12-31"),
-        ["integration1"],
-      );
-
-      expect(result).toBeDefined();
-      expect(result).toHaveProperty("vulns");
-      expect(result).toHaveProperty("severity_count");
-      expect(Array.isArray(result.severity_count)).toBe(true);
-      expect(result.severity_count).toHaveLength(5);
-    });
-
-    it("should classify vulnerability severities correctly", async () => {
-      membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
-
-      const mockQueryBuilder = {
-        where: jest.fn().mockReturnThis(),
-        leftJoinAndSelect: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        getOne: jest.fn().mockResolvedValue(mockOrganization),
-      };
-
-      organizationRepository.createQueryBuilder.mockReturnValue(
-        mockQueryBuilder as any,
-      );
-
-      const result = await service.getRecentVuls(
-        mockOrgId,
-        mockAuthenticatedUser,
-      );
-
-      expect(result.vulns).toBeDefined();
-      const vulnKeys = Object.keys(result.vulns);
-      expect(vulnKeys.length).toBeGreaterThan(0);
-
-      for (const key of vulnKeys) {
-        const vuln = result.vulns[key];
-        expect(vuln).toHaveProperty("severity");
-        expect(vuln).toHaveProperty("severity_class");
-        expect(vuln).toHaveProperty("cwe");
-        expect(vuln).toHaveProperty("cwe_name");
-      }
-    });
-  });
-
   describe("getQuickStats", () => {
     it("should return quick stats with grade based on vulnerability severity", async () => {
       membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);

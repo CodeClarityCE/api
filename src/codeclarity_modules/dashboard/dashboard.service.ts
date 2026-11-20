@@ -11,7 +11,6 @@ import { MembershipsRepository } from "src/base_modules/shared/repositories";
 import {
   AttackVectorDist,
   CIAImpact,
-  LatestVulns,
   ProjectGradeClass,
   ProjectQuickStats,
   QuickStats,
@@ -354,66 +353,6 @@ export class DashboardService {
     }
 
     return licenses;
-  }
-
-  /**
-   * Returns the vulns of each project's latest completed analysis in the date range,
-   * with the number of findings per severity class
-   * @throws {NotAuthorized} if the user is not authorized to retrieve this information
-   *
-   * @param orgId The the id of the organization for which the get the stats
-   * @param user The authenticated user
-   * @param dateRangeStart The start date at which to start collecting stats from analyses (Optional, defaults to two months back)
-   * @param dateRangeEnd The end date at which to stop collecting stats from analyses (Optional, defaults to today)
-   * @param integrationIds For which integrations to collect the stats
-   */
-  async getRecentVuls(
-    orgId: string,
-    user: AuthenticatedUser,
-    dateRangeStart?: Date,
-    dateRangeEnd?: Date,
-    _integrationIds?: string[],
-  ): Promise<LatestVulns> {
-    await this.membershipsRepository.hasRequiredRole(
-      orgId,
-      user.userId,
-      MemberRole.USER,
-    );
-
-    const latest = await this.getLatestResults(
-      orgId,
-      VULN_PLUGINS,
-      dateRangeStart,
-      dateRangeEnd,
-    );
-
-    const vulns: LatestVulns = {
-      vulns: {},
-      severity_count: [
-        { severity_class: "CRITICAL", count: 0 },
-        { severity_class: "HIGH", count: 0 },
-        { severity_class: "MEDIUM", count: 0 },
-        { severity_class: "LOW", count: 0 },
-        { severity_class: "NONE", count: 0 },
-      ],
-    };
-
-    // Counts findings, like the weekly exposure and the results pages do.
-    for (const vuln of this.findings(latest)) {
-      const severity_class = severityBucket(vuln.Severity);
-      vulns.vulns[vuln.VulnerabilityId] = {
-        severity: vuln.Severity?.Severity ?? 0,
-        severity_class,
-        cwe: vuln.VulnerabilityId,
-        cwe_name: vuln.VulnerabilityId,
-      };
-      const count = vulns.severity_count.find(
-        (c) => c.severity_class === severity_class,
-      );
-      if (count) count.count++;
-    }
-
-    return vulns;
   }
 
   /**
