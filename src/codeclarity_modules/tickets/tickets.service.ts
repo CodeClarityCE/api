@@ -38,6 +38,7 @@ import {
 import { SortDirection } from "src/types/sort.types";
 
 import { TicketIntegrationService } from "./integrations/ticket-integration.service";
+import { dueDateFor, dueSoonWindow, targetsOf } from "./service-level-targets";
 import { Ticket, TicketStatus } from "./ticket.entity";
 import {
   type TicketContent,
@@ -170,7 +171,12 @@ export class TicketsService {
       severity_class: createBody.severity_class,
       recommended_version: createBody.recommended_version,
       remediation_notes: createBody.remediation_notes,
-      due_date: createBody.due_date ? new Date(createBody.due_date) : undefined,
+      due_date: dueDateFor(
+        createBody.due_date,
+        targetsOf(organization),
+        createBody.severity_class,
+        now,
+      ),
       created_on: now,
       project,
       organization,
@@ -812,7 +818,8 @@ export class TicketsService {
           performed_by: performer,
           created_on: now,
         });
-        ticket.due_date = newDueDate;
+        // Null rather than undefined, so save clears the column.
+        ticket.due_date = newDueDate ?? null;
       }
     }
 
@@ -1044,33 +1051,55 @@ export class TicketsService {
       .leftJoin("ticket.project", "project")
       .where("ticket.organization.id = :orgId", { orgId });
 
-    // Get counts by status
-    const [openCount, inProgressCount, resolvedThisWeek, closedCount] =
-      await Promise.all([
-        baseQuery
-          .clone()
-          .andWhere("ticket.status = :status", { status: TicketStatus.OPEN })
-          .getCount(),
-        baseQuery
-          .clone()
-          .andWhere("ticket.status = :status", {
-            status: TicketStatus.IN_PROGRESS,
-          })
-          .getCount(),
-        baseQuery
-          .clone()
-          .andWhere("ticket.status = :status", {
-            status: TicketStatus.RESOLVED,
-          })
-          .andWhere("ticket.resolved_on >= :weekAgo", {
-            weekAgo: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-          })
-          .getCount(),
-        baseQuery
-          .clone()
-          .andWhere("ticket.status = :status", { status: TicketStatus.CLOSED })
-          .getCount(),
-      ]);
+    const now = new Date();
+    const dueSoon = dueSoonWindow(now);
+    const unresolved = baseQuery
+      .clone()
+      .andWhere("ticket.status IN (:...openStatuses)", {
+        openStatuses: [TicketStatus.OPEN, TicketStatus.IN_PROGRESS],
+      });
+
+    // Get counts by status and by due date
+    const [
+      openCount,
+      inProgressCount,
+      resolvedThisWeek,
+      closedCount,
+      overdueCount,
+      dueThisWeekCount,
+    ] = await Promise.all([
+      baseQuery
+        .clone()
+        .andWhere("ticket.status = :status", { status: TicketStatus.OPEN })
+        .getCount(),
+      baseQuery
+        .clone()
+        .andWhere("ticket.status = :status", {
+          status: TicketStatus.IN_PROGRESS,
+        })
+        .getCount(),
+      baseQuery
+        .clone()
+        .andWhere("ticket.status = :status", {
+          status: TicketStatus.RESOLVED,
+        })
+        .andWhere("ticket.resolved_on >= :weekAgo", {
+          weekAgo: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        })
+        .getCount(),
+      baseQuery
+        .clone()
+        .andWhere("ticket.status = :status", { status: TicketStatus.CLOSED })
+        .getCount(),
+      unresolved.clone().andWhere("ticket.due_date < :now", { now }).getCount(),
+      unresolved
+        .clone()
+        .andWhere("ticket.due_date >= :from AND ticket.due_date < :until", {
+          from: dueSoon.from,
+          until: dueSoon.until,
+        })
+        .getCount(),
+    ]);
 
     // Get counts by priority (for open and in-progress tickets)
     const priorityCounts: RawPriorityCount[] = await this.ticketRepository
@@ -1139,6 +1168,8 @@ export class TicketsService {
       total_in_progress: inProgressCount,
       total_resolved_this_week: resolvedThisWeek,
       total_closed: closedCount,
+      total_overdue: overdueCount,
+      total_due_this_week: dueThisWeekCount,
       by_priority: byPriority,
       by_project: byProject.map((row) => ({
         project_id: row.project_id,
@@ -1194,7 +1225,7 @@ export class TicketsService {
       created_on: ticket.created_on,
       updated_on: ticket.updated_on,
       resolved_on: ticket.resolved_on,
-      due_date: ticket.due_date,
+      due_date: ticket.due_date ?? undefined,
       project_id: ticket.project?.id || "",
       project_name: ticket.project?.name || "",
       created_by_id: ticket.created_by?.id || "",
