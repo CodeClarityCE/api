@@ -128,7 +128,7 @@ export class Analysis {
 
   /** Whether those rows came from a vuln-finder result */
   @Column("boolean", { default: false })
-  vulnerability_instances_have_results!: boolean;
+  vulnerability_instances_have_results?: boolean;
 
   // Foreign keys
   @ManyToMany(() => Policy, (policy) => policy.analyses)

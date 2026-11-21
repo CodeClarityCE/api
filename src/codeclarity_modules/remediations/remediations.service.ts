@@ -17,7 +17,12 @@ import {
 import type { TopLevelDependency } from "src/codeclarity_modules/vulnerability_instances/top-level-paths";
 
 import { toPackageManager } from "./package-manager-commands";
-import { type PlannedInstance, planRemediations } from "./plan-remediations";
+import {
+  type FixableInstance,
+  instanceFix,
+  type PlannedInstance,
+  planRemediations,
+} from "./plan-remediations";
 import type { ProjectRemediations } from "./remediation.types";
 import { TopLevelUpgradeSource } from "./top-level-upgrades";
 
@@ -37,6 +42,7 @@ interface InstanceRow {
   known_exploited: boolean;
   aliases: string[];
   fixed_version: string | null;
+  smallest_fix: string | null;
   package_manager: string | null;
   top_level_dependencies: TopLevelDependency[];
 }
@@ -44,7 +50,7 @@ interface InstanceRow {
 // The ranges one package has in a vulnerability's records; names compare without case, as composer's do.
 function rangesOf(
   affected: AffectedPackageRanges[],
-  row: InstanceRow,
+  row: { package: string; ecosystem: string | null },
 ): VersionRange[] {
   const name = row.package.toLowerCase();
   return affected
@@ -58,12 +64,7 @@ function rangesOf(
     .flatMap((a) => a.ranges);
 }
 
-/**
- * Remediations of the projects' current analyses (see "Remediation" in
- * GLOSSARY.md). They are derived on each call from the instance rows, the
- * knowledge sources' ranges and a patcher's top-level upgrades, and are never
- * stored. Callers check the user's access.
- */
+/** Remediations of the projects' current analyses, derived on each call; callers check access. */
 @Injectable()
 export class RemediationsService {
   constructor(
@@ -72,13 +73,7 @@ export class RemediationsService {
     private readonly topLevelUpgrades: TopLevelUpgradeSource,
   ) {}
 
-  /**
-   * The remediations of each project in the organization with instances in
-   * its current analysis, ordered by project id. Hidden and policy-excluded
-   * instances are left out.
-   * @param projectIds only these projects; every project when absent
-   * @param manager reads through this transaction instead, to see rows it wrote
-   */
+  /** Remediations per project with shown instances in its current analysis, optionally only `projectIds`, read through `manager` when given. */
   async forOrganization(
     orgId: string,
     projectIds?: string[],
@@ -96,7 +91,7 @@ export class RemediationsService {
               i.vulnerability_id, i.analysis_vulnerability_id, i.package,
               i.ecosystem, i.installed_version, i.workspace, i.prod,
               i.severity_class, i.severity_score, i.known_exploited,
-              i.aliases, i.fixed_version,
+              i.aliases, i.fixed_version, i.smallest_fix,
               i.package_manager, i.top_level_dependencies
        FROM (${matchingInstancesSql("$1", filters, bind)}) i
        WHERE ${shownSql({})}
@@ -131,6 +126,7 @@ export class RemediationsService {
         ecosystem: row.ecosystem,
         package_manager: toPackageManager(row.package_manager),
         fixed_version: row.fixed_version,
+        smallest_fix: row.smallest_fix,
         top_level_dependencies: row.top_level_dependencies,
         ranges: rangesOf(affected.get(row.vulnerability_id) ?? [], row),
       }));
@@ -153,9 +149,28 @@ export class RemediationsService {
     return project ?? null;
   }
 
+  /** Each row's smallest fix and whether a remediation resolves it, for the writer to store. */
+  async fixesOf(
+    analysisId: string,
+    rows: Omit<FixableInstance, "ranges">[],
+  ): Promise<{ smallest_fix: string | null; has_fix: boolean }[]> {
+    if (rows.length === 0) return [];
+    const affected = await this.affectedOf(rows);
+    const upgrades = await this.topLevelUpgrades.upgradesOf(analysisId);
+    return rows.map((row) =>
+      instanceFix(
+        {
+          ...row,
+          ranges: rangesOf(affected.get(row.vulnerability_id) ?? [], row),
+        },
+        upgrades,
+      ),
+    );
+  }
+
   // The affected ranges of every vulnerability the rows name, from its OSV records.
   private async affectedOf(
-    rows: InstanceRow[],
+    rows: { vulnerability_id: string }[],
   ): Promise<Map<string, AffectedPackageRanges[]>> {
     const affected = new Map<string, AffectedPackageRanges[]>();
     for (const id of new Set(rows.map((row) => row.vulnerability_id))) {

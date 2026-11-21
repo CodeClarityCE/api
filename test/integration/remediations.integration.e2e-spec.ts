@@ -525,6 +525,66 @@ describe("Remediations (e2e)", () => {
     ]);
   });
 
+  it("lists as having a fix exactly the instances that get a remediation", async () => {
+    const project = await seed.project("api");
+    await seed.analysis({
+      projectId: project,
+      workspaces: {
+        ".": {
+          topLevel: ["lodash@4.17.15", "body-parser@1.19.0", "left-pad@1.3.0"],
+          packages: { "body-parser@1.19.0": ["qs@6.5.1"] },
+          findings: [
+            // Fixed by the knowledge ranges, though the matched source named no fix.
+            finding(LODASH_CVE, "lodash", "4.17.15"),
+            // Removed by a top-level upgrade, with no fixed version anywhere.
+            finding("CVE-2099-3998", "qs", "6.5.1"),
+            // The source names a fix that the knowledge ranges still cover.
+            finding(NO_FIX_CVE, "left-pad", "1.3.0", {
+              ranges: [{ source: "NVD", fixed: "2.0.0" }],
+            }),
+          ],
+        },
+      },
+      patching: {
+        ".": {
+          patches: {
+            "body-parser@1.19.0": {
+              update: "1.20.2",
+              fixes: [{ id: "CVE-2099-3998", package: "qs@6.5.1" }],
+            },
+          },
+        },
+      },
+    });
+    await seed.store();
+    const ids = async (fix: string): Promise<string[]> => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `/org/${user.organization.id}/vulnerabilities?fix=${fix}`,
+        user.accessToken,
+      );
+      expect(response.statusCode).toBe(200);
+      return (response.json().data as { vulnerability_id: string }[])
+        .map((row) => row.vulnerability_id)
+        .sort();
+    };
+
+    expect(await ids("available")).toEqual([LODASH_CVE, "CVE-2099-3998"]);
+    expect(await ids("none")).toEqual([NO_FIX_CVE]);
+    const planned = await testHelper
+      .getApp()
+      .get(RemediationsService)
+      .forProject(user.organization.id, project);
+    expect(
+      planned?.remediations
+        .flatMap((r) => r.instances.map((i) => i.vulnerability_id))
+        .sort(),
+    ).toEqual([LODASH_CVE, "CVE-2099-3998"]);
+    expect(planned?.unremediated.map((i) => i.vulnerability_id)).toEqual([
+      NO_FIX_CVE,
+    ]);
+  });
+
   it("lists the remediations of every project in the organization", async () => {
     const api = await seed.project("api");
     const web = await seed.project("web");
