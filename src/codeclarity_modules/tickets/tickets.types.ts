@@ -13,6 +13,7 @@ import {
 
 import type { ManifestEdit } from "../remediations/package-manager-commands";
 import { RemediationKind } from "../remediations/remediation.types";
+import type { InstanceDiffLinks } from "../vulnerability_instances/organization-vulnerabilities.types";
 import type { TopLevelDependency } from "../vulnerability_instances/top-level-paths";
 
 import { TicketPriority, TicketStatus, TicketType } from "./ticket.entity";
@@ -197,6 +198,14 @@ export class CreateRemediationTicketBody {
   @IsOptional()
   @IsDateString()
   due_date?: string;
+
+  @ApiPropertyOptional({
+    enum: ExternalTicketProvider,
+    description: "Also sync the created ticket to this provider",
+  })
+  @IsOptional()
+  @IsEnum(ExternalTicketProvider)
+  sync_to_provider?: ExternalTicketProvider;
 }
 
 export class CheckDuplicateBody {
@@ -289,6 +298,8 @@ export interface TicketInstance {
   is_active: boolean;
   detected_on: Date;
   resolved_on: Date | null;
+  /** Fix commit, compare and registry diff links, built from stored knowledge */
+  diff_links: InstanceDiffLinks;
 }
 
 /** The open ticket that already tracks a remediation. */
