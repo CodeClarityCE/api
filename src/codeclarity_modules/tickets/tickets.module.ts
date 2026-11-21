@@ -14,6 +14,7 @@ import { ClickUpService } from "./integrations/clickup/clickup.service";
 import { TicketIntegrationService } from "./integrations/ticket-integration.service";
 import { RemediationTicketsService } from "./remediation-tickets.service";
 import { Ticket } from "./ticket.entity";
+import { TicketContentService } from "./ticket-content.service";
 import { TicketEvent } from "./ticket-event.entity";
 import { TicketExternalLink } from "./ticket-external-link.entity";
 import { TicketIntegrationConfig } from "./ticket-integration-config.entity";
@@ -49,6 +50,7 @@ import { TicketsService } from "./tickets.service";
     TicketsService,
     RemediationTicketsService,
     TicketInstanceSync,
+    TicketContentService,
     TicketIntegrationService,
     ClickUpService,
   ],

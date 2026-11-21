@@ -1097,6 +1097,7 @@ export class ProjectTicketsController {
   constructor(
     private readonly ticketsService: TicketsService,
     private readonly remediationTickets: RemediationTicketsService,
+    private readonly ticketIntegrationService: TicketIntegrationService,
   ) {}
 
   @Post("from-remediation")
@@ -1118,14 +1119,21 @@ export class ProjectTicketsController {
     @Param("project_id") project_id: string,
     @Body() body: CreateRemediationTicketBody,
   ): Promise<TypedResponse<CreateRemediationTicketResult>> {
-    return {
-      data: await this.remediationTickets.create(
+    const result = await this.remediationTickets.create(
+      org_id,
+      project_id,
+      body,
+      user,
+    );
+    if (result.ticket_id && body.sync_to_provider) {
+      await this.ticketIntegrationService.syncTicketToExternal(
         org_id,
-        project_id,
-        body,
-        user,
-      ),
-    };
+        result.ticket_id,
+        body.sync_to_provider,
+        user.userId,
+      );
+    }
+    return { data: result };
   }
 
   @Get("")
