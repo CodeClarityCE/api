@@ -155,11 +155,7 @@ export function upgradeCommand(
   };
 }
 
-/**
- * The command that makes every dependent install one version of a package:
- * npm and bun overrides, yarn resolutions, pnpm overrides, or for composer an
- * update of the package with its dependencies.
- */
+/** The command that pins every dependent to one version: overrides, resolutions or composer's --with-dependencies. */
 export function forceCommand(
   manager: PackageManager,
   force: ForceSpec,

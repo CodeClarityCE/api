@@ -41,8 +41,7 @@ export class FixNextService {
   ) {}
 
   /**
-   * The most urgent changes across the organization's current analyses.
-   * Hidden and policy-excluded instances do not count.
+   * The most urgent changes across the current analyses, hidden and policy-excluded instances left out.
    * @throws {NotAuthorized} if the user is not a member of the organization
    */
   async fixNext(

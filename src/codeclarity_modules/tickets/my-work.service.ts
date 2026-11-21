@@ -78,8 +78,7 @@ export class MyWorkService {
   ) {}
 
   /**
-   * Orders overdue tickets oldest due first, then due soon ones soonest first,
-   * then the rest by the Fix next rank of what they still track.
+   * The user's open tickets: overdue first, then due soon, then by Fix next rank.
    * @throws {NotAuthorized} if the user is not a member of the organization
    */
   async myWork(

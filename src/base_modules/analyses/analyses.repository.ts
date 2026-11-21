@@ -180,9 +180,8 @@ export class AnalysesRepository {
   }
 
   /**
-   * The project's latest analysis of its default branch (any label for an
-   * upload), whatever its status, with its analyzer; experiments excepted.
-   * @throws {EntityNotFound} if the project has no such analysis
+   * The project's latest default-branch analysis (any label for an upload) with its analyzer, experiments excepted.
+   * @throws {EntityNotFound} if it has none
    */
   async getLastDefaultBranchAnalysis(projectId: string): Promise<Analysis> {
     const analysis = await this.analysisRepository

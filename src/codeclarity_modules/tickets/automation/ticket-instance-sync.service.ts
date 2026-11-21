@@ -78,11 +78,7 @@ const snapshotOf = (
   top_level_dependencies: i.top_level_dependencies,
 });
 
-/**
- * Keeps each open ticket's instances in step with its project's current
- * analysis (ADR 0016) and, when the organization turned auto-resolve on,
- * resolves tickets with no instance left.
- */
+/** Keeps open tickets' instances in step with the current analysis (ADR 0016) and auto-resolves emptied ones when enabled. */
 @Injectable()
 export class TicketInstanceSync implements OnModuleInit {
   private readonly logger = CodeClarityLogger.forService("TicketInstanceSync");

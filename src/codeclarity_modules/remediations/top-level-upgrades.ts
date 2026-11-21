@@ -21,11 +21,7 @@ export interface TopLevelUpgrade {
   resolves: { package: string; version: string; vulnerability_id: string }[];
 }
 
-/**
- * Where top-level upgrades come from. A patcher fills it per analysis; an
- * analysis it did not patch has none, and its transitive instances get a
- * forced version instead.
- */
+/** Top-level upgrades per analysis from a patcher; none means transitive instances get a forced version. */
 export abstract class TopLevelUpgradeSource {
   abstract upgradesOf(analysisId: string): Promise<TopLevelUpgrade[]>;
 }

@@ -115,9 +115,8 @@ export class RemediationTicketsService {
   }
 
   /**
-   * Creates a ticket from one remediation of the project's current analysis,
-   * prefilled with its instances, paths and command. When an open ticket
-   * already tracks it, returns that one instead unless `allow_duplicate`.
+   * Creates a prefilled ticket from one current remediation, or returns the open ticket that already tracks it
+   * unless `allow_duplicate`.
    */
   async create(
     orgId: string,
