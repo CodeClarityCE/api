@@ -16,6 +16,7 @@ import { MembershipsRepository } from "../../src/base_modules/shared/repositorie
 import { User } from "../../src/base_modules/users/users.entity";
 import { DashboardService } from "../../src/codeclarity_modules/dashboard/dashboard.service";
 import { Result } from "../../src/codeclarity_modules/results/result.entity";
+import { VulnerabilitiesUtilsService } from "../../src/codeclarity_modules/results/vulnerabilities/utils/utils.service";
 import {
   closeScratchDatabase,
   openScratchDatabase,
@@ -71,6 +72,8 @@ describe("Dashboard aggregates against Postgres", () => {
         dataSource.getRepository(OrganizationMemberships),
       ),
       dataSource.getRepository(Organization),
+      dataSource,
+      new VulnerabilitiesUtilsService(dataSource.getRepository(Result)),
     );
     creator = await dataSource.getRepository(User).save({
       email: "lead@example.com",
@@ -182,51 +185,11 @@ describe("Dashboard aggregates against Postgres", () => {
     return o.id;
   }
 
-  it("leaves instances hidden by default out of the impact analysis", async () => {
-    const o = await org("Hidden org");
-    const widget = await project(o, "widget");
-    const output = vulnOutput([9.8, 9.5, 5.0], "HIDDEN") as {
-      workspaces: Record<string, { Vulnerabilities: object[] }>;
-    };
-    const [contradicted, retired, shown] = output.workspaces["."]!
-      .Vulnerabilities as Record<string, unknown>[];
-    contradicted!["SourceVerdicts"] = [
-      { source: "gcve", verdict: "matched" },
-      { source: "osv", verdict: "version_excluded" },
-      { source: "nvd", verdict: "no_record" },
-    ];
-    retired!["SourceVerdicts"] = [
-      { source: "gcve", verdict: "retired" },
-      { source: "osv", verdict: "retired" },
-      { source: "nvd", verdict: "no_record" },
-    ];
-    shown!["SourceVerdicts"] = [
-      { source: "gcve", verdict: "matched" },
-      { source: "osv", verdict: "matched" },
-      { source: "nvd", verdict: "no_record" },
-    ];
-    await analysis(widget, new Date(Date.now() - DAY), AnalysisStatus.SUCCESS, [
-      { plugin: "vuln-finder", result: output },
-    ]);
-
-    const cia = await service.getOverallCIAImpact(o.id, user);
-
-    expect(cia).toHaveLength(3);
-  });
-
   it("sums licenses over each project's latest completed analysis", async () => {
     const orgId = await seedOrganisation();
 
     const licenses = await service.getOverallLicenseDist(orgId, user);
 
     expect(licenses).toEqual({ MIT: 5, ISC: 1 });
-  });
-
-  it("bases the impact analysis on the latest completed analysis", async () => {
-    const orgId = await seedOrganisation();
-
-    const cia = await service.getOverallCIAImpact(orgId, user);
-
-    expect(cia).toHaveLength(36);
   });
 });

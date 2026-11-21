@@ -77,9 +77,6 @@ describe("DashboardController", () => {
       expect(dashboardService.getOverallCIAImpact).toHaveBeenCalledWith(
         mockOrgId,
         mockAuthenticatedUser,
-        queryParams.startDate,
-        queryParams.endDate,
-        queryParams.integrationIds,
       );
     });
   });
