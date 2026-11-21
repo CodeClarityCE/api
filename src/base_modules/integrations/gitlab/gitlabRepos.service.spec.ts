@@ -7,6 +7,7 @@ import {
   MembershipsRepository,
   OrganizationsRepository,
 } from "src/base_modules/shared/repositories";
+import { CodeClarityLogger } from "src/services/logger.service";
 
 import { EntityNotFound, NotAuthorized } from "../../../types/error.types";
 import type { PaginationUserSuppliedConf } from "../../../types/pagination.types";
@@ -41,6 +42,15 @@ jest.mock("ms", () => ({
     return 1000;
   },
 }));
+
+// A GitLab projects response, with the next page number when there is one
+function gitlabPage(projects: unknown[], nextPage = ""): unknown {
+  return {
+    ok: true,
+    headers: new Headers({ "x-next-page": nextPage }),
+    json: jest.fn().mockResolvedValue(projects),
+  };
+}
 
 describe("GitlabRepositoriesService", () => {
   let service: GitlabRepositoriesService;
@@ -200,7 +210,7 @@ describe("GitlabRepositoriesService", () => {
       (fetch as jest.Mock).mockClear();
     });
 
-    it("should successfully sync GitLab repositories", async () => {
+    it("syncs every project the user is a Reporter or above on", async () => {
       const tokenMock = {
         getToken: jest.fn().mockReturnValue("glpat-test-token"),
         validate: jest.fn().mockResolvedValue(undefined),
@@ -214,10 +224,7 @@ describe("GitlabRepositoriesService", () => {
       repositoryCacheRepository.save.mockResolvedValue(mockRepositoryCache);
       integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
 
-      (fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: jest.fn().mockResolvedValue(mockGitlabProjects),
-      });
+      (fetch as jest.Mock).mockResolvedValue(gitlabPage(mockGitlabProjects));
 
       await service.syncGitlabRepos("test-integration-id");
 
@@ -227,8 +234,9 @@ describe("GitlabRepositoriesService", () => {
       expect(integrationsRepository.getIntegrationById).toHaveBeenCalledWith(
         "test-integration-id",
       );
+      // Member projects at Reporter or above, not only owned ones
       expect(fetch).toHaveBeenCalledWith(
-        "https://gitlab.com/api/v4/projects?owned=true&membership=true&per_page=100",
+        "https://gitlab.com/api/v4/projects?membership=true&min_access_level=20&per_page=100",
         {
           headers: {
             "PRIVATE-TOKEN": "glpat-test-token",
@@ -245,6 +253,98 @@ describe("GitlabRepositoriesService", () => {
       );
     });
 
+    it("follows GitLab's next page until the last page", async () => {
+      gitlabIntegrationService.getToken.mockResolvedValue({
+        getToken: () => "glpat-test-token",
+      } as any);
+      integrationsRepository.getIntegrationById.mockResolvedValue(
+        mockIntegration,
+      );
+      repositoryCacheRepository.existsBy.mockResolvedValue(false);
+
+      const [first, second] = mockGitlabProjects;
+      (fetch as jest.Mock)
+        .mockResolvedValueOnce(gitlabPage([first], "2"))
+        .mockResolvedValueOnce(gitlabPage([second]));
+
+      await service.syncGitlabRepos("test-integration-id");
+
+      expect(fetch).toHaveBeenNthCalledWith(
+        2,
+        "https://gitlab.com/api/v4/projects?membership=true&min_access_level=20&per_page=100&page=2",
+        { headers: { "PRIVATE-TOKEN": "glpat-test-token" } },
+      );
+      expect(repositoryCacheRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fully_qualified_name: "test-user/another-repo",
+        }),
+      );
+    });
+
+    it("stops at 2,000 projects and warns", async () => {
+      gitlabIntegrationService.getToken.mockResolvedValue({
+        getToken: () => "glpat-test-token",
+      } as any);
+      integrationsRepository.getIntegrationById.mockResolvedValue(
+        mockIntegration,
+      );
+      repositoryCacheRepository.existsBy.mockResolvedValue(true);
+      const warn = jest
+        .spyOn(CodeClarityLogger.prototype, "warn")
+        .mockImplementation(() => undefined);
+
+      // A full page of 100 that always points to one more page
+      const fullPage = Array.from({ length: 100 }, () => mockGitlabProjects[0]);
+      let page = 1;
+      (fetch as jest.Mock).mockImplementation(() =>
+        Promise.resolve(gitlabPage(fullPage, String(++page))),
+      );
+
+      await service.syncGitlabRepos("test-integration-id");
+
+      expect(fetch).toHaveBeenCalledTimes(20);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("2000"),
+        expect.objectContaining({ integrationId: "test-integration-id" }),
+      );
+    });
+
+    it("caches a project another integration already cached", async () => {
+      gitlabIntegrationService.getToken.mockResolvedValue({
+        getToken: () => "glpat-test-token",
+      } as any);
+      integrationsRepository.getIntegrationById.mockResolvedValue(
+        mockIntegration,
+      );
+
+      // The cache already holds test-repo, but for a teammate's integration
+      const cached = [
+        { fully_qualified_name: "test-user/test-repo", integrationId: "other" },
+      ];
+      repositoryCacheRepository.existsBy.mockImplementation((where: any) =>
+        Promise.resolve(
+          cached.some(
+            (row) =>
+              row.fully_qualified_name === where.fully_qualified_name &&
+              (where.integration === undefined ||
+                where.integration.id === row.integrationId),
+          ),
+        ),
+      );
+      (fetch as jest.Mock).mockResolvedValue(
+        gitlabPage([mockGitlabProjects[0]]),
+      );
+
+      await service.syncGitlabRepos("test-integration-id");
+
+      expect(repositoryCacheRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fully_qualified_name: "test-user/test-repo",
+          integration: mockIntegration,
+        }),
+      );
+    });
+
     it("should skip existing repositories during sync", async () => {
       gitlabIntegrationService.getToken.mockResolvedValue(
         mockGitlabIntegrationToken,
@@ -255,10 +355,7 @@ describe("GitlabRepositoriesService", () => {
       repositoryCacheRepository.existsBy.mockResolvedValue(true);
       integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
 
-      (fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: jest.fn().mockResolvedValue(mockGitlabProjects),
-      });
+      (fetch as jest.Mock).mockResolvedValue(gitlabPage(mockGitlabProjects));
 
       await service.syncGitlabRepos("test-integration-id");
 
@@ -323,10 +420,7 @@ describe("GitlabRepositoriesService", () => {
       repositoryCacheRepository.save.mockResolvedValue(mockRepositoryCache);
       integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
 
-      (fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: jest.fn().mockResolvedValue(incompleteProjects),
-      });
+      (fetch as jest.Mock).mockResolvedValue(gitlabPage(incompleteProjects));
 
       await service.syncGitlabRepos("test-integration-id");
 
@@ -642,10 +736,7 @@ describe("GitlabRepositoriesService", () => {
       repositoryCacheRepository.existsBy.mockResolvedValue(true);
       integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
 
-      (fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: jest.fn().mockResolvedValue([]),
-      });
+      (fetch as jest.Mock).mockResolvedValue(gitlabPage([]));
 
       mockQueryBuilder.getCount.mockResolvedValue(0);
       mockQueryBuilder.getMany.mockResolvedValue([]);
@@ -682,10 +773,7 @@ describe("GitlabRepositoriesService", () => {
       repositoryCacheRepository.existsBy.mockResolvedValue(true);
       integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
 
-      (fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: jest.fn().mockResolvedValue([]),
-      });
+      (fetch as jest.Mock).mockResolvedValue(gitlabPage([]));
 
       mockQueryBuilder.getCount.mockResolvedValue(0);
       mockQueryBuilder.getMany.mockResolvedValue([]);
@@ -860,10 +948,7 @@ describe("GitlabRepositoriesService", () => {
       integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
       repositoryCacheRepository.findOne.mockResolvedValue(mockRepositoryCache);
 
-      (fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: jest.fn().mockResolvedValue([]),
-      });
+      (fetch as jest.Mock).mockResolvedValue(gitlabPage([]));
 
       const result = await service.getGitlabRepository(
         "test-org-id",
@@ -894,10 +979,7 @@ describe("GitlabRepositoriesService", () => {
       integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
       repositoryCacheRepository.findOne.mockResolvedValue(mockRepositoryCache);
 
-      (fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: jest.fn().mockResolvedValue([]),
-      });
+      (fetch as jest.Mock).mockResolvedValue(gitlabPage([]));
 
       const result = await service.getGitlabRepository(
         "test-org-id",
