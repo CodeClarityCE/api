@@ -1,5 +1,5 @@
 import {
-  deadlineState,
+  dueDateState,
   DEFAULT_SERVICE_LEVEL_TARGETS,
   defaultDueDate,
 } from "./service-level-targets";
@@ -45,24 +45,24 @@ describe("service level targets", () => {
     });
   });
 
-  describe("deadlineState", () => {
+  describe("dueDateState", () => {
     it("is overdue once the due date has passed", () => {
-      expect(deadlineState(new Date(NOW.getTime() - 1), NOW)).toBe("overdue");
+      expect(dueDateState(new Date(NOW.getTime() - 1), NOW)).toBe("overdue");
     });
 
     it("is due soon within the next seven days", () => {
-      expect(deadlineState(NOW, NOW)).toBe("due_soon");
-      expect(deadlineState(new Date(NOW.getTime() + 7 * DAY - 1), NOW)).toBe(
+      expect(dueDateState(NOW, NOW)).toBe("due_soon");
+      expect(dueDateState(new Date(NOW.getTime() + 7 * DAY - 1), NOW)).toBe(
         "due_soon",
       );
     });
 
     it("is on track further out, and none without a due date", () => {
-      expect(deadlineState(new Date(NOW.getTime() + 7 * DAY), NOW)).toBe(
+      expect(dueDateState(new Date(NOW.getTime() + 7 * DAY), NOW)).toBe(
         "on_track",
       );
-      expect(deadlineState(undefined, NOW)).toBe("none");
-      expect(deadlineState(null, NOW)).toBe("none");
+      expect(dueDateState(undefined, NOW)).toBe("none");
+      expect(dueDateState(null, NOW)).toBe("none");
     });
   });
 });

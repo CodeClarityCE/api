@@ -6,7 +6,7 @@ import { RemediationKind } from "src/codeclarity_modules/remediations/remediatio
 
 import type { FixNextRank } from "../remediations/fix-next-rank";
 
-import type { DeadlineState } from "./service-level-targets";
+import type { DueDateState } from "./service-level-targets";
 import { TicketPriority, TicketStatus } from "./ticket.entity";
 
 export const DEFAULT_MY_WORK_LIMIT = 20;
@@ -61,7 +61,7 @@ export class MyWorkEntry {
   due_date!: string | null;
 
   @ApiProperty({ enum: ["overdue", "due_soon", "on_track", "none"] })
-  deadline!: DeadlineState;
+  deadline!: DueDateState;
 
   @ApiProperty({ type: MyWorkRemediation, nullable: true })
   remediation!: MyWorkRemediation | null;

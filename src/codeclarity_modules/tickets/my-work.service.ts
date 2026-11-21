@@ -20,7 +20,7 @@ import { shownSql } from "src/codeclarity_modules/vulnerability_instances/organi
 
 import type { MyWorkEntry } from "./my-work.types";
 import { OPEN_TICKET_STATUSES } from "./remediation-tickets.service";
-import { type DeadlineState, deadlineState } from "./service-level-targets";
+import { type DueDateState, dueDateState } from "./service-level-targets";
 import type { TicketPriority, TicketStatus } from "./ticket.entity";
 
 interface TicketRow {
@@ -61,7 +61,7 @@ const asSeverity = (value: string | null): SeverityClass => {
 };
 
 // Overdue first, then due soon, then everything else.
-const DEADLINE_GROUP: Record<DeadlineState, number> = {
+const DUE_DATE_GROUP: Record<DueDateState, number> = {
   overdue: 0,
   due_soon: 1,
   on_track: 2,
@@ -163,7 +163,7 @@ export class MyWorkService {
         project_id: ticket.project_id,
         project_name: ticket.project_name,
         due_date: due ? due.toISOString() : null,
-        deadline: deadlineState(due, now),
+        deadline: dueDateState(due, now),
         remediation: ticket.remediation_kind
           ? {
               kind: ticket.remediation_kind,
@@ -185,12 +185,12 @@ export class MyWorkService {
       date ? date.getTime() : Number.POSITIVE_INFINITY;
     entries.sort((a, b) => {
       const group =
-        DEADLINE_GROUP[a.entry.deadline] - DEADLINE_GROUP[b.entry.deadline];
+        DUE_DATE_GROUP[a.entry.deadline] - DUE_DATE_GROUP[b.entry.deadline];
       if (group !== 0) return group;
       const byDue = time(a.due) - time(b.due);
       const byRank = compareFixNextRank(a.entry.rank, b.entry.rank);
       const ordered =
-        DEADLINE_GROUP[a.entry.deadline] < 2
+        DUE_DATE_GROUP[a.entry.deadline] < 2
           ? byDue || byRank
           : byRank || byDue;
       return (
