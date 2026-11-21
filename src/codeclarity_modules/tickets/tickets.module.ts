@@ -9,7 +9,7 @@ import { Result } from "src/codeclarity_modules/results/result.entity";
 import { VulnerabilitiesModule } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.module";
 import { VulnerabilityInstancesModule } from "src/codeclarity_modules/vulnerability_instances/vulnerability-instances.module";
 
-import { TicketAutomationService } from "./automation/ticket-automation.service";
+import { TicketInstanceSync } from "./automation/ticket-instance-sync.service";
 import { ClickUpService } from "./integrations/clickup/clickup.service";
 import { TicketIntegrationService } from "./integrations/ticket-integration.service";
 import { MyWorkController } from "./my-work.controller";
@@ -51,16 +51,15 @@ import { TicketsService } from "./tickets.service";
   providers: [
     TicketsService,
     RemediationTicketsService,
+    TicketInstanceSync,
     TicketContentService,
     MyWorkService,
-    TicketAutomationService,
     TicketIntegrationService,
     ClickUpService,
   ],
   exports: [
     TicketsService,
     RemediationTicketsService,
-    TicketAutomationService,
     TicketIntegrationService,
   ],
 })
