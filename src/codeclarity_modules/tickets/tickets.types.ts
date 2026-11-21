@@ -137,10 +137,13 @@ export class UpdateTicketBody {
   @IsString()
   remediation_notes?: string;
 
-  @ApiPropertyOptional({ description: "Due date for the ticket" })
+  @ApiPropertyOptional({
+    description: "Due date for the ticket; null clears it",
+    nullable: true,
+  })
   @IsOptional()
   @IsDateString()
-  due_date?: string;
+  due_date?: string | null;
 }
 
 export class BulkUpdateTicketsBody {
@@ -321,6 +324,10 @@ export interface TicketDashboardStats {
   total_in_progress: number;
   total_resolved_this_week: number;
   total_closed: number;
+  /** Open or in-progress tickets whose due date has passed */
+  total_overdue: number;
+  /** Open or in-progress tickets due within the next seven days */
+  total_due_this_week: number;
   by_priority: {
     critical: number;
     high: number;
