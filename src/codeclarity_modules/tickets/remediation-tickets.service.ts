@@ -15,6 +15,7 @@ import {
   RemediationKind,
 } from "src/codeclarity_modules/remediations/remediation.types";
 import { RemediationsService } from "src/codeclarity_modules/remediations/remediations.service";
+import { InstanceDiffLinksService } from "src/codeclarity_modules/vulnerability_instances/instance-diff-links.service";
 import type { TopLevelDependency } from "src/codeclarity_modules/vulnerability_instances/top-level-paths";
 import { EntityNotFound } from "src/types/error.types";
 
@@ -25,6 +26,7 @@ import {
   TicketStatus,
   TicketType,
 } from "./ticket.entity";
+import { remediationMarkdown, remediationTitle } from "./ticket-body";
 import { TicketEvent, TicketEventType } from "./ticket-event.entity";
 import { TicketVulnerabilityOccurrence } from "./ticket-occurrence.entity";
 import type {
@@ -55,79 +57,11 @@ interface InstanceExtras {
   top_level_dependencies: TopLevelDependency[];
 }
 
-const VERB: Record<RemediationKind, string> = {
-  [RemediationKind.UpgradeDirect]: "Upgrade",
-  [RemediationKind.UpgradeTopLevel]: "Upgrade",
-  [RemediationKind.ForceVersion]: "Force",
-};
-
 const PRIORITY_OF_CLASS: Record<string, TicketPriority> = {
   CRITICAL: TicketPriority.CRITICAL,
   HIGH: TicketPriority.HIGH,
   MEDIUM: TicketPriority.MEDIUM,
 };
-
-/** The ticket title naming a remediation, such as "Upgrade lodash to 4.17.21". */
-export function remediationTitle(remediation: Remediation): string {
-  const where =
-    remediation.workspace === "." ? "" : ` in ${remediation.workspace}`;
-  return `${VERB[remediation.kind]} ${remediation.package} to ${remediation.target_version}${where}`.slice(
-    0,
-    200,
-  );
-}
-
-/** A top-level path written as "express@4.17.0 > qs@6.5.0". */
-export function pathText(dependency: TopLevelDependency): string {
-  return dependency.path.map((p) => `${p.name}@${p.version}`).join(" > ");
-}
-
-// The ticket description: every resolved vulnerability with its versions and paths, then the command.
-function describe(
-  remediation: Remediation,
-  extras: Map<string, InstanceExtras>,
-): string {
-  const lines = [
-    `${remediationTitle(remediation)} (installed: ${remediation.installed_versions.join(", ")}).`,
-  ];
-  if (remediation.potentially_breaking) {
-    lines.push(
-      "",
-      "This is potentially breaking: it leaves the current major.",
-    );
-  }
-  lines.push("", "Resolves:");
-  for (const instance of remediation.instances) {
-    const extra = extras.get(instance.instance_id);
-    const score =
-      instance.severity_score === null
-        ? ""
-        : ` ${instance.severity_score.toFixed(1)}`;
-    const fixed = extra?.fixed_version
-      ? `, fixed in ${extra.fixed_version}`
-      : "";
-    lines.push(
-      `- ${instance.vulnerability_id} (${instance.severity_class}${score}): ${instance.package} ${instance.installed_version}${fixed}`,
-    );
-    for (const dependency of extra?.top_level_dependencies ?? []) {
-      lines.push(`  - via ${pathText(dependency)}`);
-    }
-  }
-  if (remediation.manifest_edit) {
-    lines.push(
-      "",
-      `Add to ${remediation.manifest_edit.file}:`,
-      "",
-      "```",
-      remediation.manifest_edit.text.trimEnd(),
-      "```",
-    );
-  }
-  if (remediation.command) {
-    lines.push("", "Run:", "", "```", remediation.command, "```");
-  }
-  return lines.join("\n");
-}
 
 /**
  * Creates tickets from the remediations of a project's current analysis
@@ -141,6 +75,7 @@ export class RemediationTicketsService {
     private readonly usersRepository: UsersRepository,
     private readonly projectsRepository: ProjectsRepository,
     private readonly remediations: RemediationsService,
+    private readonly diffLinks: InstanceDiffLinksService,
     @InjectRepository(Ticket, "codeclarity")
     private readonly ticketRepository: Repository<Ticket>,
   ) {}
@@ -209,6 +144,7 @@ export class RemediationTicketsService {
     }
 
     const extras = await this.extrasOf(remediation);
+    const description = await this.describe(remediation, extras);
     const worst = remediation.instances[0]!;
     const now = new Date();
 
@@ -216,7 +152,7 @@ export class RemediationTicketsService {
       async (manager) => {
         const ticket = await manager.getRepository(Ticket).save({
           title: remediationTitle(remediation),
-          description: describe(remediation, extras),
+          description,
           status: TicketStatus.OPEN,
           priority:
             body.priority ??
@@ -291,6 +227,27 @@ export class RemediationTicketsService {
       },
     );
     return { created: true, ticket_id: ticketId, duplicate: null };
+  }
+
+  // The description: the same Markdown the external issue body carries.
+  private async describe(
+    remediation: Remediation,
+    extras: Map<string, InstanceExtras>,
+  ): Promise<string> {
+    const instances = remediation.instances.map((instance) => {
+      const extra = extras.get(instance.instance_id);
+      return {
+        ...instance,
+        ecosystem: extra?.ecosystem ?? null,
+        fixed_version: extra?.fixed_version ?? null,
+        top_level_dependencies: extra?.top_level_dependencies ?? [],
+      };
+    });
+    const links = await this.diffLinks.linksOf(instances);
+    return remediationMarkdown(
+      remediation,
+      instances.map((instance, i) => ({ ...instance, diff_links: links[i]! })),
+    );
   }
 
   // Paths, fixed versions and ecosystems of the remediation's instance rows.

@@ -96,22 +96,26 @@ export interface ITicketIntegrationProvider {
   /**
    * Create a ticket in the external system
    * @param ticket The CodeClarity ticket to create externally
+   * @param body The Markdown body of the external ticket
    * @param config The integration configuration
    * @returns The external ticket ID and URL
    */
   createExternalTicket(
     ticket: Ticket,
+    body: string,
     config: IntegrationConfig,
   ): Promise<ExternalTicketResult>;
 
   /**
    * Update a ticket in the external system
    * @param ticket The updated CodeClarity ticket
+   * @param body The Markdown body of the external ticket
    * @param externalId The external ticket ID
    * @param config The integration configuration
    */
   updateExternalTicket(
     ticket: Ticket,
+    body: string,
     externalId: string,
     config: IntegrationConfig,
   ): Promise<void>;
@@ -303,53 +307,4 @@ export function mapStatusFromExternal(
     return mapping[externalStatus];
   }
   return undefined;
-}
-
-/**
- * Format ticket description for external systems with Markdown support
- */
-export function formatTicketDescription(ticket: Ticket): string {
-  const sections: string[] = [];
-
-  sections.push(ticket.description);
-  sections.push("");
-  sections.push("---");
-  sections.push("");
-  sections.push("**Vulnerability Details**");
-
-  if (ticket.vulnerability_id) {
-    sections.push(`- **CVE/ID**: ${ticket.vulnerability_id}`);
-  }
-
-  if (ticket.affected_package) {
-    sections.push(`- **Package**: ${ticket.affected_package}`);
-  }
-
-  if (ticket.affected_version) {
-    sections.push(`- **Version**: ${ticket.affected_version}`);
-  }
-
-  if (ticket.severity_score !== undefined) {
-    sections.push(`- **CVSS Score**: ${ticket.severity_score.toFixed(1)}`);
-  }
-
-  if (ticket.severity_class) {
-    sections.push(`- **Severity**: ${ticket.severity_class}`);
-  }
-
-  if (ticket.recommended_version) {
-    sections.push(`- **Recommended Version**: ${ticket.recommended_version}`);
-  }
-
-  if (ticket.remediation_notes) {
-    sections.push("");
-    sections.push("**Remediation Notes**");
-    sections.push(ticket.remediation_notes);
-  }
-
-  sections.push("");
-  sections.push("---");
-  sections.push("*Created by [CodeClarity](https://codeclarity.io)*");
-
-  return sections.join("\n");
 }
