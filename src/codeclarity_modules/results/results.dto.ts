@@ -50,13 +50,17 @@ export class ResultsQueryDto {
   @IsOptional()
   @IsInt()
   @Min(0)
-  @Transform(({ value }) => (value ? parseInt(value as string, 10) : 0))
+  @Transform(({ value }) => (value ? parseInt(value as string, 10) : 0), {
+    toClassOnly: true,
+  })
   page?: number;
 
   @IsOptional()
   @IsInt()
   @Min(0)
-  @Transform(({ value }) => (value ? parseInt(value as string, 10) : 0))
+  @Transform(({ value }) => (value ? parseInt(value as string, 10) : 0), {
+    toClassOnly: true,
+  })
   entries_per_page?: number;
 
   @IsOptional()

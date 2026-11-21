@@ -15,13 +15,13 @@ export class DashboardQueryOptions {
   endDate?: Date;
   @IsOptional()
   @IsString({ each: true })
-  @Transform(({ value }: { value: unknown }) => {
-    if (Array.isArray(value)) {
-      return value as string[];
-    } else {
-      return [value as string];
-    }
-  })
+  @Transform(
+    ({ value }: { value: unknown }) => {
+      if (value === undefined || value === null) return undefined;
+      return Array.isArray(value) ? (value as string[]) : [value as string];
+    },
+    { toClassOnly: true },
+  )
   integrationIds?: string[];
 }
 

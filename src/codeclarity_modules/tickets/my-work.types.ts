@@ -15,7 +15,9 @@ export const MAX_MY_WORK_LIMIT = 100;
 export class MyWorkQuery {
   /** How many entries, most pressing first */
   @IsOptional()
-  @Transform(({ value }: { value: string }) => parseInt(value, 10))
+  @Transform(({ value }: { value: string }) => parseInt(value, 10), {
+    toClassOnly: true,
+  })
   @IsInt()
   @Min(1)
   @Max(MAX_MY_WORK_LIMIT)
