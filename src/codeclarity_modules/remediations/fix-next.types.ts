@@ -12,7 +12,9 @@ export const MAX_FIX_NEXT_LIMIT = 50;
 export class FixNextQuery {
   /** How many entries, most urgent first */
   @IsOptional()
-  @Transform(({ value }: { value: string }) => parseInt(value, 10))
+  @Transform(({ value }: { value: string }) => parseInt(value, 10), {
+    toClassOnly: true,
+  })
   @IsInt()
   @Min(1)
   @Max(MAX_FIX_NEXT_LIMIT)
