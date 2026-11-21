@@ -136,10 +136,13 @@ export class UpdateTicketBody {
   @IsString()
   remediation_notes?: string;
 
-  @ApiPropertyOptional({ description: "Due date for the ticket" })
+  @ApiPropertyOptional({
+    description: "Due date for the ticket; null clears it",
+    nullable: true,
+  })
   @IsOptional()
   @IsDateString()
-  due_date?: string;
+  due_date?: string | null;
 }
 
 export class BulkUpdateTicketsBody {

@@ -187,7 +187,7 @@ export class Ticket {
   @ApiProperty()
   @Expose()
   @Column("timestamptz", { nullable: true })
-  due_date?: Date | undefined;
+  due_date?: Date | null | undefined;
 
   @ApiProperty({
     description: "External status from linked provider (e.g., ClickUp)",

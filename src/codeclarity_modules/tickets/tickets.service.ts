@@ -876,7 +876,8 @@ export class TicketsService {
           performed_by: performer,
           created_on: now,
         });
-        ticket.due_date = newDueDate;
+        // Null rather than undefined, so save clears the column.
+        ticket.due_date = newDueDate ?? null;
       }
     }
 
@@ -1291,7 +1292,7 @@ export class TicketsService {
       created_on: ticket.created_on,
       updated_on: ticket.updated_on,
       resolved_on: ticket.resolved_on,
-      due_date: ticket.due_date,
+      due_date: ticket.due_date ?? undefined,
       project_id: ticket.project?.id || "",
       project_name: ticket.project?.name || "",
       created_by_id: ticket.created_by?.id || "",

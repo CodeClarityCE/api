@@ -234,6 +234,25 @@ describe("Service level targets and due dates (e2e)", () => {
       expect(await dueDateOf(qs)).toEqual(new Date("2027-01-15T00:00:00.000Z"));
     });
 
+    it("can be changed and cleared after the default is set", async () => {
+      await setTargets({ service_level_targets_enabled: true });
+      const projectId = await seedProject();
+      const qs = await fromRemediation(projectId, "force_version", "qs");
+      const update = (due_date: string | null) =>
+        testHelper.makeAuthenticatedRequest(
+          "PATCH",
+          `/org/${user.organization.id}/tickets/${qs}`,
+          user.accessToken,
+          { due_date },
+        );
+
+      expect((await update("2027-03-01T00:00:00.000Z")).statusCode).toBe(200);
+      expect(await dueDateOf(qs)).toEqual(new Date("2027-03-01T00:00:00.000Z"));
+
+      expect((await update(null)).statusCode).toBe(200);
+      expect(await dueDateOf(qs)).toBeNull();
+    });
+
     it("also default on a ticket created for one vulnerability", async () => {
       await setTargets({
         service_level_targets_enabled: true,
