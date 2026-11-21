@@ -310,6 +310,10 @@ export interface TicketDashboardStats {
   total_in_progress: number;
   total_resolved_this_week: number;
   total_closed: number;
+  /** Open or in-progress tickets whose due date has passed */
+  total_overdue: number;
+  /** Open or in-progress tickets due within the next seven days */
+  total_due_this_week: number;
   by_priority: {
     critical: number;
     high: number;

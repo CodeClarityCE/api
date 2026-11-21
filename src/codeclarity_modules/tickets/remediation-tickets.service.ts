@@ -18,6 +18,7 @@ import { RemediationsService } from "src/codeclarity_modules/remediations/remedi
 import type { TopLevelDependency } from "src/codeclarity_modules/vulnerability_instances/top-level-paths";
 import { EntityNotFound } from "src/types/error.types";
 
+import { dueDateFor, targetsOf } from "./service-level-targets";
 import {
   Ticket,
   TicketPriority,
@@ -235,7 +236,12 @@ export class RemediationTicketsService {
           package_manager: remediation.package_manager,
           remediation_command: remediation.command,
           remediation_manifest_edit: remediation.manifest_edit,
-          due_date: body.due_date ? new Date(body.due_date) : undefined,
+          due_date: dueDateFor(
+            body.due_date,
+            targetsOf(organization),
+            worst.severity_class,
+            now,
+          ),
           created_on: now,
           project,
           organization,
