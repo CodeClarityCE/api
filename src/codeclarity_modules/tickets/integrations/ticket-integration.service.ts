@@ -8,6 +8,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 
 import { Ticket, TicketStatus } from "../ticket.entity";
+import { TicketContentService } from "../ticket-content.service";
 import { TicketEvent, TicketEventType } from "../ticket-event.entity";
 import {
   ExternalTicketProvider,
@@ -55,6 +56,7 @@ export class TicketIntegrationService {
     private readonly eventRepository: Repository<TicketEvent>,
     @InjectRepository(Ticket, "codeclarity")
     private readonly ticketRepository: Repository<Ticket>,
+    private readonly ticketContent: TicketContentService,
   ) {}
 
   /**
@@ -638,6 +640,7 @@ export class TicketIntegrationService {
     const providerInstance = this.getProvider(provider);
     const result = await providerInstance.createExternalTicket(
       ticket,
+      await this.ticketContent.bodyOf(ticket),
       config.config,
     );
 
@@ -724,6 +727,7 @@ export class TicketIntegrationService {
     const providerInstance = this.getProvider(externalLink.provider);
     await providerInstance.updateExternalTicket(
       ticket,
+      await this.ticketContent.bodyOf(ticket),
       externalLink.external_id,
       config.config,
     );

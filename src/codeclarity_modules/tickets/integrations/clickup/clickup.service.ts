@@ -15,7 +15,6 @@ import {
   ExternalSpace,
   ExternalTicketResult,
   ExternalWorkspace,
-  formatTicketDescription,
   ITicketIntegrationProvider,
   OAuthTokenResponse,
 } from "../integration-provider.interface";
@@ -409,6 +408,7 @@ export class ClickUpService implements ITicketIntegrationProvider {
 
   async createExternalTicket(
     ticket: Ticket,
+    body: string,
     config: IntegrationConfig,
   ): Promise<ExternalTicketResult> {
     const clickUpConfig = config as ClickUpConfig;
@@ -417,11 +417,10 @@ export class ClickUpService implements ITicketIntegrationProvider {
       ticket.priority,
       clickUpConfig.priority_mapping,
     );
-    const description = formatTicketDescription(ticket);
 
     const taskData: ClickUpCreateTaskRequest = {
       name: ticket.title,
-      markdown_description: description,
+      markdown_description: body,
       priority,
       tags: this.buildTags(ticket),
       notify_all: false,
@@ -449,6 +448,7 @@ export class ClickUpService implements ITicketIntegrationProvider {
 
   async updateExternalTicket(
     ticket: Ticket,
+    body: string,
     externalId: string,
     config: IntegrationConfig,
   ): Promise<void> {
@@ -458,11 +458,10 @@ export class ClickUpService implements ITicketIntegrationProvider {
       ticket.priority,
       clickUpConfig.priority_mapping,
     );
-    const description = formatTicketDescription(ticket);
 
     const updateData: ClickUpUpdateTaskRequest = {
       name: ticket.title,
-      markdown_description: description,
+      markdown_description: body,
       priority,
     };
 
