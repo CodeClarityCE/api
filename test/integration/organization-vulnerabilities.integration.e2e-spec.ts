@@ -183,6 +183,27 @@ describe("Organization vulnerability list (e2e)", () => {
     ]);
   });
 
+  it("keeps the previous analysis current when a newer one has no vulnerability results", async () => {
+    const api = await seed.project("api");
+    await seed.analysis({
+      projectId: api,
+      age: "1 day",
+      workspaces: {
+        ".": { findings: [{ id: "CVE-2024-0001", dependency: "lodash" }] },
+      },
+    });
+    await seed.analysis({
+      projectId: api,
+      vulnResults: false,
+      workspaces: { ".": { findings: [] } },
+    });
+    await seed.store();
+
+    expect(counts(await list())).toEqual([
+      { id: "CVE-2024-0001", projects: 1, instances: 1 },
+    ]);
+  });
+
   it("drops an analysis's instances when the analysis is deleted", async () => {
     const api = await seed.project("api");
     const web = await seed.project("web");

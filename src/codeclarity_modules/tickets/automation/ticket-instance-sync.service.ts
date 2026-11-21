@@ -5,6 +5,7 @@ import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialE
 import type { Remediation } from "src/codeclarity_modules/remediations/remediation.types";
 import { RemediationsService } from "src/codeclarity_modules/remediations/remediations.service";
 import { currentAnalysesSql } from "src/codeclarity_modules/vulnerability_instances/current-analysis";
+import { severityRank } from "src/codeclarity_modules/vulnerability_instances/organization-vulnerabilities.types";
 import { shownSql } from "src/codeclarity_modules/vulnerability_instances/organization-vulnerability-filters";
 import type { TopLevelDependency } from "src/codeclarity_modules/vulnerability_instances/top-level-paths";
 import {
@@ -51,8 +52,6 @@ interface CurrentInstance {
   top_level_dependencies: TopLevelDependency[];
 }
 
-const SEVERITY_ORDER = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "NONE"];
-
 // The key an instance keeps from one analysis to the next.
 const keyOf = (i: {
   workspace: string;
@@ -79,11 +78,7 @@ const snapshotOf = (
   top_level_dependencies: i.top_level_dependencies,
 });
 
-/**
- * Keeps each open ticket's instances in step with its project's current
- * analysis (ADR 0016) and, when the organization turned auto-resolve on,
- * resolves tickets with no instance left.
- */
+/** Keeps open tickets' instances in step with the current analysis (ADR 0016) and auto-resolves emptied ones when enabled. */
 @Injectable()
 export class TicketInstanceSync implements OnModuleInit {
   private readonly logger = CodeClarityLogger.forService("TicketInstanceSync");
@@ -283,8 +278,7 @@ export class TicketInstanceSync implements OnModuleInit {
   ): Promise<void> {
     const worst = [...active].sort(
       (a, b) =>
-        SEVERITY_ORDER.indexOf(a.severity_class) -
-          SEVERITY_ORDER.indexOf(b.severity_class) ||
+        severityRank(b.severity_class) - severityRank(a.severity_class) ||
         (b.severity_score ?? -1) - (a.severity_score ?? -1),
     )[0];
     const changes: QueryDeepPartialEntity<Ticket> = {};

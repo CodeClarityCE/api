@@ -148,6 +148,8 @@ export class OrganizationsService {
       role: membership.role,
       joined_on: membership.joined_on,
       number_of_members: number_of_members,
+      // The days the settings page suggests, so the frontend keeps no copy.
+      suggested_service_level_targets: DEFAULT_SERVICE_LEVEL_TARGETS,
     };
     return organizationInfo;
   }

@@ -78,10 +78,8 @@ export function fixesAbove(
 }
 
 /**
- * The smallest fixed version above `installed` that no range covers, from
- * the ranges the knowledge sources give its package and the fixed version its
- * instance stored; null when no fix is known. Later majors are larger, so it
- * is in the current major whenever that major has a fix.
+ * The smallest fixed version above `installed` that no range covers; null when none is known.
+ * Later majors are larger, so it stays in the current major when that major has a fix.
  */
 export function smallestFix(
   installed: string,

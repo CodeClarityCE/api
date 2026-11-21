@@ -126,6 +126,10 @@ export class Analysis {
   @Column("timestamptz", { nullable: true })
   vulnerability_instances_stored_on?: Date | null;
 
+  /** Whether those rows came from a vuln-finder result */
+  @Column("boolean", { default: false })
+  vulnerability_instances_have_results?: boolean;
+
   // Foreign keys
   @ManyToMany(() => Policy, (policy) => policy.analyses)
   policies!: Relation<Policy[]>;

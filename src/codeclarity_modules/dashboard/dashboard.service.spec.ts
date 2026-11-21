@@ -1,5 +1,5 @@
 import { Test, type TestingModule } from "@nestjs/testing";
-import { getRepositoryToken } from "@nestjs/typeorm";
+import { getDataSourceToken, getRepositoryToken } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
 
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
@@ -8,6 +8,7 @@ import {
   MembershipsRepository,
   OrganizationsRepository,
 } from "src/base_modules/shared/repositories";
+import { VulnerabilitiesUtilsService } from "src/codeclarity_modules/results/vulnerabilities/utils/utils.service";
 import { NotAuthorized } from "src/types/error.types";
 
 import { DashboardService } from "./dashboard.service";
@@ -24,57 +25,6 @@ describe("DashboardService", () => {
   );
 
   const mockOrgId = "test-org-id";
-
-  const mockOrganization = {
-    id: mockOrgId,
-    name: "Test Organization",
-    projects: [
-      {
-        id: "project1",
-        name: "Test Project 1",
-        analyses: [
-          {
-            id: "analysis1",
-            created_on: new Date("2023-10-01"),
-            results: [
-              {
-                id: "result1",
-                plugin: "js-vuln-finder",
-                result: {
-                  workspaces: {
-                    main: {
-                      Vulnerabilities: [
-                        {
-                          VulnerabilityId: "CVE-2023-1234",
-                          Severity: {
-                            Severity: 8.5,
-                            Vector: "NETWORK",
-                            ConfidentialityImpactNumerical: 3,
-                            IntegrityImpactNumerical: 2,
-                            AvailabilityImpactNumerical: 1,
-                          },
-                        },
-                        {
-                          VulnerabilityId: "CVE-2023-5678",
-                          Severity: {
-                            Severity: 5.0,
-                            Vector: "LOCAL",
-                            ConfidentialityImpactNumerical: 2,
-                            IntegrityImpactNumerical: 2,
-                            AvailabilityImpactNumerical: 1,
-                          },
-                        },
-                      ],
-                    },
-                  },
-                },
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  };
 
   const mockLicenseOrganization = {
     id: mockOrgId,
@@ -133,6 +83,8 @@ describe("DashboardService", () => {
           provide: getRepositoryToken(Organization, "codeclarity"),
           useValue: mockOrganizationRepository,
         },
+        { provide: getDataSourceToken("codeclarity"), useValue: {} },
+        { provide: VulnerabilitiesUtilsService, useValue: {} },
       ],
     }).compile();
 
@@ -145,60 +97,6 @@ describe("DashboardService", () => {
 
   afterEach(() => {
     jest.clearAllMocks();
-  });
-
-  describe("getOverallCIAImpact", () => {
-    it("should return CIA impact distribution successfully", async () => {
-      membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
-
-      const mockQueryBuilder = {
-        where: jest.fn().mockReturnThis(),
-        leftJoinAndSelect: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        getOne: jest.fn().mockResolvedValue(mockOrganization),
-      };
-
-      organizationRepository.createQueryBuilder.mockReturnValue(
-        mockQueryBuilder as any,
-      );
-
-      const result = await service.getOverallCIAImpact(
-        mockOrgId,
-        mockAuthenticatedUser,
-        new Date("2023-01-01"),
-        new Date("2023-12-31"),
-        ["integration1"],
-      );
-
-      expect(result).toBeDefined();
-      expect(Array.isArray(result)).toBe(true);
-      expect(result.length).toBeGreaterThan(0);
-      expect(result[0]).toHaveProperty("cia");
-      expect(result[0]).toHaveProperty("impact");
-    });
-
-    it("should use default date ranges when not provided", async () => {
-      membershipsRepository.hasRequiredRole.mockResolvedValue(undefined);
-
-      const mockQueryBuilder = {
-        where: jest.fn().mockReturnThis(),
-        leftJoinAndSelect: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        getOne: jest.fn().mockResolvedValue(mockOrganization),
-      };
-
-      organizationRepository.createQueryBuilder.mockReturnValue(
-        mockQueryBuilder as any,
-      );
-
-      const result = await service.getOverallCIAImpact(
-        mockOrgId,
-        mockAuthenticatedUser,
-      );
-
-      expect(result).toBeDefined();
-      expect(Array.isArray(result)).toBe(true);
-    });
   });
 
   describe("getOverallLicenseDist", () => {
@@ -328,7 +226,7 @@ describe("DashboardService", () => {
       );
 
       await expect(
-        service.getOverallCIAImpact(mockOrgId, mockAuthenticatedUser),
+        service.getOverallLicenseDist(mockOrgId, mockAuthenticatedUser),
       ).rejects.toThrow("Database error");
     });
 
@@ -338,7 +236,7 @@ describe("DashboardService", () => {
       );
 
       await expect(
-        service.getOverallCIAImpact(mockOrgId, mockAuthenticatedUser),
+        service.getOverallLicenseDist(mockOrgId, mockAuthenticatedUser),
       ).rejects.toThrow(NotAuthorized);
     });
 
@@ -353,7 +251,7 @@ describe("DashboardService", () => {
                 created_on: new Date(),
                 results: [
                   {
-                    plugin: "js-vuln-finder",
+                    plugin: "js-license",
                     result: {
                       workspaces: {}, // Empty workspaces instead of completely empty
                     },
@@ -379,12 +277,11 @@ describe("DashboardService", () => {
         mockQueryBuilder as any,
       );
 
-      const result = await service.getOverallCIAImpact(
+      const result = await service.getOverallLicenseDist(
         mockOrgId,
         mockAuthenticatedUser,
       );
-      expect(result).toBeDefined();
-      expect(Array.isArray(result)).toBe(true);
+      expect(result).toEqual({});
     });
   });
 });

@@ -1,6 +1,6 @@
 import { isHighEpss } from "src/codeclarity_modules/knowledge/epss/epss-threshold";
 import type { SeverityClass } from "src/codeclarity_modules/results/utils/utils";
-import { SEVERITY_ORDER } from "src/codeclarity_modules/vulnerability_instances/organization-vulnerabilities.types";
+import { severityRank } from "src/codeclarity_modules/vulnerability_instances/organization-vulnerabilities.types";
 
 /** What the Fix next rank reads from one resolved vulnerability instance. */
 export interface RankedInstance {
@@ -25,15 +25,11 @@ export interface FixNextRank {
   instance_count: number;
 }
 
-/** Higher is worse. */
-export const severityWeight = (severity: SeverityClass): number =>
-  SEVERITY_ORDER.length - SEVERITY_ORDER.indexOf(severity);
-
 /** The rank of a change that resolves these instances. */
 export function fixNextRank(instances: RankedInstance[]): FixNextRank {
   let severity: SeverityClass = "NONE";
   for (const instance of instances) {
-    if (severityWeight(instance.severity_class) > severityWeight(severity)) {
+    if (severityRank(instance.severity_class) > severityRank(severity)) {
       severity = instance.severity_class;
     }
   }
@@ -54,7 +50,7 @@ export function compareFixNextRank(a: FixNextRank, b: FixNextRank): number {
   const urgent = (rank: FixNextRank): number =>
     rank.known_exploited || rank.high_epss ? 1 : 0;
   return (
-    severityWeight(b.severity_class) - severityWeight(a.severity_class) ||
+    severityRank(b.severity_class) - severityRank(a.severity_class) ||
     urgent(b) - urgent(a) ||
     Number(b.prod) - Number(a.prod) ||
     b.instance_count - a.instance_count

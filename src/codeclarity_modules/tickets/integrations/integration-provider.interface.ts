@@ -93,26 +93,14 @@ export interface ITicketIntegrationProvider {
    */
   testConnection(config: IntegrationConfig): Promise<ConnectionTestResult>;
 
-  /**
-   * Create a ticket in the external system
-   * @param ticket The CodeClarity ticket to create externally
-   * @param body The Markdown body of the external ticket
-   * @param config The integration configuration
-   * @returns The external ticket ID and URL
-   */
+  /** Creates the ticket in the external system with this Markdown body; returns its id and URL. */
   createExternalTicket(
     ticket: Ticket,
     body: string,
     config: IntegrationConfig,
   ): Promise<ExternalTicketResult>;
 
-  /**
-   * Update a ticket in the external system
-   * @param ticket The updated CodeClarity ticket
-   * @param body The Markdown body of the external ticket
-   * @param externalId The external ticket ID
-   * @param config The integration configuration
-   */
+  /** Updates the external ticket `externalId` with the ticket and this Markdown body. */
   updateExternalTicket(
     ticket: Ticket,
     body: string,

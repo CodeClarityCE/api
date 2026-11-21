@@ -71,9 +71,8 @@ function linkLines(links: InstanceDiffLinks | undefined): string[] {
 }
 
 /**
- * The remediation in Markdown: the change, every vulnerability it resolves
- * with versions, paths and links, then the manifest edit and command.
- * Both the ticket description and the external issue body use it.
+ * The remediation in Markdown (change, resolved vulnerabilities, manifest edit, command),
+ * shared by the ticket description and the external issue.
  */
 export function remediationMarkdown(
   remediation: BodyRemediation,

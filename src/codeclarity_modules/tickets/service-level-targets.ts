@@ -51,7 +51,7 @@ export const DUE_SOON_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Where a ticket stands against its due date. */
-export type DeadlineState = "overdue" | "due_soon" | "on_track" | "none";
+export type DueDateState = "overdue" | "due_soon" | "on_track" | "none";
 
 /** The due date a new ticket of this severity gets, or undefined when none applies. */
 export function defaultDueDate(
@@ -68,10 +68,10 @@ export function defaultDueDate(
 }
 
 /** Overdue once the due date has passed, due soon within the next seven days. */
-export function deadlineState(
+export function dueDateState(
   dueDate: Date | null | undefined,
   now: Date,
-): DeadlineState {
+): DueDateState {
   if (!dueDate) return "none";
   const left = dueDate.getTime() - now.getTime();
   if (left < 0) return "overdue";

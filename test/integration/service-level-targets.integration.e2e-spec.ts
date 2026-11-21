@@ -80,6 +80,22 @@ describe("Service level targets and due dates (e2e)", () => {
       });
     });
 
+    it("returns the suggested days with the organization, whatever it set", async () => {
+      expect(
+        (await setTargets({ service_level_targets: { high: 14 } })).statusCode,
+      ).toBe(200);
+
+      expect(await organization()).toMatchObject({
+        service_level_targets: { critical: 7, high: 14, medium: 90, low: null },
+        suggested_service_level_targets: {
+          critical: 7,
+          high: 30,
+          medium: 90,
+          low: null,
+        },
+      });
+    });
+
     it("lets an admin enable it and edit the days", async () => {
       const response = await setTargets({
         service_level_targets_enabled: true,

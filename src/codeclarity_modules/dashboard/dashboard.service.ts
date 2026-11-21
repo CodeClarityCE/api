@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { InjectDataSource, InjectRepository } from "@nestjs/typeorm";
+import { DataSource, Repository } from "typeorm";
 
 import { Analysis } from "src/base_modules/analyses/analysis.entity";
 import { SUCCEEDED_ANALYSIS_STATUSES } from "src/base_modules/analyses/analysis-outcome";
@@ -14,16 +14,16 @@ import {
   LicenseDist,
   Output as SbomOutput,
 } from "src/codeclarity_modules/results/sbom/sbom.types";
-import { shownByDefault } from "src/codeclarity_modules/results/vulnerabilities/utils/instance-status";
+import { VulnerabilitiesUtilsService } from "src/codeclarity_modules/results/vulnerabilities/utils/utils.service";
 import {
-  Output as VulnsOutput,
-  Vulnerability,
-} from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
+  type Bind,
+  matchingInstancesSql,
+  shownSql,
+} from "src/codeclarity_modules/vulnerability_instances/organization-vulnerability-filters";
 
 // Every dashboard endpoint defaults to the same period, so their numbers agree.
 const DEFAULT_PERIOD_MONTHS = 2;
 
-const VULN_PLUGINS = ["vuln-finder", "js-vuln-finder"];
 const LICENSE_PLUGINS = ["license-finder", "js-license"];
 
 // Native Date API utility functions
@@ -46,6 +46,8 @@ export class DashboardService {
     private readonly membershipsRepository: MembershipsRepository,
     @InjectRepository(Organization, "codeclarity")
     private organizationRepository: Repository<Organization>,
+    @InjectDataSource("codeclarity") private readonly dataSource: DataSource,
+    private readonly vulnerabilitiesUtils: VulnerabilitiesUtilsService,
   ) {}
 
   /**
@@ -101,32 +103,10 @@ export class DashboardService {
     return latest;
   }
 
-  /** The findings default views show in the given results, workspace by workspace. */
-  private findings(latest: LatestResult[]): Vulnerability[] {
-    return latest.flatMap(({ result }) => {
-      const output = result.result as unknown as VulnsOutput;
-      return Object.values(output.workspaces ?? {}).flatMap((workspace) =>
-        shownByDefault(workspace.Vulnerabilities ?? []),
-      );
-    });
-  }
-
-  /**
-   * Returns the cia impact of each project's latest completed analysis in the date range
-   * @throws {NotAuthorized} if the user is not authorized to retrieve this information
-   *
-   * @param orgId The the id of the organization for which the get the stats
-   * @param user The authenticated user
-   * @param dateRangeStart The start date at which to start collecting stats from analyses (Optional, defaults to two months back)
-   * @param dateRangeEnd The end date at which to stop collecting stats from analyses (Optional, defaults to today)
-   * @param integrationIds For which integrations to collect the stats
-   */
+  /** The CIA impact of every shown instance in each project's current analysis. */
   async getOverallCIAImpact(
     orgId: string,
     user: AuthenticatedUser,
-    dateRangeStart?: Date,
-    dateRangeEnd?: Date,
-    _integrationIds?: string[],
   ): Promise<CIAImpact[]> {
     await this.membershipsRepository.hasRequiredRole(
       orgId,
@@ -134,24 +114,70 @@ export class DashboardService {
       MemberRole.USER,
     );
 
-    const latest = await this.getLatestResults(
-      orgId,
-      VULN_PLUGINS,
-      dateRangeStart,
-      dateRangeEnd,
+    const params: unknown[] = [orgId];
+    const bind: Bind = (value) => {
+      params.push(value);
+      return `$${params.length}`;
+    };
+    const shown: {
+      analysis_id: string;
+      workspace: string;
+      analysis_vulnerability_id: string;
+      package: string;
+      installed_version: string;
+    }[] = await this.dataSource.query(
+      `SELECT i."analysisId" AS analysis_id, i.workspace,
+              i.analysis_vulnerability_id, i.package, i.installed_version
+       FROM (${matchingInstancesSql("$1", {}, bind)}) i
+       WHERE ${shownSql({})}`,
+      params,
+    );
+    const key = (...parts: string[]): string => parts.join("\u0000");
+    // Instances not counted yet; each is counted once, as its row is.
+    const pending = new Set(
+      shown.map((i) =>
+        key(
+          i.analysis_id,
+          i.workspace,
+          i.analysis_vulnerability_id,
+          i.package,
+          i.installed_version,
+        ),
+      ),
     );
 
-    return this.findings(latest).flatMap((vuln) => [
-      {
-        cia: "Confidentiality",
-        impact: vuln.Severity.ConfidentialityImpactNumerical,
-      },
-      { cia: "Integrity", impact: vuln.Severity.IntegrityImpactNumerical },
-      {
-        cia: "Availability",
-        impact: vuln.Severity.AvailabilityImpactNumerical,
-      },
-    ]);
+    const impacts: CIAImpact[] = [];
+    for (const analysisId of new Set(shown.map((i) => i.analysis_id))) {
+      const output = await this.vulnerabilitiesUtils.getVulnsResult(analysisId);
+      for (const [workspace, data] of Object.entries(output.workspaces ?? {})) {
+        for (const vuln of data.Vulnerabilities ?? []) {
+          const found = key(
+            analysisId,
+            workspace,
+            vuln.VulnerabilityId,
+            vuln.AffectedDependency,
+            vuln.AffectedVersion ?? "",
+          );
+          if (!pending.has(found)) continue;
+          pending.delete(found);
+          impacts.push(
+            {
+              cia: "Confidentiality",
+              impact: vuln.Severity.ConfidentialityImpactNumerical,
+            },
+            {
+              cia: "Integrity",
+              impact: vuln.Severity.IntegrityImpactNumerical,
+            },
+            {
+              cia: "Availability",
+              impact: vuln.Severity.AvailabilityImpactNumerical,
+            },
+          );
+        }
+      }
+    }
+    return impacts;
   }
 
   /**

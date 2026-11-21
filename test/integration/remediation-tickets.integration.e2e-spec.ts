@@ -216,6 +216,52 @@ describe("Tickets from remediations (e2e)", () => {
     );
   });
 
+  const QS_GHSA = "GHSA-qsqs-7101-test";
+
+  // A project installing qs through express, whose finding's OSV record aliases a GHSA id.
+  const seedAliasedProject = async (): Promise<string> => {
+    const projectId = await seed.project("api");
+    await seed.analysis({
+      projectId,
+      workspaces: {
+        ".": {
+          topLevel: ["express@4.17.0"],
+          packages: { "express@4.17.0": ["qs@6.5.0"] },
+          findings: [
+            {
+              ...finding(QS_CVE, "qs", "6.5.0", "6.5.3", 9.8),
+              osvAliases: [QS_GHSA],
+            },
+          ],
+        },
+      },
+    });
+    await seed.store();
+    return projectId;
+  };
+
+  // A one-vulnerability ticket made the way the API did before remediations.
+  const createLegacyTicket = async (
+    projectId: string,
+    vulnerabilityId: string,
+  ): Promise<string> => {
+    const response = await testHelper.makeAuthenticatedRequest(
+      "POST",
+      `/org/${user.organization.id}/tickets`,
+      user.accessToken,
+      {
+        title: `Fix ${vulnerabilityId}`,
+        description: "One vulnerability",
+        priority: "HIGH",
+        type: "VULNERABILITY",
+        project_id: projectId,
+        vulnerability_id: vulnerabilityId,
+      },
+    );
+    expect(response.statusCode).toBe(201);
+    return response.json().id as string;
+  };
+
   describe("duplicate detection", () => {
     const createdId = async (
       projectId: string,
@@ -244,6 +290,22 @@ describe("Tickets from remediations (e2e)", () => {
         },
       });
       expect(await ticketCount()).toBe(1);
+    });
+
+    it("warns about an open one-vulnerability ticket of a vulnerability or alias the remediation resolves", async () => {
+      const projectId = await seedAliasedProject();
+      const legacy = await createLegacyTicket(projectId, QS_GHSA.toLowerCase());
+
+      const response = await create(projectId, QS_FORCE);
+      expect(response.json().data).toEqual({
+        created: false,
+        ticket_id: null,
+        duplicate: {
+          ticket_id: legacy,
+          title: `Fix ${QS_GHSA.toLowerCase()}`,
+          status: "OPEN",
+        },
+      });
     });
 
     it("still matches once the remediation's target version has moved", async () => {
@@ -365,6 +427,15 @@ describe("Tickets from remediations (e2e)", () => {
       expect(await ticketsInFixNext()).toEqual([
         ["qs", { id: result.ticket_id, status: "OPEN" }],
         ["lodash", null],
+      ]);
+    });
+
+    it("shows a one-vulnerability ticket of an alias the remediation resolves", async () => {
+      const projectId = await seedAliasedProject();
+      const legacy = await createLegacyTicket(projectId, QS_GHSA);
+
+      expect(await ticketsInFixNext()).toEqual([
+        ["qs", { id: legacy, status: "OPEN" }],
       ]);
     });
 

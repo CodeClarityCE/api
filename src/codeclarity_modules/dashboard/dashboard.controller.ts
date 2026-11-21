@@ -33,16 +33,11 @@ export class DashboardController {
   async getOverallCIAImpact(
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") orgId: string,
-    @Query() queryParams: GetOverallCIADistQueryOptions,
+    // Accepted for older clients; the current analyses need no period.
+    @Query() _queryParams: GetOverallCIADistQueryOptions,
   ): Promise<TypedResponse<CIAImpact[]>> {
     return {
-      data: await this.dashboardService.getOverallCIAImpact(
-        orgId,
-        user,
-        queryParams.startDate,
-        queryParams.endDate,
-        queryParams.integrationIds,
-      ),
+      data: await this.dashboardService.getOverallCIAImpact(orgId, user),
     };
   }
 

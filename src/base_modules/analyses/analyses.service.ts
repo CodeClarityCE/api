@@ -322,11 +322,8 @@ export class AnalysesService {
   }
 
   /**
-   * Submits a new analysis of the project with the analyzer, configuration,
-   * branch and tag of its last default-branch analysis, on the branch head.
-   * @throws {NotAuthorized} if the user is not a member of the organization
-   * @throws {EntityNotFound} if the project has no analysis to repeat
-   * @returns The ID of the created analysis
+   * Submits the project's last default-branch analysis again, on the branch head; returns the new analysis id.
+   * Throws NotAuthorized for non-members and EntityNotFound when there is nothing to repeat.
    */
   async reanalyse(
     orgId: string,

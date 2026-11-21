@@ -10,10 +10,8 @@ import {
   ProjectsRepository,
   UsersRepository,
 } from "src/base_modules/shared/repositories";
-import {
-  type Remediation,
-  RemediationKind,
-} from "src/codeclarity_modules/remediations/remediation.types";
+import type { Remediation } from "src/codeclarity_modules/remediations/remediation.types";
+import { trackedIds } from "src/codeclarity_modules/remediations/remediation-tickets";
 import { RemediationsService } from "src/codeclarity_modules/remediations/remediations.service";
 import { InstanceDiffLinksService } from "src/codeclarity_modules/vulnerability_instances/instance-diff-links.service";
 import type { TopLevelDependency } from "src/codeclarity_modules/vulnerability_instances/top-level-paths";
@@ -40,13 +38,6 @@ export const OPEN_TICKET_STATUSES = [
   TicketStatus.OPEN,
   TicketStatus.IN_PROGRESS,
 ];
-
-/** What identifies a remediation within a project; its target version can change. */
-export interface RemediationIdentity {
-  kind: RemediationKind;
-  workspace: string;
-  package: string;
-}
 
 // The instance row fields a remediation instance does not carry.
 interface InstanceExtras {
@@ -80,21 +71,40 @@ export class RemediationTicketsService {
     private readonly ticketRepository: Repository<Ticket>,
   ) {}
 
-  /** The open ticket of the project that tracks this remediation, if any. */
+  /** The project's open ticket of this remediation, else an open one-vulnerability ticket of an id it resolves. */
   async openTicketOf(
     projectId: string,
-    remediation: RemediationIdentity,
+    remediation: Pick<
+      Remediation,
+      "kind" | "workspace" | "package" | "instances"
+    >,
   ): Promise<DuplicateTicket | null> {
-    const existing = await this.ticketRepository.findOne({
-      where: {
-        project: { id: projectId },
-        remediation_kind: remediation.kind,
-        remediation_workspace: remediation.workspace,
-        remediation_package: remediation.package,
-        status: In(OPEN_TICKET_STATUSES),
-      },
-      order: { created_on: "ASC" },
-    });
+    const open = {
+      project: { id: projectId },
+      status: In(OPEN_TICKET_STATUSES),
+    };
+    const existing =
+      (await this.ticketRepository.findOne({
+        where: {
+          ...open,
+          remediation_kind: remediation.kind,
+          remediation_workspace: remediation.workspace,
+          remediation_package: remediation.package,
+        },
+        order: { created_on: "ASC" },
+      })) ??
+      (await this.ticketRepository
+        .createQueryBuilder("t")
+        .where(`t."projectId" = :projectId`, { projectId })
+        .andWhere("t.status IN (:...statuses)", {
+          statuses: OPEN_TICKET_STATUSES,
+        })
+        .andWhere("t.remediation_kind IS NULL")
+        .andWhere("upper(t.vulnerability_id) IN (:...ids)", {
+          ids: trackedIds(remediation.instances),
+        })
+        .orderBy("t.created_on", "ASC")
+        .getOne());
     return existing
       ? {
           ticket_id: existing.id,
@@ -105,9 +115,8 @@ export class RemediationTicketsService {
   }
 
   /**
-   * Creates a ticket from one remediation of the project's current analysis,
-   * prefilled with its instances, paths and command. When an open ticket
-   * already tracks it, returns that one instead unless `allow_duplicate`.
+   * Creates a prefilled ticket from one current remediation, or returns the open ticket that already tracks it
+   * unless `allow_duplicate`.
    */
   async create(
     orgId: string,
