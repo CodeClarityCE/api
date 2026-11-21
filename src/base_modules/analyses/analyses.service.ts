@@ -38,7 +38,10 @@ import {
 } from "src/types/pagination.types";
 import { AnalysisStartMessageCreate } from "src/types/rabbitMqMessages.types";
 
-import { AnaylzerMissingConfigAttribute } from "../analyzers/analyzers.errors";
+import {
+  AnalyzerDoesNotExist,
+  AnaylzerMissingConfigAttribute,
+} from "../analyzers/analyzers.errors";
 import { AnalyzersRepository } from "../analyzers/analyzers.repository";
 import { PluginAvailabilityService } from "../plugin-availability/plugin-availability.service";
 import {
@@ -316,6 +319,37 @@ export class AnalysesService {
 
     // Return the ID of the created analysis as a confirmation
     return created_analysis.id;
+  }
+
+  /**
+   * Submits the project's last default-branch analysis again, on the branch head; returns the new analysis id.
+   * Throws NotAuthorized for non-members and EntityNotFound when there is nothing to repeat.
+   */
+  async reanalyse(
+    orgId: string,
+    projectId: string,
+    user: AuthenticatedUser,
+  ): Promise<string> {
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.USER,
+    );
+    await this.projectsRepository.doesProjectBelongToOrg(projectId, orgId);
+    const previous =
+      await this.analysesRepository.getLastDefaultBranchAnalysis(projectId);
+    if (!previous.analyzer) throw new AnalyzerDoesNotExist();
+    return this.create(
+      orgId,
+      projectId,
+      {
+        analyzer_id: previous.analyzer.id,
+        config: previous.config,
+        branch: previous.branch,
+        ...(previous.tag ? { tag: previous.tag } : {}),
+      },
+      user,
+    );
   }
 
   /**

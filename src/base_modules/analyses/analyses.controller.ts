@@ -68,6 +68,26 @@ export class AnalysesController {
   }
 
   @ApiTags("Analyses")
+  @ApiOperation({
+    description:
+      "Analyse the project again with the configuration of its last default-branch analysis.",
+  })
+  @APIDocCreatedResponseDecorator()
+  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
+  @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
+  @ApiErrorDecorator({ statusCode: 400, errors: [AnalyzerDoesNotExist] })
+  @Post("reanalyse")
+  async reanalyse(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("project_id") project_id: string,
+  ): Promise<CreatedResponse> {
+    return {
+      id: await this.analysesService.reanalyse(org_id, project_id, user),
+    };
+  }
+
+  @ApiTags("Analyses")
   @ApiOperation({ description: "Get the analyses of a project." })
   @APIDocTypedPaginatedResponseDecorator(Analysis)
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })

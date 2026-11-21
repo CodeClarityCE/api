@@ -35,7 +35,6 @@ import {
 } from "src/types/apiResponses.types";
 import { SortDirection } from "src/types/sort.types";
 
-import { TicketAutomationService } from "./automation/ticket-automation.service";
 import {
   ACCESS_TOKEN_HEADER,
   API_KEY_HEADER,
@@ -44,6 +43,7 @@ import {
 } from "./integrations/integration-credentials";
 import { ConnectionTestResult } from "./integrations/integration-provider.interface";
 import { TicketIntegrationService } from "./integrations/ticket-integration.service";
+import { RemediationTicketsService } from "./remediation-tickets.service";
 import { TicketPriority, TicketStatus, TicketType } from "./ticket.entity";
 import { TicketEventFrontend } from "./ticket-event.entity";
 import {
@@ -62,6 +62,8 @@ import {
   BulkUpdateTicketsBody,
   CheckDuplicateBody,
   ConfigureClickUpBody,
+  CreateRemediationTicketBody,
+  CreateRemediationTicketResult,
   CreateTicketBody,
   DuplicateCheckResult,
   IntegrationConfigSummary,
@@ -75,12 +77,6 @@ import {
   UpdateTicketBody,
   VerifyCredentialsBody,
 } from "./tickets.types";
-
-/** Response type for auto-resolve operation */
-interface AutoResolveResponse {
-  resolved_count: number;
-  ticket_ids: string[];
-}
 
 // Helper to normalize query arrays
 function normalizeQueryArray<T>(value: T | T[] | undefined): T[] | undefined {
@@ -104,7 +100,6 @@ const providerPipe = new ParseEnumPipe(ExternalTicketProvider);
 export class TicketsController {
   constructor(
     private readonly ticketsService: TicketsService,
-    private readonly ticketAutomationService: TicketAutomationService,
     private readonly ticketIntegrationService: TicketIntegrationService,
     private readonly membershipsRepository: MembershipsRepository,
   ) {}
@@ -292,42 +287,6 @@ export class TicketsController {
       body.vulnerability_id,
       user,
     );
-    return { data: result };
-  }
-
-  @Post("automation/process-analysis/:analysis_id")
-  @ApiOperation({
-    summary: "Process auto-resolve for a completed analysis",
-    description:
-      "Triggers the auto-resolve workflow for a completed analysis. " +
-      "If the organization has auto_resolve_tickets enabled, tickets for " +
-      "vulnerabilities that are no longer detected will be automatically resolved.",
-  })
-  @ApiParam({ name: "org_id", description: "Organization ID" })
-  @ApiParam({ name: "analysis_id", description: "Analysis ID to process" })
-  @ApiResponse({
-    status: 200,
-    description: "Auto-resolve processing completed",
-    schema: {
-      type: "object",
-      properties: {
-        data: {
-          type: "object",
-          properties: {
-            resolved_count: { type: "number" },
-            ticket_ids: { type: "array", items: { type: "string" } },
-          },
-        },
-      },
-    },
-  })
-  async processAnalysisAutoResolve(
-    @AuthUser() _user: AuthenticatedUser,
-    @Param("org_id") _org_id: string,
-    @Param("analysis_id") analysis_id: string,
-  ): Promise<TypedResponse<AutoResolveResponse>> {
-    const result =
-      await this.ticketAutomationService.processCompletedAnalysis(analysis_id);
     return { data: result };
   }
 
@@ -1135,7 +1094,47 @@ export class TicketsController {
 @ApiTags("Project Tickets")
 @Controller("org/:org_id/projects/:project_id/tickets")
 export class ProjectTicketsController {
-  constructor(private readonly ticketsService: TicketsService) {}
+  constructor(
+    private readonly ticketsService: TicketsService,
+    private readonly remediationTickets: RemediationTicketsService,
+    private readonly ticketIntegrationService: TicketIntegrationService,
+  ) {}
+
+  @Post("from-remediation")
+  @ApiOperation({
+    summary:
+      "Create a ticket from a remediation of the project's current analysis",
+  })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "project_id", description: "Project ID" })
+  @ApiResponse({
+    status: 201,
+    description:
+      "The created ticket, or the open ticket that already tracks the remediation",
+  })
+  @ApiResponse({ status: 404, description: "No such remediation" })
+  async createFromRemediation(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("project_id") project_id: string,
+    @Body() body: CreateRemediationTicketBody,
+  ): Promise<TypedResponse<CreateRemediationTicketResult>> {
+    const result = await this.remediationTickets.create(
+      org_id,
+      project_id,
+      body,
+      user,
+    );
+    if (result.ticket_id && body.sync_to_provider) {
+      await this.ticketIntegrationService.syncTicketToExternal(
+        org_id,
+        result.ticket_id,
+        body.sync_to_provider,
+        user.userId,
+      );
+    }
+    return { data: result };
+  }
 
   @Get("")
   @ApiOperation({ summary: "Get all tickets for a specific project" })

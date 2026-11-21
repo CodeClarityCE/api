@@ -47,6 +47,15 @@ export interface TicketEventData {
   old_due_date?: string | undefined;
   new_due_date?: string | undefined;
   source?: "manual" | "automation" | "sync" | undefined;
+  /** The remediation a ticket was created from */
+  remediation?:
+    | {
+        kind: string;
+        workspace: string;
+        package: string;
+        target_version: string;
+      }
+    | undefined;
 }
 
 @Entity()

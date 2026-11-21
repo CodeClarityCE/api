@@ -154,8 +154,11 @@ function processOSVEvents(events: OSVEvent[], ranges: ParsedRange[]): void {
   let currentIntroduced: string | null = null;
 
   for (const event of events) {
-    if (event.introduced !== undefined) {
-      // Normalize empty string to "0" (meaning "from the earliest version")
+    // An empty introduced opens a range from "0", but never restarts an open one.
+    if (
+      event.introduced !== undefined &&
+      (event.introduced !== "" || currentIntroduced === null)
+    ) {
       currentIntroduced = event.introduced || "0";
     }
     if (
@@ -195,6 +198,13 @@ function processOSVEvents(events: OSVEvent[], ranges: ParsedRange[]): void {
       fixedInclusive: false,
     });
   }
+}
+
+/** The ranges one OSV range's events describe, in order. */
+export function osvEventRanges(events: unknown): ParsedRange[] {
+  const ranges: ParsedRange[] = [];
+  if (Array.isArray(events)) processOSVEvents(events as OSVEvent[], ranges);
+  return ranges;
 }
 
 /**

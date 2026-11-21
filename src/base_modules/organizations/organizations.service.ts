@@ -16,6 +16,7 @@ import {
   OrganizationCreateBody,
   OrganizationInfoForInvitee,
   OrganizationSettingsUpdateBody,
+  ServiceLevelTargetDaysBody,
 } from "src/base_modules/organizations/org.types";
 import { Organization } from "src/base_modules/organizations/organization.entity";
 import {
@@ -24,6 +25,10 @@ import {
   OrganizationsRepository,
   UsersRepository,
 } from "src/base_modules/shared/repositories";
+import {
+  DEFAULT_SERVICE_LEVEL_TARGETS,
+  type ServiceLevelTargetDays,
+} from "src/codeclarity_modules/tickets/service-level-targets";
 import {
   CannotRevokeOwnMembership,
   EntityNotFound,
@@ -143,6 +148,8 @@ export class OrganizationsService {
       role: membership.role,
       joined_on: membership.joined_on,
       number_of_members: number_of_members,
+      // The days the settings page suggests, so the frontend keeps no copy.
+      suggested_service_level_targets: DEFAULT_SERVICE_LEVEL_TARGETS,
     };
     return organizationInfo;
   }
@@ -745,10 +752,39 @@ export class OrganizationsService {
     if (settingsBody.auto_resolve_tickets !== undefined) {
       organization.auto_resolve_tickets = settingsBody.auto_resolve_tickets;
     }
+    if (settingsBody.freshness_threshold_days !== undefined) {
+      organization.freshness_threshold_days =
+        settingsBody.freshness_threshold_days;
+    }
+    if (settingsBody.service_level_targets_enabled !== undefined) {
+      organization.service_level_targets_enabled =
+        settingsBody.service_level_targets_enabled;
+    }
+    if (settingsBody.service_level_targets !== undefined) {
+      organization.service_level_targets = mergeTargetDays(
+        organization.service_level_targets,
+        settingsBody.service_level_targets,
+      );
+    }
 
     await this.organizationsRepository.saveOrganization(organization);
   }
 }
+
+/** Applies the severities given in the update, keeping the others. */
+function mergeTargetDays(
+  current: ServiceLevelTargetDays,
+  update: ServiceLevelTargetDaysBody,
+): ServiceLevelTargetDays {
+  const merged = { ...DEFAULT_SERVICE_LEVEL_TARGETS, ...current };
+  for (const key of SEVERITY_KEYS) {
+    const days = update[key];
+    if (days !== undefined) merged[key] = days;
+  }
+  return merged;
+}
+
+const SEVERITY_KEYS = ["critical", "high", "medium", "low"] as const;
 
 /** Turns the requested page into a safe page index and size. */
 function pageOf(conf: PaginationUserSuppliedConf): {

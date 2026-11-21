@@ -26,6 +26,8 @@ import { FriendsOfPhp } from "./friendsofphp/friendsofphp.entity";
 import { FriendsOfPhpRepository } from "./friendsofphp/friendsofphp.repository";
 import { GCVE } from "./gcve/gcve.entity";
 import { GCVERepository } from "./gcve/gcve.repository";
+import { Kev } from "./kev/kev.entity";
+import { KevRepository } from "./kev/kev.repository";
 import { LicenseController } from "./license/license.controller";
 import { LicenseService } from "./license/license.service";
 import { NPMPackageRepository } from "./npm/npm.repository";
@@ -45,6 +47,7 @@ import { KnowledgeStatusController } from "./status/knowledge-status.controller"
 import { KnowledgeStatusService } from "./status/knowledge-status.service";
 import { VulnerabilityController } from "./vulnerability/vulnerability.controller";
 import { VulnerabilitySearchService } from "./vulnerability/vulnerability.service";
+import { VulnerabilityPublicationRepository } from "./vulnerability/vulnerability-publication.repository";
 
 @Module({
   imports: [
@@ -59,6 +62,7 @@ import { VulnerabilitySearchService } from "./vulnerability/vulnerability.servic
         EPSS,
         FriendsOfPhp,
         GCVE,
+        Kev,
         PackageVulnerability,
       ],
       "knowledge",
@@ -78,6 +82,8 @@ import { VulnerabilitySearchService } from "./vulnerability/vulnerability.servic
     EPSSRepository,
     FriendsOfPhpRepository,
     GCVERepository,
+    KevRepository,
+    VulnerabilityPublicationRepository,
     VulnerabilitySearchService,
     OutdatedCheckService,
     VulnerabilityCheckService,
@@ -100,6 +106,8 @@ import { VulnerabilitySearchService } from "./vulnerability/vulnerability.servic
     EPSSRepository,
     FriendsOfPhpRepository,
     GCVERepository,
+    KevRepository,
+    VulnerabilityPublicationRepository,
     VulnerabilitySearchService,
     OutdatedCheckService,
     VulnerabilityCheckService,
