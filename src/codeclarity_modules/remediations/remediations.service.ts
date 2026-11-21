@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectDataSource } from "@nestjs/typeorm";
-import { DataSource } from "typeorm";
+import { DataSource, type EntityManager } from "typeorm";
 
 import { OSVRepository } from "src/codeclarity_modules/knowledge/osv/osv.repository";
 import type { SeverityClass } from "src/codeclarity_modules/results/utils/utils";
@@ -77,10 +77,12 @@ export class RemediationsService {
    * its current analysis, ordered by project id. Hidden and policy-excluded
    * instances are left out.
    * @param projectIds only these projects; every project when absent
+   * @param manager reads through this transaction instead, to see rows it wrote
    */
   async forOrganization(
     orgId: string,
     projectIds?: string[],
+    manager?: EntityManager,
   ): Promise<ProjectRemediations[]> {
     if (projectIds?.length === 0) return [];
     const params: unknown[] = [orgId];
@@ -89,7 +91,7 @@ export class RemediationsService {
       return `$${params.length}`;
     };
     const filters = projectIds ? { project: projectIds } : {};
-    const rows: InstanceRow[] = await this.dataSource.query(
+    const rows: InstanceRow[] = await (manager ?? this.dataSource).query(
       `SELECT i.id, i."projectId" AS project_id, i."analysisId" AS analysis_id,
               i.vulnerability_id, i.analysis_vulnerability_id, i.package,
               i.ecosystem, i.installed_version, i.workspace, i.prod,
@@ -145,8 +147,9 @@ export class RemediationsService {
   async forProject(
     orgId: string,
     projectId: string,
+    manager?: EntityManager,
   ): Promise<ProjectRemediations | null> {
-    const [project] = await this.forOrganization(orgId, [projectId]);
+    const [project] = await this.forOrganization(orgId, [projectId], manager);
     return project ?? null;
   }
 

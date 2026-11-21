@@ -35,7 +35,6 @@ import {
 } from "src/types/apiResponses.types";
 import { SortDirection } from "src/types/sort.types";
 
-import { TicketAutomationService } from "./automation/ticket-automation.service";
 import {
   ACCESS_TOKEN_HEADER,
   API_KEY_HEADER,
@@ -79,12 +78,6 @@ import {
   VerifyCredentialsBody,
 } from "./tickets.types";
 
-/** Response type for auto-resolve operation */
-interface AutoResolveResponse {
-  resolved_count: number;
-  ticket_ids: string[];
-}
-
 // Helper to normalize query arrays
 function normalizeQueryArray<T>(value: T | T[] | undefined): T[] | undefined {
   if (!value) return undefined;
@@ -107,7 +100,6 @@ const providerPipe = new ParseEnumPipe(ExternalTicketProvider);
 export class TicketsController {
   constructor(
     private readonly ticketsService: TicketsService,
-    private readonly ticketAutomationService: TicketAutomationService,
     private readonly ticketIntegrationService: TicketIntegrationService,
     private readonly membershipsRepository: MembershipsRepository,
   ) {}
@@ -295,42 +287,6 @@ export class TicketsController {
       body.vulnerability_id,
       user,
     );
-    return { data: result };
-  }
-
-  @Post("automation/process-analysis/:analysis_id")
-  @ApiOperation({
-    summary: "Process auto-resolve for a completed analysis",
-    description:
-      "Triggers the auto-resolve workflow for a completed analysis. " +
-      "If the organization has auto_resolve_tickets enabled, tickets for " +
-      "vulnerabilities that are no longer detected will be automatically resolved.",
-  })
-  @ApiParam({ name: "org_id", description: "Organization ID" })
-  @ApiParam({ name: "analysis_id", description: "Analysis ID to process" })
-  @ApiResponse({
-    status: 200,
-    description: "Auto-resolve processing completed",
-    schema: {
-      type: "object",
-      properties: {
-        data: {
-          type: "object",
-          properties: {
-            resolved_count: { type: "number" },
-            ticket_ids: { type: "array", items: { type: "string" } },
-          },
-        },
-      },
-    },
-  })
-  async processAnalysisAutoResolve(
-    @AuthUser() _user: AuthenticatedUser,
-    @Param("org_id") _org_id: string,
-    @Param("analysis_id") analysis_id: string,
-  ): Promise<TypedResponse<AutoResolveResponse>> {
-    const result =
-      await this.ticketAutomationService.processCompletedAnalysis(analysis_id);
     return { data: result };
   }
 

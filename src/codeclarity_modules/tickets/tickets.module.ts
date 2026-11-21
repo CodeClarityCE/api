@@ -7,8 +7,9 @@ import { KnowledgeModule } from "src/codeclarity_modules/knowledge/knowledge.mod
 import { RemediationsModule } from "src/codeclarity_modules/remediations/remediations.module";
 import { Result } from "src/codeclarity_modules/results/result.entity";
 import { VulnerabilitiesModule } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.module";
+import { VulnerabilityInstancesModule } from "src/codeclarity_modules/vulnerability_instances/vulnerability-instances.module";
 
-import { TicketAutomationService } from "./automation/ticket-automation.service";
+import { TicketInstanceSync } from "./automation/ticket-instance-sync.service";
 import { ClickUpService } from "./integrations/clickup/clickup.service";
 import { TicketIntegrationService } from "./integrations/ticket-integration.service";
 import { RemediationTicketsService } from "./remediation-tickets.service";
@@ -41,19 +42,19 @@ import { TicketsService } from "./tickets.service";
     forwardRef(() => VulnerabilitiesModule),
     KnowledgeModule,
     RemediationsModule,
+    VulnerabilityInstancesModule,
   ],
   controllers: [TicketsController, ProjectTicketsController],
   providers: [
     TicketsService,
     RemediationTicketsService,
-    TicketAutomationService,
+    TicketInstanceSync,
     TicketIntegrationService,
     ClickUpService,
   ],
   exports: [
     TicketsService,
     RemediationTicketsService,
-    TicketAutomationService,
     TicketIntegrationService,
   ],
 })

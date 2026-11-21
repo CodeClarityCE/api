@@ -390,6 +390,7 @@ describe("Organization vulnerability list (e2e)", () => {
         projectId: api,
         organizationId: user.organization.id,
         ref: "main",
+        hasResults: true,
       },
     ]);
     expect(counts(await list())).toEqual([
