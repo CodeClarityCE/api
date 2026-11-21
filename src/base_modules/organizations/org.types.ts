@@ -1,6 +1,17 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Expose } from "class-transformer";
-import { IsDefined, IsNotEmpty, IsString, Length } from "class-validator";
+import { Expose, Type } from "class-transformer";
+import {
+  IsBoolean,
+  IsDefined,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Length,
+  Max,
+  Min,
+  ValidateNested,
+} from "class-validator";
 
 import { User } from "src/base_modules/users/users.entity";
 
@@ -98,9 +109,61 @@ export class InviteeInfoQuery {
   user_email_hash!: string;
 }
 
+/** Days allowed per severity, each a whole number of days or null for none */
+export class ServiceLevelTargetDaysBody {
+  @ApiProperty({ required: false, nullable: true, minimum: 1, maximum: 3650 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(3650)
+  critical?: number | null;
+
+  @ApiProperty({ required: false, nullable: true, minimum: 1, maximum: 3650 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(3650)
+  high?: number | null;
+
+  @ApiProperty({ required: false, nullable: true, minimum: 1, maximum: 3650 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(3650)
+  medium?: number | null;
+
+  @ApiProperty({ required: false, nullable: true, minimum: 1, maximum: 3650 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(3650)
+  low?: number | null;
+}
+
 export class OrganizationSettingsUpdateBody {
   @ApiProperty({ required: false })
   auto_resolve_tickets?: boolean;
+
+  /** Days after which a project's current analysis counts as stale */
+  @ApiProperty({ required: false, minimum: 1, maximum: 365 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  freshness_threshold_days?: number;
+
+  /** Whether new tickets get due dates from the service level targets */
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  service_level_targets_enabled?: boolean;
+
+  /** Days per severity to change; null removes that severity's target */
+  @ApiProperty({ required: false, type: () => ServiceLevelTargetDaysBody })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ServiceLevelTargetDaysBody)
+  service_level_targets?: ServiceLevelTargetDaysBody;
 }
 
 /********************************************/

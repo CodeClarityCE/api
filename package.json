@@ -1,6 +1,6 @@
 {
   "name": "api",
-  "version": "0.0.56-alpha",
+  "version": "0.0.57-alpha",
   "description": "",
   "author": "",
   "private": true,
@@ -122,13 +122,11 @@
               "syntax": "typescript",
               "decorators": true
             },
+            "target": "es2022",
             "transform": {
               "legacyDecorator": true,
-              "decoratorMetadata": true
-            },
-            "target": "es2021",
-            "assumptions": {
-              "setPublicClassFields": true
+              "decoratorMetadata": true,
+              "useDefineForClassFields": true
             }
           },
           "module": {

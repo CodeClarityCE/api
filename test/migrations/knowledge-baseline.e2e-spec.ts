@@ -23,6 +23,7 @@ const KNOWLEDGE_TABLES = [
   "epss",
   "friends_of_php",
   "gcve",
+  "kev",
   "knowledge_date_conversion_issue",
   "knowledge_dated_restore",
   "knowledge_source_sync",
@@ -33,6 +34,18 @@ const KNOWLEDGE_TABLES = [
   "package",
   "package_vulnerability",
   "version",
+];
+
+// Every knowledge source, as knowledge_source_sync names it.
+const SOURCES = [
+  "cwe",
+  "epss",
+  "friends_of_php",
+  "gcve",
+  "kev",
+  "licenses",
+  "nvd",
+  "osv",
 ];
 
 type MigrationClass = new () => MigrationInterface;
@@ -255,10 +268,16 @@ describe("Knowledge and config baseline migrations", () => {
     expect(await tables(fresh.config)).toEqual(["config", "migrations"]);
     const config = await query(
       fresh.config,
-      `SELECT nvd_last, npm_last, gcve_last, osv_last FROM config`,
+      `SELECT nvd_last, npm_last, gcve_last, osv_last, kev_last FROM config`,
     );
     expect(config).toEqual([
-      { nvd_last: null, npm_last: null, gcve_last: null, osv_last: null },
+      {
+        nvd_last: null,
+        npm_last: null,
+        gcve_last: null,
+        osv_last: null,
+        kev_last: null,
+      },
     ]);
   }, 60000);
 
@@ -272,9 +291,7 @@ describe("Knowledge and config baseline migrations", () => {
       `SELECT source, watermark FROM knowledge_source_sync ORDER BY source`,
     );
     expect(sync).toEqual(
-      ["cwe", "epss", "friends_of_php", "gcve", "licenses", "nvd", "osv"].map(
-        (source) => ({ source, watermark: null }),
-      ),
+      SOURCES.map((source) => ({ source, watermark: null })),
     );
   }, 60000);
 
@@ -288,9 +305,7 @@ describe("Knowledge and config baseline migrations", () => {
       `SELECT source, upstream_total FROM knowledge_source_sync ORDER BY source`,
     );
     expect(sync).toEqual(
-      ["cwe", "epss", "friends_of_php", "gcve", "licenses", "nvd", "osv"].map(
-        (source) => ({ source, upstream_total: null }),
-      ),
+      SOURCES.map((source) => ({ source, upstream_total: null })),
     );
   }, 60000);
 

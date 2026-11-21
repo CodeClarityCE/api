@@ -5,6 +5,7 @@ import { Organization } from "src/base_modules/organizations/organization.entity
 import { OrganizationsModule } from "src/base_modules/organizations/organizations.module";
 
 import { KnowledgeModule } from "../knowledge/knowledge.module";
+import { VulnerabilitiesModule } from "../results/vulnerabilities/vulnerabilities.module";
 
 import { DashboardController } from "./dashboard.controller";
 import { DashboardService } from "./dashboard.service";
@@ -14,6 +15,7 @@ import { DashboardService } from "./dashboard.service";
     OrganizationsModule,
     TypeOrmModule.forFeature([Organization], "codeclarity"),
     KnowledgeModule,
+    VulnerabilitiesModule,
   ],
   providers: [DashboardService],
   controllers: [DashboardController],

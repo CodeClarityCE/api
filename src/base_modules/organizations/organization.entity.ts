@@ -12,6 +12,7 @@ import {
 } from "typeorm";
 
 import type { Policy } from "../../codeclarity_modules/policies/policy.entity";
+import type { ServiceLevelTargetDays } from "../../codeclarity_modules/tickets/service-level-targets";
 import type { Analysis } from "../analyses/analysis.entity";
 import type { Analyzer } from "../analyzers/analyzer.entity";
 import type { Integration } from "../integrations/integrations.entity";
@@ -62,6 +63,28 @@ export class Organization {
   @Expose()
   @Column({ default: false })
   auto_resolve_tickets!: boolean;
+
+  /** Days after which a project's current analysis counts as stale */
+  @ApiProperty()
+  @Expose()
+  @Column({ type: "integer", default: 14 })
+  freshness_threshold_days!: number;
+
+  /** Whether new tickets get due dates from the service level targets */
+  @ApiProperty()
+  @Expose()
+  @Column({ default: false })
+  service_level_targets_enabled!: boolean;
+
+  /** Days allowed per severity; null means no target for that severity */
+  @ApiProperty()
+  @Expose()
+  @Column({
+    type: "jsonb",
+    // Postgres's own text for the suggested days, so schema sync sees no change.
+    default: () => `'{"low": null, "high": 30, "medium": 90, "critical": 7}'`,
+  })
+  service_level_targets!: ServiceLevelTargetDays;
 
   // Foreign keys
   @ApiProperty()

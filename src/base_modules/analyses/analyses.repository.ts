@@ -180,6 +180,34 @@ export class AnalysesRepository {
   }
 
   /**
+   * The project's latest default-branch analysis (any label for an upload) with its analyzer, experiments excepted.
+   * @throws {EntityNotFound} if it has none
+   */
+  async getLastDefaultBranchAnalysis(projectId: string): Promise<Analysis> {
+    const analysis = await this.analysisRepository
+      .createQueryBuilder("analysis")
+      .innerJoin("analysis.project", "project")
+      .leftJoinAndSelect("analysis.analyzer", "analyzer")
+      .where("project.id = :projectId", { projectId })
+      .andWhere(
+        "(project.default_branch = '' OR analysis.branch = project.default_branch)",
+      )
+      .andWhere(
+        `NOT EXISTS (SELECT 1 FROM experiment_run r WHERE r."analysisId" = analysis.id)`,
+      )
+      .andWhere(
+        `NOT EXISTS (SELECT 1 FROM experiment_probe p WHERE p."analysisId" = analysis.id)`,
+      )
+      .orderBy("analysis.created_on", "DESC")
+      .addOrderBy("analysis.id", "DESC")
+      .getOne();
+    if (!analysis) {
+      throw new EntityNotFound();
+    }
+    return analysis;
+  }
+
+  /**
    * Retrieves a paginated list of analyses for a given project, sorted by creation date in descending order.
    * @param projectId The ID of the project to retrieve analyses for.
    * @param currentPage The current page number (0-indexed).

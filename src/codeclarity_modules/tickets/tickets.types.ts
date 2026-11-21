@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsNumber,
@@ -9,6 +10,11 @@ import {
   IsUUID,
   MaxLength,
 } from "class-validator";
+
+import type { ManifestEdit } from "../remediations/package-manager-commands";
+import { RemediationKind } from "../remediations/remediation.types";
+import type { InstanceDiffLinks } from "../vulnerability_instances/organization-vulnerabilities.types";
+import type { TopLevelDependency } from "../vulnerability_instances/top-level-paths";
 
 import { TicketPriority, TicketStatus, TicketType } from "./ticket.entity";
 import { ExternalTicketProvider } from "./ticket-external-link.entity";
@@ -131,10 +137,13 @@ export class UpdateTicketBody {
   @IsString()
   remediation_notes?: string;
 
-  @ApiPropertyOptional({ description: "Due date for the ticket" })
+  @ApiPropertyOptional({
+    description: "Due date for the ticket; null clears it",
+    nullable: true,
+  })
   @IsOptional()
   @IsDateString()
-  due_date?: string;
+  due_date?: string | null;
 }
 
 export class BulkUpdateTicketsBody {
@@ -157,6 +166,49 @@ export class BulkUpdateTicketsBody {
   @IsOptional()
   @IsUUID()
   assigned_to_id?: string;
+}
+
+/** Names one remediation of the project's current analysis to track in a ticket. */
+export class CreateRemediationTicketBody {
+  @ApiProperty({ enum: RemediationKind })
+  @IsEnum(RemediationKind)
+  kind!: RemediationKind;
+
+  @ApiProperty({ description: "Workspace of the remediation" })
+  @IsString()
+  @MaxLength(200)
+  workspace!: string;
+
+  @ApiProperty({ description: "Package the remediation upgrades or forces" })
+  @IsString()
+  @MaxLength(200)
+  package!: string;
+
+  @ApiPropertyOptional({
+    description:
+      "Create the ticket even when an open one tracks the remediation",
+  })
+  @IsOptional()
+  @IsBoolean()
+  allow_duplicate?: boolean;
+
+  @ApiPropertyOptional({ enum: TicketPriority })
+  @IsOptional()
+  @IsEnum(TicketPriority)
+  priority?: TicketPriority;
+
+  @ApiPropertyOptional({ description: "Due date for the ticket" })
+  @IsOptional()
+  @IsDateString()
+  due_date?: string;
+
+  @ApiPropertyOptional({
+    enum: ExternalTicketProvider,
+    description: "Also sync the created ticket to this provider",
+  })
+  @IsOptional()
+  @IsEnum(ExternalTicketProvider)
+  sync_to_provider?: ExternalTicketProvider;
 }
 
 export class CheckDuplicateBody {
@@ -212,6 +264,59 @@ export interface TicketDetails extends TicketSummary {
   }[];
   occurrence_count: number;
   active_occurrence_count: number;
+  /** Null for tickets that track one vulnerability */
+  remediation: TicketRemediation | null;
+  /** The vulnerability instances the remediation resolves, worst first */
+  instances: TicketInstance[];
+}
+
+/** The remediation a ticket tracks, as it was when last stored. */
+export interface TicketRemediation {
+  kind: RemediationKind;
+  workspace: string;
+  package: string;
+  installed_versions: string[];
+  target_version: string;
+  potentially_breaking: boolean;
+  package_manager: string | null;
+  command: string | null;
+  manifest_edit: ManifestEdit | null;
+}
+
+/** One vulnerability instance a ticket's remediation resolves. */
+export interface TicketInstance {
+  id: string;
+  analysis_id: string;
+  vulnerability_id: string;
+  analysis_vulnerability_id: string;
+  package: string;
+  ecosystem: string | null;
+  installed_version: string;
+  workspace: string;
+  prod: boolean;
+  severity_class: string;
+  severity_score: number | null;
+  fixed_version: string | null;
+  top_level_dependencies: TopLevelDependency[];
+  is_active: boolean;
+  detected_on: Date;
+  resolved_on: Date | null;
+  /** Fix commit, compare and registry diff links, built from stored knowledge */
+  diff_links: InstanceDiffLinks;
+}
+
+/** The open ticket that already tracks a remediation. */
+export interface DuplicateTicket {
+  ticket_id: string;
+  title: string;
+  status: TicketStatus;
+}
+
+/** A ticket created from a remediation, or the open one that already tracks it. */
+export interface CreateRemediationTicketResult {
+  created: boolean;
+  ticket_id: string | null;
+  duplicate: DuplicateTicket | null;
 }
 
 export interface TicketDashboardStats {
@@ -219,6 +324,10 @@ export interface TicketDashboardStats {
   total_in_progress: number;
   total_resolved_this_week: number;
   total_closed: number;
+  /** Open or in-progress tickets whose due date has passed */
+  total_overdue: number;
+  /** Open or in-progress tickets due within the next seven days */
+  total_due_this_week: number;
   by_priority: {
     critical: number;
     high: number;

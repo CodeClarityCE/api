@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 
 import { EPSS } from "./epss.entity";
 
@@ -24,5 +24,17 @@ export class EPSSRepository {
     }
 
     return epss;
+  }
+
+  /** The scores of the CVEs that have one, keyed by uppercase CVE id. */
+  async scoresOf(cves: string[]): Promise<Map<string, number>> {
+    const ids = [...new Set(cves.map((cve) => cve.toUpperCase()))];
+    if (ids.length === 0) return new Map();
+    const rows = await this.epssRepository.find({ where: { cve: In(ids) } });
+    return new Map(
+      rows
+        .filter((row) => row.score !== null && row.score !== undefined)
+        .map((row) => [row.cve.toUpperCase(), row.score]),
+    );
   }
 }

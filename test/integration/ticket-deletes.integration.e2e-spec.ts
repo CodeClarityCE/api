@@ -72,8 +72,8 @@ describe("Deleting projects and analyses that have tickets (e2e)", () => {
     );
     for (const analysis of [analysisId, otherAnalysisId]) {
       await db().query(
-        `INSERT INTO ticket_vulnerability_occurrence (workspace, affected_paths, detected_on, "ticketId", "analysisId")
-         VALUES ('.', '[]', now(), $1, $2)`,
+        `INSERT INTO ticket_vulnerability_occurrence (workspace, vulnerability_id, analysis_vulnerability_id, package, installed_version, prod, severity_class, detected_on, "ticketId", "analysisId")
+         VALUES ('.', 'CVE-2021-23337', 'CVE-2021-23337', 'lodash', '4.17.15', true, 'HIGH', now(), $1, $2)`,
         [id, analysis],
       );
     }
