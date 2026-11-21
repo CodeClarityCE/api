@@ -4,7 +4,22 @@ import { DataSource } from "typeorm";
 
 import type { TicketStatus } from "src/codeclarity_modules/tickets/ticket.entity";
 
-import type { Remediation } from "./remediation.types";
+import type { Remediation, RemediationInstance } from "./remediation.types";
+
+/** Every id the instances go by, upper-cased, for matching one-vulnerability tickets as `TRACKING_TICKETS_SQL` does. */
+export function trackedIds(
+  instances: Pick<
+    RemediationInstance,
+    "vulnerability_id" | "analysis_vulnerability_id" | "aliases"
+  >[],
+): string[] {
+  const ids = instances.flatMap((i) => [
+    i.vulnerability_id,
+    i.analysis_vulnerability_id,
+    ...i.aliases,
+  ]);
+  return [...new Set(ids.map((id) => id.toUpperCase()))];
+}
 
 /** The ticket that tracks a remediation. */
 export interface RemediationTicket {
@@ -26,12 +41,7 @@ export abstract class RemediationTicketLookup {
   ): Promise<(RemediationTicket | null)[]>;
 }
 
-/**
- * Matches the ticket created from the remediation (same project, kind,
- * workspace and package), open ones first, then the newest. A remediation
- * without one falls back to the newest one-vulnerability ticket of the
- * project for a vulnerability it resolves (ADR 0016).
- */
+/** The remediation's own ticket, else a one-vulnerability ticket of an id it resolves (ADR 0016); open first, then newest. */
 @Injectable()
 export class TicketRemediationLookup extends RemediationTicketLookup {
   constructor(
@@ -45,11 +55,6 @@ export class TicketRemediationLookup extends RemediationTicketLookup {
     remediations: ProjectRemediation[],
   ): Promise<(RemediationTicket | null)[]> {
     if (remediations.length === 0) return [];
-    const ids = (r: Remediation): string[] =>
-      r.instances.flatMap((i) => [
-        i.vulnerability_id,
-        i.analysis_vulnerability_id,
-      ]);
     const tickets: {
       id: string;
       status: TicketStatus;
@@ -65,17 +70,17 @@ export class TicketRemediationLookup extends RemediationTicketLookup {
        WHERE t."organizationId" = $1
          AND t."projectId" = ANY($2::uuid[])
          AND (t.remediation_package = ANY($3::varchar[])
-              OR (t.remediation_kind IS NULL AND t.vulnerability_id = ANY($4::varchar[])))
+              OR (t.remediation_kind IS NULL AND upper(t.vulnerability_id) = ANY($4::varchar[])))
        ORDER BY t.status IN ('OPEN', 'IN_PROGRESS') DESC, t.created_on DESC, t.id`,
       [
         orgId,
         [...new Set(remediations.map((r) => r.project_id))],
         [...new Set(remediations.map((r) => r.remediation.package))],
-        [...new Set(remediations.flatMap((r) => ids(r.remediation)))],
+        trackedIds(remediations.flatMap((r) => r.remediation.instances)),
       ],
     );
     return remediations.map(({ project_id, remediation }) => {
-      const wanted = new Set(ids(remediation));
+      const wanted = new Set(trackedIds(remediation.instances));
       const ofProject = tickets.filter((t) => t.project_id === project_id);
       const ticket =
         ofProject.find(
@@ -88,7 +93,7 @@ export class TicketRemediationLookup extends RemediationTicketLookup {
           (t) =>
             t.remediation_kind === null &&
             t.vulnerability_id !== null &&
-            wanted.has(t.vulnerability_id),
+            wanted.has(t.vulnerability_id.toUpperCase()),
         );
       return ticket ? { id: ticket.id, status: ticket.status } : null;
     });
