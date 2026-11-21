@@ -12,6 +12,8 @@ import { VulnerabilityInstancesModule } from "src/codeclarity_modules/vulnerabil
 import { TicketInstanceSync } from "./automation/ticket-instance-sync.service";
 import { ClickUpService } from "./integrations/clickup/clickup.service";
 import { TicketIntegrationService } from "./integrations/ticket-integration.service";
+import { MyWorkController } from "./my-work.controller";
+import { MyWorkService } from "./my-work.service";
 import { RemediationTicketsService } from "./remediation-tickets.service";
 import { Ticket } from "./ticket.entity";
 import { TicketContentService } from "./ticket-content.service";
@@ -45,12 +47,13 @@ import { TicketsService } from "./tickets.service";
     RemediationsModule,
     VulnerabilityInstancesModule,
   ],
-  controllers: [TicketsController, ProjectTicketsController],
+  controllers: [MyWorkController, TicketsController, ProjectTicketsController],
   providers: [
     TicketsService,
     RemediationTicketsService,
     TicketInstanceSync,
     TicketContentService,
+    MyWorkService,
     TicketIntegrationService,
     ClickUpService,
   ],
