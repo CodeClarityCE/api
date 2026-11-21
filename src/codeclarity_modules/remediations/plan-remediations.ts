@@ -1,5 +1,5 @@
 import {
-  SEVERITY_ORDER,
+  severityRank,
   type VersionRange,
 } from "src/codeclarity_modules/vulnerability_instances/organization-vulnerabilities.types";
 import type { TopLevelDependency } from "src/codeclarity_modules/vulnerability_instances/top-level-paths";
@@ -73,7 +73,7 @@ interface Group {
 }
 
 const rank = (instance: RemediationInstance): number =>
-  SEVERITY_ORDER.length - SEVERITY_ORDER.indexOf(instance.severity_class);
+  severityRank(instance.severity_class);
 
 // Worst class first, then highest score.
 const worse = (a: RemediationInstance, b: RemediationInstance): number =>

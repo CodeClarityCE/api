@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 
 import { InstanceDiffLinksService } from "src/codeclarity_modules/vulnerability_instances/instance-diff-links.service";
+import { severityRank } from "src/codeclarity_modules/vulnerability_instances/organization-vulnerabilities.types";
 
 import type { Ticket } from "./ticket.entity";
 import { ticketBody } from "./ticket-body";
@@ -16,10 +17,6 @@ export interface TicketContent {
   /** Active first, then worst first */
   instances: TicketInstance[];
 }
-
-const SEVERITY_ORDER = ["NONE", "LOW", "MEDIUM", "HIGH", "CRITICAL"];
-const severityRank = (severity: string): number =>
-  SEVERITY_ORDER.indexOf(severity);
 
 function ticketInstance(
   o: TicketVulnerabilityOccurrence,

@@ -6,13 +6,13 @@ import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
 import { MembershipsRepository } from "src/base_modules/shared/repositories";
 import { EPSSRepository } from "src/codeclarity_modules/knowledge/epss/epss.repository";
+import { severityRank } from "src/codeclarity_modules/vulnerability_instances/organization-vulnerabilities.types";
 
 import type { FixNextEntry } from "./fix-next.types";
 import {
   compareFixNextRank,
   fixNextRank,
   type RankedInstance,
-  severityWeight,
 } from "./fix-next-rank";
 import type { RemediationInstance } from "./remediation.types";
 import {
@@ -154,7 +154,7 @@ export class FixNextService {
 // The worst vulnerability among the instances: severity, then score, then id.
 function worstVulnerability(instances: RemediationInstance[]): string {
   const rank = (i: RemediationInstance): number =>
-    severityWeight(i.severity_class);
+    severityRank(i.severity_class);
   const [worst] = [...instances].sort(
     (a, b) =>
       rank(b) - rank(a) ||
