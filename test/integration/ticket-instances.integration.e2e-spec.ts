@@ -386,7 +386,13 @@ describe("Ticket instances follow the current analysis (e2e)", () => {
       return response.json().data.projects as {
         project_name: string;
         ticket_state: string;
-        instances: { ticket: { id: string; status: string } | null }[];
+        instances: {
+          ticket: {
+            id: string;
+            status: string;
+            due_date: string | null;
+          } | null;
+        }[];
       }[];
     };
 
@@ -401,7 +407,7 @@ describe("Ticket instances follow the current analysis (e2e)", () => {
           p.instances.map((i) => i.ticket),
         ]),
       ).toEqual([
-        ["api", "open", [{ id: ticketId, status: "OPEN" }]],
+        ["api", "open", [{ id: ticketId, status: "OPEN", due_date: null }]],
         ["web", "none", [null]],
       ]);
     });
@@ -419,6 +425,7 @@ describe("Ticket instances follow the current analysis (e2e)", () => {
       expect(projects[1]!.instances[0]!.ticket).toEqual({
         id: legacy,
         status: "OPEN",
+        due_date: null,
       });
     });
 
@@ -430,6 +437,45 @@ describe("Ticket instances follow the current analysis (e2e)", () => {
         [LODASH_CVE, 2, 0],
         [QS_OTHER_CVE, 2, 1],
       ]);
+    });
+
+    it("shows a ticket past its due date as overdue on the page and the list", async () => {
+      const { ticketId } = await seedTicketed();
+      const yesterday = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+      const patch = await request("PATCH", `/tickets/${ticketId}`, {
+        due_date: yesterday,
+      });
+      expect(patch.statusCode).toBe(200);
+
+      const projects = await pageProjects(QS_CVE);
+      expect(projects.map((p) => [p.project_name, p.ticket_state])).toEqual([
+        ["api", "overdue"],
+        ["web", "none"],
+      ]);
+      expect(projects[0]!.instances[0]!.ticket).toEqual({
+        id: ticketId,
+        status: "OPEN",
+        due_date: yesterday,
+      });
+
+      const response = await request("GET", "/vulnerabilities");
+      expect(
+        (
+          response.json().data as {
+            vulnerability_id: string;
+            overdue_instance_count: number;
+          }[]
+        ).map((r) => [r.vulnerability_id, r.overdue_instance_count]),
+      ).toEqual([
+        [QS_CVE, 1],
+        [LODASH_CVE, 0],
+        [QS_OTHER_CVE, 1],
+      ]);
+      expect(await list("?ticket=overdue")).toEqual([
+        [QS_CVE, 1, 1],
+        [QS_OTHER_CVE, 1, 1],
+      ]);
+      expect(await list("?ticket=open")).toEqual([]);
     });
 
     it("filters the list by ticket state", async () => {
