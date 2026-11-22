@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-/** Drops js-patching from every analyzer's steps and language config, as the plugin is gone (#334). */
+/** Drops js-patching from every analyzer's steps and language config, as the plugin is gone. */
 export class RemoveJsPatchingFromAnalyzers1796256000000 implements MigrationInterface {
   name = "RemoveJsPatchingFromAnalyzers1796256000000";
 
