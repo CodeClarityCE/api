@@ -22,7 +22,7 @@ export const BOOTSTRAP_SETTINGS = {
   seed: 20_260_611,
 } as const satisfies BootstrapSettings & { method: string };
 
-export interface ConcentrationIntervals {
+interface ConcentrationIntervals {
   load_median: BootstrapInterval | null;
   gini_pkg: BootstrapInterval | null;
   gini_proj: BootstrapInterval | null;

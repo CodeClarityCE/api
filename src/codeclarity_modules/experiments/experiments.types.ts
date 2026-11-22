@@ -24,7 +24,7 @@ import {
 import { ExperimentRunStatus } from "./experiment-run.entity";
 
 export const EXPERIMENT_DEFAULT_RETRIES = 2;
-export const EXPERIMENT_MAX_RETRIES = 10;
+const EXPERIMENT_MAX_RETRIES = 10;
 
 export const SBOM_PLUGIN = "js-sbom";
 export const VULN_PLUGIN = "vuln-finder";

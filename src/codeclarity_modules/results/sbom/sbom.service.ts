@@ -102,7 +102,7 @@ const PURL_TYPES: Record<string, string> = {
 };
 
 /** The package URL of a dependency, e.g. pkg:npm/%40vue/shared@3.5.0 */
-export function packageUrl(
+function packageUrl(
   name: string,
   version: string,
   ecosystem: string | undefined,

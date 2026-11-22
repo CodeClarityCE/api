@@ -34,7 +34,7 @@ for (const [network, prefix] of [
 }
 
 /** Whether an IP address is internal or reserved (IPv4-mapped IPv6 included) */
-export function isInternalAddress(address: string): boolean {
+function isInternalAddress(address: string): boolean {
   const family = isIP(address);
   if (family === 0) return true;
   return reservedRanges.check(address, family === 4 ? "ipv4" : "ipv6");

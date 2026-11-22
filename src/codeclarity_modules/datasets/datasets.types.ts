@@ -28,9 +28,9 @@ export const DATASET_DEFAULTS = {
   limit: 100,
 };
 
-export const DATASET_MAX_LIMIT = 500;
+const DATASET_MAX_LIMIT = 500;
 /** The search API never returns more than 1000 results (10 pages of 100) */
-export const DATASET_MAX_PAGES = 10;
+const DATASET_MAX_PAGES = 10;
 
 export class CreateDatasetBody {
   @ApiProperty({ maxLength: 100 })

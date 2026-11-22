@@ -2,7 +2,7 @@
 import { publishedDay } from "./experiment-grid";
 import { InvalidFigureDefinition } from "./experiments.errors";
 
-export interface FigureChoice {
+interface FigureChoice {
   id: string;
   label: string;
 }
@@ -15,7 +15,7 @@ export interface FigureFilter extends FigureChoice {
   options: readonly FigureChoice[];
 }
 
-export interface FigureChartForm extends FigureChoice {
+interface FigureChartForm extends FigureChoice {
   /** How the composer draws it; a line when not given */
   mark?: "line" | "bar" | "point";
   /** The metric's group-bys and filters valid with this form, all when not given */
@@ -57,7 +57,7 @@ export const SWEEP_FILTER: FigureFilter = {
 };
 
 /** Without it, instances hidden by default (ADR 0013) are left out. */
-export const HIDDEN_FILTER: FigureFilter = {
+const HIDDEN_FILTER: FigureFilter = {
   id: "hidden",
   label: "Hidden instances",
   none_label: "Left out",

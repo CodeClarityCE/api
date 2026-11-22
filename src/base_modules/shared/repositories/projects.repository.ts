@@ -10,7 +10,6 @@ import { SortDirection } from "src/types/sort.types";
 
 export enum AllowedOrderByGetProjects {
   NAME = "name",
-  IMPORTED_ON = "imported_on",
 }
 
 /**

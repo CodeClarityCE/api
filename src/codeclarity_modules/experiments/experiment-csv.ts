@@ -201,7 +201,7 @@ export function fixCsvRow(entry: CsvEntry, exposure: Exposure): CsvRow | null {
 }
 
 /** Encodes one cell value. Blank for null and undefined. */
-export function encodeCsvCell(value: unknown): string {
+function encodeCsvCell(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (value instanceof Date) return value.toISOString();
   if (typeof value === "number" || typeof value === "boolean") {

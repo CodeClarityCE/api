@@ -30,8 +30,6 @@ import {
   instanceStatus,
 } from "./instance-status";
 
-export type { HiddenCounts } from "./instance-status";
-
 /** Filters that show instances hidden by default. */
 export interface HiddenFilters {
   show_contradicted?: boolean;

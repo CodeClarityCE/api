@@ -38,7 +38,7 @@ import {
 } from "../experiment-row-copy";
 
 /** Instance columns shared by many instances, stored once per entry. */
-export interface GridInstanceMeta {
+interface GridInstanceMeta {
   vulnerability_id: string | null;
   affected_dependency: string | null;
   severity_class: string | null;
@@ -51,7 +51,7 @@ export interface GridInstanceMeta {
 }
 
 /** One instance: [workspace, index into the entry's meta, affected version, direct]. */
-export type GridInstance = [string, number, string | null, boolean];
+type GridInstance = [string, number, string | null, boolean];
 
 export interface GridFixtureRun {
   id: string;
@@ -152,7 +152,7 @@ function* cacheFiles<T>(studyDir: string, kind: string): Generator<T> {
  * probe dating and fix kinds never read the workspace, and monorepos
  * repeat the same packages in every workspace (970 MB instead of 230 MB unpacked).
  */
-export function compactPackages(packages: ProbePackage[]): ProbePackage[] {
+function compactPackages(packages: ProbePackage[]): ProbePackage[] {
   const seen = new Set<string>();
   return packages.filter((p) => {
     const key = `${p.name}@${p.version}@${p.direct}`;

@@ -41,7 +41,7 @@ import {
 } from "./clickup.types";
 
 /** A non-2xx reply from the ClickUp API. */
-export class ClickUpApiError extends BadRequestException {
+class ClickUpApiError extends BadRequestException {
   constructor(
     readonly clickUpStatus: number,
     body: string,

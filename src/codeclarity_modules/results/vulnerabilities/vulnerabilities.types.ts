@@ -14,28 +14,6 @@ export interface VulnSourceInfo {
   vuln_url: string;
 }
 
-export interface VulnerabilityInfo {
-  vulnerability_id: string;
-  description: string;
-  version_info: VersionInfo;
-  published: string;
-  last_modified: string;
-  sources: VulnSourceInfo[];
-  aliases: string[];
-}
-
-export interface VersionInfo {
-  affected_versions_string: string;
-  patched_versions_string: string;
-  versions: VulnerableVersionInfo[];
-}
-
-export interface VulnerableVersionInfo {
-  version: string;
-  status: string;
-  release: string;
-}
-
 /** DependencyInfo for report generation (simpler version) */
 export interface DependencyInfoReport {
   name: string;
@@ -61,11 +39,6 @@ export interface SeverityInfo {
   cvss_2?: CVSS2;
   /** GHSA's qualitative severity, such as "HIGH"; it has no score. */
   ghsa?: string;
-}
-
-export interface OwaspInfo {
-  name: string;
-  description: string;
 }
 
 /** WeaknessInfo for report generation (simpler version) */
@@ -100,7 +73,7 @@ export enum Status {
   Failure = "failure",
 }
 
-export interface AnalysisInfo {
+interface AnalysisInfo {
   status: Status;
   private_errors: StatusError[];
   public_errors: StatusError[];
@@ -135,14 +108,6 @@ export interface KnowledgeSourceSnapshot {
   stale_after_hours: number;
 }
 
-export interface SeverityDist {
-  critical: number;
-  high: number;
-  medium: number;
-  low: number;
-  none: number;
-}
-
 /** A package version flagged as malicious, reported apart from vulnerabilities */
 export interface MaliciousPackageAdvisory {
   AdvisoryId: string;
@@ -157,26 +122,14 @@ export interface MaliciousPackageAdvisory {
   References?: string[];
 }
 
-export interface WorkSpaceData {
+interface WorkSpaceData {
   Vulnerabilities: Vulnerability[];
   // Absent on analyses made before malicious packages were reported separately
   MaliciousPackageAdvisories?: MaliciousPackageAdvisory[];
   // DependencyInfo: { [key: string]: DependencyInfo };
 }
 
-export interface DependencyInfo {
-  SeverityDist: SeverityDist | null;
-  Vulnerable: boolean;
-  Vulnerabilities: DependencyInfoVulnerability[];
-}
-
-export interface DependencyInfoVulnerability {
-  Vulnerability: string;
-  Severity: Severity;
-  Weaknesses: WeaknessInfo[];
-}
-
-export interface WeaknessInfo {
+interface WeaknessInfo {
   WeaknessId: string;
   WeaknessName: string;
   WeaknessDescription: string;
@@ -281,13 +234,13 @@ export interface VulnerabilityMerged {
   Uncorroborated?: boolean;
 }
 
-export interface VLAI {
+interface VLAI {
   Source: Source;
   Score: string;
   Confidence: number;
 }
 
-export interface EPSS {
+interface EPSS {
   Score: number;
   Percentile: number;
 }

@@ -1,6 +1,6 @@
 // Shapes vuln-finder writes for comparing knowledge sources.
 
-export interface SourceRange {
+interface SourceRange {
   introduced?: string;
   fixed?: string;
 }
@@ -51,7 +51,7 @@ export enum SourceVerdictValue {
 }
 
 // A product or package a record names; fields a source does not use are absent.
-export interface SourceProduct {
+interface SourceProduct {
   /** The OSV ecosystem the name belongs to, like "npm"; absent when the record gives none. */
   ecosystem?: string;
   /** An OSV package's name. */

@@ -120,6 +120,7 @@ export interface PatchingAnalysisStats {
   after_patch_overall_availability_impact: number;
 }
 
+/** @jsPatching Removed with js-patching (#334). */
 export function newPatchingAnalysisStats(): PatchingAnalysisStats {
   return {
     before_patch_number_of_issues: 0,

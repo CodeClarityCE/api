@@ -51,12 +51,12 @@ export interface ExposureEvent {
   probe_reason: string | null;
 }
 
-export interface Introduction extends ExposureEvent {
+interface Introduction extends ExposureEvent {
   /** Days from introduction to disclosure; negative when already disclosed */
   residence_days: number | null;
 }
 
-export interface Fix extends ExposureEvent {
+interface Fix extends ExposureEvent {
   /** Null when the state after the fix is unknown (no probe outcome row) */
   kind: FixKind | null;
   /** Days from disclosure to fix; negative when fixed before disclosure */

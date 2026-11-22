@@ -236,13 +236,6 @@ export function bootstrapGiniSteps(
   return pooledValuesSteps(clusters, weightedGini, settings);
 }
 
-export function bootstrapGini(
-  clusters: BootstrapClusters<readonly number[]>,
-  settings: BootstrapSettings,
-): BootstrapInterval | null {
-  return runSteps(bootstrapGiniSteps(clusters, settings));
-}
-
 /** Percentile interval of the Gini of per-item totals over the drawn clusters; zero totals are left out. */
 export function* bootstrapGiniOfTotalsSteps(
   clusters: BootstrapClusters<ReadonlyMap<string, number>>,
@@ -286,13 +279,6 @@ export function* bootstrapGiniOfTotalsSteps(
   );
 }
 
-export function bootstrapGiniOfTotals(
-  clusters: BootstrapClusters<ReadonlyMap<string, number>>,
-  settings: BootstrapSettings,
-): BootstrapInterval | null {
-  return runSteps(bootstrapGiniOfTotalsSteps(clusters, settings));
-}
-
 /** Percentile interval of the median, resampling whole clusters. */
 export function bootstrapMedianSteps(
   clusters: BootstrapClusters<readonly number[]>,
@@ -303,13 +289,6 @@ export function bootstrapMedianSteps(
     (values, weights) => weightedQuantile(values, weights, 0.5),
     settings,
   );
-}
-
-export function bootstrapMedian(
-  clusters: BootstrapClusters<readonly number[]>,
-  settings: BootstrapSettings,
-): BootstrapInterval | null {
-  return runSteps(bootstrapMedianSteps(clusters, settings));
 }
 
 /**
@@ -427,11 +406,7 @@ function betaContinuedFraction(x: number, a: number, b: number): number {
 }
 
 /** The regularized incomplete beta function I_x(a, b). */
-export function regularizedIncompleteBeta(
-  x: number,
-  a: number,
-  b: number,
-): number {
+function regularizedIncompleteBeta(x: number, a: number, b: number): number {
   if (x <= 0) return 0;
   if (x >= 1) return 1;
   const front = Math.exp(

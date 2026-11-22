@@ -19,7 +19,7 @@ export interface ParsedRange {
   fixedInclusive: boolean;
 }
 
-export type SourceName = "NVD" | "OSV" | "GCVE";
+type SourceName = "NVD" | "OSV" | "GCVE";
 
 /** All range data extracted from a single source (or a single NVD affected entry). */
 export interface SourceRangeData {

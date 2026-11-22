@@ -6,8 +6,8 @@ import type { FixNextRank } from "./fix-next-rank";
 import type { RemediationKind } from "./remediation.types";
 import type { RemediationTicket } from "./remediation-tickets";
 
-export const DEFAULT_FIX_NEXT_LIMIT = 10;
-export const MAX_FIX_NEXT_LIMIT = 50;
+const DEFAULT_FIX_NEXT_LIMIT = 10;
+const MAX_FIX_NEXT_LIMIT = 50;
 
 export class FixNextQuery {
   /** How many entries, most urgent first */
