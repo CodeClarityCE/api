@@ -13,7 +13,6 @@ import type { OwaspTop10Info } from "src/codeclarity_modules/knowledge/owasp/owa
 import type { Version } from "src/codeclarity_modules/knowledge/package/package.entity";
 import { PackageRepository } from "src/codeclarity_modules/knowledge/package/package.repository";
 import { VersionsRepository } from "src/codeclarity_modules/knowledge/package/packageVersions.repository";
-import type { PatchInfo } from "src/codeclarity_modules/results/patching/patching.types";
 import type { Dependency } from "src/codeclarity_modules/results/sbom/sbom.types";
 import type {
   AffectedInfo,
@@ -489,8 +488,6 @@ abstract class BaseReportGenerator {
       weaknesses,
       severities: severityInfo,
       common_consequences: consequences,
-      // Patch data is not loaded for reports yet.
-      patch: undefined as unknown as PatchInfo,
       references: this.getReferences(ctx),
       owasp_top_10: this.getOwaspTop10Info(vuln),
       location: [],

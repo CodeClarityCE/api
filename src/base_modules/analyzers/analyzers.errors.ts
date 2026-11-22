@@ -54,7 +54,7 @@ export class AnalyzerHasNoPlugins extends PublicAPIError {
   }
 }
 
-/** Names the plugin and what it is missing, e.g. "js-patching needs vuln-finder". */
+/** Names the plugin and what it is missing, e.g. "license-finder needs js-sbom". */
 export class AnalyzerDependencyMissing extends PublicAPIError {
   static errorCode = "AnalyzerDependencyMissing";
   static errorMessage = errorMessages[AnalyzerDependencyMissing.errorCode]!;

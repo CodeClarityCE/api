@@ -22,7 +22,6 @@ export function affectedOf(finding: Vulnerability): AffectedVuln {
     Conflict: finding.Conflict,
     ...(finding.GCVEMatch ? { GCVEMatch: finding.GCVEMatch } : {}),
     ...(finding.Weaknesses ? { Weaknesses: finding.Weaknesses } : {}),
-    ...(finding.PatchType ? { PatchType: finding.PatchType } : {}),
     ...(finding.Disputed === true ? { Disputed: true } : {}),
     ...(finding.SourceVerdicts
       ? { SourceVerdicts: finding.SourceVerdicts }

@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 
-import { Output as PatchesOutput } from "src/codeclarity_modules/results/patching/patching.types";
 import {
   NEWEST_RESULT_FIRST,
   Result,
@@ -12,11 +11,9 @@ import {
   KnowledgeSnapshot,
   MaliciousPackageAdvisory,
   Output as VulnsOutput,
-  PatchType,
   Status,
   Vulnerability,
 } from "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types";
-import { Status as PluginStatus } from "src/types/apiResponses.types";
 import {
   PluginFailed,
   PluginResultNotAvailable,
@@ -144,13 +141,6 @@ export class VulnerabilitiesUtilsService {
     //     // Nothing to throw here
     // }
 
-    // Attach patch status only when the patching plugin produced a result
-    const patchTypes = await this.getPatchTypes(analysis_id, workspace);
-    for (const vuln of vulnerabilities) {
-      const patchType = patchTypes.get(occurrenceKey(vuln));
-      if (patchType) vuln.PatchType = patchType;
-    }
-
     // Judge each instance from its source verdicts, then drop the hidden ones
     const hidden_counts = emptyHiddenCounts();
     const shown: Record<HiddenReason, boolean> = {
@@ -178,63 +168,6 @@ export class VulnerabilitiesUtilsService {
         (ws.Vulnerabilities ?? []).some((f) => f.SourceVerdicts),
       ),
     };
-  }
-
-  /**
-   * Patch status of each vulnerable dependency, from the newest js-patching result.
-   * Empty when patching did not run or failed.
-   */
-  private async getPatchTypes(
-    analysis_id: string,
-    workspace: string,
-  ): Promise<Map<string, PatchType>> {
-    const patchTypes = new Map<string, PatchType>();
-    const result = await this.resultRepository.findOne({
-      relations: { analysis: true },
-      where: { analysis: { id: analysis_id }, plugin: "js-patching" },
-      order: NEWEST_RESULT_FIRST,
-      cache: true,
-    });
-    if (!result) return patchTypes;
-    const patches = result.result as unknown as PatchesOutput;
-    if (patches.analysis_info?.status === PluginStatus.Failure)
-      return patchTypes;
-    const workspaceData = patches.workspaces?.[workspace];
-    if (!workspaceData) return patchTypes;
-
-    // A vulnerability can be reached through several direct dependencies
-    const fixable = new Map<
-      string,
-      { patchable: boolean; unpatchable: boolean }
-    >();
-    const mark = (
-      list: { Vulnerability: Vulnerability }[] | null | undefined,
-      field: "patchable" | "unpatchable",
-    ): void => {
-      for (const entry of list ?? []) {
-        const key = occurrenceKey(entry.Vulnerability);
-        const seen = fixable.get(key) ?? {
-          patchable: false,
-          unpatchable: false,
-        };
-        seen[field] = true;
-        fixable.set(key, seen);
-      }
-    };
-    for (const patch of [
-      ...Object.values(workspaceData.patches ?? {}),
-      ...Object.values(workspaceData.dev_patches ?? {}),
-    ]) {
-      mark(patch.Patchable, "patchable");
-      mark(patch.Unpatchable, "unpatchable");
-    }
-
-    for (const [key, { patchable, unpatchable }] of fixable) {
-      if (patchable && unpatchable) patchTypes.set(key, PatchType.Partial);
-      else if (patchable) patchTypes.set(key, PatchType.Full);
-      else patchTypes.set(key, PatchType.None);
-    }
-    return patchTypes;
   }
 
   async getMaliciousPackageAdvisories(
@@ -328,14 +261,4 @@ export class VulnerabilitiesUtilsService {
     // This is a heuristic that may need refinement
     return "npm";
   }
-}
-
-/** One vulnerability in one installed dependency version. */
-function occurrenceKey(
-  vuln: Pick<
-    Vulnerability,
-    "VulnerabilityId" | "AffectedDependency" | "AffectedVersion"
-  >,
-): string {
-  return `${vuln.VulnerabilityId}|${vuln.AffectedDependency}@${vuln.AffectedVersion}`;
 }

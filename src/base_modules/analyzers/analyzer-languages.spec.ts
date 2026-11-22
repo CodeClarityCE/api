@@ -1,31 +1,31 @@
 import { deriveLanguages, languagesToSync } from "./analyzer-languages";
 import type { PluginDependencies } from "./workflow-rules";
 
-// The installed plugins, with js-patching reading only the JavaScript SBOM.
+// The installed plugins, with js-checker reading only the JavaScript SBOM.
 const plugins: PluginDependencies[] = [
   { name: "js-sbom", depends_on: [] },
   { name: "php-sbom", depends_on: [] },
   { name: "vuln-finder", depends_on: ["js-sbom", "php-sbom"] },
   { name: "license-finder", depends_on: ["js-sbom", "php-sbom"] },
-  { name: "js-patching", depends_on: ["js-sbom", "vuln-finder"] },
+  { name: "js-checker", depends_on: ["js-sbom", "vuln-finder"] },
   { name: "codeql", depends_on: [] },
 ];
 
 const step = (name: string) => ({ name, version: "v1", config: {} });
 
 describe("deriveLanguages", () => {
-  it("lists js-patching only under javascript in the multi-language template", () => {
+  it("lists js-checker only under javascript in the multi-language template", () => {
     const steps = [
       [step("js-sbom"), step("php-sbom")],
       [step("vuln-finder"), step("license-finder")],
-      [step("js-patching")],
+      [step("js-checker")],
     ];
 
     expect(deriveLanguages(steps, ["javascript", "php"], plugins)).toEqual({
       supported_languages: ["javascript", "php"],
       language_config: {
         javascript: {
-          plugins: ["js-sbom", "vuln-finder", "license-finder", "js-patching"],
+          plugins: ["js-sbom", "vuln-finder", "license-finder", "js-checker"],
         },
         php: { plugins: ["php-sbom", "vuln-finder", "license-finder"] },
       },
@@ -34,12 +34,12 @@ describe("deriveLanguages", () => {
 });
 
 describe("languagesToSync", () => {
-  // Saved from the JavaScript template, then given codeql and js-patching.
+  // Saved from the JavaScript template, then given codeql and js-checker.
   const staleAnalyzer = () => ({
     steps: [
       [step("js-sbom"), step("codeql")],
       [step("vuln-finder"), step("license-finder")],
-      [step("js-patching")],
+      [step("js-checker")],
     ],
     supported_languages: ["javascript"],
     language_config: {
@@ -57,7 +57,7 @@ describe("languagesToSync", () => {
             "codeql",
             "vuln-finder",
             "license-finder",
-            "js-patching",
+            "js-checker",
           ],
         },
       },

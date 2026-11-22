@@ -1,6 +1,5 @@
 import type { CVSS2, CVSS3, CVSS4, CVSS31 } from "../../knowledge/cvss.types";
 import type { OwaspTop10Info } from "../../knowledge/owasp/owasp.types";
-import type { PatchInfo } from "../patching/patching.types";
 import type { ParsedGitUrl, StatusError } from "../sbom/sbom.types";
 import type {
   SourceSeverity,
@@ -138,7 +137,7 @@ interface WeaknessInfo {
   OWASPTop10Name: string;
 }
 
-export interface Severity {
+interface Severity {
   Severity: number;
   SeverityClass: string;
   SeverityType: SeverityType;
@@ -164,12 +163,6 @@ export enum SeverityType {
   Ghsa = "GHSA",
 }
 
-export enum PatchType {
-  Full = "FULL",
-  Partial = "PARTIAL",
-  None = "NONE",
-}
-
 export interface Vulnerability {
   Id: string;
   Sources: Source[];
@@ -182,7 +175,6 @@ export interface Vulnerability {
   NVDMatch: Vuln;
   GCVEMatch?: Vuln;
   Conflict: Conflict;
-  PatchType?: PatchType;
   /** True when a matched CVE record says its vendor disputes it. */
   Disputed?: boolean;
   /** One verdict per knowledge source; absent on older analyses. */
@@ -256,7 +248,6 @@ export interface AffectedVuln {
   NVDMatch: Vuln;
   GCVEMatch?: Vuln;
   Conflict: Conflict;
-  PatchType?: PatchType;
   Disputed?: boolean;
   SourceVerdicts?: SourceVerdict[];
   Hidden?: HiddenReason;
@@ -277,7 +268,8 @@ interface Conflict {
   ConflictFlag: ConflictFlag;
 }
 
-interface Semver {
+/** A version as the Go plugins write it. */
+export interface Semver {
   Major: number;
   Minor: number;
   Patch: number;
@@ -347,14 +339,13 @@ export interface VulnerabilityInfoReport {
   aliases: string[];
 }
 
-/** Vulnerability details for report generation (uses raw PatchInfo) */
+/** Vulnerability details for report generation */
 export interface VulnerabilityDetailsReport {
   vulnerability_info: VulnerabilityInfoReport;
   dependency_info?: DependencyInfoReport;
   severities: SeverityInfo;
   owasp_top_10: OwaspTop10Info | null;
   weaknesses: WeaknessInfoReport[];
-  patch: PatchInfo;
   common_consequences: Record<string, CommonConsequencesInfo[]>;
   references: ReferenceInfo[];
   location: string[];

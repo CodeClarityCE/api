@@ -62,7 +62,6 @@ export const errorMessages: Record<string, string> = {
   NotAuthorized: "You are not authorized to perform this action.",
   OrganizationTokenScopeTooNarrow:
     "The scope of this Organization token does not allow this action.",
-  Unsupported: "The action you requested is not supported.",
   UnknownWorkspace: "The referenced workspace does not exist on the project.",
   SourceVerdictsNotAvailable:
     "This analysis predates source verdicts. Re-run it to export them.",
@@ -194,20 +193,6 @@ export class OrganizationTokenScopeTooNarrow extends PublicAPIError {
       OrganizationTokenScopeTooNarrow.errorCode,
       OrganizationTokenScopeTooNarrow.errorMessage,
       OrganizationTokenScopeTooNarrow.statusCode,
-      cause,
-    );
-  }
-}
-
-export class Unsupported extends PublicAPIError {
-  static errorCode = "Unsupported";
-  static errorMessage = errorMessages[Unsupported.errorCode]!;
-  static statusCode = 400;
-  constructor(cause?: unknown) {
-    super(
-      Unsupported.errorCode,
-      Unsupported.errorMessage,
-      Unsupported.statusCode,
       cause,
     );
   }

@@ -385,7 +385,6 @@ export class TicketsService {
         severities,
         owasp_top_10: null,
         weaknesses: [],
-        patch: null as unknown as VulnerabilityDetailsReport["patch"],
         common_consequences: {},
         references,
         location: [],

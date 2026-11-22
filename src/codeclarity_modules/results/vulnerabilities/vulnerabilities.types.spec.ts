@@ -339,21 +339,6 @@ describe("vulnerabilities.types (report generation)", () => {
               description: "XSS vulnerability",
             },
           ],
-          patch: {
-            TopLevelVulnerable: true,
-            IsPatchable: "true",
-            Unpatchable: [],
-            Patchable: [],
-            Introduced: [],
-            Patches: {},
-            Update: {
-              Major: 2,
-              Minor: 0,
-              Patch: 0,
-              PreReleaseTag: "",
-              MetaData: "",
-            },
-          },
           common_consequences: {
             "CWE-79": [
               {
@@ -379,7 +364,6 @@ describe("vulnerabilities.types (report generation)", () => {
         expect(vulnDetails.severities.cvss_31?.base_score).toBe(7.5);
         expect(vulnDetails.owasp_top_10?.id).toBe("A01:2021");
         expect(vulnDetails.weaknesses).toHaveLength(1);
-        expect(vulnDetails.patch.IsPatchable).toBe("true");
         expect(vulnDetails.references).toHaveLength(1);
         expect(vulnDetails.location).toContain("/path/to/vulnerable/file.js");
       });
@@ -402,21 +386,6 @@ describe("vulnerabilities.types (report generation)", () => {
           severities: {},
           owasp_top_10: null,
           weaknesses: [],
-          patch: {
-            TopLevelVulnerable: false,
-            IsPatchable: "false",
-            Unpatchable: [],
-            Patchable: [],
-            Introduced: [],
-            Patches: {},
-            Update: {
-              Major: 0,
-              Minor: 0,
-              Patch: 0,
-              PreReleaseTag: "",
-              MetaData: "",
-            },
-          },
           common_consequences: {},
           references: [],
           location: [],

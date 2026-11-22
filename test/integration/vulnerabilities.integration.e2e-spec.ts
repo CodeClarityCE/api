@@ -59,7 +59,7 @@ const vulnsOutput = {
   analysis_info: { status: "success" },
 };
 
-// A patching result entry, as js-patching writes one per direct dependency.
+// A patching result entry, as the removed js-patching plugin wrote one per direct dependency.
 const toPatch = (id: string, dependency: string, version: string) => ({
   DependencyName: dependency,
   DependencyVersion: version,
@@ -189,79 +189,43 @@ describe("Vulnerabilities list (e2e)", () => {
     ).toEqual(["axios"]);
   });
 
-  interface Affected {
-    AffectedDependency: string;
-    PatchType?: string;
-  }
+  // Analyses from before js-patching was removed keep their patching result rows.
+  it("lists an analysis with an old patching result, without patch data", async () => {
+    await testHelper
+      .getDataSource()
+      .query(
+        `INSERT INTO result (result, plugin, created_on, "analysisId") VALUES ($1, 'js-patching', now(), $2)`,
+        [JSON.stringify(patchingOutput), analysisId],
+      );
 
-  const patchTypes = async (): Promise<Record<string, string | undefined>> => {
     const response = await testHelper.makeAuthenticatedRequest(
       "GET",
       url,
       user.accessToken,
     );
     expect(response.statusCode).toBe(200);
-    const findings = response.json().data as { Affected: Affected[] }[];
-    return Object.fromEntries(
-      findings
-        .flatMap((v) => v.Affected)
-        .map((a) => [a.AffectedDependency, a.PatchType]),
-    );
-  };
-
-  it("shows each dependency's patch status from the patching result", async () => {
-    await testHelper
-      .getDataSource()
-      .query(
-        `INSERT INTO result (result, plugin, created_on, "analysisId") VALUES ($1, 'js-patching', now(), $2)`,
-        [JSON.stringify(patchingOutput), analysisId],
-      );
-
-    expect(await patchTypes()).toEqual({
-      lodash: "FULL",
-      axios: "NONE",
-      minimist: "PARTIAL",
-    });
-  });
-
-  it("filters and counts by patch status", async () => {
-    await testHelper
-      .getDataSource()
-      .query(
-        `INSERT INTO result (result, plugin, created_on, "analysisId") VALUES ($1, 'js-patching', now(), $2)`,
-        [JSON.stringify(patchingOutput), analysisId],
-      );
-
-    expect(await dependencies("active_filters=[patch_full]")).toEqual([
+    const body = response.json() as {
+      data: { Affected: Record<string, unknown>[] }[];
+      filter_count: Record<string, number>;
+    };
+    const affected = body.data.flatMap((v) => v.Affected);
+    expect(affected.map((a) => a["AffectedDependency"]).sort()).toEqual([
+      "axios",
       "lodash",
+      "minimist",
     ]);
+    expect(affected.some((a) => "PatchType" in a)).toBe(false);
     expect(
-      (await dependencies("active_filters=[patch_partial,patch_none]")).sort(),
-    ).toEqual(["axios", "minimist"]);
-
-    const response = await testHelper.makeAuthenticatedRequest(
-      "GET",
-      url,
-      user.accessToken,
-    );
-    const counts = response.json().filter_count as Record<string, number>;
-    expect([
-      counts["patch_full"],
-      counts["patch_partial"],
-      counts["patch_none"],
-    ]).toEqual([1, 1, 1]);
+      Object.keys(body.filter_count).filter((f) => f.startsWith("patch_")),
+    ).toEqual([]);
   });
 
-  it("finds nothing by patch status when patching did not run", async () => {
-    expect(await dependencies("active_filters=[patch_full]")).toEqual([]);
-  });
-
-  it("leaves the patch status out when patching did not run", async () => {
-    expect(await patchTypes()).toEqual({
-      lodash: undefined,
-      axios: undefined,
-      minimist: undefined,
-    });
+  it("ignores a patch status filter an older client sends", async () => {
+    expect((await dependencies("active_filters=[patch_full]")).sort()).toEqual([
+      "axios",
+      "lodash",
+      "minimist",
+    ]);
   });
 
   describe("a vulnerability found in two versions", () => {

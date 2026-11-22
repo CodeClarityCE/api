@@ -33,19 +33,19 @@ import {
   openScratchDatabase,
 } from "../utils/scratch-database";
 
-// The plugins as they register, with js-patching reading only the JavaScript SBOM.
+// The plugins as they register, with js-checker reading only the JavaScript SBOM.
 const installed = [
   { id: "1", name: "js-sbom", depends_on: [] },
   { id: "2", name: "php-sbom", depends_on: [] },
   { id: "3", name: "vuln-finder", depends_on: ["js-sbom", "php-sbom"] },
   { id: "4", name: "license-finder", depends_on: ["js-sbom", "php-sbom"] },
-  { id: "5", name: "js-patching", depends_on: ["js-sbom", "vuln-finder"] },
+  { id: "5", name: "js-checker", depends_on: ["js-sbom", "vuln-finder"] },
   { id: "6", name: "codeql", depends_on: [] },
 ];
 
 const step = (name: string) => ({ name, version: "v1", config: {} });
 
-// The language config audit-js-only-full was saved with, before codeql and js-patching were listed.
+// The language config audit-js-only-full was saved with, before codeql and js-checker were listed.
 const staleConfig = {
   javascript: { plugins: ["js-sbom", "vuln-finder", "license-finder"] },
 };
@@ -57,7 +57,7 @@ const derivedConfig = {
       "codeql",
       "vuln-finder",
       "license-finder",
-      "js-patching",
+      "js-checker",
     ],
   },
 };
@@ -200,7 +200,7 @@ describe("Language config of a template-based analyzer (Postgres)", () => {
       steps: [
         [step("js-sbom"), step("codeql")],
         [step("vuln-finder"), step("license-finder")],
-        [step("js-patching")],
+        [step("js-checker")],
       ],
       supported_languages: ["javascript"],
       language_config,
