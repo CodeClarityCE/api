@@ -12,6 +12,7 @@ import {
 import { ApiBearerAuth, ApiQuery, ApiTags } from "@nestjs/swagger";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import { OrganizationTokenScope } from "src/base_modules/organizations/tokens/organization-token.types";
 import { Project } from "src/base_modules/projects/project.entity";
 import {
   BatchProjectIdsBody,
@@ -22,6 +23,7 @@ import { AllowedOrderByGetProjects } from "src/base_modules/shared/repositories"
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocCreatedResponseDecorator } from "src/decorators/CrudResponse";
 import { APIDocNoDataResponseDecorator } from "src/decorators/NoDataResponse";
+import { AllowOrganizationToken } from "src/decorators/OrganizationTokenDecorator";
 import { APIDocTypedPaginatedResponseDecorator } from "src/decorators/TypedPaginatedResponse";
 import { APIDocTypedResponseDecorator } from "src/decorators/TypedResponse";
 import { AuthUser } from "src/decorators/UserDecorator";
@@ -90,6 +92,7 @@ export class ProjectController {
   @ApiQuery({ name: "search_key", required: false })
   @ApiQuery({ name: "sort_key", required: false })
   @ApiQuery({ name: "sort_direction", required: false })
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get("")
   async getMany(
     @AuthUser() user: AuthenticatedUser,

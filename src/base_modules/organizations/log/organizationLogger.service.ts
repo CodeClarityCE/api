@@ -20,6 +20,8 @@ import {
 } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
 
+import type { OrganizationTokenPrincipal } from "../tokens/organization-token.types";
+
 import { Log } from "./log.entity";
 
 /**
@@ -61,6 +63,24 @@ export class OrganizationLoggerService {
     const log_created = await this.logsRepository.saveLog(log);
 
     return log_created.id;
+  }
+
+  /** Adds an audit log entry whose actor is an Organization token. */
+  async addTokenAuditLog(
+    action: ActionType,
+    description: string,
+    token: OrganizationTokenPrincipal,
+  ): Promise<string> {
+    const log = new Log();
+    log.action = action;
+    log.description = description;
+    log.blame_on_token_id = token.id;
+    log.blame_on_token_name = token.name;
+    log.created_on = new Date();
+    log.organization_id = token.organizationId;
+    log.action_class = getTypeClassOfAction(action);
+    log.action_severity = getSeverityOfAction(action);
+    return (await this.logsRepository.saveLog(log)).id;
   }
 
   /**

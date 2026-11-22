@@ -15,6 +15,7 @@ import * as fs from "fs";
 import type { Socket } from "socket.io";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import { OrganizationTokensService } from "src/base_modules/organizations/tokens/organization-tokens.service";
 import { SKIP_AUTH_KEY } from "src/decorators/SkipAuthDecorator";
 import { AccountNotActivated, NotAuthenticated } from "src/types/error.types";
 
@@ -55,6 +56,7 @@ describe("CombinedAuthGuard", () => {
             getAllAndOverride: jest.fn(),
           },
         },
+        { provide: OrganizationTokensService, useValue: {} },
       ],
     }).compile();
 

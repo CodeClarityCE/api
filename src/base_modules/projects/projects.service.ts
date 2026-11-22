@@ -394,9 +394,9 @@ export class ProjectService {
     _sortDirection?: SortDirection,
   ): Promise<TypedPaginatedData<Project>> {
     // Every member of an org can retrieve all project
-    await this.repos.memberships.hasRequiredRole(
+    await this.repos.memberships.hasRequiredRoleFor(
       orgId,
-      user.userId,
+      user,
       MemberRole.USER,
     );
 
