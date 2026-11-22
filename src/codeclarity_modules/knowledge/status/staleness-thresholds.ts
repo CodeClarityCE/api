@@ -1,6 +1,6 @@
 // Hours after which each knowledge source counts as stale.
 // Grafana alerts must use the same values: overriding KNOWLEDGE_STALE_AFTER_HOURS_* needs the Grafana rules changed to match.
-export const DEFAULT_STALE_AFTER_HOURS = {
+const DEFAULT_STALE_AFTER_HOURS = {
   cwe: 168,
   epss: 24,
   friends_of_php: 168,
@@ -18,7 +18,7 @@ export const KNOWLEDGE_SOURCES = Object.keys(
 ) as KnowledgeSourceName[];
 
 // The environment variable overriding a source's threshold.
-export function staleAfterEnvName(source: KnowledgeSourceName): string {
+function staleAfterEnvName(source: KnowledgeSourceName): string {
   return `KNOWLEDGE_STALE_AFTER_HOURS_${source.toUpperCase()}`;
 }
 

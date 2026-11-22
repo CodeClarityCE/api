@@ -7,10 +7,10 @@ import {
   SOURCE_VERDICT_EVIDENCE_FIELDS,
 } from "./source-match.types";
 
-export type SourceVerdictCell = string | number | boolean | null;
-export type SourceVerdictRow = Record<string, SourceVerdictCell>;
+type SourceVerdictCell = string | number | boolean | null;
+type SourceVerdictRow = Record<string, SourceVerdictCell>;
 
-export const SOURCE_VERDICT_COLUMNS: readonly string[] = [
+const SOURCE_VERDICT_COLUMNS: readonly string[] = [
   "workspace",
   "vulnerability_id",
   "dependency",

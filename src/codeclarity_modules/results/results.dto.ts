@@ -9,20 +9,6 @@ import {
 } from "class-validator";
 
 /**
- * Path parameters for analysis-related endpoints
- */
-export class AnalysisParamsDto {
-  @IsString()
-  org_id!: string;
-
-  @IsString()
-  project_id!: string;
-
-  @IsString()
-  analysis_id!: string;
-}
-
-/**
  * Query parameters for reading one result of an analysis by plugin type
  */
 export class ResultByTypeQuery {
@@ -43,7 +29,7 @@ export class ResultByTypeQuery {
 /**
  * Common query parameters for paginated results
  */
-export class ResultsQueryDto {
+class ResultsQueryDto {
   @IsString()
   workspace!: string;
 
@@ -81,45 +67,7 @@ export class ResultsQueryDto {
 }
 
 /**
- * Query parameters for SBOM results (extends common with ecosystem_filter)
- */
-export class SbomQueryDto extends ResultsQueryDto {
-  @IsOptional()
-  @IsString()
-  ecosystem_filter?: string;
-}
-
-/**
- * Query parameters for licenses results
- */
-export class LicensesQueryDto extends ResultsQueryDto {
-  @IsOptional()
-  @IsString()
-  ecosystem_filter?: string;
-}
-
-/**
  * Query parameters for patching results
+ * @jsPatching Removed with js-patching (#334).
  */
 export class PatchingQueryDto extends ResultsQueryDto {}
-
-/**
- * Helper to convert query DTO to service parameters
- */
-export function getQueryParams(query: ResultsQueryDto): {
-  page: number;
-  entriesPerPage: number;
-  sortBy: string | undefined;
-  sortDirection: string | undefined;
-  activeFilters: string | undefined;
-  searchKey: string | undefined;
-} {
-  return {
-    page: query.page ?? -1,
-    entriesPerPage: query.entries_per_page ?? -1,
-    sortBy: query.sort_by,
-    sortDirection: query.sort_direction,
-    activeFilters: query.active_filters,
-    searchKey: query.search_key,
-  };
-}

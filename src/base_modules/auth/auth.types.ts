@@ -106,12 +106,3 @@ export class AuthenticateBody {
   @IsNotEmpty()
   password!: string;
 }
-
-export class GithubAppUpdateQuery {
-  @ApiProperty({ description: "Installation ID" })
-  @IsNotEmpty()
-  installation_id!: string;
-
-  @IsNotEmpty()
-  setup_action!: string;
-}

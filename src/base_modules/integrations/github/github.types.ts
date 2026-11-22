@@ -214,7 +214,7 @@ export interface GithubRepositorySchema {
 /**
  * License Simple
  */
-export interface LicenseSimple {
+interface LicenseSimple {
   html_url?: string;
   key: string;
   name: string;
@@ -231,7 +231,7 @@ export interface LicenseSimple {
  * - `PR_BODY` - default to the pull request's body.
  * - `BLANK` - default to a blank commit message.
  */
-export enum MergeCommitMessage {
+enum MergeCommitMessage {
   Blank = "BLANK",
   PRBody = "PR_BODY",
   PRTitle = "PR_TITLE",
@@ -244,7 +244,7 @@ export enum MergeCommitMessage {
  * - `MERGE_MESSAGE` - default to the classic title for a merge message (e.g., Merge pull
  * request #123 from branch-name).
  */
-export enum MergeCommitTitle {
+enum MergeCommitTitle {
   MergeMessage = "MERGE_MESSAGE",
   PRTitle = "PR_TITLE",
 }
@@ -252,7 +252,7 @@ export enum MergeCommitTitle {
 /**
  * A GitHub user.
  */
-export interface SimpleUser {
+interface SimpleUser {
   avatar_url: string;
   email?: null | string;
   events_url: string;
@@ -280,7 +280,7 @@ export interface SimpleUser {
 /**
  * A GitHub user.
  */
-export interface OwnerObject {
+interface OwnerObject {
   avatar_url: string;
   email?: null | string;
   events_url: string;
@@ -305,7 +305,7 @@ export interface OwnerObject {
   [property: string]: unknown;
 }
 
-export interface CoordinatePermissions {
+interface CoordinatePermissions {
   admin: boolean;
   maintain?: boolean;
   pull: boolean;
@@ -321,7 +321,7 @@ export interface CoordinatePermissions {
  * - `COMMIT_MESSAGES` - default to the branch's commit messages.
  * - `BLANK` - default to a blank commit message.
  */
-export enum SquashMergeCommitMessage {
+enum SquashMergeCommitMessage {
   Blank = "BLANK",
   CommitMessages = "COMMIT_MESSAGES",
   PRBody = "PR_BODY",
@@ -334,12 +334,12 @@ export enum SquashMergeCommitMessage {
  * - `COMMIT_OR_PR_TITLE` - default to the commit's title (if only one commit) or the pull
  * request's title (when more than one commit).
  */
-export enum SquashMergeCommitTitle {
+enum SquashMergeCommitTitle {
   CommitOrPRTitle = "COMMIT_OR_PR_TITLE",
   PRTitle = "PR_TITLE",
 }
 
-export interface TemplateRepository {
+interface TemplateRepository {
   allow_auto_merge?: boolean;
   allow_merge_commit?: boolean;
   allow_rebase_merge?: boolean;
@@ -458,7 +458,7 @@ export interface TemplateRepository {
   [property: string]: unknown;
 }
 
-export interface Owner {
+interface Owner {
   avatar_url?: string;
   events_url?: string;
   followers_url?: string;
@@ -480,131 +480,11 @@ export interface Owner {
   [property: string]: unknown;
 }
 
-export interface TemplateRepositoryPermissions {
+interface TemplateRepositoryPermissions {
   admin?: boolean;
   maintain?: boolean;
   pull?: boolean;
   push?: boolean;
   triage?: boolean;
   [property: string]: unknown;
-}
-
-export interface GithubOAuthAccessTokenResponse {
-  access_token: string;
-  token_type: string;
-  scope: string;
-}
-
-export type GithubUserResponse = PrivateUser | PublicUser;
-
-/**
- * Private User
- */
-export interface PrivateUser {
-  login: string;
-  id: number;
-  node_id: string;
-  avatar_url: string;
-  gravatar_id: string | null;
-  url: string;
-  html_url: string;
-  followers_url: string;
-  following_url: string;
-  gists_url: string;
-  starred_url: string;
-  subscriptions_url: string;
-  organizations_url: string;
-  repos_url: string;
-  events_url: string;
-  received_events_url: string;
-  type: string;
-  site_admin: boolean;
-  name: string | null;
-  company: string | null;
-  blog: string | null;
-  location: string | null;
-  email: string | null;
-  hireable: boolean | null;
-  bio: string | null;
-  twitter_username?: string | null;
-  public_repos: number;
-  public_gists: number;
-  followers: number;
-  following: number;
-  created_at: string;
-  updated_at: string;
-  private_gists: number;
-  total_private_repos: number;
-  owned_private_repos: number;
-  disk_usage: number;
-  collaborators: number;
-  two_factor_authentication: boolean;
-  plan?: {
-    collaborators: number;
-    name: string;
-    space: number;
-    private_repos: number;
-    [k: string]: unknown;
-  };
-  suspended_at?: string | null;
-  business_plus?: boolean;
-  ldap_dn?: string;
-  [k: string]: unknown;
-}
-/**
- * Public User
- */
-export interface PublicUser {
-  login: string;
-  id: number;
-  node_id: string;
-  avatar_url: string;
-  gravatar_id: string | null;
-  url: string;
-  html_url: string;
-  followers_url: string;
-  following_url: string;
-  gists_url: string;
-  starred_url: string;
-  subscriptions_url: string;
-  organizations_url: string;
-  repos_url: string;
-  events_url: string;
-  received_events_url: string;
-  type: string;
-  site_admin: boolean;
-  name: string | null;
-  company: string | null;
-  blog: string | null;
-  location: string | null;
-  email: string | null;
-  hireable: boolean | null;
-  bio: string | null;
-  twitter_username?: string | null;
-  public_repos: number;
-  public_gists: number;
-  followers: number;
-  following: number;
-  created_at: string;
-  updated_at: string;
-  plan?: {
-    collaborators: number;
-    name: string;
-    space: number;
-    private_repos: number;
-    [k: string]: unknown;
-  };
-  suspended_at?: string | null;
-  private_gists?: number;
-  total_private_repos?: number;
-  owned_private_repos?: number;
-  disk_usage?: number;
-  collaborators?: number;
-}
-
-export interface GithubEmail {
-  email: string;
-  primary: boolean;
-  verified: boolean;
-  visibility: string | null;
 }

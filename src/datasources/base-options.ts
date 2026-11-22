@@ -27,7 +27,7 @@ try {
   // ignore if not present
 }
 
-export function buildSslOptions():
+function buildSslOptions():
   false | { rejectUnauthorized: boolean; ca?: string } {
   const sslMode =
     process.env["PG_DB_SSLMODE"] ?? (ENV === "prod" ? "require" : "disable");

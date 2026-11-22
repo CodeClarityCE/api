@@ -14,9 +14,7 @@ test/
 │   └── analyses.integration.e2e-spec.ts   # Analysis workflow tests
 ├── utils/
 │   ├── integration-test-helper.ts        # Test infrastructure helper
-│   ├── test-utils.ts                     # Shared utilities
 │   └── jest-setup.ts                     # Jest configuration
-├── mocks/                          # Mock services
 ├── setup-e2e.ts                   # E2E test setup
 └── jest-e2e.json                  # Jest E2E configuration
 ```
@@ -28,7 +26,7 @@ test/
 Integration tests require real PostgreSQL databases to be running. The application uses three databases:
 
 1. **codeclarity** - Main application data (users, projects, analyses)
-2. **knowledge** - Vulnerability and package databases 
+2. **knowledge** - Vulnerability and package databases
 3. **config** - Configuration and plugin metadata
 
 ### Environment Configuration
@@ -90,7 +88,7 @@ Use Docker Compose to run the required infrastructure:
 
 ```yaml
 # docker-compose.test.yml
-version: '3.8'
+version: "3.8"
 services:
   postgres-test:
     image: postgres:18.6-alpine
@@ -126,6 +124,7 @@ CREATE DATABASE plugin_test;
 ### Prerequisites
 
 1. **Start Infrastructure:**
+
    ```bash
    docker-compose -f docker-compose.test.yml up -d
    ```
@@ -179,6 +178,7 @@ psql -h localhost -U postgres -Atc "SELECT format('DROP DATABASE %I WITH (FORCE)
 **File:** `auth.integration.e2e-spec.ts`
 
 Tests the complete authentication flow:
+
 - User registration with organization creation
 - Login with credential validation
 - JWT token management (access/refresh)
@@ -188,6 +188,7 @@ Tests the complete authentication flow:
 - Concurrent authentication handling
 
 **Coverage:**
+
 - 8 test suites
 - 25+ individual test cases
 - Happy path and error scenarios
@@ -198,6 +199,7 @@ Tests the complete authentication flow:
 **File:** `projects.integration.e2e-spec.ts`
 
 Tests project management workflows:
+
 - Project creation with role-based authorization
 - Project listing with pagination and search
 - Project details retrieval
@@ -206,7 +208,8 @@ Tests project management workflows:
 - Concurrent operations handling
 
 **Coverage:**
-- 6 test suites  
+
+- 6 test suites
 - 20+ individual test cases
 - CRUD operations validation
 - Authorization boundary testing
@@ -216,6 +219,7 @@ Tests project management workflows:
 **File:** `analyses.integration.e2e-spec.ts`
 
 Tests analysis workflow management:
+
 - Analysis creation with configuration validation
 - Analysis listing and filtering
 - Analysis details and chart data retrieval
@@ -224,6 +228,7 @@ Tests analysis workflow management:
 - RabbitMQ integration testing
 
 **Coverage:**
+
 - 7 test suites
 - 25+ individual test cases
 - Complex business logic validation
@@ -234,6 +239,7 @@ Tests analysis workflow management:
 **Files:** `simple-contract.e2e-spec.ts`, `comprehensive-contract.e2e-spec.ts`
 
 Mock-based contract tests that validate API behavior without requiring infrastructure:
+
 - Request/response schema validation
 - Input validation and error handling
 - HTTP status code compliance
@@ -243,6 +249,7 @@ Mock-based contract tests that validate API behavior without requiring infrastru
 - Unicode character support
 
 **Coverage:**
+
 - 32 test cases across both files
 - Authentication endpoints
 - Project management endpoints
@@ -251,6 +258,7 @@ Mock-based contract tests that validate API behavior without requiring infrastru
 - Content validation
 
 **Benefits:**
+
 - ✅ No database required
 - ✅ No external services required
 - ✅ Fast execution (< 1 second)
@@ -273,16 +281,16 @@ Mock-based contract tests that validate API behavior without requiring infrastru
 ```typescript
 // Create test user with organization
 const testUser = await testHelper.createTestUser({
-    email: 'test@example.com',
-    password: 'SecurePassword123!',
-    role: MemberRole.ADMIN
+  email: "test@example.com",
+  password: "SecurePassword123!",
+  role: MemberRole.ADMIN,
 });
 
 // Make authenticated request
 const response = await testHelper.makeAuthenticatedRequest(
-    'GET',
-    '/api/endpoint',
-    testUser.accessToken
+  "GET",
+  "/api/endpoint",
+  testUser.accessToken,
 );
 ```
 

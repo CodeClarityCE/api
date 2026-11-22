@@ -165,22 +165,3 @@ export class OrganizationSettingsUpdateBody {
   @Type(() => ServiceLevelTargetDaysBody)
   service_level_targets?: ServiceLevelTargetDaysBody;
 }
-
-/********************************************/
-/*             Create interfaces            */
-/********************************************/
-
-export interface OrganizationCreate {
-  name: string;
-  description: string;
-  created_on: Date;
-  created_by: string;
-  personal: boolean;
-  color_scheme: string;
-}
-
-/********************************************/
-/*             Update interfaces            */
-/********************************************/
-
-export interface OrganizationUpdate extends OrganizationCreate {}

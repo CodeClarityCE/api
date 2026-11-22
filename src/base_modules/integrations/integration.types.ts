@@ -144,17 +144,6 @@ export class Repository {
   integration_id!: string;
 }
 
-/********************************************/
-/*             Create interfaces            */
-/********************************************/
-
-export interface IntegrationUpdate {
-  integration_type: IntegrationType;
-  integration_provider: IntegrationProvider;
-  service_domain: string;
-  invalid: boolean;
-}
-
 export interface IntegrationCreate {
   integration_type: IntegrationType;
   integration_provider: IntegrationProvider;
@@ -169,14 +158,4 @@ export interface AccessTokenBasedIntegrationCreate extends IntegrationCreate {
   access_token: string;
   refresh_token?: string;
   expiry_date?: Date;
-}
-
-export interface RepositoryCreate {
-  url: string;
-  default_branch: string;
-  visibility: string;
-  fully_qualified_name: string;
-  description: string;
-  created_at: Date;
-  integration_id: string;
 }

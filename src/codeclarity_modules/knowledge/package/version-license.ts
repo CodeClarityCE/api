@@ -1,7 +1,7 @@
 import type { Package, Version } from "./package.entity";
 
 /** Version extra key where the knowledge service stores a version's license expression. */
-export const VERSION_LICENSE_KEY = "license_expression";
+const VERSION_LICENSE_KEY = "license_expression";
 
 /** The version's license expression, or the package's when the version has none. */
 export function versionLicense(
