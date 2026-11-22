@@ -14,7 +14,10 @@ import {
 } from "src/base_modules/analyses/analysis.types";
 import { AnalyzerLanguagesService } from "src/base_modules/analyzers/analyzer-languages.service";
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
-import { OrganizationLoggerService } from "src/base_modules/organizations/log/organizationLogger.service";
+import {
+  actorLabel,
+  OrganizationLoggerService,
+} from "src/base_modules/organizations/log/organizationLogger.service";
 import { ActionType } from "src/base_modules/organizations/log/orgAuditLog.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
 import {
@@ -125,9 +128,9 @@ export class AnalysesService {
     options: { inTransaction?: AnalysisWrites } = {},
   ): Promise<string> {
     // Check if the user has the required role to perform actions on the organization
-    await this.membershipsRepository.hasRequiredRole(
+    await this.membershipsRepository.hasRequiredRoleFor(
       orgId,
-      user.userId,
+      user,
       MemberRole.USER,
     );
 
@@ -150,8 +153,10 @@ export class AnalysesService {
       integration: true,
     });
 
-    // Get the user details of the creator of the analysis
-    const creator = await this.usersRepository.getUserById(user.userId);
+    // Get the user details of the creator of the analysis; a token is not a user
+    const creator = user.organizationToken
+      ? null
+      : await this.usersRepository.getUserById(user.userId);
 
     // Retrieve organization details based on the organization ID
     const organization =
@@ -265,7 +270,7 @@ export class AnalysesService {
       analysis.commit_hash = analysisData.commit_hash;
     }
     analysis.created_on = new Date();
-    analysis.created_by = creator;
+    if (creator) analysis.created_by = creator;
     analysis.analyzer = analyzer;
     analysis.project = project;
     analysis.organization = organization;
@@ -309,11 +314,11 @@ export class AnalysesService {
         organization_id: orgId,
         project_id: projectId,
       });
-      await this.organizationLoggerService.addAuditLog(
+      await this.organizationLoggerService.addActorAuditLog(
         ActionType.AnalysisStarted,
-        `The User started an analysis of project ${project.name} with analyzer ${analyzer.name}.`,
+        `${actorLabel(user)} started an analysis of project ${project.name} with analyzer ${analyzer.name}.`,
         orgId,
-        user.userId,
+        user,
       );
     }
 
@@ -377,9 +382,9 @@ export class AnalysesService {
     user: AuthenticatedUser,
   ): Promise<Analysis> {
     // (1) Check if user has access to org
-    await this.membershipsRepository.hasRequiredRole(
+    await this.membershipsRepository.hasRequiredRoleFor(
       orgId,
-      user.userId,
+      user,
       MemberRole.USER,
     );
 

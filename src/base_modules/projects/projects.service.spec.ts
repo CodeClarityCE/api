@@ -72,7 +72,10 @@ describe("ProjectService", () => {
         ProjectRowsService,
         {
           provide: OrganizationLoggerService,
-          useValue: { addAuditLog: jest.fn().mockResolvedValue(null) },
+          useValue: {
+            addAuditLog: jest.fn().mockResolvedValue(null),
+            addActorAuditLog: jest.fn().mockResolvedValue(null),
+          },
         },
         {
           provide: ProjectMemberService,
@@ -109,7 +112,15 @@ describe("ProjectService", () => {
           provide: MembershipsRepository,
           useValue: {
             hasRequiredRole: jest.fn().mockResolvedValue(undefined),
-            hasRequiredRoleFor: jest.fn().mockResolvedValue(undefined),
+            // A member's check, as the real method does for users.
+            hasRequiredRoleFor: jest.fn(function (
+              this: { hasRequiredRole: (...args: unknown[]) => unknown },
+              orgId: string,
+              actor: { userId: string },
+              role: unknown,
+            ) {
+              return this.hasRequiredRole(orgId, actor.userId, role);
+            }),
             getMembershipRole: jest.fn(),
           },
         },

@@ -12,7 +12,9 @@ import { ApiBody, ApiConsumes, ApiTags } from "@nestjs/swagger";
 import { readFile } from "fs";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import { OrganizationTokenScope } from "src/base_modules/organizations/tokens/organization-token.types";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
+import { AllowOrganizationToken } from "src/decorators/OrganizationTokenDecorator";
 import { AuthUser } from "src/decorators/UserDecorator";
 import { NoDataResponse, TypedResponse } from "src/types/apiResponses.types";
 import {
@@ -46,6 +48,7 @@ export class FileController {
   @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
   @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
+  @AllowOrganizationToken(OrganizationTokenScope.ANALYZE)
   @Patch("upload")
   @ApiConsumes("multipart/form-data")
   @UseInterceptors(SingleFileInterceptor)

@@ -58,6 +58,7 @@ describe("AnalysesService.create against Postgres", () => {
     } as unknown as PluginAvailabilityService;
     const auditLog = {
       addAuditLog: async () => undefined,
+      addActorAuditLog: async () => undefined,
     } as unknown as OrganizationLoggerService;
     const analyzers = new AnalyzersRepository(
       dataSource.getRepository(Analyzer),

@@ -123,6 +123,7 @@ export class AnalysesController {
   @APIDocTypedResponseDecorator(Analysis)
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
   @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get(":analysis_id")
   async get(
     @AuthUser() user: AuthenticatedUser,

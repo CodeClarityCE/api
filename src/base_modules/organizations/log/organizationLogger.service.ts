@@ -24,6 +24,12 @@ import type { OrganizationTokenPrincipal } from "../tokens/organization-token.ty
 
 import { Log } from "./log.entity";
 
+/** How an audit log description names the actor. */
+export function actorLabel(actor: AuthenticatedUser): string {
+  const token = actor.organizationToken;
+  return token ? `The Organization token ${token.name}` : "The User";
+}
+
 /**
  * This service provides methods for working with organization audit logs
  */
@@ -63,6 +69,23 @@ export class OrganizationLoggerService {
     const log_created = await this.logsRepository.saveLog(log);
 
     return log_created.id;
+  }
+
+  /** Adds an audit log entry naming whoever acted: a user or an Organization token. */
+  async addActorAuditLog(
+    action: ActionType,
+    description: string,
+    organizationId: string,
+    actor: AuthenticatedUser,
+  ): Promise<string> {
+    if (actor.organizationToken) {
+      return this.addTokenAuditLog(
+        action,
+        description,
+        actor.organizationToken,
+      );
+    }
+    return this.addAuditLog(action, description, organizationId, actor.userId);
   }
 
   /** Adds an audit log entry whose actor is an Organization token. */

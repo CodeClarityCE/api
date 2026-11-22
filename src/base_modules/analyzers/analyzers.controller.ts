@@ -15,6 +15,8 @@ import { ApiBearerAuth } from "@nestjs/swagger";
 import { Analyzer } from "src/base_modules/analyzers/analyzer.entity";
 import { AnalyzerCreateBody } from "src/base_modules/analyzers/analyzer.types";
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import { OrganizationTokenScope } from "src/base_modules/organizations/tokens/organization-token.types";
+import { AllowOrganizationToken } from "src/decorators/OrganizationTokenDecorator";
 import { AuthUser } from "src/decorators/UserDecorator";
 import {
   CreatedResponse,
@@ -43,6 +45,7 @@ export class AnalyzersController {
     return { id: await this.analyzersService.create(org_id, analyzer, user) };
   }
 
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get("")
   async getMany(
     @AuthUser() user: AuthenticatedUser,
