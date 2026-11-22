@@ -237,6 +237,43 @@ describe("Organization invitations (e2e)", () => {
       expect(await emailRow(token)).toBeNull();
     });
   });
+
+  describe("GET /org/:id/invitations", () => {
+    function list(user: TestUser): Promise<any> {
+      return testHelper.makeAuthenticatedRequest(
+        "GET",
+        `/org/${owner.organization.id}/invitations?page=0&entries_per_page=100`,
+        user.accessToken,
+      );
+    }
+
+    it("lists the open invitation to the owner, with invitee and inviter", async () => {
+      await invite();
+      const response = await list(owner);
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body.total_entries).toBe(1);
+      expect(body.total_pages).toBe(1);
+      const [listed] = body.data;
+      expect(listed).toMatchObject({
+        user_email: "invitee@invites.com",
+        role: MemberRole.ADMIN,
+        organization_id: owner.organization.id,
+        created_by: { id: owner.user.id, email: "owner@invites.com" },
+      });
+      expect(listed.id).toEqual(expect.any(String));
+      expect(listed.ttl).toEqual(expect.any(String));
+      expect(listed.token_digest).toBeUndefined();
+      expect(listed.created_by.password).toBeUndefined();
+    });
+
+    it("answers 403 to a plain member and to an outsider", async () => {
+      await invite();
+      expect((await list(member)).statusCode).toBe(403);
+      expect((await list(outsider)).statusCode).toBe(403);
+    });
+  });
+
   describe("POST /org/:id/invitations/:invitation_id/resend", () => {
     const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
 

@@ -13,8 +13,10 @@ import {
 import { ApiBearerAuth, ApiQuery, ApiTags } from "@nestjs/swagger";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
-import { Invitation } from "src/base_modules/organizations/invitations/invitation.entity";
-import { InviteCreateBody } from "src/base_modules/organizations/invitations/orgInvitation.types";
+import {
+  InvitationListItem,
+  InviteCreateBody,
+} from "src/base_modules/organizations/invitations/orgInvitation.types";
 import { Log } from "src/base_modules/organizations/log/log.entity";
 import { OrganizationLoggerService } from "src/base_modules/organizations/log/organizationLogger.service";
 import { OrganizationAuditLog } from "src/base_modules/organizations/log/orgAuditLog.types";
@@ -354,7 +356,7 @@ export class OrganizationsController {
   }
 
   @ApiTags("Organizations")
-  @APIDocTypedPaginatedResponseDecorator(Invitation)
+  @APIDocTypedPaginatedResponseDecorator(InvitationListItem)
   @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
   @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
@@ -368,7 +370,7 @@ export class OrganizationsController {
     @Query("search_key") search_key?: string,
     @Query("sort_key") sort_key?: string,
     @Query("sort_direction") sort_direction?: SortDirection,
-  ): Promise<TypedPaginatedResponse<Invitation>> {
+  ): Promise<TypedPaginatedResponse<InvitationListItem>> {
     return await this.organizationsService.getInvitations(
       organization_id,
       { currentPage: page, entriesPerPage: entries_per_page },
