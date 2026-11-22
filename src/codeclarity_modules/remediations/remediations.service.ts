@@ -24,7 +24,6 @@ import {
   planRemediations,
 } from "./plan-remediations";
 import type { ProjectRemediations } from "./remediation.types";
-import { TopLevelUpgradeSource } from "./top-level-upgrades";
 
 interface InstanceRow {
   id: string;
@@ -70,7 +69,6 @@ export class RemediationsService {
   constructor(
     @InjectDataSource("codeclarity") private readonly dataSource: DataSource,
     private readonly osvRepository: OSVRepository,
-    private readonly topLevelUpgrades: TopLevelUpgradeSource,
   ) {}
 
   /** Remediations per project with shown instances in its current analysis, optionally only `projectIds`, read through `manager` when given. */
@@ -110,7 +108,6 @@ export class RemediationsService {
     const result: ProjectRemediations[] = [];
     for (const [projectId, list] of projects) {
       const analysisId = list[0]!.analysis_id;
-      const upgrades = await this.topLevelUpgrades.upgradesOf(analysisId);
       const instances = list.map((row): PlannedInstance => ({
         instance_id: row.id,
         vulnerability_id: row.vulnerability_id,
@@ -133,7 +130,7 @@ export class RemediationsService {
       result.push({
         project_id: projectId,
         analysis_id: analysisId,
-        ...planRemediations(instances, upgrades),
+        ...planRemediations(instances),
       });
     }
     return result;
@@ -151,20 +148,15 @@ export class RemediationsService {
 
   /** Each row's smallest fix and whether a remediation resolves it, for the writer to store. */
   async fixesOf(
-    analysisId: string,
     rows: Omit<FixableInstance, "ranges">[],
   ): Promise<{ smallest_fix: string | null; has_fix: boolean }[]> {
     if (rows.length === 0) return [];
     const affected = await this.affectedOf(rows);
-    const upgrades = await this.topLevelUpgrades.upgradesOf(analysisId);
     return rows.map((row) =>
-      instanceFix(
-        {
-          ...row,
-          ranges: rangesOf(affected.get(row.vulnerability_id) ?? [], row),
-        },
-        upgrades,
-      ),
+      instanceFix({
+        ...row,
+        ranges: rangesOf(affected.get(row.vulnerability_id) ?? [], row),
+      }),
     );
   }
 

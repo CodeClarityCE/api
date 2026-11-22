@@ -13,6 +13,5 @@
     "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types.ts": [
       "enumMembers"
     ]
-  },
-  "tags": ["-jsPatching"]
+  }
 }

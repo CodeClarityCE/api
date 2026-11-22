@@ -6,7 +6,6 @@ import { DataSource, type Repository } from "typeorm";
 import { TypeOrmExperimentStore } from "../../src/codeclarity_modules/experiments/experiment-store";
 import { LicensesRepository } from "../../src/codeclarity_modules/results/licenses/licenses.repository";
 import { LicensesUtilsService } from "../../src/codeclarity_modules/results/licenses/utils/utils";
-import { PatchingUtilsService } from "../../src/codeclarity_modules/results/patching/utils/utils";
 import { Result } from "../../src/codeclarity_modules/results/result.entity";
 import { AnalysisResultsRepository } from "../../src/codeclarity_modules/results/results.repository";
 import { SBOMRepository } from "../../src/codeclarity_modules/results/sbom/sbom.repository";
@@ -126,11 +125,6 @@ describe("Results of an analysis redelivered after a restart", () => {
       "php-sbom",
       (r: Repository<Result>, id: string) =>
         new SBOMRepository(r).getSbomResult(id),
-    ],
-    [
-      "js-patching",
-      (r: Repository<Result>, id: string) =>
-        new PatchingUtilsService(r).getPatchingResult(id),
     ],
   ])("serves the newest %s row", async (plugin, lookup) => {
     const analysisId = await redelivered(plugin);

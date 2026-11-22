@@ -60,7 +60,6 @@ export const errorMessages: Record<string, string> = {
   ValidationFailed: "Malformed request",
   NotAuthenticated: "You are not authenticated.",
   NotAuthorized: "You are not authorized to perform this action.",
-  Unsupported: "The action you requested is not supported.",
   UnknownWorkspace: "The referenced workspace does not exist on the project.",
   SourceVerdictsNotAvailable:
     "This analysis predates source verdicts. Re-run it to export them.",
@@ -176,20 +175,6 @@ export class NotAuthorized extends PublicAPIError {
       NotAuthorized.errorCode,
       NotAuthorized.errorMessage,
       NotAuthorized.statusCode,
-      cause,
-    );
-  }
-}
-
-export class Unsupported extends PublicAPIError {
-  static errorCode = "Unsupported";
-  static errorMessage = errorMessages[Unsupported.errorCode]!;
-  static statusCode = 400;
-  constructor(cause?: unknown) {
-    super(
-      Unsupported.errorCode,
-      Unsupported.errorMessage,
-      Unsupported.statusCode,
       cause,
     );
   }
