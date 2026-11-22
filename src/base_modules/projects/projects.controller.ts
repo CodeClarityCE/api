@@ -72,6 +72,7 @@ export class ProjectController {
   @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
   @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get(":project_id")
   async get(
     @AuthUser() user: AuthenticatedUser,

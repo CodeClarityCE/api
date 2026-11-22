@@ -306,4 +306,93 @@ describe("Analysing an upload with an Organization token (e2e)", () => {
 
     expect((await createUploadProject(secret)).statusCode).toBe(403);
   });
+
+  // A project linked from GitHub through an integration, as an admin imports it in the web app.
+  async function linkedProject(orgId = admin.organization.id): Promise<string> {
+    const data = testHelper.getDataSource();
+    const [integration] = await data.query(
+      `INSERT INTO integration (integration_type, integration_provider, access_token, invalid, service_domain, added_on, "ownerId")
+       VALUES ('VCS', 'GITHUB', 'not-a-real-token', false, 'github.com', now(), $1) RETURNING id`,
+      [admin.user.id],
+    );
+    const [project] = await data.query(
+      `INSERT INTO project (name, description, integration_type, integration_provider, invalid, downloaded, added_on, type, url, default_branch, service_domain, "integrationId", "addedById")
+       VALUES ('acme/shop-front', '', 'VCS', 'GITHUB', false, false, now(), 'GITHUB', 'https://github.com/acme/shop-front', 'develop', 'github.com', $1, $2) RETURNING id`,
+      [integration.id, admin.user.id],
+    );
+    await data.query(
+      `INSERT INTO organization_projects_project ("organizationId", "projectId") VALUES ($1, $2)`,
+      [orgId, project.id],
+    );
+    return project.id;
+  }
+
+  it("a read token reads a linked project's default branch, without the integration's secrets", async () => {
+    const projectId = await linkedProject();
+
+    const response = await testHelper.makeAuthenticatedRequest(
+      "GET",
+      `/org/${admin.organization.id}/projects/${projectId}`,
+      await issueToken("read"),
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().data).toEqual(
+      expect.objectContaining({
+        id: projectId,
+        type: "GITHUB",
+        default_branch: "develop",
+      }),
+    );
+    expect(response.body).not.toContain("not-a-real-token");
+    expect(response.body).not.toContain("password");
+  });
+
+  it("a token cannot read a project of another organization", async () => {
+    const other = await testHelper.createTestUser({
+      email: "other@token-analysis.com",
+      orgName: "Other Org",
+      role: MemberRole.ADMIN,
+    });
+    const projectId = await linkedProject(other.organization.id);
+
+    const response = await testHelper.makeAuthenticatedRequest(
+      "GET",
+      `/org/${admin.organization.id}/projects/${projectId}`,
+      await issueToken("read"),
+    );
+    expect([403, 404]).toContain(response.statusCode);
+    const across = await testHelper.makeAuthenticatedRequest(
+      "GET",
+      `/org/${other.organization.id}/projects/${projectId}`,
+      await issueToken("read"),
+    );
+    expect(across.statusCode).toBe(403);
+  });
+
+  it("an analyze token starts an analysis of a linked project on its default branch", async () => {
+    const analyzerId = await createAnalyzer();
+    const projectId = await linkedProject();
+    const secret = await issueToken("analyze");
+
+    const started = await testHelper.makeAuthenticatedRequest(
+      "POST",
+      `/org/${admin.organization.id}/projects/${projectId}/analyses`,
+      secret,
+      { analyzer_id: analyzerId, branch: "develop", config: {} },
+    );
+    expect(started.statusCode).toBe(201);
+
+    const [analysis] = await testHelper
+      .getDataSource()
+      .query(
+        `SELECT branch, "integrationId" IS NOT NULL AS linked, "createdById" FROM analysis WHERE id = $1`,
+        [started.json().id],
+      );
+    expect(analysis).toEqual({
+      branch: "develop",
+      linked: true,
+      createdById: null,
+    });
+  });
 });

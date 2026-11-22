@@ -60,6 +60,8 @@ export class Project {
   downloaded!: boolean;
 
   @Column()
+  @ApiProperty()
+  @Expose()
   default_branch!: string;
 
   @Column()

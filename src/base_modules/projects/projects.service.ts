@@ -367,10 +367,10 @@ export class ProjectService {
     id: string,
     user: AuthenticatedUser,
   ): Promise<Project> {
-    // (1) Every member of an org can retrieve a project
-    await this.repos.memberships.hasRequiredRole(
+    // (1) Every member of an org, or a token of it, can retrieve a project
+    await this.repos.memberships.hasRequiredRoleFor(
       organizationId,
-      user.userId,
+      user,
       MemberRole.USER,
     );
 
