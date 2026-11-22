@@ -1,8 +1,8 @@
 import { readFileSync } from "fs";
 import type { QueryRunner } from "typeorm";
 
-// The alpha release whose schema the beta baselines hold; only it upgrades to beta (ADR 0018).
-export const LAST_ALPHA = "v0.0.57-alpha";
+// The last alpha release, whose schema the beta baselines hold; only it upgrades to beta (ADR 0018).
+const LAST_ALPHA = "deployment v0.0.32-alpha, API v0.0.57-alpha";
 
 export interface BetaBaseline {
   database: string;
@@ -32,7 +32,8 @@ export async function applyBetaBaseline(
   if ((tables?.count ?? 0) > 0) {
     throw new Error(
       `The ${database} database has tables but ${lastAlphaMigration} never ran on it: ` +
-        `it comes from an alpha older than ${LAST_ALPHA}. Upgrade to ${LAST_ALPHA} first, then to this release.`,
+        `it comes from an alpha older than the last alpha (${LAST_ALPHA}). ` +
+        `Upgrade to the last alpha first, then to this release.`,
     );
   }
   await runner.query(readFileSync(schema, "utf8"));

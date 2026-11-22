@@ -145,7 +145,7 @@ describe.each(BASELINES)("The %s beta baseline", (db, Baseline) => {
     const executedBefore = await executed(older);
 
     await expect(migrate(older, migrations(db))).rejects.toThrow(
-      /upgrade to v0\.0\.57-alpha first/i,
+      /older than the last alpha \(deployment v0\.0\.32-alpha, API v0\.0\.57-alpha\)\. Upgrade to the last alpha first/,
     );
 
     expect(await schemaSnapshot(older)).toEqual(before);
