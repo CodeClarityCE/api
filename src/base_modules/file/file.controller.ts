@@ -9,7 +9,6 @@ import {
   UseInterceptors,
 } from "@nestjs/common";
 import { ApiBody, ApiConsumes, ApiTags } from "@nestjs/swagger";
-import { readFile } from "fs";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
@@ -21,7 +20,6 @@ import {
   NotAuthenticated,
   NotAuthorized,
 } from "src/types/error.types";
-import { validateAndJoinPath } from "src/utils/path-validator";
 
 import { FileService } from "./file.service";
 import {
@@ -104,30 +102,18 @@ export class FileController {
   @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
   @Get(":file_name")
   async getFileByName(
-    @AuthUser() _user: AuthenticatedUser,
+    @AuthUser() user: AuthenticatedUser,
     @Param("project_id") project_id: string,
     @Param("organization_id") organization_id: string,
     @Param("file_name") file_name: string,
   ): Promise<TypedResponse<string>> {
-    const downloadPath = process.env["DOWNLOAD_PATH"] ?? "/private";
-    const filePath = validateAndJoinPath(
-      downloadPath,
-      organization_id,
-      project_id,
-      file_name,
-    );
-
-    return new Promise((resolve, reject) => {
-      // Path is validated using validateAndJoinPath to prevent traversal attacks
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
-      return readFile(filePath, "utf8", (err, data) => {
-        if (err) {
-          reject(err);
-        }
-        resolve({
-          data: data,
-        });
-      });
-    });
+    return {
+      data: await this.fileService.readByName(
+        organization_id,
+        project_id,
+        file_name,
+        user,
+      ),
+    };
   }
 }
