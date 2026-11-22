@@ -1,0 +1,18 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/main.ts",
+    "src/scripts/*.ts",
+    "src/datasources/*.datasource.ts",
+    "src/migrations/*/*.ts",
+    "src/**/*.entity.ts",
+    "test/**/*.e2e-spec.ts"
+  ],
+  "project": ["src/**/*.ts", "test/**/*.ts"],
+  "ignoreIssues": {
+    "src/codeclarity_modules/results/vulnerabilities/vulnerabilities.types.ts": [
+      "enumMembers"
+    ]
+  },
+  "tags": ["-jsPatching"]
+}

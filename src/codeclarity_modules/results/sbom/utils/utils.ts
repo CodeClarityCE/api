@@ -38,7 +38,7 @@ interface EnhancedDependency extends Dependency {
 }
 
 /** Reported when the given SBOMs use different package managers */
-export const MIXED_PACKAGE_MANAGERS = "multi-language";
+const MIXED_PACKAGE_MANAGERS = "multi-language";
 
 /** The package manager the SBOMs share, or MIXED_PACKAGE_MANAGERS */
 export function sharedPackageManager(sboms: SBOMOutput[]): string {

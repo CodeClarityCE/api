@@ -14,8 +14,7 @@ import type {
 import type { ResolvedPackage } from "./experiment-row-copy";
 import { isVulnerableVersion } from "./experiment-vulnerable-versions";
 
-export const PROBE_OUTCOMES = ["found", "ambiguous", "not_found"] as const;
-export type ProbeOutcomeKind = (typeof PROBE_OUTCOMES)[number];
+export type ProbeOutcomeKind = "found" | "ambiguous" | "not_found";
 
 /** A commit that touched the lockfile, as GitHub listed it. */
 export interface ProbeCandidate {
@@ -105,10 +104,9 @@ export interface IntervalRequest {
   to: ResultsRunInput;
 }
 
-export const AMBIGUOUS_REASON =
+const AMBIGUOUS_REASON =
   "a known commit in the interval contradicts a single boundary";
-export const NO_CANDIDATES_REASON =
-  "no lockfile-touching commit in the interval";
+const NO_CANDIDATES_REASON = "no lockfile-touching commit in the interval";
 
 type CommitState =
   | { state: "present" | "absent"; packages: ResolvedPackage[] }

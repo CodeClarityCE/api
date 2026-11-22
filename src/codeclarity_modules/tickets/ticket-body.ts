@@ -53,7 +53,7 @@ export function remediationTitle(
 }
 
 /** A top-level path written as "express@4.17.0 > qs@6.5.0". */
-export function pathText(dependency: TopLevelDependency): string {
+function pathText(dependency: TopLevelDependency): string {
   return dependency.path.map((p) => `${p.name}@${p.version}`).join(" > ");
 }
 

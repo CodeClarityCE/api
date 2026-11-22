@@ -174,7 +174,7 @@ interface HeadRun {
 }
 
 /** The done HEAD rows with an analysis and a project, in manifest order. */
-export function headDoneRows(manifest: string): HeadRun[] {
+function headDoneRows(manifest: string): HeadRun[] {
   return manifest
     .split("\n")
     .filter((line) => line.trim() !== "")

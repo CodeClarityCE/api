@@ -1,6 +1,6 @@
 import { PublicAPIError } from "src/types/error.types";
 
-export const errorMessages: Record<string, string> = {
+const errorMessages: Record<string, string> = {
   AccountRegistrationVerificationTokenInvalidOrExpired:
     "The account registration verification token does not exist or has expired.",
   HandleAlreadyExists:

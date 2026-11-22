@@ -121,70 +121,9 @@ export class DefaultOrgPatchBody {
 }
 
 /********************************************/
-/*             Create interfaces            */
-/********************************************/
-
-export class UserCreate {
-  first_name!: string;
-  last_name!: string;
-  email!: string;
-  handle!: string;
-  password!: string;
-  social!: boolean;
-  setup_done!: boolean;
-  activated!: boolean;
-  default_org?: string;
-  personal_org?: string;
-  registration_verified!: boolean;
-  avatar_url!: string | undefined;
-  created_on!: Date;
-  oauth_integration?: string;
-}
-
-export class UserCreateSocial {
-  email!: string;
-  social!: boolean;
-  setup_done!: boolean;
-  activated!: boolean;
-  social_register_type!: SocialType;
-  social_id!: string;
-  avatar_url!: string | undefined;
-  created_on!: Date;
-}
-
-export abstract class SocialAccountSetupCreate {
-  access_token!: string;
-  refresh_token?: string;
-}
-
-export class GithubSocialAccountSetupCreate extends SocialAccountSetupCreate {}
-
-export class GitlabSocialAccountSetupCreate extends SocialAccountSetupCreate {
-  integration_base_url!: string;
-  expiry_date!: Date;
-}
-
-/********************************************/
-/*             Update interfaces            */
-/********************************************/
-
-export class UserPatch {
-  first_name?: string;
-  last_name?: string;
-  handle?: string;
-}
-
-export class UserPasswordPatchCreate {
-  password!: string;
-}
-
-export class UserUpdate extends UserCreate {}
-
-/********************************************/
 /*                Other types               */
 /********************************************/
 
 export enum SocialType {
   GITHUB = "GITHUB",
-  GITLAB = "GITLAB",
 }

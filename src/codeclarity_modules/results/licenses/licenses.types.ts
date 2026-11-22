@@ -1,45 +1,4 @@
-import type { Dependency } from "../sbom/sbom.types";
-
-export interface License {
-  reference: string;
-  isDeprecatedLicenseId: boolean;
-  detailsUrl: string;
-  details: Details;
-  referenceNumber: number;
-  name: string;
-  licenseId: string;
-  seeAlso: string[];
-  isOsiApproved: boolean;
-}
-
-export interface CrossRef {
-  isLive: boolean;
-  isValid: boolean;
-  isWayBackLink: boolean;
-  match: string;
-  order: number;
-  timestamp: string;
-  url: string;
-}
-
-export interface Details {
-  classification?: string;
-  licenseProperties?: LicenseProperties;
-  description?: string;
-  crossRef: CrossRef[];
-  isDeprecatedLicenseId: boolean;
-  isOsiApproved: boolean;
-  licenseId: string;
-  licenseText: string;
-  licenseTextHtml: string;
-  licenseTextNormalized: string;
-  licenseTextNormalizedDigest: string;
-  name: string;
-  seeAlso: string[];
-  standardLicenseTemplate: string;
-}
-
-export interface LicenseProperties {
+interface LicenseProperties {
   permissions: string[];
   conditions: string[];
   limitations: string[];
@@ -52,19 +11,12 @@ export interface WorkSpaceLicenseInfo {
   DependencyInfo: Record<string, DependencyInfo | undefined>;
 }
 
-export interface DependencyInfo {
+interface DependencyInfo {
   Licenses: string[];
   NonSpdxLicenses: string[];
 }
 
-export interface WorkSpaceLicenseInfoInternal {
-  LicensesDepMap: Record<string, (Dependency | undefined)[]>;
-  NonSpdxLicensesDepMap: Record<string, (Dependency | undefined)[]>;
-  LicenseComplianceViolations: Record<string, (Dependency | undefined)[]>;
-  DependencyInfo: Record<string, DependencyInfo | undefined>;
-}
-
-export interface AnalysisStats {
+interface AnalysisStats {
   number_of_spdx_licenses: number;
   number_of_non_spdx_licenses: number;
   number_of_copy_left_licenses: number;
@@ -77,7 +29,7 @@ export enum Status {
   Failure = "failure",
 }
 
-export interface AnalysisInfo {
+interface AnalysisInfo {
   status: Status;
   private_errors: unknown[];
   public_errors: unknown[];
@@ -94,13 +46,6 @@ export interface AnalysisInfo {
 export interface Output {
   workspaces: Record<string, WorkSpaceLicenseInfo>;
   analysis_info: AnalysisInfo;
-}
-
-// Types from licenses2.types.ts (for service/API responses)
-
-export interface LicenseReportOutput {
-  license_infos: LicenseInfo[];
-  dependency_infos: Record<string, DepShortInfo>;
 }
 
 export interface DepShortInfo {

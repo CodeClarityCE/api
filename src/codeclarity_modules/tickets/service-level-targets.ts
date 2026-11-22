@@ -46,7 +46,7 @@ export function dueDateFor(
 }
 
 /** How far ahead a due date counts as due soon. */
-export const DUE_SOON_DAYS = 7;
+const DUE_SOON_DAYS = 7;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

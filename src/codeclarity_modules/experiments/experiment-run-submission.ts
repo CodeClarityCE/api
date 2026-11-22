@@ -46,7 +46,7 @@ const ANALYZER_NAME_MAX = 25;
 const PROBE_ANALYZER_PREFIX = "Experiment probes";
 
 /** The SBOM-only analyzer fix probes run with (ADR 0005), one per js-sbom version. */
-export function probeAnalyzerName(sbomVersion: string): string {
+function probeAnalyzerName(sbomVersion: string): string {
   const name = `${PROBE_ANALYZER_PREFIX} ${sbomVersion}`;
   if (name.length <= ANALYZER_NAME_MAX) return name;
   // Too long a version: a short hash keeps the name unique per version

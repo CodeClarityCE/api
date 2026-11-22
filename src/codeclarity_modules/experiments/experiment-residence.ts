@@ -4,7 +4,7 @@ import { SEVERITY_ORDER, type SeverityCounts } from "./experiment-severity";
 import { median, quantile } from "./experiment-stats";
 
 /** A distribution of day counts. */
-export interface DaysSummary {
+interface DaysSummary {
   n: number;
   median: number | null;
   p25: number | null;
@@ -14,11 +14,11 @@ export interface DaysSummary {
 }
 
 /** One severity class of a days distribution. */
-export interface DaysGroup extends DaysSummary {
+interface DaysGroup extends DaysSummary {
   key: string;
 }
 
-export interface ResidencePoint {
+interface ResidencePoint {
   severity: keyof SeverityCounts;
   residence_days: number;
   precision: DatingPrecision;

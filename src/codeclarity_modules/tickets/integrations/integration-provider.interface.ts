@@ -1,8 +1,4 @@
-import {
-  type Ticket,
-  TicketPriority,
-  type TicketStatus,
-} from "../ticket.entity";
+import { type Ticket, type TicketStatus } from "../ticket.entity";
 import { type ExternalTicketProvider } from "../ticket-external-link.entity";
 import { type IntegrationConfig } from "../ticket-integration-config.entity";
 
@@ -260,39 +256,4 @@ export interface ITicketIntegrationProvider {
     spaceId: string,
     config: IntegrationConfig,
   ): Promise<ExternalList>;
-}
-
-/**
- * Map CodeClarity priority to external provider priority value
- */
-export function mapPriorityToExternal(
-  priority: TicketPriority,
-  mapping?: Record<string, number | string>,
-): number | string {
-  if (mapping?.[priority] !== undefined) {
-    return mapping[priority];
-  }
-
-  // Default mappings (ClickUp-style: 1=Urgent, 2=High, 3=Normal, 4=Low)
-  const defaultMapping: Record<TicketPriority, number> = {
-    [TicketPriority.CRITICAL]: 1,
-    [TicketPriority.HIGH]: 2,
-    [TicketPriority.MEDIUM]: 3,
-    [TicketPriority.LOW]: 4,
-  };
-
-  return defaultMapping[priority];
-}
-
-/**
- * Map external provider status to CodeClarity status
- */
-export function mapStatusFromExternal(
-  externalStatus: string,
-  mapping?: Record<string, TicketStatus>,
-): TicketStatus | undefined {
-  if (mapping?.[externalStatus]) {
-    return mapping[externalStatus];
-  }
-  return undefined;
 }

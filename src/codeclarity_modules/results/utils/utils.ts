@@ -30,9 +30,7 @@ export function isCriticalSeverity(severity: number): boolean {
 export type SeverityClass = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "NONE";
 
 // The CVSS class the results pages show for a score; a missing score counts as none.
-export function severityClass(
-  severity: number | null | undefined,
-): SeverityClass {
+function severityClass(severity: number | null | undefined): SeverityClass {
   if (severity === null || severity === undefined) return "NONE";
   if (isCriticalSeverity(severity)) return "CRITICAL";
   if (isHighSeverity(severity)) return "HIGH";

@@ -19,7 +19,7 @@ import {
 import { fixedVersions, osvFixedVersions } from "./fixed-versions";
 import { cvss3Score } from "./osv-score";
 
-export interface KnowledgeDbSourceCoverage {
+interface KnowledgeDbSourceCoverage {
   source: string;
   status: string;
   comparable: boolean;
@@ -32,7 +32,7 @@ export interface KnowledgeDbSourceCoverage {
   only_source: number;
 }
 
-export interface KnowledgeDbOverlap {
+interface KnowledgeDbOverlap {
   sources: [string, string];
   vulnerabilities: number;
   // Both sources hold a record from the same origin, so it is not corroboration.
@@ -40,7 +40,7 @@ export interface KnowledgeDbOverlap {
   corroborating: number;
 }
 
-export interface KnowledgeDbSeverityAgreement {
+interface KnowledgeDbSeverityAgreement {
   sources: [string, string];
   // Vulnerabilities both sources score with CVSS v3.
   compared: number;
@@ -48,7 +48,7 @@ export interface KnowledgeDbSeverityAgreement {
   mean_score_difference: number | null;
 }
 
-export interface KnowledgeDbAffectedAgreement {
+interface KnowledgeDbAffectedAgreement {
   sources: [string, string];
   // Vulnerability and package pairs both sources give affected versions for.
   compared: number;

@@ -93,33 +93,12 @@ export class OrganizationAuditLog {
 }
 
 /********************************************/
-/*             Create interfaces            */
-/********************************************/
-
-export interface OrganizationAuditLogCreate {
-  action: ActionType;
-  action_class: ActionClassType;
-  action_severity: ActionSeverity;
-  description: string;
-  blame_on: string;
-  blame_on_email: string;
-  organization_id: string;
-  created_on: Date;
-}
-
-/********************************************/
-/*             Update interfaces            */
-/********************************************/
-
-export interface OrganizationAuditLogUpdate extends OrganizationAuditLogCreate {}
-
-/********************************************/
 /*              Miscellaneous               */
 /********************************************/
 
 // Creates, starts and updates rank Low; deletions, membership and
 // integration changes rank higher.
-export const actionTypeSeverityMapping = new Map<ActionType, ActionSeverity>([
+const actionTypeSeverityMapping = new Map<ActionType, ActionSeverity>([
   [ActionType.AnalyzerCreate, ActionSeverity.Low],
   [ActionType.AnalyzerDelete, ActionSeverity.High],
   [ActionType.AnalyzerUpdate, ActionSeverity.Low],
@@ -148,7 +127,7 @@ export function getSeverityOfAction(action: ActionType): ActionSeverity {
   }
 }
 
-export const actionTypeClassMapping = new Map<ActionType, ActionClassType>([
+const actionTypeClassMapping = new Map<ActionType, ActionClassType>([
   [ActionType.AnalyzerCreate, ActionClassType.Analyzer],
   [ActionType.AnalyzerDelete, ActionClassType.Analyzer],
   [ActionType.AnalyzerUpdate, ActionClassType.Analyzer],

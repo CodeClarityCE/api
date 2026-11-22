@@ -8,7 +8,7 @@ import { isUUID } from "class-validator";
 import { ValidationFailed } from "src/types/error.types";
 
 // Route parameters that always hold a uuid.
-export const UUID_ROUTE_PARAMS = new Set([
+const UUID_ROUTE_PARAMS = new Set([
   "org_id",
   "project_id",
   "analysis_id",

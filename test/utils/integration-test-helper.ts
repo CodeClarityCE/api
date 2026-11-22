@@ -41,7 +41,7 @@ export interface TestUser {
   refreshToken: string;
 }
 
-export class IntegrationTestHelper {
+class IntegrationTestHelper {
   private app!: NestFastifyApplication;
   private dataSource!: DataSource;
   private usersRepository!: UsersRepository;

@@ -16,7 +16,7 @@ export interface ClickUpOAuthTokenResponse {
 // User & Team
 // ============================================
 
-export interface ClickUpUser {
+interface ClickUpUser {
   id: number;
   username: string;
   email: string;
@@ -28,7 +28,7 @@ export interface ClickUpUser {
   timezone: string;
 }
 
-export interface ClickUpTeam {
+interface ClickUpTeam {
   id: string;
   name: string;
   color: string;
@@ -36,7 +36,7 @@ export interface ClickUpTeam {
   members: ClickUpMember[];
 }
 
-export interface ClickUpMember {
+interface ClickUpMember {
   user: ClickUpUser;
 }
 
@@ -113,7 +113,7 @@ export interface ClickUpFoldersResponse {
 // List
 // ============================================
 
-export interface ClickUpListSummary {
+interface ClickUpListSummary {
   id: string;
   name: string;
   orderindex: number;
@@ -181,7 +181,7 @@ export interface ClickUpListsResponse {
 // Task
 // ============================================
 
-export interface ClickUpStatus {
+interface ClickUpStatus {
   id?: string;
   status: string;
   type: string;
@@ -189,14 +189,7 @@ export interface ClickUpStatus {
   color: string;
 }
 
-export interface ClickUpPriority {
-  id: string;
-  priority: string;
-  color: string;
-  orderindex: string;
-}
-
-export interface ClickUpTag {
+interface ClickUpTag {
   name: string;
   tag_fg: string;
   tag_bg: string;
@@ -277,7 +270,7 @@ export interface ClickUpTask {
   };
 }
 
-export interface ClickUpCustomField {
+interface ClickUpCustomField {
   id: string;
   name: string;
   type: string;
@@ -384,22 +377,8 @@ export enum ClickUpPriorityValue {
 }
 
 // ============================================
-// Error Response
-// ============================================
-
-export interface ClickUpErrorResponse {
-  err: string;
-  ECODE: string;
-}
-
-// ============================================
 // API Configuration
 // ============================================
 
 export const CLICKUP_API_BASE_URL = "https://api.clickup.com/api/v2";
 export const CLICKUP_OAUTH_URL = "https://app.clickup.com/api";
-
-export interface ClickUpApiConfig {
-  apiKey?: string;
-  accessToken?: string;
-}

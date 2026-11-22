@@ -1,6 +1,6 @@
 import { PublicAPIError } from "src/types/error.types";
 
-export const errorMessages: Record<string, string> = {
+const errorMessages: Record<string, string> = {
   FailedToSendAccountRegistrationVerificationEmail:
     "An error occurred while trying to send the account registration verification email.",
   CannotPerformActionOnSocialAccount:
