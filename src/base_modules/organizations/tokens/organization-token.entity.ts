@@ -47,6 +47,10 @@ export class OrganizationToken {
   @Column("timestamptz")
   expires_on!: Date;
 
+  // Set when an admin revokes the token; a revoked token never works again.
+  @Column("timestamptz", { nullable: true })
+  revoked_on!: Date | null;
+
   @ManyToOne("Organization", { onDelete: "CASCADE", nullable: false })
   organization!: Relation<Organization>;
 
