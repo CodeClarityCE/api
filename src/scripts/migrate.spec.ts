@@ -1,4 +1,9 @@
-import { migrate, type MigrationTarget, selectDatabases } from "./migrate";
+import {
+  migrate,
+  type MigrationTarget,
+  selectDatabases,
+  serviceGrants,
+} from "./migrate";
 
 // A database that records what the migrate entry did to it.
 function fakeDatabase(
@@ -78,6 +83,32 @@ describe("migrate", () => {
       "knowledge: migrate",
       "knowledge: close",
     ]);
+  });
+
+  it("applies the database's grants as the admin after its migrations, on every run", async () => {
+    const calls: string[] = [];
+    await migrate(["knowledge"], {
+      open: async (db) => fakeDatabase(db, calls),
+      roles: { knowledge: "cc_knowledge" },
+      grants: { knowledge: ["GRANT INSERT ON x TO y"] },
+    });
+
+    expect(calls).toEqual([
+      "knowledge: connect",
+      "knowledge: SET ROLE cc_knowledge",
+      "knowledge: migrate",
+      "knowledge: RESET ROLE",
+      "knowledge: GRANT INSERT ON x TO y",
+      "knowledge: close",
+    ]);
+  });
+
+  it("lets the services' role write the packages the package follower imports", () => {
+    expect(serviceGrants("cc_service")).toEqual({
+      knowledge: [
+        'GRANT SELECT, INSERT, UPDATE ON "package", "version" TO cc_service',
+      ],
+    });
   });
 
   it("stops at the first database that fails and names it", async () => {
