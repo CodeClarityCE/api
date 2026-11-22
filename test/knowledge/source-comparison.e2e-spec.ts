@@ -4,7 +4,7 @@ import { DataSource } from "typeorm";
 import { KnowledgeDbComparisonService } from "../../src/codeclarity_modules/knowledge/comparison/knowledge-db-comparison.service";
 import { SourceOriginService } from "../../src/codeclarity_modules/knowledge/comparison/source-origin.service";
 import { KnowledgeStatusService } from "../../src/codeclarity_modules/knowledge/status/knowledge-status.service";
-import { AddKnowledgeSourceOrigins1794441600000 as AddOrigins } from "../../src/migrations/knowledge/1794441600000-AddKnowledgeSourceOrigins";
+import { CreateKnowledgeBetaBaseline1796200000000 as KnowledgeBaseline } from "../../src/migrations/knowledge/1796200000000-CreateKnowledgeBetaBaseline";
 
 const connection = {
   host: process.env["TEST_PG_HOST"] ?? "localhost",
@@ -27,42 +27,6 @@ const nvdMetrics = (score: number) =>
 const gcveMetrics = (score: number) =>
   JSON.stringify([{ other: {} }, { cvssV3_1: { baseScore: score } }]);
 
-// Knowledge tables with the columns the comparison reads, as migrated.
-const SCHEMA = `
-  CREATE TABLE osv (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    osv_id varchar NOT NULL UNIQUE, cve varchar, aliases jsonb, "references" jsonb,
-    severity jsonb, affected jsonb, published timestamptz,
-    kind varchar NOT NULL DEFAULT 'vulnerability', retired_at timestamptz,
-    cve_aliases jsonb GENERATED ALWAYS AS (
-      COALESCE(jsonb_path_query_array(aliases, '$[*] ? (@ starts with "CVE-")'), '[]'::jsonb)
-    ) STORED
-  );
-  CREATE TABLE nvd (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    nvd_id varchar NOT NULL UNIQUE, metrics jsonb, published timestamptz,
-    retired_at timestamptz
-  );
-  CREATE TABLE gcve (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    gcve_id varchar NOT NULL UNIQUE, cve_id varchar, metrics jsonb,
-    date_published timestamptz, retired_at timestamptz
-  );
-  CREATE TABLE friends_of_php (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    advisory_id varchar NOT NULL UNIQUE, cve varchar, composer varchar,
-    reference varchar NOT NULL, link varchar NOT NULL,
-    branches jsonb NOT NULL DEFAULT '{}', published timestamptz,
-    retired_at timestamptz
-  );
-  CREATE TABLE knowledge_source_sync (
-    source varchar PRIMARY KEY, watermark timestamptz,
-    last_run_started_at timestamptz, last_run_finished_at timestamptz,
-    last_outcome varchar, row_count bigint NOT NULL DEFAULT 0,
-    validation_error text
-  );
-`;
-
 describe("Knowledge source comparison", () => {
   let knowledge: DataSource;
 
@@ -78,17 +42,17 @@ describe("Knowledge source comparison", () => {
       extra: { max: 2 },
     });
     await knowledge.initialize();
-    await knowledge.query(SCHEMA);
+    await knowledge.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
     const runner = knowledge.createQueryRunner();
-    await new AddOrigins().up(runner);
+    await new KnowledgeBaseline().up(runner);
     await runner.release();
 
     await knowledge.query(
-      `INSERT INTO osv (osv_id, aliases, severity, affected, published, kind, retired_at) VALUES
-        ('GHSA-aaaa', '["CVE-2024-0001"]', $1, $2, '2024-01-01T00:00:00Z', 'vulnerability', NULL),
-        ('MAL-2024-1', '["CVE-2024-0001"]', NULL, NULL, '2023-01-01T00:00:00Z', 'malicious', NULL),
-        ('GHSA-rrrr', '["CVE-2024-0003"]', NULL, NULL, '2024-01-01T00:00:00Z', 'vulnerability', now()),
-        ('GHSA-nnnn', '[]', NULL, NULL, '2024-01-01T00:00:00Z', 'vulnerability', NULL)`,
+      `INSERT INTO osv (osv_id, aliases, severity, affected, published, kind, retired_at, retired_reason) VALUES
+        ('GHSA-aaaa', '["CVE-2024-0001"]', $1, $2, '2024-01-01T00:00:00Z', 'vulnerability', NULL, NULL),
+        ('MAL-2024-1', '["CVE-2024-0001"]', NULL, NULL, '2023-01-01T00:00:00Z', 'malicious', NULL, NULL),
+        ('GHSA-rrrr', '["CVE-2024-0003"]', NULL, NULL, '2024-01-01T00:00:00Z', 'vulnerability', now(), 'withdrawn'),
+        ('GHSA-nnnn', '[]', NULL, NULL, '2024-01-01T00:00:00Z', 'vulnerability', NULL, NULL)`,
       [
         JSON.stringify([{ type: "CVSS_V3", score: CRITICAL_VECTOR }]),
         JSON.stringify([
@@ -119,8 +83,8 @@ describe("Knowledge source comparison", () => {
     );
     // Linking a GitHub advisory gives this FriendsOfPHP record the ghsa origin.
     await knowledge.query(
-      `INSERT INTO friends_of_php (advisory_id, cve, composer, reference, link, branches, published) VALUES
-        ('vendor/pkg/CVE-2024-0001', 'CVE-2024-0001', 'vendor/pkg', 'composer://vendor/pkg',
+      `INSERT INTO friends_of_php (advisory_id, title, cve, composer, reference, link, branches, published) VALUES
+        ('vendor/pkg/CVE-2024-0001', 'CVE-2024-0001: vendor/pkg', 'CVE-2024-0001', 'vendor/pkg', 'composer://vendor/pkg',
          'https://github.com/advisories/GHSA-aaaa', $1, '2023-12-31T00:00:00Z')`,
       [
         JSON.stringify({

@@ -1,0 +1,140 @@
+{
+  "extensions": [
+    {
+      "extname": "plpgsql"
+    },
+    {
+      "extname": "uuid-ossp"
+    }
+  ],
+  "types": [],
+  "relations": [
+    {
+      "name": "PK_26c98f1bfcce9906f8bb0b11e5b",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "PK_8c82d7f526340ab734260ea46be",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "UQ_plugin_name",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "plugin",
+      "kind": "r",
+      "persistence": "p",
+      "options": null
+    }
+  ],
+  "columns": [
+    {
+      "table": "plugin",
+      "column": "id",
+      "position": 1,
+      "type": "uuid",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "uuid_generate_v4()"
+    },
+    {
+      "table": "plugin",
+      "column": "name",
+      "position": 2,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "plugin",
+      "column": "version",
+      "position": 3,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "plugin",
+      "column": "description",
+      "position": 4,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "plugin",
+      "column": "depends_on",
+      "position": 5,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "plugin",
+      "column": "config",
+      "position": 6,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    }
+  ],
+  "constraints": [
+    {
+      "table": "plugin",
+      "name": "PK_26c98f1bfcce9906f8bb0b11e5b",
+      "kind": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "plugin",
+      "name": "UQ_plugin_name",
+      "kind": "u",
+      "definition": "UNIQUE (name)"
+    },
+    {
+      "table": "plugin",
+      "name": "plugin_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL id"
+    }
+  ],
+  "indexes": [
+    {
+      "table": "plugin",
+      "name": "PK_26c98f1bfcce9906f8bb0b11e5b",
+      "definition": "CREATE UNIQUE INDEX \"PK_26c98f1bfcce9906f8bb0b11e5b\" ON public.plugin USING btree (id)"
+    },
+    {
+      "table": "plugin",
+      "name": "UQ_plugin_name",
+      "definition": "CREATE UNIQUE INDEX \"UQ_plugin_name\" ON public.plugin USING btree (name)"
+    }
+  ],
+  "functions": [],
+  "triggers": [],
+  "rows": []
+}

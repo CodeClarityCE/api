@@ -3,7 +3,7 @@ import { DataSource } from "typeorm";
 
 import { Kev } from "../../src/codeclarity_modules/knowledge/kev/kev.entity";
 import { KevRepository } from "../../src/codeclarity_modules/knowledge/kev/kev.repository";
-import { CreateKevTable1795651200000 as CreateKevTable } from "../../src/migrations/knowledge/1795651200000-CreateKevTable";
+import { CreateKnowledgeBetaBaseline1796200000000 as KnowledgeBaseline } from "../../src/migrations/knowledge/1796200000000-CreateKnowledgeBetaBaseline";
 
 const connection = {
   host: process.env["TEST_PG_HOST"] ?? "localhost",
@@ -38,11 +38,8 @@ describe("Known exploited vulnerabilities by canonical vulnerability", () => {
     });
     await knowledge.initialize();
     await knowledge.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
-    await knowledge.query(
-      `CREATE TABLE knowledge_source_sync (source character varying PRIMARY KEY)`,
-    );
     const runner = knowledge.createQueryRunner();
-    await new CreateKevTable().up(runner);
+    await new KnowledgeBaseline().up(runner);
     await runner.release();
     // Entries as the knowledge service mirrors them from the catalog.
     await knowledge.query(`

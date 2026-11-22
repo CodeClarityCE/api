@@ -1,0 +1,3215 @@
+{
+  "extensions": [
+    {
+      "extname": "plpgsql"
+    },
+    {
+      "extname": "uuid-ossp"
+    }
+  ],
+  "types": [],
+  "relations": [
+    {
+      "name": "IDX_129e04e01810e12ea16e48b275",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_9cc3075a662b00d9b3b6d1590f",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_a1a455434143cac56134910e0b",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_d48c4e23bf4cc989ccc9598b39",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_ff27e0c5a71cd3d2b6623d4631",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_friends_of_php_branches_gin",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_friends_of_php_composer",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_friends_of_php_cve",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_friends_of_php_published",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_gcve_cve_id",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_gcve_state",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_nvd_descriptions_text_search",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_nvd_nvd_id_text_search",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_nvd_nvd_id_upper",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_osv_aliases_gin",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_osv_aliases_not_null",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_osv_cve_aliases_gin",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_osv_osv_id_upper",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_osv_summary_text_search",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_package_language",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_package_name_language",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_pv_friendsofphp_id",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_pv_gcve_id",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_pv_nvd_id",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_pv_osv_id",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_pv_package_ecosystem",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_pv_package_name",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_pv_package_name_ecosystem",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_pv_unique_friendsofphp",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_pv_unique_gcve",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_pv_unique_nvd",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_pv_unique_osv",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_version_dependencies_gin",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_version_extra_gin",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_version_package_id",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_version_unique",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "IDX_version_version",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "PK_308364c66df656295bc4ec467c2",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "PK_3849ad9c24a83f52032bdd766d6",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "PK_843fa8d16ab777718211ba39ea6",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "PK_8c82d7f526340ab734260ea46be",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "PK_da4d150c7412f06c7ee5fee61df",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "PK_da5021501ce80efa03de6f40086",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "PK_f8e9d331bbbcee401c05ec8481e",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "PK_friends_of_php",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "PK_gcve",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "PK_kev",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "PK_knowledge_source_sync",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "PK_package_vulnerability",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "PK_version_id",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "UQ_friends_of_php_advisory_id",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "UQ_gcve_gcve_id",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "UQ_kev_cve",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "cwe",
+      "kind": "r",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "epss",
+      "kind": "r",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "friends_of_php",
+      "kind": "r",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "gcve",
+      "kind": "r",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "gcve_affected_flattened_gin_pathops_idx",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "idx_friends_of_php_advisory_id",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "idx_friends_of_php_composer",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "idx_license_name",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "idx_nvd_affected_product",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "idx_osv_affected_purl_composer",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "idx_osv_composer_packages",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "kev",
+      "kind": "r",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "knowledge_date_conversion_issue",
+      "kind": "r",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "knowledge_dated_restore",
+      "kind": "r",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "knowledge_dated_restore_pkey",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "knowledge_source_sync",
+      "kind": "r",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "licenses",
+      "kind": "r",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "nvd",
+      "kind": "r",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "nvd_affectedflattened_gin_pathops_idx",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "osv",
+      "kind": "r",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "osv_affected_gin_pathops_idx",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "package",
+      "kind": "r",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "package_vulnerability",
+      "kind": "r",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "version",
+      "kind": "r",
+      "persistence": "p",
+      "options": null
+    }
+  ],
+  "columns": [
+    {
+      "table": "cwe",
+      "column": "id",
+      "position": 1,
+      "type": "uuid",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "uuid_generate_v4()"
+    },
+    {
+      "table": "cwe",
+      "column": "cwe_id",
+      "position": 2,
+      "type": "character varying",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "name",
+      "position": 3,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "abstraction",
+      "position": 4,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "structure",
+      "position": 5,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "status",
+      "position": 6,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "description",
+      "position": 7,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "extended_description",
+      "position": 8,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "likelihood_of_exploit",
+      "position": 9,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "related_weaknesses",
+      "position": 10,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "modes_of_introduction",
+      "position": 11,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "common_consequences",
+      "position": 12,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "detection_methods",
+      "position": 13,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "potential_mitigations",
+      "position": 14,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "taxonomy_mappings",
+      "position": 15,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "observed_examples",
+      "position": 16,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "alternate_terms",
+      "position": 17,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "affected_resources",
+      "position": 18,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "functional_areas",
+      "position": 19,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "categories",
+      "position": 20,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "cwe",
+      "column": "applicable_platforms",
+      "position": 21,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "epss",
+      "column": "id",
+      "position": 1,
+      "type": "uuid",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "uuid_generate_v4()"
+    },
+    {
+      "table": "epss",
+      "column": "cve",
+      "position": 2,
+      "type": "character varying",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "epss",
+      "column": "score",
+      "position": 3,
+      "type": "double precision",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "epss",
+      "column": "percentile",
+      "position": 4,
+      "type": "double precision",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "epss",
+      "column": "score_date",
+      "position": 5,
+      "type": "date",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "friends_of_php",
+      "column": "id",
+      "position": 1,
+      "type": "uuid",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "uuid_generate_v4()"
+    },
+    {
+      "table": "friends_of_php",
+      "column": "advisory_id",
+      "position": 2,
+      "type": "character varying",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "friends_of_php",
+      "column": "title",
+      "position": 3,
+      "type": "character varying",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "friends_of_php",
+      "column": "cve",
+      "position": 4,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "friends_of_php",
+      "column": "link",
+      "position": 5,
+      "type": "character varying",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "friends_of_php",
+      "column": "reference",
+      "position": 6,
+      "type": "character varying",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "friends_of_php",
+      "column": "composer",
+      "position": 7,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "friends_of_php",
+      "column": "description",
+      "position": 8,
+      "type": "text",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "friends_of_php",
+      "column": "branches",
+      "position": 9,
+      "type": "jsonb",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "'{}'::jsonb"
+    },
+    {
+      "table": "friends_of_php",
+      "column": "published",
+      "position": 10,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "friends_of_php",
+      "column": "modified",
+      "position": 11,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "friends_of_php",
+      "column": "retired_reason",
+      "position": 12,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "friends_of_php",
+      "column": "retired_at",
+      "position": 13,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "friends_of_php",
+      "column": "origin",
+      "position": 14,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "s",
+      "collation": null,
+      "default": "\nCASE\n    WHEN (((reference)::text ~~ 'GHSA-%'::text) OR ((link)::text ~ '/advisories/GHSA-'::text)) THEN 'ghsa'::text\n    WHEN (((advisory_id)::text ~~ 'PKSA-%'::text) AND ((reference)::text !~ '^[^/]+/[^/]+/[^/]+$'::text)) THEN 'packagist'::text\n    ELSE 'friendsofphp'::text\nEND"
+    },
+    {
+      "table": "gcve",
+      "column": "id",
+      "position": 1,
+      "type": "uuid",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "uuid_generate_v4()"
+    },
+    {
+      "table": "gcve",
+      "column": "gcve_id",
+      "position": 2,
+      "type": "character varying",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "gcve",
+      "column": "cve_id",
+      "position": 3,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "gcve",
+      "column": "data_version",
+      "position": 4,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "gcve",
+      "column": "state",
+      "position": 5,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "gcve",
+      "column": "date_published",
+      "position": 6,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "gcve",
+      "column": "date_updated",
+      "position": 7,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "gcve",
+      "column": "assigner_org_id",
+      "position": 8,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "gcve",
+      "column": "descriptions",
+      "position": 9,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "'[]'::jsonb"
+    },
+    {
+      "table": "gcve",
+      "column": "affected",
+      "position": 10,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "'[]'::jsonb"
+    },
+    {
+      "table": "gcve",
+      "column": "affected_flattened",
+      "position": 11,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "'[]'::jsonb"
+    },
+    {
+      "table": "gcve",
+      "column": "metrics",
+      "position": 12,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "'[]'::jsonb"
+    },
+    {
+      "table": "gcve",
+      "column": "problem_types",
+      "position": 13,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "'[]'::jsonb"
+    },
+    {
+      "table": "gcve",
+      "column": "references",
+      "position": 14,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "'[]'::jsonb"
+    },
+    {
+      "table": "gcve",
+      "column": "adp_enrichments",
+      "position": 15,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "'[]'::jsonb"
+    },
+    {
+      "table": "gcve",
+      "column": "cwes",
+      "position": 16,
+      "type": "text[]",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "'{}'::text[]"
+    },
+    {
+      "table": "gcve",
+      "column": "vlai_score",
+      "position": 17,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "''::character varying"
+    },
+    {
+      "table": "gcve",
+      "column": "vlai_confidence",
+      "position": 18,
+      "type": "double precision",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "0"
+    },
+    {
+      "table": "gcve",
+      "column": "retired_reason",
+      "position": 19,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "gcve",
+      "column": "retired_at",
+      "position": 20,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "gcve",
+      "column": "origin",
+      "position": 21,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "s",
+      "collation": null,
+      "default": "\nCASE\n    WHEN ((gcve_id)::text ~~ 'GCVE-0-%'::text) THEN 'cve-list'::text\n    ELSE 'gcve'::text\nEND"
+    },
+    {
+      "table": "kev",
+      "column": "id",
+      "position": 1,
+      "type": "uuid",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "uuid_generate_v4()"
+    },
+    {
+      "table": "kev",
+      "column": "cve",
+      "position": 2,
+      "type": "character varying",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "kev",
+      "column": "vendor_project",
+      "position": 3,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "kev",
+      "column": "product",
+      "position": 4,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "kev",
+      "column": "vulnerability_name",
+      "position": 5,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "kev",
+      "column": "date_added",
+      "position": 6,
+      "type": "date",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "kev",
+      "column": "due_date",
+      "position": 7,
+      "type": "date",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "kev",
+      "column": "short_description",
+      "position": 8,
+      "type": "text",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "kev",
+      "column": "required_action",
+      "position": 9,
+      "type": "text",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "kev",
+      "column": "notes",
+      "position": 10,
+      "type": "text",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "kev",
+      "column": "known_ransomware_use",
+      "position": 11,
+      "type": "boolean",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "false"
+    },
+    {
+      "table": "kev",
+      "column": "cwes",
+      "position": 12,
+      "type": "jsonb",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "'[]'::jsonb"
+    },
+    {
+      "table": "knowledge_date_conversion_issue",
+      "column": "source_table",
+      "position": 1,
+      "type": "character varying",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "knowledge_date_conversion_issue",
+      "column": "record_id",
+      "position": 2,
+      "type": "uuid",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "knowledge_date_conversion_issue",
+      "column": "column_name",
+      "position": 3,
+      "type": "character varying",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "knowledge_date_conversion_issue",
+      "column": "raw_value",
+      "position": 4,
+      "type": "text",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "knowledge_date_conversion_issue",
+      "column": "reported_at",
+      "position": 5,
+      "type": "timestamp with time zone",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "now()"
+    },
+    {
+      "table": "knowledge_dated_restore",
+      "column": "id",
+      "position": 1,
+      "type": "boolean",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "true"
+    },
+    {
+      "table": "knowledge_dated_restore",
+      "column": "label",
+      "position": 2,
+      "type": "character varying",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "knowledge_dated_restore",
+      "column": "marked_at",
+      "position": 3,
+      "type": "timestamp with time zone",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "now()"
+    },
+    {
+      "table": "knowledge_source_sync",
+      "column": "source",
+      "position": 1,
+      "type": "character varying",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "knowledge_source_sync",
+      "column": "watermark",
+      "position": 2,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "knowledge_source_sync",
+      "column": "last_run_started_at",
+      "position": 3,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "knowledge_source_sync",
+      "column": "last_run_finished_at",
+      "position": 4,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "knowledge_source_sync",
+      "column": "last_outcome",
+      "position": 5,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "knowledge_source_sync",
+      "column": "last_error",
+      "position": 6,
+      "type": "text",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "knowledge_source_sync",
+      "column": "row_count",
+      "position": 7,
+      "type": "bigint",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "0"
+    },
+    {
+      "table": "knowledge_source_sync",
+      "column": "bulk_completed_at",
+      "position": 8,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "knowledge_source_sync",
+      "column": "validated_row_count",
+      "position": 9,
+      "type": "bigint",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "knowledge_source_sync",
+      "column": "validated_malicious_count",
+      "position": 10,
+      "type": "bigint",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "knowledge_source_sync",
+      "column": "validated_at",
+      "position": 11,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "knowledge_source_sync",
+      "column": "validation_error",
+      "position": 12,
+      "type": "text",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "knowledge_source_sync",
+      "column": "upstream_total",
+      "position": 13,
+      "type": "bigint",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "licenses",
+      "column": "id",
+      "position": 1,
+      "type": "uuid",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "uuid_generate_v4()"
+    },
+    {
+      "table": "licenses",
+      "column": "name",
+      "position": 2,
+      "type": "character varying(250)",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "licenses",
+      "column": "reference",
+      "position": 3,
+      "type": "character varying(250)",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "licenses",
+      "column": "isDeprecatedLicenseId",
+      "position": 4,
+      "type": "boolean",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "licenses",
+      "column": "detailsUrl",
+      "position": 5,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "licenses",
+      "column": "referenceNumber",
+      "position": 6,
+      "type": "integer",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "licenses",
+      "column": "licenseId",
+      "position": 7,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "licenses",
+      "column": "seeAlso",
+      "position": 8,
+      "type": "text",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "licenses",
+      "column": "isOsiApproved",
+      "position": 9,
+      "type": "boolean",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "licenses",
+      "column": "details",
+      "position": 10,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "nvd",
+      "column": "id",
+      "position": 1,
+      "type": "uuid",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "uuid_generate_v4()"
+    },
+    {
+      "table": "nvd",
+      "column": "nvd_id",
+      "position": 2,
+      "type": "character varying",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "nvd",
+      "column": "sourceIdentifier",
+      "position": 3,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "nvd",
+      "column": "published",
+      "position": 4,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "nvd",
+      "column": "lastModified",
+      "position": 5,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "nvd",
+      "column": "vulnStatus",
+      "position": 6,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "nvd",
+      "column": "descriptions",
+      "position": 7,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "nvd",
+      "column": "metrics",
+      "position": 8,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "nvd",
+      "column": "weaknesses",
+      "position": 9,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "nvd",
+      "column": "configurations",
+      "position": 10,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "nvd",
+      "column": "affectedFlattened",
+      "position": 11,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "nvd",
+      "column": "affected",
+      "position": 12,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "nvd",
+      "column": "references",
+      "position": 13,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "nvd",
+      "column": "vlai_score",
+      "position": 14,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "nvd",
+      "column": "vlai_confidence",
+      "position": 15,
+      "type": "double precision",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "nvd",
+      "column": "retired_reason",
+      "position": 16,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "nvd",
+      "column": "retired_at",
+      "position": 17,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "nvd",
+      "column": "origin",
+      "position": 18,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "s",
+      "collation": null,
+      "default": "'cve-list'::character varying"
+    },
+    {
+      "table": "osv",
+      "column": "id",
+      "position": 1,
+      "type": "uuid",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "uuid_generate_v4()"
+    },
+    {
+      "table": "osv",
+      "column": "osv_id",
+      "position": 2,
+      "type": "character varying",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "schema_version",
+      "position": 3,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "modified",
+      "position": 4,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "published",
+      "position": 5,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "withdrawn",
+      "position": 6,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "summary",
+      "position": 7,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "details",
+      "position": 8,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "cve",
+      "position": 9,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "aliases",
+      "position": 10,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "related",
+      "position": 11,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "severity",
+      "position": 12,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "affected",
+      "position": 13,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "references",
+      "position": 14,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "credits",
+      "position": 15,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "database_specific",
+      "position": 16,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "cwes",
+      "position": 17,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "vlai_score",
+      "position": 18,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "vlai_confidence",
+      "position": 19,
+      "type": "double precision",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "retired_reason",
+      "position": 20,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "retired_at",
+      "position": 21,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "osv",
+      "column": "kind",
+      "position": 22,
+      "type": "character varying",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "'vulnerability'::character varying"
+    },
+    {
+      "table": "osv",
+      "column": "cve_aliases",
+      "position": 23,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "s",
+      "collation": null,
+      "default": "COALESCE(jsonb_path_query_array(aliases, '$[*]?(@ starts with \"CVE-\")'::jsonpath), '[]'::jsonb)"
+    },
+    {
+      "table": "osv",
+      "column": "origin",
+      "position": 24,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "s",
+      "collation": null,
+      "default": "\nCASE\n    WHEN (split_part((osv_id)::text, '-'::text, 1) = 'CVE'::text) THEN 'cve-list'::text\n    WHEN ((split_part((osv_id)::text, '-'::text, 1) = 'GHSA'::text) AND (jsonb_typeof(\"references\") = 'array'::text) AND jsonb_path_exists(\"references\", '$[*].\"url\"?(@ like_regex \"github[.]com/FriendsOfPHP/security-advisories/\")'::jsonpath)) THEN 'friendsofphp'::text\n    ELSE lower(split_part((osv_id)::text, '-'::text, 1))\nEND"
+    },
+    {
+      "table": "package",
+      "column": "id",
+      "position": 1,
+      "type": "uuid",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "uuid_generate_v4()"
+    },
+    {
+      "table": "package",
+      "column": "name",
+      "position": 2,
+      "type": "character varying(255)",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "package",
+      "column": "description",
+      "position": 3,
+      "type": "character varying(255)",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "package",
+      "column": "homepage",
+      "position": 4,
+      "type": "character varying(255)",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "package",
+      "column": "latest_version",
+      "position": 5,
+      "type": "character varying(255)",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "package",
+      "column": "time",
+      "position": 6,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "package",
+      "column": "keywords",
+      "position": 7,
+      "type": "text",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "package",
+      "column": "source",
+      "position": 8,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "package",
+      "column": "license",
+      "position": 9,
+      "type": "text",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "package",
+      "column": "licenses",
+      "position": 10,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "package",
+      "column": "extra",
+      "position": 11,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "package",
+      "column": "language",
+      "position": 12,
+      "type": "character varying(50)",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "'javascript'::character varying"
+    },
+    {
+      "table": "package_vulnerability",
+      "column": "id",
+      "position": 1,
+      "type": "uuid",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "uuid_generate_v4()"
+    },
+    {
+      "table": "package_vulnerability",
+      "column": "package_name",
+      "position": 2,
+      "type": "character varying",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "package_vulnerability",
+      "column": "package_ecosystem",
+      "position": 3,
+      "type": "character varying",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "package_vulnerability",
+      "column": "osv_id",
+      "position": 4,
+      "type": "uuid",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "package_vulnerability",
+      "column": "nvd_id",
+      "position": 5,
+      "type": "uuid",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "package_vulnerability",
+      "column": "friendsofphp_id",
+      "position": 6,
+      "type": "uuid",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "package_vulnerability",
+      "column": "created_at",
+      "position": 7,
+      "type": "timestamp without time zone",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "now()"
+    },
+    {
+      "table": "package_vulnerability",
+      "column": "gcve_id",
+      "position": 8,
+      "type": "uuid",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "version",
+      "column": "id",
+      "position": 1,
+      "type": "uuid",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "uuid_generate_v4()"
+    },
+    {
+      "table": "version",
+      "column": "package_id",
+      "position": 2,
+      "type": "uuid",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "version",
+      "column": "version",
+      "position": 3,
+      "type": "character varying(255)",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "version",
+      "column": "dependencies",
+      "position": 4,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "version",
+      "column": "dev_dependencies",
+      "position": 5,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "version",
+      "column": "extra",
+      "position": 6,
+      "type": "jsonb",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "version",
+      "column": "created_at",
+      "position": 7,
+      "type": "timestamp with time zone",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "now()"
+    },
+    {
+      "table": "version",
+      "column": "updated_at",
+      "position": 8,
+      "type": "timestamp with time zone",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "now()"
+    }
+  ],
+  "constraints": [
+    {
+      "table": "cwe",
+      "name": "PK_da4d150c7412f06c7ee5fee61df",
+      "kind": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "cwe",
+      "name": "cwe_cwe_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL cwe_id"
+    },
+    {
+      "table": "cwe",
+      "name": "cwe_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table": "epss",
+      "name": "PK_3849ad9c24a83f52032bdd766d6",
+      "kind": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "epss",
+      "name": "epss_cve_not_null",
+      "kind": "n",
+      "definition": "NOT NULL cve"
+    },
+    {
+      "table": "epss",
+      "name": "epss_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table": "friends_of_php",
+      "name": "CHK_friends_of_php_retired_reason",
+      "kind": "c",
+      "definition": "CHECK (((retired_reason)::text = ANY ((ARRAY['rejected'::character varying, 'withdrawn'::character varying, 'removed'::character varying])::text[])))"
+    },
+    {
+      "table": "friends_of_php",
+      "name": "CHK_friends_of_php_retired_together",
+      "kind": "c",
+      "definition": "CHECK (((retired_reason IS NULL) = (retired_at IS NULL)))"
+    },
+    {
+      "table": "friends_of_php",
+      "name": "PK_friends_of_php",
+      "kind": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "friends_of_php",
+      "name": "UQ_friends_of_php_advisory_id",
+      "kind": "u",
+      "definition": "UNIQUE (advisory_id)"
+    },
+    {
+      "table": "friends_of_php",
+      "name": "friends_of_php_advisory_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL advisory_id"
+    },
+    {
+      "table": "friends_of_php",
+      "name": "friends_of_php_branches_not_null",
+      "kind": "n",
+      "definition": "NOT NULL branches"
+    },
+    {
+      "table": "friends_of_php",
+      "name": "friends_of_php_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table": "friends_of_php",
+      "name": "friends_of_php_link_not_null",
+      "kind": "n",
+      "definition": "NOT NULL link"
+    },
+    {
+      "table": "friends_of_php",
+      "name": "friends_of_php_reference_not_null",
+      "kind": "n",
+      "definition": "NOT NULL reference"
+    },
+    {
+      "table": "friends_of_php",
+      "name": "friends_of_php_title_not_null",
+      "kind": "n",
+      "definition": "NOT NULL title"
+    },
+    {
+      "table": "gcve",
+      "name": "CHK_gcve_retired_reason",
+      "kind": "c",
+      "definition": "CHECK (((retired_reason)::text = ANY ((ARRAY['rejected'::character varying, 'withdrawn'::character varying, 'removed'::character varying])::text[])))"
+    },
+    {
+      "table": "gcve",
+      "name": "CHK_gcve_retired_together",
+      "kind": "c",
+      "definition": "CHECK (((retired_reason IS NULL) = (retired_at IS NULL)))"
+    },
+    {
+      "table": "gcve",
+      "name": "PK_gcve",
+      "kind": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "gcve",
+      "name": "UQ_gcve_gcve_id",
+      "kind": "u",
+      "definition": "UNIQUE (gcve_id)"
+    },
+    {
+      "table": "gcve",
+      "name": "gcve_gcve_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL gcve_id"
+    },
+    {
+      "table": "gcve",
+      "name": "gcve_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table": "kev",
+      "name": "PK_kev",
+      "kind": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "kev",
+      "name": "UQ_kev_cve",
+      "kind": "u",
+      "definition": "UNIQUE (cve)"
+    },
+    {
+      "table": "kev",
+      "name": "kev_cve_not_null",
+      "kind": "n",
+      "definition": "NOT NULL cve"
+    },
+    {
+      "table": "kev",
+      "name": "kev_cwes_not_null",
+      "kind": "n",
+      "definition": "NOT NULL cwes"
+    },
+    {
+      "table": "kev",
+      "name": "kev_date_added_not_null",
+      "kind": "n",
+      "definition": "NOT NULL date_added"
+    },
+    {
+      "table": "kev",
+      "name": "kev_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table": "kev",
+      "name": "kev_known_ransomware_use_not_null",
+      "kind": "n",
+      "definition": "NOT NULL known_ransomware_use"
+    },
+    {
+      "table": "knowledge_date_conversion_issue",
+      "name": "knowledge_date_conversion_issue_column_name_not_null",
+      "kind": "n",
+      "definition": "NOT NULL column_name"
+    },
+    {
+      "table": "knowledge_date_conversion_issue",
+      "name": "knowledge_date_conversion_issue_raw_value_not_null",
+      "kind": "n",
+      "definition": "NOT NULL raw_value"
+    },
+    {
+      "table": "knowledge_date_conversion_issue",
+      "name": "knowledge_date_conversion_issue_record_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL record_id"
+    },
+    {
+      "table": "knowledge_date_conversion_issue",
+      "name": "knowledge_date_conversion_issue_reported_at_not_null",
+      "kind": "n",
+      "definition": "NOT NULL reported_at"
+    },
+    {
+      "table": "knowledge_date_conversion_issue",
+      "name": "knowledge_date_conversion_issue_source_table_not_null",
+      "kind": "n",
+      "definition": "NOT NULL source_table"
+    },
+    {
+      "table": "knowledge_dated_restore",
+      "name": "knowledge_dated_restore_id_check",
+      "kind": "c",
+      "definition": "CHECK (id)"
+    },
+    {
+      "table": "knowledge_dated_restore",
+      "name": "knowledge_dated_restore_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table": "knowledge_dated_restore",
+      "name": "knowledge_dated_restore_label_not_null",
+      "kind": "n",
+      "definition": "NOT NULL label"
+    },
+    {
+      "table": "knowledge_dated_restore",
+      "name": "knowledge_dated_restore_marked_at_not_null",
+      "kind": "n",
+      "definition": "NOT NULL marked_at"
+    },
+    {
+      "table": "knowledge_dated_restore",
+      "name": "knowledge_dated_restore_pkey",
+      "kind": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "knowledge_source_sync",
+      "name": "CHK_knowledge_source_sync_last_outcome",
+      "kind": "c",
+      "definition": "CHECK (((last_outcome)::text = ANY ((ARRAY['success'::character varying, 'failure'::character varying])::text[])))"
+    },
+    {
+      "table": "knowledge_source_sync",
+      "name": "PK_knowledge_source_sync",
+      "kind": "p",
+      "definition": "PRIMARY KEY (source)"
+    },
+    {
+      "table": "knowledge_source_sync",
+      "name": "knowledge_source_sync_row_count_not_null",
+      "kind": "n",
+      "definition": "NOT NULL row_count"
+    },
+    {
+      "table": "knowledge_source_sync",
+      "name": "knowledge_source_sync_source_not_null",
+      "kind": "n",
+      "definition": "NOT NULL source"
+    },
+    {
+      "table": "licenses",
+      "name": "PK_da5021501ce80efa03de6f40086",
+      "kind": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "licenses",
+      "name": "licenses_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table": "nvd",
+      "name": "CHK_nvd_retired_reason",
+      "kind": "c",
+      "definition": "CHECK (((retired_reason)::text = ANY ((ARRAY['rejected'::character varying, 'withdrawn'::character varying, 'removed'::character varying])::text[])))"
+    },
+    {
+      "table": "nvd",
+      "name": "CHK_nvd_retired_together",
+      "kind": "c",
+      "definition": "CHECK (((retired_reason IS NULL) = (retired_at IS NULL)))"
+    },
+    {
+      "table": "nvd",
+      "name": "PK_843fa8d16ab777718211ba39ea6",
+      "kind": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "nvd",
+      "name": "nvd_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table": "nvd",
+      "name": "nvd_nvd_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL nvd_id"
+    },
+    {
+      "table": "osv",
+      "name": "CHK_osv_kind",
+      "kind": "c",
+      "definition": "CHECK (((kind)::text = ANY ((ARRAY['vulnerability'::character varying, 'malicious'::character varying])::text[])))"
+    },
+    {
+      "table": "osv",
+      "name": "CHK_osv_retired_reason",
+      "kind": "c",
+      "definition": "CHECK (((retired_reason)::text = ANY ((ARRAY['rejected'::character varying, 'withdrawn'::character varying, 'removed'::character varying])::text[])))"
+    },
+    {
+      "table": "osv",
+      "name": "CHK_osv_retired_together",
+      "kind": "c",
+      "definition": "CHECK (((retired_reason IS NULL) = (retired_at IS NULL)))"
+    },
+    {
+      "table": "osv",
+      "name": "PK_f8e9d331bbbcee401c05ec8481e",
+      "kind": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "osv",
+      "name": "osv_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table": "osv",
+      "name": "osv_kind_not_null",
+      "kind": "n",
+      "definition": "NOT NULL kind"
+    },
+    {
+      "table": "osv",
+      "name": "osv_osv_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL osv_id"
+    },
+    {
+      "table": "package",
+      "name": "PK_308364c66df656295bc4ec467c2",
+      "kind": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "package",
+      "name": "package_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table": "package",
+      "name": "package_language_not_null",
+      "kind": "n",
+      "definition": "NOT NULL language"
+    },
+    {
+      "table": "package",
+      "name": "package_latest_version_not_null",
+      "kind": "n",
+      "definition": "NOT NULL latest_version"
+    },
+    {
+      "table": "package",
+      "name": "package_name_not_null",
+      "kind": "n",
+      "definition": "NOT NULL name"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "CHK_package_vulnerability_one_fk",
+      "kind": "c",
+      "definition": "CHECK (((((((osv_id IS NOT NULL))::integer + ((nvd_id IS NOT NULL))::integer) + ((friendsofphp_id IS NOT NULL))::integer) + ((gcve_id IS NOT NULL))::integer) = 1))"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "FK_package_vulnerability_friendsofphp",
+      "kind": "f",
+      "definition": "FOREIGN KEY (friendsofphp_id) REFERENCES friends_of_php(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "FK_package_vulnerability_gcve",
+      "kind": "f",
+      "definition": "FOREIGN KEY (gcve_id) REFERENCES gcve(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "FK_package_vulnerability_nvd",
+      "kind": "f",
+      "definition": "FOREIGN KEY (nvd_id) REFERENCES nvd(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "FK_package_vulnerability_osv",
+      "kind": "f",
+      "definition": "FOREIGN KEY (osv_id) REFERENCES osv(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "PK_package_vulnerability",
+      "kind": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "package_vulnerability_created_at_not_null",
+      "kind": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "package_vulnerability_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "package_vulnerability_package_ecosystem_not_null",
+      "kind": "n",
+      "definition": "NOT NULL package_ecosystem"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "package_vulnerability_package_name_not_null",
+      "kind": "n",
+      "definition": "NOT NULL package_name"
+    },
+    {
+      "table": "version",
+      "name": "FK_version_package",
+      "kind": "f",
+      "definition": "FOREIGN KEY (package_id) REFERENCES package(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "version",
+      "name": "PK_version_id",
+      "kind": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "version",
+      "name": "version_created_at_not_null",
+      "kind": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "table": "version",
+      "name": "version_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table": "version",
+      "name": "version_package_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL package_id"
+    },
+    {
+      "table": "version",
+      "name": "version_updated_at_not_null",
+      "kind": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "table": "version",
+      "name": "version_version_not_null",
+      "kind": "n",
+      "definition": "NOT NULL version"
+    }
+  ],
+  "indexes": [
+    {
+      "table": "cwe",
+      "name": "IDX_129e04e01810e12ea16e48b275",
+      "definition": "CREATE UNIQUE INDEX \"IDX_129e04e01810e12ea16e48b275\" ON public.cwe USING btree (cwe_id)"
+    },
+    {
+      "table": "cwe",
+      "name": "PK_da4d150c7412f06c7ee5fee61df",
+      "definition": "CREATE UNIQUE INDEX \"PK_da4d150c7412f06c7ee5fee61df\" ON public.cwe USING btree (id)"
+    },
+    {
+      "table": "epss",
+      "name": "IDX_9cc3075a662b00d9b3b6d1590f",
+      "definition": "CREATE UNIQUE INDEX \"IDX_9cc3075a662b00d9b3b6d1590f\" ON public.epss USING btree (cve)"
+    },
+    {
+      "table": "epss",
+      "name": "PK_3849ad9c24a83f52032bdd766d6",
+      "definition": "CREATE UNIQUE INDEX \"PK_3849ad9c24a83f52032bdd766d6\" ON public.epss USING btree (id)"
+    },
+    {
+      "table": "friends_of_php",
+      "name": "IDX_friends_of_php_branches_gin",
+      "definition": "CREATE INDEX \"IDX_friends_of_php_branches_gin\" ON public.friends_of_php USING gin (branches)"
+    },
+    {
+      "table": "friends_of_php",
+      "name": "IDX_friends_of_php_composer",
+      "definition": "CREATE INDEX \"IDX_friends_of_php_composer\" ON public.friends_of_php USING btree (composer)"
+    },
+    {
+      "table": "friends_of_php",
+      "name": "IDX_friends_of_php_cve",
+      "definition": "CREATE INDEX \"IDX_friends_of_php_cve\" ON public.friends_of_php USING btree (cve)"
+    },
+    {
+      "table": "friends_of_php",
+      "name": "IDX_friends_of_php_published",
+      "definition": "CREATE INDEX \"IDX_friends_of_php_published\" ON public.friends_of_php USING btree (published)"
+    },
+    {
+      "table": "friends_of_php",
+      "name": "PK_friends_of_php",
+      "definition": "CREATE UNIQUE INDEX \"PK_friends_of_php\" ON public.friends_of_php USING btree (id)"
+    },
+    {
+      "table": "friends_of_php",
+      "name": "UQ_friends_of_php_advisory_id",
+      "definition": "CREATE UNIQUE INDEX \"UQ_friends_of_php_advisory_id\" ON public.friends_of_php USING btree (advisory_id)"
+    },
+    {
+      "table": "friends_of_php",
+      "name": "idx_friends_of_php_advisory_id",
+      "definition": "CREATE INDEX idx_friends_of_php_advisory_id ON public.friends_of_php USING btree (advisory_id)"
+    },
+    {
+      "table": "friends_of_php",
+      "name": "idx_friends_of_php_composer",
+      "definition": "CREATE INDEX idx_friends_of_php_composer ON public.friends_of_php USING btree (composer)"
+    },
+    {
+      "table": "gcve",
+      "name": "IDX_gcve_cve_id",
+      "definition": "CREATE INDEX \"IDX_gcve_cve_id\" ON public.gcve USING btree (cve_id) WHERE (cve_id IS NOT NULL)"
+    },
+    {
+      "table": "gcve",
+      "name": "IDX_gcve_state",
+      "definition": "CREATE INDEX \"IDX_gcve_state\" ON public.gcve USING btree (state)"
+    },
+    {
+      "table": "gcve",
+      "name": "PK_gcve",
+      "definition": "CREATE UNIQUE INDEX \"PK_gcve\" ON public.gcve USING btree (id)"
+    },
+    {
+      "table": "gcve",
+      "name": "UQ_gcve_gcve_id",
+      "definition": "CREATE UNIQUE INDEX \"UQ_gcve_gcve_id\" ON public.gcve USING btree (gcve_id)"
+    },
+    {
+      "table": "gcve",
+      "name": "gcve_affected_flattened_gin_pathops_idx",
+      "definition": "CREATE INDEX gcve_affected_flattened_gin_pathops_idx ON public.gcve USING gin (affected_flattened jsonb_path_ops)"
+    },
+    {
+      "table": "kev",
+      "name": "PK_kev",
+      "definition": "CREATE UNIQUE INDEX \"PK_kev\" ON public.kev USING btree (id)"
+    },
+    {
+      "table": "kev",
+      "name": "UQ_kev_cve",
+      "definition": "CREATE UNIQUE INDEX \"UQ_kev_cve\" ON public.kev USING btree (cve)"
+    },
+    {
+      "table": "knowledge_dated_restore",
+      "name": "knowledge_dated_restore_pkey",
+      "definition": "CREATE UNIQUE INDEX knowledge_dated_restore_pkey ON public.knowledge_dated_restore USING btree (id)"
+    },
+    {
+      "table": "knowledge_source_sync",
+      "name": "PK_knowledge_source_sync",
+      "definition": "CREATE UNIQUE INDEX \"PK_knowledge_source_sync\" ON public.knowledge_source_sync USING btree (source)"
+    },
+    {
+      "table": "licenses",
+      "name": "IDX_d48c4e23bf4cc989ccc9598b39",
+      "definition": "CREATE UNIQUE INDEX \"IDX_d48c4e23bf4cc989ccc9598b39\" ON public.licenses USING btree (\"licenseId\")"
+    },
+    {
+      "table": "licenses",
+      "name": "PK_da5021501ce80efa03de6f40086",
+      "definition": "CREATE UNIQUE INDEX \"PK_da5021501ce80efa03de6f40086\" ON public.licenses USING btree (id)"
+    },
+    {
+      "table": "licenses",
+      "name": "idx_license_name",
+      "definition": "CREATE INDEX idx_license_name ON public.licenses USING btree (name)"
+    },
+    {
+      "table": "nvd",
+      "name": "IDX_ff27e0c5a71cd3d2b6623d4631",
+      "definition": "CREATE UNIQUE INDEX \"IDX_ff27e0c5a71cd3d2b6623d4631\" ON public.nvd USING btree (nvd_id)"
+    },
+    {
+      "table": "nvd",
+      "name": "IDX_nvd_descriptions_text_search",
+      "definition": "CREATE INDEX \"IDX_nvd_descriptions_text_search\" ON public.nvd USING gin (to_tsvector('english'::regconfig, (descriptions)::text))"
+    },
+    {
+      "table": "nvd",
+      "name": "IDX_nvd_nvd_id_text_search",
+      "definition": "CREATE INDEX \"IDX_nvd_nvd_id_text_search\" ON public.nvd USING gin (to_tsvector('english'::regconfig, (nvd_id)::text))"
+    },
+    {
+      "table": "nvd",
+      "name": "IDX_nvd_nvd_id_upper",
+      "definition": "CREATE INDEX \"IDX_nvd_nvd_id_upper\" ON public.nvd USING btree (upper((nvd_id)::text))"
+    },
+    {
+      "table": "nvd",
+      "name": "PK_843fa8d16ab777718211ba39ea6",
+      "definition": "CREATE UNIQUE INDEX \"PK_843fa8d16ab777718211ba39ea6\" ON public.nvd USING btree (id)"
+    },
+    {
+      "table": "nvd",
+      "name": "idx_nvd_affected_product",
+      "definition": "CREATE INDEX idx_nvd_affected_product ON public.nvd USING gin (affected)"
+    },
+    {
+      "table": "nvd",
+      "name": "nvd_affectedflattened_gin_pathops_idx",
+      "definition": "CREATE INDEX nvd_affectedflattened_gin_pathops_idx ON public.nvd USING gin (\"affectedFlattened\" jsonb_path_ops)"
+    },
+    {
+      "table": "osv",
+      "name": "IDX_a1a455434143cac56134910e0b",
+      "definition": "CREATE UNIQUE INDEX \"IDX_a1a455434143cac56134910e0b\" ON public.osv USING btree (osv_id)"
+    },
+    {
+      "table": "osv",
+      "name": "IDX_osv_aliases_gin",
+      "definition": "CREATE INDEX \"IDX_osv_aliases_gin\" ON public.osv USING gin (aliases)"
+    },
+    {
+      "table": "osv",
+      "name": "IDX_osv_aliases_not_null",
+      "definition": "CREATE INDEX \"IDX_osv_aliases_not_null\" ON public.osv USING btree (aliases) WHERE (aliases IS NOT NULL)"
+    },
+    {
+      "table": "osv",
+      "name": "IDX_osv_cve_aliases_gin",
+      "definition": "CREATE INDEX \"IDX_osv_cve_aliases_gin\" ON public.osv USING gin (cve_aliases)"
+    },
+    {
+      "table": "osv",
+      "name": "IDX_osv_osv_id_upper",
+      "definition": "CREATE INDEX \"IDX_osv_osv_id_upper\" ON public.osv USING btree (upper((osv_id)::text))"
+    },
+    {
+      "table": "osv",
+      "name": "IDX_osv_summary_text_search",
+      "definition": "CREATE INDEX \"IDX_osv_summary_text_search\" ON public.osv USING gin (to_tsvector('english'::regconfig, (summary)::text))"
+    },
+    {
+      "table": "osv",
+      "name": "PK_f8e9d331bbbcee401c05ec8481e",
+      "definition": "CREATE UNIQUE INDEX \"PK_f8e9d331bbbcee401c05ec8481e\" ON public.osv USING btree (id)"
+    },
+    {
+      "table": "osv",
+      "name": "idx_osv_affected_purl_composer",
+      "definition": "CREATE INDEX idx_osv_affected_purl_composer ON public.osv USING gin (affected)"
+    },
+    {
+      "table": "osv",
+      "name": "idx_osv_composer_packages",
+      "definition": "CREATE INDEX idx_osv_composer_packages ON public.osv USING gin (affected) WHERE ((affected)::text ~~ '%pkg:composer/%'::text)"
+    },
+    {
+      "table": "osv",
+      "name": "osv_affected_gin_pathops_idx",
+      "definition": "CREATE INDEX osv_affected_gin_pathops_idx ON public.osv USING gin (affected jsonb_path_ops)"
+    },
+    {
+      "table": "package",
+      "name": "IDX_package_language",
+      "definition": "CREATE INDEX \"IDX_package_language\" ON public.package USING btree (language)"
+    },
+    {
+      "table": "package",
+      "name": "IDX_package_name_language",
+      "definition": "CREATE UNIQUE INDEX \"IDX_package_name_language\" ON public.package USING btree (name, language)"
+    },
+    {
+      "table": "package",
+      "name": "PK_308364c66df656295bc4ec467c2",
+      "definition": "CREATE UNIQUE INDEX \"PK_308364c66df656295bc4ec467c2\" ON public.package USING btree (id)"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "IDX_pv_friendsofphp_id",
+      "definition": "CREATE INDEX \"IDX_pv_friendsofphp_id\" ON public.package_vulnerability USING btree (friendsofphp_id) WHERE (friendsofphp_id IS NOT NULL)"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "IDX_pv_gcve_id",
+      "definition": "CREATE INDEX \"IDX_pv_gcve_id\" ON public.package_vulnerability USING btree (gcve_id) WHERE (gcve_id IS NOT NULL)"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "IDX_pv_nvd_id",
+      "definition": "CREATE INDEX \"IDX_pv_nvd_id\" ON public.package_vulnerability USING btree (nvd_id) WHERE (nvd_id IS NOT NULL)"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "IDX_pv_osv_id",
+      "definition": "CREATE INDEX \"IDX_pv_osv_id\" ON public.package_vulnerability USING btree (osv_id) WHERE (osv_id IS NOT NULL)"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "IDX_pv_package_ecosystem",
+      "definition": "CREATE INDEX \"IDX_pv_package_ecosystem\" ON public.package_vulnerability USING btree (package_ecosystem)"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "IDX_pv_package_name",
+      "definition": "CREATE INDEX \"IDX_pv_package_name\" ON public.package_vulnerability USING btree (package_name)"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "IDX_pv_package_name_ecosystem",
+      "definition": "CREATE INDEX \"IDX_pv_package_name_ecosystem\" ON public.package_vulnerability USING btree (package_name, package_ecosystem)"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "IDX_pv_unique_friendsofphp",
+      "definition": "CREATE UNIQUE INDEX \"IDX_pv_unique_friendsofphp\" ON public.package_vulnerability USING btree (package_name, package_ecosystem, friendsofphp_id) WHERE (friendsofphp_id IS NOT NULL)"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "IDX_pv_unique_gcve",
+      "definition": "CREATE UNIQUE INDEX \"IDX_pv_unique_gcve\" ON public.package_vulnerability USING btree (package_name, package_ecosystem, gcve_id) WHERE (gcve_id IS NOT NULL)"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "IDX_pv_unique_nvd",
+      "definition": "CREATE UNIQUE INDEX \"IDX_pv_unique_nvd\" ON public.package_vulnerability USING btree (package_name, package_ecosystem, nvd_id) WHERE (nvd_id IS NOT NULL)"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "IDX_pv_unique_osv",
+      "definition": "CREATE UNIQUE INDEX \"IDX_pv_unique_osv\" ON public.package_vulnerability USING btree (package_name, package_ecosystem, osv_id) WHERE (osv_id IS NOT NULL)"
+    },
+    {
+      "table": "package_vulnerability",
+      "name": "PK_package_vulnerability",
+      "definition": "CREATE UNIQUE INDEX \"PK_package_vulnerability\" ON public.package_vulnerability USING btree (id)"
+    },
+    {
+      "table": "version",
+      "name": "IDX_version_dependencies_gin",
+      "definition": "CREATE INDEX \"IDX_version_dependencies_gin\" ON public.version USING gin (dependencies)"
+    },
+    {
+      "table": "version",
+      "name": "IDX_version_extra_gin",
+      "definition": "CREATE INDEX \"IDX_version_extra_gin\" ON public.version USING gin (extra)"
+    },
+    {
+      "table": "version",
+      "name": "IDX_version_package_id",
+      "definition": "CREATE INDEX \"IDX_version_package_id\" ON public.version USING btree (package_id)"
+    },
+    {
+      "table": "version",
+      "name": "IDX_version_unique",
+      "definition": "CREATE UNIQUE INDEX \"IDX_version_unique\" ON public.version USING btree (package_id, version)"
+    },
+    {
+      "table": "version",
+      "name": "IDX_version_version",
+      "definition": "CREATE INDEX \"IDX_version_version\" ON public.version USING btree (version)"
+    },
+    {
+      "table": "version",
+      "name": "PK_version_id",
+      "definition": "CREATE UNIQUE INDEX \"PK_version_id\" ON public.version USING btree (id)"
+    }
+  ],
+  "functions": [],
+  "triggers": [],
+  "rows": [
+    {
+      "table": "knowledge_source_sync",
+      "row": "{\"source\":\"cwe\",\"row_count\":0,\"watermark\":null,\"last_error\":null,\"last_outcome\":null,\"validated_at\":null,\"upstream_total\":null,\"validation_error\":null,\"bulk_completed_at\":null,\"last_run_started_at\":null,\"validated_row_count\":null,\"last_run_finished_at\":null,\"validated_malicious_count\":null}"
+    },
+    {
+      "table": "knowledge_source_sync",
+      "row": "{\"source\":\"epss\",\"row_count\":0,\"watermark\":null,\"last_error\":null,\"last_outcome\":null,\"validated_at\":null,\"upstream_total\":null,\"validation_error\":null,\"bulk_completed_at\":null,\"last_run_started_at\":null,\"validated_row_count\":null,\"last_run_finished_at\":null,\"validated_malicious_count\":null}"
+    },
+    {
+      "table": "knowledge_source_sync",
+      "row": "{\"source\":\"friends_of_php\",\"row_count\":0,\"watermark\":null,\"last_error\":null,\"last_outcome\":null,\"validated_at\":null,\"upstream_total\":null,\"validation_error\":null,\"bulk_completed_at\":null,\"last_run_started_at\":null,\"validated_row_count\":null,\"last_run_finished_at\":null,\"validated_malicious_count\":null}"
+    },
+    {
+      "table": "knowledge_source_sync",
+      "row": "{\"source\":\"gcve\",\"row_count\":0,\"watermark\":null,\"last_error\":null,\"last_outcome\":null,\"validated_at\":null,\"upstream_total\":null,\"validation_error\":null,\"bulk_completed_at\":null,\"last_run_started_at\":null,\"validated_row_count\":null,\"last_run_finished_at\":null,\"validated_malicious_count\":null}"
+    },
+    {
+      "table": "knowledge_source_sync",
+      "row": "{\"source\":\"kev\",\"row_count\":0,\"watermark\":null,\"last_error\":null,\"last_outcome\":null,\"validated_at\":null,\"upstream_total\":null,\"validation_error\":null,\"bulk_completed_at\":null,\"last_run_started_at\":null,\"validated_row_count\":null,\"last_run_finished_at\":null,\"validated_malicious_count\":null}"
+    },
+    {
+      "table": "knowledge_source_sync",
+      "row": "{\"source\":\"licenses\",\"row_count\":0,\"watermark\":null,\"last_error\":null,\"last_outcome\":null,\"validated_at\":null,\"upstream_total\":null,\"validation_error\":null,\"bulk_completed_at\":null,\"last_run_started_at\":null,\"validated_row_count\":null,\"last_run_finished_at\":null,\"validated_malicious_count\":null}"
+    },
+    {
+      "table": "knowledge_source_sync",
+      "row": "{\"source\":\"nvd\",\"row_count\":0,\"watermark\":null,\"last_error\":null,\"last_outcome\":null,\"validated_at\":null,\"upstream_total\":null,\"validation_error\":null,\"bulk_completed_at\":null,\"last_run_started_at\":null,\"validated_row_count\":null,\"last_run_finished_at\":null,\"validated_malicious_count\":null}"
+    },
+    {
+      "table": "knowledge_source_sync",
+      "row": "{\"source\":\"osv\",\"row_count\":0,\"watermark\":null,\"last_error\":null,\"last_outcome\":null,\"validated_at\":null,\"upstream_total\":null,\"validation_error\":null,\"bulk_completed_at\":null,\"last_run_started_at\":null,\"validated_row_count\":null,\"last_run_finished_at\":null,\"validated_malicious_count\":null}"
+    }
+  ]
+}

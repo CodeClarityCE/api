@@ -4,8 +4,7 @@ import { Client } from "pg";
 import { DataSource, type MigrationInterface } from "typeorm";
 
 import { RemoveJsPatchingFromAnalyzers1796256000000 as AnalyzersMigration } from "../../src/migrations/codeclarity/1796256000000-RemoveJsPatchingFromAnalyzers";
-import { Init1754648240560 as PluginsInit } from "../../src/migrations/plugins/1754648240560-Init";
-import { UniquePluginName1795132800000 as UniquePluginName } from "../../src/migrations/plugins/1795132800000-UniquePluginName";
+import { CreatePluginsBetaBaseline1796200000000 as PluginsBaseline } from "../../src/migrations/plugins/1796200000000-CreatePluginsBetaBaseline";
 import { RemoveJsPatchingPlugin1796256000000 as PluginsMigration } from "../../src/migrations/plugins/1796256000000-RemoveJsPatchingPlugin";
 
 const connection = {
@@ -177,8 +176,7 @@ describe("RemoveJsPatchingPlugin migration", () => {
     plugins = dataSource(database);
     await plugins.initialize();
     await plugins.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
-    await run("up", new PluginsInit());
-    await run("up", new UniquePluginName());
+    await run("up", new PluginsBaseline());
   });
 
   afterAll(async () => {
