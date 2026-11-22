@@ -264,9 +264,9 @@ export class AnalyzersService {
     user: AuthenticatedUser,
   ): Promise<TypedPaginatedData<Analyzer>> {
     // Check if the user is allowed to get analyzers (is at least user)
-    await this.membershipsRepository.hasRequiredRole(
+    await this.membershipsRepository.hasRequiredRoleFor(
       orgId,
-      user.userId,
+      user,
       MemberRole.USER,
     );
 

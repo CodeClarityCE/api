@@ -20,10 +20,12 @@ import {
   ScheduleUpdateBody,
 } from "src/base_modules/analyses/analysis.types";
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import { OrganizationTokenScope } from "src/base_modules/organizations/tokens/organization-token.types";
 import { BatchResponse } from "src/base_modules/projects/project.types";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocCreatedResponseDecorator } from "src/decorators/CrudResponse";
 import { APIDocNoDataResponseDecorator } from "src/decorators/NoDataResponse";
+import { AllowOrganizationToken } from "src/decorators/OrganizationTokenDecorator";
 import { APIDocTypedPaginatedResponseDecorator } from "src/decorators/TypedPaginatedResponse";
 import { APIDocTypedResponseDecorator } from "src/decorators/TypedResponse";
 import { AuthUser } from "src/decorators/UserDecorator";
@@ -55,6 +57,7 @@ export class AnalysesController {
     statusCode: 400,
     errors: [AnalyzerDoesNotExist, AnaylzerMissingConfigAttribute],
   })
+  @AllowOrganizationToken(OrganizationTokenScope.ANALYZE)
   @Post("")
   async create(
     @AuthUser() user: AuthenticatedUser,
@@ -113,6 +116,7 @@ export class AnalysesController {
   @APIDocTypedResponseDecorator(Analysis)
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
   @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get(":analysis_id")
   async get(
     @AuthUser() user: AuthenticatedUser,

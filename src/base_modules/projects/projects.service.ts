@@ -3,7 +3,10 @@ import { mkdir } from "fs/promises";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { IntegrationProvider as IntegrationProviderEntity } from "src/base_modules/integrations/integrations.entity";
-import { OrganizationLoggerService } from "src/base_modules/organizations/log/organizationLogger.service";
+import {
+  actorLabel,
+  OrganizationLoggerService,
+} from "src/base_modules/organizations/log/organizationLogger.service";
 import { ActionType } from "src/base_modules/organizations/log/orgAuditLog.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/organization.memberships.entity";
 import {
@@ -151,11 +154,15 @@ export class ProjectService {
     user: AuthenticatedUser,
   ): Promise<string> {
     // (1) Check that the user is a member of the org
-    await this.repos.memberships.hasRequiredRole(
+    await this.repos.memberships.hasRequiredRoleFor(
       orgId,
-      user.userId,
+      user,
       MemberRole.USER,
     );
+    // Integrations belong to users, so a token creates upload projects only.
+    if (user.organizationToken && projectData.integration_id) {
+      throw new NotAuthorized();
+    }
 
     // Idempotent import: a repo already imported by THIS user into THIS org
     // reuses the existing project. Scoped per-user so each user keeps their own
@@ -307,14 +314,17 @@ export class ProjectService {
     project: Project,
     user: AuthenticatedUser,
   ): Promise<string> {
-    const user_adding = await this.repos.users.getUserById(user.userId);
+    // A token is not a user, so its projects have no adding user.
+    const user_adding = user.organizationToken
+      ? null
+      : await this.repos.users.getUserById(user.userId);
 
     const organization =
       await this.repos.organizations.getOrganizationById(orgId);
 
     project.downloaded = false;
     project.added_on = new Date();
-    project.added_by = user_adding;
+    if (user_adding) project.added_by = user_adding;
     project.organizations = [organization];
     project.integration_type = IntegrationType.VCS;
     project.invalid = false;
@@ -332,11 +342,11 @@ export class ProjectService {
     // eslint-disable-next-line security/detect-non-literal-fs-filename
     await mkdir(folderPath, { recursive: true });
 
-    await this.organizationLoggerService.addAuditLog(
+    await this.organizationLoggerService.addActorAuditLog(
       ActionType.ProjectCreate,
-      `The User imported repository ${project.url} to the organization.`,
+      `${actorLabel(user)} imported repository ${project.url} to the organization.`,
       orgId,
-      user.userId,
+      user,
     );
 
     return added_project.id;

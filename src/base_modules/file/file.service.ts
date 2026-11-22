@@ -42,9 +42,9 @@ export class FileService {
     queryParams: UploadData,
   ): Promise<void> {
     // Check if the user has the required role in the organization
-    await this.membershipsRepository.hasRequiredRole(
+    await this.membershipsRepository.hasRequiredRoleFor(
       organization_id,
-      user.userId,
+      user,
       MemberRole.USER,
     );
 
@@ -54,15 +54,17 @@ export class FileService {
       organization_id,
     );
 
-    // Retrieve the user who added the file
-    const added_by = await this.usersRepository.getUserById(user.userId);
+    // Retrieve the user who added the file; a token is not a user
+    const added_by = user.organizationToken
+      ? null
+      : await this.usersRepository.getUserById(user.userId);
 
     // Define the folder path where the file will be saved
-    // Use the current user's ID for the folder path (user uploading the file)
+    // Named after the uploader: the user, or the token
     const downloadPath = process.env["DOWNLOAD_PATH"] ?? "/private";
     const folderPath = validateAndJoinPath(
       downloadPath,
-      added_by.id,
+      added_by?.id ?? user.userId,
       project_id,
     );
 
@@ -214,7 +216,7 @@ export class FileService {
     if (queryParams.chunk === "false" || queryParams.last === "true") {
       // Save the file to the database
       const file_entity = new FileEntity();
-      file_entity.added_by = added_by;
+      if (added_by) file_entity.added_by = added_by;
       file_entity.added_on = new Date();
       file_entity.project = project;
       file_entity.type = queryParams.type;
