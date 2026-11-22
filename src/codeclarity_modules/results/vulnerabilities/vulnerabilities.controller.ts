@@ -8,6 +8,8 @@ import {
 } from "@nestjs/common";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import { OrganizationTokenScope } from "src/base_modules/organizations/tokens/organization-token.types";
+import { AllowOrganizationToken } from "src/decorators/OrganizationTokenDecorator";
 import { AuthUser } from "src/decorators/UserDecorator";
 import { PaginatedResponse, Response } from "src/types/apiResponses.types";
 
@@ -34,6 +36,7 @@ export class FindingsController {
   ) {}
 
   // eslint-disable-next-line max-params
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get(":analysis_id/vulnerabilities")
   async getVulnerabilities(
     @Param("org_id") org_id: string,

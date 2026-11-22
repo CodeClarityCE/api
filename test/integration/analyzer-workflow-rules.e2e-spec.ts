@@ -62,7 +62,7 @@ describe("Analyzer workflow rules (HTTP)", () => {
         },
         {
           provide: OrganizationLoggerService,
-          useValue: { addAuditLog: jest.fn() },
+          useValue: { addAuditLog: jest.fn(), addActorAuditLog: jest.fn() },
         },
         {
           provide: MembershipsRepository,

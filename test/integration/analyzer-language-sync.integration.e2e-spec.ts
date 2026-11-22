@@ -105,6 +105,7 @@ describe("Language config of a template-based analyzer (Postgres)", () => {
     } as unknown as PluginAvailabilityService;
     const auditLog = {
       addAuditLog: async () => undefined,
+      addActorAuditLog: async () => undefined,
     } as unknown as OrganizationLoggerService;
     const memberships = new MembershipsRepository(
       dataSource.getRepository(OrganizationMemberships),

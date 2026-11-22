@@ -33,6 +33,15 @@ describe("AnalysisResultsService", () => {
 
   const mockMembershipsRepository = {
     hasRequiredRole: jest.fn(),
+    // A member's check, as the real method does for users.
+    hasRequiredRoleFor: jest.fn(function (
+      this: { hasRequiredRole: (...args: unknown[]) => unknown },
+      orgId: string,
+      actor: { userId: string },
+      role: unknown,
+    ) {
+      return this.hasRequiredRole(orgId, actor.userId, role);
+    }),
   };
 
   const mockAnalysesRepository = {
