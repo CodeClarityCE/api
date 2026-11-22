@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-/** Removes the js-patching registry row, as the plugin is gone (#334). */
+/** Removes the js-patching registry row, as the plugin is gone. */
 export class RemoveJsPatchingPlugin1796256000000 implements MigrationInterface {
   name = "RemoveJsPatchingPlugin1796256000000";
 

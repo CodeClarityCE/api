@@ -19,7 +19,7 @@ export async function applyBetaBaseline(
   { database, schema, lastAlphaMigration }: BetaBaseline,
 ): Promise<void> {
   if (await recorded(runner, lastAlphaMigration)) {
-    const timestamp = lastAlphaMigration.slice(-13);
+    const timestamp = migrationTimestamp(lastAlphaMigration);
     await runner.query(`DELETE FROM "migrations" WHERE "timestamp" <= $1`, [
       timestamp,
     ]);
@@ -37,6 +37,15 @@ export async function applyBetaBaseline(
     );
   }
   await runner.query(readFileSync(schema, "utf8"));
+}
+
+// The 13-digit millisecond timestamp TypeORM migration names end with.
+function migrationTimestamp(name: string): string {
+  const match = /(\d{13})$/.exec(name);
+  if (!match?.[1]) {
+    throw new Error(`${name} does not end with a 13-digit migration timestamp`);
+  }
+  return match[1];
 }
 
 // Reverting would drop every table, so it is refused.

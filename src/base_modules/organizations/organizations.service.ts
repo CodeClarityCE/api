@@ -1,10 +1,14 @@
 import { Injectable } from "@nestjs/common";
+import { plainToInstance } from "class-transformer";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { Email, EmailType } from "src/base_modules/email/email.entity";
 import { Invitation } from "src/base_modules/organizations/invitations/invitation.entity";
 import { invitationExpiry } from "src/base_modules/organizations/invitations/invitation.lifetime";
-import { InviteCreateBody } from "src/base_modules/organizations/invitations/orgInvitation.types";
+import {
+  InvitationListItem,
+  InviteCreateBody,
+} from "src/base_modules/organizations/invitations/orgInvitation.types";
 import { ActionType } from "src/base_modules/organizations/log/orgAuditLog.types";
 import { OrganizationMemberships } from "src/base_modules/organizations/memberships/organization.memberships.entity";
 import {
@@ -281,6 +285,7 @@ export class OrganizationsService {
     invitation.token_digest = activationTokenhash;
     invitation.user_email_digest = userEmailHash;
     invitation.user = invitedUser;
+    invitation.created_by = inviter;
     invitation.organization = org;
     invitation.ttl = invitationExpiry();
     await this.invitationsRepository.saveInvitation(invitation);
@@ -420,9 +425,8 @@ export class OrganizationsService {
   }
 
   /**
-   * Get the org's join-org invitations
-   * @throws {NotAuthorized}
-   * @throws {EntityNotFound}
+   * Get one page of the org's open invitations
+   * @throws {NotAuthorized} Unless the user is an admin or owner of the org
    *
    * @param orgId The id of the organization
    * @param paginationUserSuppliedConf The pagination config
@@ -431,40 +435,48 @@ export class OrganizationsService {
    */
   async getInvitations(
     orgId: string,
-    _paginationUserSuppliedConf: PaginationUserSuppliedConf,
+    paginationUserSuppliedConf: PaginationUserSuppliedConf,
     user: AuthenticatedUser,
     _searchKey?: string,
     _sortBy?: string,
     _sortDirection?: SortDirection,
-  ): Promise<TypedPaginatedData<Invitation>> {
-    // const organizations = await CodeclarityDB.getRepository(Organization).find({
-    //     where: {
-    //         invited: {
-    //             id: user.userId
-    //         }
-    //     }
-    // });
-
-    const invitations =
-      await this.invitationsRepository.getInvitationsByOrganizationAndUser(
+  ): Promise<TypedPaginatedData<InvitationListItem>> {
+    // Same role the invitations page asks for.
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.ADMIN,
+    );
+    const { currentPage, entriesPerPage } = pageOf(paginationUserSuppliedConf);
+    const [invitations, fullCount] =
+      await this.invitationsRepository.getInvitationsPage(
         orgId,
-        user.userId,
+        currentPage,
+        entriesPerPage,
       );
-
-    // for (const org of organizations) {
-    //     const invitation = new Invitation();
-    //     invitation.
-
-    // }
-
+    const data = invitations.map((invitation) =>
+      plainToInstance(
+        InvitationListItem,
+        {
+          id: invitation.id,
+          created_on: invitation.created_on,
+          created_by: invitation.created_by ?? undefined,
+          role: invitation.role,
+          organization_id: orgId,
+          user_email: invitation.user.email,
+          ttl: invitation.ttl,
+        },
+        { excludeExtraneousValues: true },
+      ),
+    );
     return {
-      data: invitations,
-      page: 0,
-      entry_count: 0,
-      entries_per_page: 0,
-      total_entries: 0,
-      total_pages: 0,
-      matching_count: 0,
+      data,
+      page: currentPage,
+      entry_count: data.length,
+      entries_per_page: entriesPerPage,
+      total_entries: fullCount,
+      total_pages: Math.ceil(fullCount / entriesPerPage),
+      matching_count: fullCount,
       filter_count: {},
     };
   }

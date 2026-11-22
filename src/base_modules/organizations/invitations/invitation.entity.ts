@@ -55,4 +55,8 @@ export class Invitation {
   @Expose()
   @ManyToOne("User", "invitations")
   user!: Relation<User>;
+
+  // Null once the inviter's account is deleted.
+  @ManyToOne("User", { nullable: true, onDelete: "SET NULL" })
+  created_by?: Relation<User> | null;
 }
