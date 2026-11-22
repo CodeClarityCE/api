@@ -256,6 +256,82 @@ describe("Analysing an upload with an Organization token (e2e)", () => {
     ]);
   });
 
+  // A js-sbom result with one direct dependency in a second workspace.
+  async function addSbom(analysisId: string): Promise<void> {
+    const lodash = {
+      Key: "lodash@4.17.20",
+      Requires: {},
+      Dependencies: {},
+      Optional: false,
+      Bundled: false,
+      Dev: false,
+      Prod: true,
+      Direct: true,
+      Transitive: false,
+      Licenses: [],
+    };
+    const workspace = (deps: object): object => ({
+      dependencies: deps,
+      start: {
+        dependencies: [
+          { name: "lodash", version: "4.17.20", constraint: "^4.17.20" },
+        ],
+      },
+    });
+    await testHelper
+      .getDataSource()
+      .query(
+        `INSERT INTO result (result, plugin, created_on, "analysisId") VALUES ($1, 'js-sbom', now(), $2)`,
+        [
+          JSON.stringify({
+            workspaces: {
+              ".": workspace({}),
+              api: workspace({ lodash: { "4.17.20": lodash } }),
+            },
+            analysis_info: {
+              status: "success",
+              package_manager: "NPM",
+              private_errors: [],
+              public_errors: [],
+            },
+          }),
+          analysisId,
+        ],
+      );
+  }
+
+  it("a read token reads the SBOM workspaces and dependencies of a finished analysis", async () => {
+    const projectId = (
+      await createUploadProject(await issueToken("analyze"))
+    ).json().id;
+    const analysisId = await finishedAnalysis(projectId);
+    await addSbom(analysisId);
+    const read = await issueToken("read");
+    const base = `/org/${admin.organization.id}/projects/${projectId}/analysis/${analysisId}/sbom`;
+
+    const workspaces = await testHelper.makeAuthenticatedRequest(
+      "GET",
+      `${base}/workspaces`,
+      read,
+    );
+    expect(workspaces.statusCode).toBe(200);
+    expect(workspaces.json().data.workspaces).toEqual([".", "api"]);
+
+    const sbom = await testHelper.makeAuthenticatedRequest(
+      "GET",
+      `${base}?workspace=api&page=0&entries_per_page=100`,
+      read,
+    );
+    expect(sbom.statusCode).toBe(200);
+    expect(sbom.json().data).toEqual([
+      expect.objectContaining({
+        name: "lodash",
+        version: "4.17.20",
+        purl: "pkg:npm/lodash@4.17.20",
+      }),
+    ]);
+  });
+
   it("a token, like a member, does not see findings the analysis's policy accepts", async () => {
     const policy = await testHelper.makeAuthenticatedRequest(
       "POST",
