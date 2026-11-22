@@ -1,0 +1,128 @@
+{
+  "extensions": [
+    {
+      "extname": "plpgsql"
+    },
+    {
+      "extname": "uuid-ossp"
+    }
+  ],
+  "types": [],
+  "relations": [
+    {
+      "name": "PK_8c82d7f526340ab734260ea46be",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "config",
+      "kind": "r",
+      "persistence": "p",
+      "options": null
+    },
+    {
+      "name": "config_pkey",
+      "kind": "i",
+      "persistence": "p",
+      "options": null
+    }
+  ],
+  "columns": [
+    {
+      "table": "config",
+      "column": "id",
+      "position": 1,
+      "type": "uuid",
+      "not_null": true,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": "uuid_generate_v4()"
+    },
+    {
+      "table": "config",
+      "column": "nvd_last",
+      "position": 2,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "config",
+      "column": "npm_last",
+      "position": 3,
+      "type": "character varying",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "config",
+      "column": "gcve_last",
+      "position": 4,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "config",
+      "column": "osv_last",
+      "position": 5,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    },
+    {
+      "table": "config",
+      "column": "kev_last",
+      "position": 6,
+      "type": "timestamp with time zone",
+      "not_null": false,
+      "identity": "",
+      "generated": "",
+      "collation": null,
+      "default": null
+    }
+  ],
+  "constraints": [
+    {
+      "table": "config",
+      "name": "config_id_not_null",
+      "kind": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "table": "config",
+      "name": "config_pkey",
+      "kind": "p",
+      "definition": "PRIMARY KEY (id)"
+    }
+  ],
+  "indexes": [
+    {
+      "table": "config",
+      "name": "config_pkey",
+      "definition": "CREATE UNIQUE INDEX config_pkey ON public.config USING btree (id)"
+    }
+  ],
+  "functions": [],
+  "triggers": [],
+  "rows": [
+    {
+      "table": "config",
+      "row": "{\"id\":\"<default>\",\"kev_last\":null,\"npm_last\":null,\"nvd_last\":null,\"osv_last\":null,\"gcve_last\":null}"
+    }
+  ]
+}

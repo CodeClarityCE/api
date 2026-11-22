@@ -6,7 +6,8 @@
     "src/datasources/*.datasource.ts",
     "src/migrations/*/*.ts",
     "src/**/*.entity.ts",
-    "test/**/*.e2e-spec.ts"
+    "test/**/*.e2e-spec.ts",
+    "test/migrations/snapshot-last-alpha.ts"
   ],
   "project": ["src/**/*.ts", "test/**/*.ts"],
   "ignoreIssues": {
