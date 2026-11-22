@@ -2,6 +2,8 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 
+import { EntityNotFound } from "src/types/error.types";
+
 import { Plugin } from "./plugin.entity";
 @Injectable()
 export class PluginsRepository {
@@ -20,7 +22,7 @@ export class PluginsRepository {
       where: { id: pluginId },
     });
     if (!plugin) {
-      throw new Error("No plugins found");
+      throw new EntityNotFound();
     }
     return plugin;
   }
