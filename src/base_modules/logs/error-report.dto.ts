@@ -6,7 +6,7 @@ import {
   MaxLength,
 } from "class-validator";
 
-export const ERROR_REPORT_LEVELS = ["error", "warn"] as const;
+const ERROR_REPORT_LEVELS = ["error", "warn"] as const;
 export type ErrorReportLevel = (typeof ERROR_REPORT_LEVELS)[number];
 
 /** Body of an error report sent by the web app. */

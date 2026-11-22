@@ -6,7 +6,6 @@ import { UsersModule } from "src/base_modules/users/users.module";
 import { Result } from "src/codeclarity_modules/results/result.entity";
 
 import { LicenseModule } from "./licenses/licenses.module";
-import { PatchingModule } from "./patching/patching.module";
 import { ResultsController } from "./results.controller";
 import { AnalysisResultsRepository } from "./results.repository";
 import { AnalysisResultsService } from "./results.service";
@@ -20,7 +19,6 @@ import { VulnerabilitiesModule } from "./vulnerabilities/vulnerabilities.module"
     OrganizationsModule,
     VulnerabilitiesModule,
     SbomModule,
-    PatchingModule,
     LicenseModule,
     SourceComparisonModule,
     TypeOrmModule.forFeature([Result], "codeclarity"),

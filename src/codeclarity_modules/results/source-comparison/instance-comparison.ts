@@ -17,14 +17,14 @@ import type {
 
 const DAY_MS = 86_400_000;
 
-export interface InstanceCounts {
+interface InstanceCounts {
   total: number;
   compared: number;
   malicious_excluded: number;
   without_source_matches: number;
 }
 
-export interface SourceCoverage {
+interface SourceCoverage {
   source: string;
   // Source status in the analysis's snapshot; only healthy sources are compared.
   status: string;
@@ -45,7 +45,7 @@ export interface AnalysisSourceComparison {
   disclosure_lag: DisclosureLag[];
 }
 
-export interface AffectedAgreement {
+interface AffectedAgreement {
   sources: [string, string];
   compared: number;
   // Instances where the sources' affected versions differ at all.
@@ -54,7 +54,7 @@ export interface AffectedAgreement {
   fixed_version_disagreements: number;
 }
 
-export interface SeverityAgreement {
+interface SeverityAgreement {
   sources: [string, string];
   // Instances where both sources score with the same CVSS major version.
   compared: number;
@@ -63,7 +63,7 @@ export interface SeverityAgreement {
   mean_score_difference: number | null;
 }
 
-export interface SourceOverlap {
+interface SourceOverlap {
   sources: [string, string];
   instances: number;
   same_origin: number;
@@ -335,7 +335,7 @@ function earliestDates(
 }
 
 // Lag of each source behind the earliest publication among the other sources.
-export function lagBySource(
+function lagBySource(
   datesByVulnerability: Iterable<Map<string, number>>,
   sources: string[],
 ): DisclosureLag[] {

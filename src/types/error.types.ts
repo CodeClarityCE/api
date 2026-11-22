@@ -60,7 +60,8 @@ export const errorMessages: Record<string, string> = {
   ValidationFailed: "Malformed request",
   NotAuthenticated: "You are not authenticated.",
   NotAuthorized: "You are not authorized to perform this action.",
-  Unsupported: "The action you requested is not supported.",
+  OrganizationTokenScopeTooNarrow:
+    "The scope of this Organization token does not allow this action.",
   UnknownWorkspace: "The referenced workspace does not exist on the project.",
   SourceVerdictsNotAvailable:
     "This analysis predates source verdicts. Re-run it to export them.",
@@ -181,15 +182,17 @@ export class NotAuthorized extends PublicAPIError {
   }
 }
 
-export class Unsupported extends PublicAPIError {
-  static errorCode = "Unsupported";
-  static errorMessage = errorMessages[Unsupported.errorCode]!;
-  static statusCode = 400;
+/** An Organization token called a route that needs a wider scope than it has. */
+export class OrganizationTokenScopeTooNarrow extends PublicAPIError {
+  static errorCode = "OrganizationTokenScopeTooNarrow";
+  static errorMessage =
+    errorMessages[OrganizationTokenScopeTooNarrow.errorCode]!;
+  static statusCode = 403;
   constructor(cause?: unknown) {
     super(
-      Unsupported.errorCode,
-      Unsupported.errorMessage,
-      Unsupported.statusCode,
+      OrganizationTokenScopeTooNarrow.errorCode,
+      OrganizationTokenScopeTooNarrow.errorMessage,
+      OrganizationTokenScopeTooNarrow.statusCode,
       cause,
     );
   }
@@ -251,48 +254,6 @@ export class PluginResultNotAvailable extends PublicAPIError {
   }
 }
 
-export class CannotRemoveDefaultPolicy extends PublicAPIError {
-  static errorCode = "CannotRemoveDefaultPolicy";
-  static errorMessage = errorMessages[CannotRemoveDefaultPolicy.errorCode]!;
-  static statusCode = 400;
-  constructor(cause?: unknown) {
-    super(
-      CannotRemoveDefaultPolicy.errorCode,
-      CannotRemoveDefaultPolicy.errorMessage,
-      CannotRemoveDefaultPolicy.statusCode,
-      cause,
-    );
-  }
-}
-
-export class CannotUnDefaultDefaultPolicy extends PublicAPIError {
-  static errorCode = "CannotUnDefaultDefaultPolicy";
-  static errorMessage = errorMessages[CannotUnDefaultDefaultPolicy.errorCode]!;
-  static statusCode = 400;
-  constructor(cause?: unknown) {
-    super(
-      CannotUnDefaultDefaultPolicy.errorCode,
-      CannotRemoveDefaultPolicy.errorMessage,
-      CannotRemoveDefaultPolicy.statusCode,
-      cause,
-    );
-  }
-}
-
-export class RepositoryCannotBeFound extends PublicAPIError {
-  static errorCode = "RepositoryCannotBeFound";
-  static errorMessage = errorMessages[RepositoryCannotBeFound.errorCode]!;
-  static statusCode = 404;
-  constructor(cause?: unknown) {
-    super(
-      RepositoryCannotBeFound.errorCode,
-      RepositoryCannotBeFound.errorMessage,
-      RepositoryCannotBeFound.statusCode,
-      cause,
-    );
-  }
-}
-
 export class IntegrationNotSupported extends PublicAPIError {
   static errorCode = "IntegrationNotSupported";
   static errorMessage = errorMessages[IntegrationNotSupported.errorCode]!;
@@ -316,20 +277,6 @@ export class ImportTargetNotAllowed extends PublicAPIError {
       ImportTargetNotAllowed.errorCode,
       ImportTargetNotAllowed.errorMessage,
       ImportTargetNotAllowed.statusCode,
-      cause,
-    );
-  }
-}
-
-export class IntegrationDoesNotExist extends PublicAPIError {
-  static errorCode = "IntegrationDoesNotExist";
-  static errorMessage = errorMessages[IntegrationDoesNotExist.errorCode]!;
-  static statusCode = 404;
-  constructor(cause?: unknown) {
-    super(
-      IntegrationDoesNotExist.errorCode,
-      IntegrationDoesNotExist.errorMessage,
-      IntegrationDoesNotExist.statusCode,
       cause,
     );
   }
@@ -491,34 +438,6 @@ export class PersonalOrgCannotBeModified extends PublicAPIError {
   }
 }
 
-export class FailedToCreateApiKey extends PublicAPIError {
-  static errorCode = "FailedToCreateApiKey";
-  static errorMessage = errorMessages[FailedToCreateApiKey.errorCode]!;
-  static statusCode = 500;
-  constructor(cause?: unknown) {
-    super(
-      FailedToCreateApiKey.errorCode,
-      FailedToCreateApiKey.errorMessage,
-      FailedToCreateApiKey.statusCode,
-      cause,
-    );
-  }
-}
-
-export class InvitationExpired extends PublicAPIError {
-  static errorCode = "InvitationExpired";
-  static errorMessage = errorMessages[InvitationExpired.errorCode]!;
-  static statusCode = 400;
-  constructor(cause?: unknown) {
-    super(
-      InvitationExpired.errorCode,
-      InvitationExpired.errorMessage,
-      InvitationExpired.statusCode,
-      cause,
-    );
-  }
-}
-
 export class EmailAlreadyExists extends PublicAPIError {
   static errorCode = "EmailAlreadyExists";
   static errorMessage = errorMessages[EmailAlreadyExists.errorCode]!;
@@ -660,21 +579,6 @@ export class IntegrationTokenMissingPermissions extends PublicAPIError {
   }
 }
 
-export class FailedToSendPasswordResetEmail extends PublicAPIError {
-  static errorCode = "FailedToSendPasswordResetEmail";
-  static errorMessage =
-    errorMessages[FailedToSendPasswordResetEmail.errorCode]!;
-  static statusCode = 500;
-  constructor(cause?: unknown) {
-    super(
-      FailedToSendPasswordResetEmail.errorCode,
-      FailedToSendPasswordResetEmail.errorMessage,
-      FailedToSendPasswordResetEmail.statusCode,
-      cause,
-    );
-  }
-}
-
 export class FailedToSendOrganizationInviteEmail extends PublicAPIError {
   static errorCode = "FailedToSendOrganizationInviteEmail";
   static errorMessage =
@@ -698,19 +602,6 @@ export class InternalError extends PrivateAPIError {
       500,
       errorCode,
       errorMessage,
-      cause,
-    );
-  }
-}
-
-export class RabbitMQError extends PrivateAPIError {
-  constructor(cause?: unknown) {
-    super(
-      "InternalError",
-      "We encountered a problem while processing your request.",
-      500,
-      "RabbitMQError",
-      "An error occurred while communicating or setting up communication with rabbitmq.",
       cause,
     );
   }

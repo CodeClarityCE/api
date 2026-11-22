@@ -22,7 +22,7 @@ interface Judged {
 }
 
 /** Rows copied without source verdicts (null status) count as visible. */
-export function isHiddenInstance(v: Judged): boolean {
+function isHiddenInstance(v: Judged): boolean {
   return HIDDEN_REASONS.includes(v.instance_status as HiddenReason);
 }
 

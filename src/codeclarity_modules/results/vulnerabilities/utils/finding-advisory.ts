@@ -16,7 +16,7 @@ export interface FindingAdvisoryQuery {
 }
 
 /** OSV id of the record the vuln-finder matched, if it names one. */
-export function sourceMatchOsvId(
+function sourceMatchOsvId(
   osvMatch: FindingAdvisoryQuery["osvMatch"],
 ): string | undefined {
   const matched = osvMatch?.Vulnerability;

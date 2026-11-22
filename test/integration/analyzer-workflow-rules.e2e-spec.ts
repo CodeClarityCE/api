@@ -30,7 +30,7 @@ const installed: Plugin[] = [
   { id: "2", name: "php-sbom", depends_on: [] },
   { id: "3", name: "vuln-finder", depends_on: ["js-sbom", "php-sbom"] },
   { id: "4", name: "license-finder", depends_on: ["js-sbom", "php-sbom"] },
-  { id: "5", name: "js-patching", depends_on: ["js-sbom", "vuln-finder"] },
+  { id: "5", name: "js-checker", depends_on: ["js-sbom", "vuln-finder"] },
   { id: "6", name: "codeql", depends_on: [] },
   // Hypothetical plugins that read only the JavaScript SBOM.
   { id: "7", name: "npm-audit", depends_on: ["js-sbom"] },
@@ -62,7 +62,7 @@ describe("Analyzer workflow rules (HTTP)", () => {
         },
         {
           provide: OrganizationLoggerService,
-          useValue: { addAuditLog: jest.fn() },
+          useValue: { addAuditLog: jest.fn(), addActorAuditLog: jest.fn() },
         },
         {
           provide: MembershipsRepository,
@@ -158,10 +158,10 @@ describe("Analyzer workflow rules (HTTP)", () => {
   it.each(["POST", "PUT"] as const)(
     "%s rejects a plugin whose dependency is missing, naming it",
     async (method) => {
-      const res = await send(method, body([[step("js-patching")]]));
+      const res = await send(method, body([[step("js-checker")]]));
       expect(res.status).toBe(400);
       expect(res.json["error_code"]).toBe("AnalyzerDependencyMissing");
-      expect(res.json["error_message"]).toContain("js-patching");
+      expect(res.json["error_message"]).toContain("js-checker");
       expect(res.json["error_message"]).toContain("vuln-finder");
       expect(saveAnalyzer).not.toHaveBeenCalled();
     },
@@ -182,7 +182,7 @@ describe("Analyzer workflow rules (HTTP)", () => {
       body([
         [step("js-sbom")],
         [step("vuln-finder"), step("license-finder")],
-        [step("js-patching")],
+        [step("js-checker")],
       ]),
     );
     expect(res.status).toBe(201);
@@ -219,7 +219,7 @@ describe("Analyzer workflow rules (HTTP)", () => {
         ...body([
           [step("js-sbom")],
           [step("vuln-finder"), step("license-finder")],
-          [step("js-patching")],
+          [step("js-checker")],
         ]),
         ...jsTemplate,
       });
@@ -227,7 +227,7 @@ describe("Analyzer workflow rules (HTTP)", () => {
       expect(saved().supported_languages).toEqual(["javascript"]);
       expect(saved().language_config).toEqual({
         javascript: {
-          plugins: ["js-sbom", "vuln-finder", "license-finder", "js-patching"],
+          plugins: ["js-sbom", "vuln-finder", "license-finder", "js-checker"],
         },
       });
     });
@@ -278,15 +278,15 @@ describe("Analyzer workflow rules (HTTP)", () => {
           php: { plugins: ["php-sbom", "vuln-finder"] },
         },
       });
-      // The edit page sends no language fields: php-sbom removed, js-patching added.
+      // The edit page sends no language fields: php-sbom removed, js-checker added.
       const res = await send(
         "PUT",
-        body([[step("js-sbom")], [step("vuln-finder")], [step("js-patching")]]),
+        body([[step("js-sbom")], [step("vuln-finder")], [step("js-checker")]]),
       );
       expect(res.status).toBe(200);
       expect(saved().supported_languages).toEqual(["javascript"]);
       expect(saved().language_config).toEqual({
-        javascript: { plugins: ["js-sbom", "vuln-finder", "js-patching"] },
+        javascript: { plugins: ["js-sbom", "vuln-finder", "js-checker"] },
       });
     });
 

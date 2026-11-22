@@ -1,6 +1,6 @@
 import { PublicAPIError } from "src/types/error.types";
 
-export const errorMessages: Record<string, string> = {
+const errorMessages: Record<string, string> = {
   AnalyzerDoesNotExist: "The analyzer referenced does not exist.",
   AnaylzerMissingConfigAttribute:
     "A required configuration attribute to run an analyzer is missing.",
@@ -54,7 +54,7 @@ export class AnalyzerHasNoPlugins extends PublicAPIError {
   }
 }
 
-/** Names the plugin and what it is missing, e.g. "js-patching needs vuln-finder". */
+/** Names the plugin and what it is missing, e.g. "license-finder needs js-sbom". */
 export class AnalyzerDependencyMissing extends PublicAPIError {
   static errorCode = "AnalyzerDependencyMissing";
   static errorMessage = errorMessages[AnalyzerDependencyMissing.errorCode]!;

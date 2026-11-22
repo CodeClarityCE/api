@@ -30,17 +30,19 @@ export class InvitationsRepository {
   }
 
   /**
-   * Retrieve all invitations for a specific organization and user.
+   * Retrieve one page of an organization's invitations, newest first, with invitee and inviter.
    */
-  async getInvitationsByOrganizationAndUser(
+  async getInvitationsPage(
     organizationId: string,
-    userId: string,
-  ): Promise<Invitation[]> {
-    return this.invitationRepository.find({
-      where: {
-        organization: { id: organizationId },
-        user: { id: userId },
-      },
+    currentPage: number,
+    entriesPerPage: number,
+  ): Promise<[Invitation[], number]> {
+    return this.invitationRepository.findAndCount({
+      where: { organization: { id: organizationId } },
+      relations: { user: true, created_by: true },
+      order: { created_on: { direction: "DESC", nulls: "LAST" } },
+      take: entriesPerPage,
+      skip: currentPage * entriesPerPage,
     });
   }
 

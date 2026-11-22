@@ -24,7 +24,6 @@ import {
   type RemediationInstance,
   RemediationKind,
 } from "./remediation.types";
-import type { TopLevelUpgrade } from "./top-level-upgrades";
 
 /** One instance as the planner reads it. */
 export interface PlannedInstance extends RemediationInstance {
@@ -52,12 +51,6 @@ export type FixableInstance = Pick<
   | "ranges"
 >;
 
-/** How one instance is resolved: its kind, the patcher upgrade for a top-level one. */
-interface InstanceRemediation {
-  kind: RemediationKind;
-  upgrade?: TopLevelUpgrade;
-}
-
 // One remediation being built, before its target and command are settled.
 interface Group {
   kind: RemediationKind;
@@ -68,8 +61,6 @@ interface Group {
   instances: PlannedInstance[];
   // Per-instance targets; the group upgrades to the newest of them.
   targets: string[];
-  // Set by a patcher's top-level upgrade.
-  upgrade?: TopLevelUpgrade;
 }
 
 const rank = (instance: RemediationInstance): number =>
@@ -93,47 +84,23 @@ const toInstance = (instance: PlannedInstance): RemediationInstance => ({
   aliases: instance.aliases,
 });
 
-// The patcher's upgrade of the only top-level dependency installing the instance, when it removes it.
-function topLevelUpgradeOf(
-  instance: FixableInstance,
-  upgrades: TopLevelUpgrade[],
-): TopLevelUpgrade | undefined {
-  const tops = instance.top_level_dependencies;
-  if (tops.length > 1) return undefined;
-  return upgrades.find(
-    (u) =>
-      u.workspace === instance.workspace &&
-      (tops.length === 0 ||
-        (tops[0]!.name === u.name && tops[0]!.version === u.version)) &&
-      u.resolves.some(
-        (r) =>
-          r.package === instance.package &&
-          r.version === instance.installed_version &&
-          r.vulnerability_id === instance.analysis_vulnerability_id,
-      ),
-  );
-}
-
-// A direct dependency with a fix is upgraded; else a top-level upgrade removing it; else a forced fix.
+// A direct dependency with a fix is upgraded; else the fix is forced.
 function remediationOf(
   instance: FixableInstance,
   target: string | null,
-  upgrades: TopLevelUpgrade[],
-): InstanceRemediation | null {
+): RemediationKind | null {
+  if (!target) return null;
   const direct = instance.top_level_dependencies.some(
     (t) => t.path.length === 1,
   );
-  if (direct && target) return { kind: RemediationKind.UpgradeDirect };
-  const upgrade = direct ? undefined : topLevelUpgradeOf(instance, upgrades);
-  if (upgrade) return { kind: RemediationKind.UpgradeTopLevel, upgrade };
-  return target ? { kind: RemediationKind.ForceVersion } : null;
+  return direct ? RemediationKind.UpgradeDirect : RemediationKind.ForceVersion;
 }
 
 /** An instance's smallest fix and whether a remediation resolves it, for storing with its row. */
-export function instanceFix(
-  instance: FixableInstance,
-  upgrades: TopLevelUpgrade[],
-): { smallest_fix: string | null; has_fix: boolean } {
+export function instanceFix(instance: FixableInstance): {
+  smallest_fix: string | null;
+  has_fix: boolean;
+} {
   const target = smallestFix(
     instance.installed_version,
     instance.ranges,
@@ -141,7 +108,7 @@ export function instanceFix(
   );
   return {
     smallest_fix: target,
-    has_fix: remediationOf(instance, target, upgrades) !== null,
+    has_fix: remediationOf(instance, target) !== null,
   };
 }
 
@@ -164,10 +131,10 @@ function groupTarget(group: Group): string {
 }
 
 /** The remediations of one project's current analysis, grouping the instances one change resolves. */
-export function planRemediations(
-  instances: PlannedInstance[],
-  upgrades: TopLevelUpgrade[],
-): { remediations: Remediation[]; unremediated: RemediationInstance[] } {
+export function planRemediations(instances: PlannedInstance[]): {
+  remediations: Remediation[];
+  unremediated: RemediationInstance[];
+} {
   const groups = new Map<string, Group>();
   const unremediated: RemediationInstance[] = [];
   const groupOf = (
@@ -196,23 +163,9 @@ export function planRemediations(
 
   for (const instance of instances) {
     const target = instance.smallest_fix;
-    const remediation = remediationOf(instance, target, upgrades);
-    if (!remediation) {
+    const kind = remediationOf(instance, target);
+    if (!kind) {
       unremediated.push(toInstance(instance));
-      continue;
-    }
-    const { kind, upgrade } = remediation;
-    if (upgrade) {
-      const group = groupOf(
-        kind,
-        instance.workspace,
-        upgrade.name,
-        upgrade.dev,
-      );
-      group.upgrade = upgrade;
-      group.installed.add(upgrade.version);
-      group.instances.push(instance);
-      group.targets.push(upgrade.upgrade_to);
       continue;
     }
     const direct = instance.top_level_dependencies.find(
@@ -230,9 +183,7 @@ export function planRemediations(
   }
 
   const remediations = [...groups.values()].map((group): Remediation => {
-    const target = group.upgrade
-      ? group.upgrade.upgrade_to
-      : groupTarget(group);
+    const target = groupTarget(group);
     const installed = [...group.installed].sort(compareVersions);
     const manager = managerOf(group.instances);
     const spec = {
@@ -252,9 +203,9 @@ export function planRemediations(
       package: group.package,
       installed_versions: installed,
       target_version: target,
-      potentially_breaking: group.upgrade
-        ? group.upgrade.potentially_breaking
-        : installed.some((version) => !inCurrentMajor(version, target)),
+      potentially_breaking: installed.some(
+        (version) => !inCurrentMajor(version, target),
+      ),
       dev: group.dev,
       package_manager: manager,
       command: command?.command ?? null,

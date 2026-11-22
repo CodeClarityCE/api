@@ -35,9 +35,9 @@ export class AnalysisResultsService {
     user: AuthenticatedUser,
   ): Promise<void> {
     // (1) Check if user has access to org
-    await this.membershipsRepository.hasRequiredRole(
+    await this.membershipsRepository.hasRequiredRoleFor(
       orgId,
-      user.userId,
+      user,
       MemberRole.USER,
     );
 

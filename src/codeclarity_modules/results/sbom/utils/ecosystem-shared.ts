@@ -15,14 +15,3 @@ export interface EcosystemInfo {
   registryUrl: string;
   tools: string[];
 }
-export interface DetectedLanguage {
-  name: string;
-  icon: string;
-  color: string;
-}
-export type PluginEcosystemMap = Record<string, EcosystemInfo>;
-export enum MergeStrategy {
-  UNION = "union",
-  INTERSECTION = "intersection",
-  PRIORITY = "priority",
-}

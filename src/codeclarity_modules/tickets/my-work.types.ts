@@ -9,8 +9,8 @@ import type { FixNextRank } from "../remediations/fix-next-rank";
 import type { DueDateState } from "./service-level-targets";
 import { TicketPriority, TicketStatus } from "./ticket.entity";
 
-export const DEFAULT_MY_WORK_LIMIT = 20;
-export const MAX_MY_WORK_LIMIT = 100;
+const DEFAULT_MY_WORK_LIMIT = 20;
+const MAX_MY_WORK_LIMIT = 100;
 
 export class MyWorkQuery {
   /** How many entries, most pressing first */

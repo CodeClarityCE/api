@@ -1,6 +1,5 @@
 import type { CVSS2, CVSS3, CVSS4, CVSS31 } from "../../knowledge/cvss.types";
 import type { OwaspTop10Info } from "../../knowledge/owasp/owasp.types";
-import type { PatchInfo } from "../patching/patching.types";
 import type { ParsedGitUrl, StatusError } from "../sbom/sbom.types";
 import type {
   SourceSeverity,
@@ -12,28 +11,6 @@ import type { HiddenReason } from "./utils/instance-status";
 export interface VulnSourceInfo {
   name: string;
   vuln_url: string;
-}
-
-export interface VulnerabilityInfo {
-  vulnerability_id: string;
-  description: string;
-  version_info: VersionInfo;
-  published: string;
-  last_modified: string;
-  sources: VulnSourceInfo[];
-  aliases: string[];
-}
-
-export interface VersionInfo {
-  affected_versions_string: string;
-  patched_versions_string: string;
-  versions: VulnerableVersionInfo[];
-}
-
-export interface VulnerableVersionInfo {
-  version: string;
-  status: string;
-  release: string;
 }
 
 /** DependencyInfo for report generation (simpler version) */
@@ -61,11 +38,6 @@ export interface SeverityInfo {
   cvss_2?: CVSS2;
   /** GHSA's qualitative severity, such as "HIGH"; it has no score. */
   ghsa?: string;
-}
-
-export interface OwaspInfo {
-  name: string;
-  description: string;
 }
 
 /** WeaknessInfo for report generation (simpler version) */
@@ -100,7 +72,7 @@ export enum Status {
   Failure = "failure",
 }
 
-export interface AnalysisInfo {
+interface AnalysisInfo {
   status: Status;
   private_errors: StatusError[];
   public_errors: StatusError[];
@@ -135,14 +107,6 @@ export interface KnowledgeSourceSnapshot {
   stale_after_hours: number;
 }
 
-export interface SeverityDist {
-  critical: number;
-  high: number;
-  medium: number;
-  low: number;
-  none: number;
-}
-
 /** A package version flagged as malicious, reported apart from vulnerabilities */
 export interface MaliciousPackageAdvisory {
   AdvisoryId: string;
@@ -157,26 +121,14 @@ export interface MaliciousPackageAdvisory {
   References?: string[];
 }
 
-export interface WorkSpaceData {
+interface WorkSpaceData {
   Vulnerabilities: Vulnerability[];
   // Absent on analyses made before malicious packages were reported separately
   MaliciousPackageAdvisories?: MaliciousPackageAdvisory[];
   // DependencyInfo: { [key: string]: DependencyInfo };
 }
 
-export interface DependencyInfo {
-  SeverityDist: SeverityDist | null;
-  Vulnerable: boolean;
-  Vulnerabilities: DependencyInfoVulnerability[];
-}
-
-export interface DependencyInfoVulnerability {
-  Vulnerability: string;
-  Severity: Severity;
-  Weaknesses: WeaknessInfo[];
-}
-
-export interface WeaknessInfo {
+interface WeaknessInfo {
   WeaknessId: string;
   WeaknessName: string;
   WeaknessDescription: string;
@@ -185,7 +137,7 @@ export interface WeaknessInfo {
   OWASPTop10Name: string;
 }
 
-export interface Severity {
+interface Severity {
   Severity: number;
   SeverityClass: string;
   SeverityType: SeverityType;
@@ -211,12 +163,6 @@ export enum SeverityType {
   Ghsa = "GHSA",
 }
 
-export enum PatchType {
-  Full = "FULL",
-  Partial = "PARTIAL",
-  None = "NONE",
-}
-
 export interface Vulnerability {
   Id: string;
   Sources: Source[];
@@ -229,7 +175,6 @@ export interface Vulnerability {
   NVDMatch: Vuln;
   GCVEMatch?: Vuln;
   Conflict: Conflict;
-  PatchType?: PatchType;
   /** True when a matched CVE record says its vendor disputes it. */
   Disputed?: boolean;
   /** One verdict per knowledge source; absent on older analyses. */
@@ -281,13 +226,13 @@ export interface VulnerabilityMerged {
   Uncorroborated?: boolean;
 }
 
-export interface VLAI {
+interface VLAI {
   Source: Source;
   Score: string;
   Confidence: number;
 }
 
-export interface EPSS {
+interface EPSS {
   Score: number;
   Percentile: number;
 }
@@ -303,7 +248,6 @@ export interface AffectedVuln {
   NVDMatch: Vuln;
   GCVEMatch?: Vuln;
   Conflict: Conflict;
-  PatchType?: PatchType;
   Disputed?: boolean;
   SourceVerdicts?: SourceVerdict[];
   Hidden?: HiddenReason;
@@ -324,7 +268,8 @@ interface Conflict {
   ConflictFlag: ConflictFlag;
 }
 
-interface Semver {
+/** A version as the Go plugins write it. */
+export interface Semver {
   Major: number;
   Minor: number;
   Patch: number;
@@ -394,14 +339,13 @@ export interface VulnerabilityInfoReport {
   aliases: string[];
 }
 
-/** Vulnerability details for report generation (uses raw PatchInfo) */
+/** Vulnerability details for report generation */
 export interface VulnerabilityDetailsReport {
   vulnerability_info: VulnerabilityInfoReport;
   dependency_info?: DependencyInfoReport;
   severities: SeverityInfo;
   owasp_top_10: OwaspTop10Info | null;
   weaknesses: WeaknessInfoReport[];
-  patch: PatchInfo;
   common_consequences: Record<string, CommonConsequencesInfo[]>;
   references: ReferenceInfo[];
   location: string[];

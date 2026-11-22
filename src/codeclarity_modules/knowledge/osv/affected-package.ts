@@ -27,7 +27,7 @@ export function ecosystemOf(
 }
 
 /** Whether an OSV "affected" entry names the package. */
-export function entryAffectsPackage(
+function entryAffectsPackage(
   entry: OSVAffectedEntry,
   pkg: AffectedPackage,
 ): boolean {

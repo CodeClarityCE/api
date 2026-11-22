@@ -130,61 +130,6 @@ export class AnalysisCreateBody {
 }
 
 /********************************************/
-/*             Create interfaces            */
-/********************************************/
-
-export interface AnalysisCreate {
-  created_on: Date;
-  analyzer_id: string;
-  created_by: string;
-  config: Record<string, Record<string, unknown>>;
-  stage: number;
-  status: AnalysisStatus;
-  steps: AnalysisStage[][];
-  started_on?: Date;
-  ended_on?: Date;
-  branch: string;
-  tag?: string;
-  commit_hash?: string;
-  project_id: string;
-  organization_id: string;
-  integration_id: string;
-}
-
-/********************************************/
-/*             Update interfaces            */
-/********************************************/
-
-export interface AnalysisUpdate extends AnalysisCreate {}
-
-/********************************************/
-/*                Other types               */
-/********************************************/
-
-// One step of a stored analysis, keyed as the Go dispatcher and plugins write it.
-export interface AnalysisStage {
-  Name: string;
-  Version: string;
-  Status: AnalysisStatus;
-  Result: object | null;
-  Config: object;
-  Started_on?: string;
-  Ended_on?: string;
-}
-
-export enum AnalysisStatus {
-  REQUESTED = "requested",
-  TRIGGERED = "triggered",
-  STARTED = "started",
-  FINISHED = "finished",
-  COMPLETED = "completed",
-  FAILED = "failed",
-  SUCCESS = "success",
-  CANCELLED = "cancelled",
-  SKIPPED = "skipped",
-}
-
-/********************************************/
 /*        Schedule Management Types         */
 /********************************************/
 

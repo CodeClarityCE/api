@@ -1,6 +1,6 @@
 import { PublicAPIError } from "src/types/error.types";
 
-export const errorMessages: Record<string, string> = {
+const errorMessages: Record<string, string> = {
   DatasetNotReady: "Only a READY dataset can be used in an experiment.",
   AnalyzerMissingRequiredPlugins:
     "The analyzer of an experiment must run js-sbom and vuln-finder.",

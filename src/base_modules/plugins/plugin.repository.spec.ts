@@ -2,6 +2,8 @@ import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
 
+import { EntityNotFound } from "src/types/error.types";
+
 import { Plugin } from "./plugin.entity";
 import { PluginsRepository } from "./plugin.repository";
 
@@ -79,7 +81,7 @@ describe("PluginsRepository", () => {
 
       await expect(
         pluginsRepository.getById("non-existent-id"),
-      ).rejects.toThrow("No plugins found");
+      ).rejects.toThrow(EntityNotFound);
 
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { id: "non-existent-id" },
@@ -99,7 +101,7 @@ describe("PluginsRepository", () => {
       mockRepository.findOne.mockResolvedValue(null);
 
       await expect(pluginsRepository.getById("")).rejects.toThrow(
-        "No plugins found",
+        EntityNotFound,
       );
 
       expect(mockRepository.findOne).toHaveBeenCalledWith({
@@ -124,7 +126,7 @@ describe("PluginsRepository", () => {
       mockRepository.findOne.mockResolvedValue(null);
 
       await expect(pluginsRepository.getById(longId)).rejects.toThrow(
-        "No plugins found",
+        EntityNotFound,
       );
 
       expect(mockRepository.findOne).toHaveBeenCalledWith({

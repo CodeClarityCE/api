@@ -6,7 +6,7 @@
 import { eq, gte, lt, valid } from "semver";
 
 /** introduced <= version < fixed; a null bound is open. */
-export interface VulnerableRange {
+interface VulnerableRange {
   introduced: string | null;
   fixed: string | null;
 }

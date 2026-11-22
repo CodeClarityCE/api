@@ -186,21 +186,6 @@ describe("FindingsController", () => {
         description: "Improper neutralization of input",
       },
     ],
-    patch: {
-      TopLevelVulnerable: true,
-      IsPatchable: "true",
-      Unpatchable: [],
-      Patchable: [],
-      Introduced: [],
-      Patches: {},
-      Update: {
-        Major: 1,
-        Minor: 0,
-        Patch: 1,
-        PreReleaseTag: "",
-        MetaData: "",
-      },
-    },
     common_consequences: {
       Confidentiality: [
         {
@@ -657,21 +642,6 @@ describe("FindingsController", () => {
         severities: {},
         owasp_top_10: null,
         weaknesses: [],
-        patch: {
-          TopLevelVulnerable: false,
-          IsPatchable: "false",
-          Unpatchable: [],
-          Patchable: [],
-          Introduced: [],
-          Patches: {},
-          Update: {
-            Major: 0,
-            Minor: 0,
-            Patch: 0,
-            PreReleaseTag: "",
-            MetaData: "",
-          },
-        },
         common_consequences: {},
         references: [],
         location: [],

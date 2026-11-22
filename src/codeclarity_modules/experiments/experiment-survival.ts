@@ -4,8 +4,6 @@ import { DAY_MS, gridDay } from "./experiment-grid";
 import { SEVERITY_ORDER } from "./experiment-severity";
 import { kaplanMeier, kmMedian, type KmStep } from "./experiment-stats";
 
-export type { KmStep };
-
 /** One survival curve: every exposure, or one severity class. */
 export interface SurvivalGroup {
   key: string;

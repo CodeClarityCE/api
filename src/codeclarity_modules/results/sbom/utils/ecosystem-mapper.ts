@@ -23,7 +23,7 @@ interface EcosystemInfoRuntime extends Omit<
  * 2. Define the ecosystem information
  * 3. The system will automatically support it
  */
-export const PLUGIN_ECOSYSTEM_MAP: Record<string, EcosystemInfoRuntime> = {
+const PLUGIN_ECOSYSTEM_MAP: Record<string, EcosystemInfoRuntime> = {
   "js-sbom": {
     name: "npm Registry",
     ecosystem: "npm",

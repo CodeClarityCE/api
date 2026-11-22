@@ -88,16 +88,6 @@ export class LinkGitlabPatchBody {
   gitlab_instance_url!: string;
 }
 
-/********************************************/
-/*             Create interfaces            */
-/********************************************/
-
-export interface LinkGitlabCreate {
-  token: string;
-  token_type: GitlabTokenType;
-  gitlab_instance_url: string;
-}
-
 export class GitLabIntegrationCreate
   implements AccessTokenBasedIntegrationCreate, IntegrationCreate
 {
