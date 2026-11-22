@@ -35,7 +35,11 @@ import {
   TypedPaginatedResponse,
   TypedResponse,
 } from "src/types/apiResponses.types";
-import { EntityNotFound, NotAuthorized } from "src/types/error.types";
+import {
+  EntityNotFound,
+  NotAuthorized,
+  OrganizationTokenScopeTooNarrow,
+} from "src/types/error.types";
 
 import {
   AnalyzerDoesNotExist,
@@ -52,7 +56,10 @@ export class AnalysesController {
   @ApiTags("Analyses")
   @ApiOperation({ description: "Start an analysis on the project." })
   @APIDocCreatedResponseDecorator()
-  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
+  @ApiErrorDecorator({
+    statusCode: 403,
+    errors: [NotAuthorized, OrganizationTokenScopeTooNarrow],
+  })
   @ApiErrorDecorator({
     statusCode: 400,
     errors: [AnalyzerDoesNotExist, AnaylzerMissingConfigAttribute],

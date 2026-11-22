@@ -60,6 +60,8 @@ export const errorMessages: Record<string, string> = {
   ValidationFailed: "Malformed request",
   NotAuthenticated: "You are not authenticated.",
   NotAuthorized: "You are not authorized to perform this action.",
+  OrganizationTokenScopeTooNarrow:
+    "The scope of this Organization token does not allow this action.",
   Unsupported: "The action you requested is not supported.",
   UnknownWorkspace: "The referenced workspace does not exist on the project.",
   SourceVerdictsNotAvailable:
@@ -176,6 +178,22 @@ export class NotAuthorized extends PublicAPIError {
       NotAuthorized.errorCode,
       NotAuthorized.errorMessage,
       NotAuthorized.statusCode,
+      cause,
+    );
+  }
+}
+
+/** An Organization token called a route that needs a wider scope than it has. */
+export class OrganizationTokenScopeTooNarrow extends PublicAPIError {
+  static errorCode = "OrganizationTokenScopeTooNarrow";
+  static errorMessage =
+    errorMessages[OrganizationTokenScopeTooNarrow.errorCode]!;
+  static statusCode = 403;
+  constructor(cause?: unknown) {
+    super(
+      OrganizationTokenScopeTooNarrow.errorCode,
+      OrganizationTokenScopeTooNarrow.errorMessage,
+      OrganizationTokenScopeTooNarrow.statusCode,
       cause,
     );
   }

@@ -21,6 +21,7 @@ import {
   AccountNotActivated,
   NotAuthenticated,
   NotAuthorized,
+  OrganizationTokenScopeTooNarrow,
 } from "src/types/error.types";
 
 /** The parts of a Fastify request the token check reads. */
@@ -104,6 +105,7 @@ export class CombinedAuthGuard implements CanActivate {
    * records the call in the organization's audit log.
    * @throws {NotAuthenticated} for an unknown or expired token
    * @throws {NotAuthorized} for a route or organization the token may not use
+   * @throws {OrganizationTokenScopeTooNarrow} for a route that needs a wider scope
    */
   private async authorizeOrganizationToken(
     secret: string,
@@ -114,8 +116,9 @@ export class CombinedAuthGuard implements CanActivate {
     const required = this.reflector.getAllAndOverride<
       OrganizationTokenScope | undefined
     >(ORGANIZATION_TOKEN_SCOPE_KEY, [context.getHandler(), context.getClass()]);
-    if (!required || !scopeIncludes(token.scope, required)) {
-      throw new NotAuthorized();
+    if (!required) throw new NotAuthorized();
+    if (!scopeIncludes(token.scope, required)) {
+      throw new OrganizationTokenScopeTooNarrow();
     }
     const orgId =
       request.params?.["org_id"] ?? request.params?.["organization_id"];

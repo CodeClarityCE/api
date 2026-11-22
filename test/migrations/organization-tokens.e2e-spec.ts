@@ -4,6 +4,7 @@ import { Client } from "pg";
 import { DataSource, type MigrationInterface } from "typeorm";
 
 import { AddOrganizationTokens1796212800000 as Migration } from "../../src/migrations/codeclarity/1796212800000-AddOrganizationTokens";
+import { AddOrganizationTokenRevokedOn1796299200000 as RevokedOn } from "../../src/migrations/codeclarity/1796299200000-AddOrganizationTokenRevokedOn";
 
 const connection = {
   host: process.env["TEST_PG_HOST"] ?? "localhost",
@@ -38,12 +39,15 @@ function migrations(): (new () => MigrationInterface)[] {
     );
 }
 
-describe("AddOrganizationTokens migration", () => {
+describe("Organization token migrations", () => {
   let source: DataSource;
 
-  const run = async (step: "up" | "down"): Promise<void> => {
+  const run = async (
+    step: "up" | "down",
+    migration: MigrationInterface = new Migration(),
+  ): Promise<void> => {
     const runner = source.createQueryRunner();
-    await new Migration()[step](runner);
+    await migration[step](runner);
     await runner.release();
   };
 
@@ -112,7 +116,26 @@ describe("AddOrganizationTokens migration", () => {
     expect(log).toEqual({ blame_on_email: null });
   }, 60000);
 
+  it("reverting revoked_on drops revoked tokens, so none comes back to life", async () => {
+    const [org] = await source.query(`SELECT id FROM organization LIMIT 1`);
+    await source.query(
+      `INSERT INTO organization_token (name, scope, secret_hash, created_on, expires_on, revoked_on, "organizationId")
+       VALUES ('live', 'read', repeat('a', 64), now(), now() + interval '1 day', NULL, $1),
+              ('revoked', 'read', repeat('b', 64), now(), now() + interval '1 day', now(), $1)`,
+      [org.id],
+    );
+
+    await run("down", new RevokedOn());
+    expect(await source.query(`SELECT name FROM organization_token`)).toEqual([
+      { name: "live" },
+    ]);
+
+    await run("up", new RevokedOn());
+    expect(await drift()).toEqual([]);
+  }, 60000);
+
   it("reverts cleanly, naming the token where no email was kept, and applies again", async () => {
+    await run("down", new RevokedOn());
     await run("down");
     const tables = await source.query(
       `SELECT 1 FROM information_schema.tables WHERE table_name = 'organization_token'`,
@@ -122,6 +145,7 @@ describe("AddOrganizationTokens migration", () => {
     expect(log).toEqual({ blame_on_email: "Organization token ci-pipeline" });
 
     await run("up");
+    await run("up", new RevokedOn());
     expect(await drift()).toEqual([]);
   }, 60000);
 });
