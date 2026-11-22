@@ -49,6 +49,7 @@ export enum ActionType {
   OrganizationIntegrationDeleted = "OrganizationIntegrationDeleted",
   OrganizationTokenCreated = "OrganizationTokenCreated",
   OrganizationTokenUsed = "OrganizationTokenUsed",
+  OrganizationTokenRevoked = "OrganizationTokenRevoked",
 }
 
 /********************************************/
@@ -121,6 +122,7 @@ const actionTypeSeverityMapping = new Map<ActionType, ActionSeverity>([
   [ActionType.OrganizationCreated, ActionSeverity.Critical],
   [ActionType.OrganizationTokenCreated, ActionSeverity.Critical],
   [ActionType.OrganizationTokenUsed, ActionSeverity.Low],
+  [ActionType.OrganizationTokenRevoked, ActionSeverity.Critical],
 ]);
 
 export function getSeverityOfAction(action: ActionType): ActionSeverity {
@@ -152,6 +154,7 @@ const actionTypeClassMapping = new Map<ActionType, ActionClassType>([
   [ActionType.OrganizationCreated, ActionClassType.Organization],
   [ActionType.OrganizationTokenCreated, ActionClassType.Organization],
   [ActionType.OrganizationTokenUsed, ActionClassType.Organization],
+  [ActionType.OrganizationTokenRevoked, ActionClassType.Organization],
 ]);
 
 export function getTypeClassOfAction(action: ActionType): ActionClassType {

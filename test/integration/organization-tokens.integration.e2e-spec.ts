@@ -166,6 +166,224 @@ describe("Organization tokens (e2e)", () => {
     expect((await createToken(member)).statusCode).toBe(403);
   });
 
+  function listTokens(user: TestUser = admin): Promise<any> {
+    return testHelper.makeAuthenticatedRequest(
+      "GET",
+      `/org/${user.organization.id}/tokens`,
+      user.accessToken,
+    );
+  }
+
+  it("an admin lists the organization's tokens without their secrets", async () => {
+    const token = (await createToken()).json().data;
+    await createToken(otherOrgAdmin);
+
+    const listed = await listTokens();
+    expect(listed.statusCode).toBe(200);
+    expect(listed.json().data).toEqual([
+      expect.objectContaining({
+        id: token.id,
+        name: "ci-pipeline",
+        scope: "analyze",
+        created_by_email: "admin@tokens.com",
+      }),
+    ]);
+    expect(listed.body).not.toContain(token.secret);
+    expect(listed.body).not.toContain("secret");
+  });
+
+  it("only an admin can list tokens", async () => {
+    const member = await testHelper.createTestUser({
+      email: "member@tokens.com",
+      organization: admin.organization,
+      role: MemberRole.USER,
+    });
+
+    expect((await listTokens(member)).statusCode).toBe(403);
+  });
+
+  function revokeToken(tokenId: string, user: TestUser = admin): Promise<any> {
+    return testHelper.makeAuthenticatedRequest(
+      "DELETE",
+      `/org/${user.organization.id}/tokens/${tokenId}`,
+      user.accessToken,
+    );
+  }
+
+  it("a revoked token is refused at once and no longer listed", async () => {
+    const token = (await createToken()).json().data;
+    expect(
+      (await listProjects(token.secret, admin.organization.id)).statusCode,
+    ).toBe(200);
+
+    expect((await revokeToken(token.id)).statusCode).toBe(200);
+
+    expect(
+      (await listProjects(token.secret, admin.organization.id)).statusCode,
+    ).toBe(401);
+    expect((await listTokens()).json().data).toEqual([]);
+    expect(await auditEntries(admin, "OrganizationTokenRevoked")).toEqual([
+      expect.objectContaining({
+        blame_on_email: "admin@tokens.com",
+        description: expect.stringContaining("ci-pipeline"),
+      }),
+    ]);
+  });
+
+  it("only an admin of the token's organization can revoke it", async () => {
+    const token = (await createToken()).json().data;
+    const member = await testHelper.createTestUser({
+      email: "member@tokens.com",
+      organization: admin.organization,
+      role: MemberRole.USER,
+    });
+
+    expect((await revokeToken(token.id, member)).statusCode).toBe(403);
+    expect((await revokeToken(token.id, otherOrgAdmin)).statusCode).toBe(404);
+    expect(
+      (await listProjects(token.secret, admin.organization.id)).statusCode,
+    ).toBe(200);
+  });
+
+  it("a token cannot revoke tokens", async () => {
+    const token = (await createToken()).json().data;
+
+    const revoked = await testHelper.makeAuthenticatedRequest(
+      "DELETE",
+      `/org/${admin.organization.id}/tokens/${token.id}`,
+      token.secret,
+    );
+    expect(revoked.statusCode).toBe(403);
+  });
+
+  it("a read token is refused analysis starts for lack of scope", async () => {
+    const project = (await createProject(admin, "token-org-app")).json();
+    const token = (
+      await createToken(admin, {
+        name: "reader",
+        scope: "read",
+        expires_on: new Date(Date.now() + DAY).toISOString(),
+      })
+    ).json().data;
+
+    const started = await testHelper.makeAuthenticatedRequest(
+      "POST",
+      `/org/${admin.organization.id}/projects/${project.id}/analyses`,
+      token.secret,
+      { analyzer_id: project.id, config: {}, branch: "main" },
+    );
+    expect(started.statusCode).toBe(403);
+    expect(started.json().error_code).toBe("OrganizationTokenScopeTooNarrow");
+  });
+
+  it("a read token is refused other writes", async () => {
+    const project = (await createProject(admin, "token-org-app")).json();
+    const token = (
+      await createToken(admin, {
+        name: "reader",
+        scope: "read",
+        expires_on: new Date(Date.now() + DAY).toISOString(),
+      })
+    ).json().data;
+    const org = admin.organization.id;
+
+    const writes: [string, string, object?][] = [
+      ["POST", `/org/${org}/projects`, { name: "sneaky", description: "" }],
+      ["DELETE", `/org/${org}/projects/${project.id}`],
+      ["POST", `/org/${org}/projects/${project.id}/analyses/reanalyse`],
+      [
+        "POST",
+        `/org/${org}/tokens`,
+        { name: "escalate", scope: "analyze", expires_on: token.expires_on },
+      ],
+      ["DELETE", `/org/${org}/tokens/${token.id}`],
+    ];
+    for (const [method, url, body] of writes) {
+      const response = await testHelper.makeAuthenticatedRequest(
+        method as "POST" | "DELETE",
+        url,
+        token.secret,
+        body,
+      );
+      expect({ method, url, status: response.statusCode }).toEqual({
+        method,
+        url,
+        status: 403,
+      });
+    }
+    const projects = await listProjects(token.secret, org);
+    expect(projects.json().data.map((p: { name: string }) => p.name)).toEqual([
+      "token-org-app",
+    ]);
+  });
+
+  async function tokenByAnotherAdmin(): Promise<{
+    creator: TestUser;
+    token: { id: string; secret: string };
+  }> {
+    const creator = await testHelper.createTestUser({
+      email: "creator@tokens.com",
+      organization: admin.organization,
+      role: MemberRole.ADMIN,
+    });
+    const token = (await createToken(creator)).json().data;
+    return { creator, token };
+  }
+
+  it("a token keeps working after its creator leaves the organization", async () => {
+    await createProject(admin, "token-org-app");
+    const { creator, token } = await tokenByAnotherAdmin();
+
+    const left = await testHelper.makeAuthenticatedRequest(
+      "POST",
+      `/org/${admin.organization.id}/leave_org`,
+      creator.accessToken,
+    );
+    expect(left.statusCode).toBe(201);
+
+    const listed = await listProjects(token.secret, admin.organization.id);
+    expect(listed.statusCode).toBe(200);
+    expect(listed.json().data.map((p: { name: string }) => p.name)).toEqual([
+      "token-org-app",
+    ]);
+    expect((await listTokens()).json().data).toEqual([
+      expect.objectContaining({
+        id: token.id,
+        created_by_email: "creator@tokens.com",
+      }),
+    ]);
+  });
+
+  it("a token keeps working after its creator deletes their account", async () => {
+    const { creator, token } = await tokenByAnotherAdmin();
+
+    const deleted = await testHelper.makeAuthenticatedRequest(
+      "DELETE",
+      "/users/@self",
+      creator.accessToken,
+      { password: "TestPassword123!" },
+    );
+    expect(deleted.statusCode).toBe(200);
+
+    expect(
+      (await listProjects(token.secret, admin.organization.id)).statusCode,
+    ).toBe(200);
+    expect((await listTokens()).json().data).toEqual([
+      expect.objectContaining({ id: token.id, created_by_email: null }),
+    ]);
+  });
+
+  it("a token cannot be issued already expired", async () => {
+    const created = await createToken(admin, {
+      name: "dead-on-arrival",
+      scope: "read",
+      expires_on: new Date(Date.now() - DAY).toISOString(),
+    });
+
+    expect(created.statusCode).toBe(400);
+    expect((await listTokens()).json().data).toEqual([]);
+  });
+
   it("an expired token is not authenticated", async () => {
     const token = (
       await createToken(admin, {

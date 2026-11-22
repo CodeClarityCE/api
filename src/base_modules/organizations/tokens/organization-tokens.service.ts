@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { createHash, randomBytes } from "crypto";
-import { MoreThan, Repository } from "typeorm";
+import { IsNull, MoreThan, Repository } from "typeorm";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { OrganizationLoggerService } from "src/base_modules/organizations/log/organizationLogger.service";
@@ -12,7 +12,7 @@ import {
   OrganizationsRepository,
   UsersRepository,
 } from "src/base_modules/shared/repositories";
-import { NotAuthenticated } from "src/types/error.types";
+import { EntityNotFound, NotAuthenticated } from "src/types/error.types";
 
 import { OrganizationToken } from "./organization-token.entity";
 import {
@@ -20,6 +20,7 @@ import {
   ORGANIZATION_TOKEN_PREFIX,
   OrganizationTokenCreateBody,
   OrganizationTokenPrincipal,
+  OrganizationTokenSummary,
 } from "./organization-token.types";
 
 function hashSecret(secret: string): string {
@@ -83,7 +84,67 @@ export class OrganizationTokensService {
   }
 
   /**
-   * The token a secret belongs to, if it has not expired.
+   * The organization's tokens, newest first, without their secrets; only admins may.
+   * @throws {NotAuthorized}
+   */
+  async list(
+    organizationId: string,
+    user: AuthenticatedUser,
+  ): Promise<OrganizationTokenSummary[]> {
+    await this.memberships.hasRequiredRoleFor(
+      organizationId,
+      user,
+      MemberRole.ADMIN,
+    );
+    const tokens = await this.tokens.find({
+      where: { organizationId, revoked_on: IsNull() },
+      relations: { created_by: true },
+      order: { created_on: "DESC" },
+    });
+    return tokens.map((token) =>
+      Object.assign(new OrganizationTokenSummary(), {
+        id: token.id,
+        name: token.name,
+        scope: token.scope,
+        created_on: token.created_on,
+        expires_on: token.expires_on,
+        created_by_email: token.created_by?.email ?? null,
+      }),
+    );
+  }
+
+  /**
+   * Revokes a token of the organization so it is refused from now on; only admins may.
+   * @throws {NotAuthorized}
+   * @throws {EntityNotFound} for a token of another organization or one already revoked
+   */
+  async revoke(
+    organizationId: string,
+    tokenId: string,
+    user: AuthenticatedUser,
+  ): Promise<void> {
+    await this.memberships.hasRequiredRoleFor(
+      organizationId,
+      user,
+      MemberRole.ADMIN,
+    );
+    const token = await this.tokens.findOne({
+      where: { id: tokenId, organizationId, revoked_on: IsNull() },
+    });
+    if (!token) throw new EntityNotFound();
+    token.revoked_on = new Date();
+    await this.tokens.save(token);
+
+    await this.auditLog.addAuditLog(
+      ActionType.OrganizationTokenRevoked,
+      `The User revoked the Organization token ${token.name}.`,
+      organizationId,
+      user.userId,
+    );
+  }
+
+  /**
+   * The token a secret belongs to, if it has not expired or been revoked.
    * @throws {NotAuthenticated}
    */
   async authenticate(secret: string): Promise<OrganizationTokenPrincipal> {
@@ -91,6 +152,7 @@ export class OrganizationTokensService {
       where: {
         secret_hash: hashSecret(secret),
         expires_on: MoreThan(new Date()),
+        revoked_on: IsNull(),
       },
     });
     if (!token) throw new NotAuthenticated();
