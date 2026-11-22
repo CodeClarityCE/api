@@ -8,6 +8,8 @@ import {
 } from "@nestjs/common";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import { OrganizationTokenScope } from "src/base_modules/organizations/tokens/organization-token.types";
+import { AllowOrganizationToken } from "src/decorators/OrganizationTokenDecorator";
 import { AuthUser } from "src/decorators/UserDecorator";
 import { PaginatedResponse, Response } from "src/types/apiResponses.types";
 
@@ -17,6 +19,7 @@ import { SbomQueryOptions, SBOMService } from "./sbom.service";
 export class SBOMController {
   constructor(private readonly sbomService: SBOMService) {}
 
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get(":analysis_id/sbom")
   async getSbom(
     @Param("org_id") org_id: string,
@@ -74,6 +77,7 @@ export class SBOMController {
     };
   }
 
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get(":analysis_id/sbom/workspaces")
   async getWorkspaces(
     @Param("org_id") org_id: string,
