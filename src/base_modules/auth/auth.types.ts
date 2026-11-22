@@ -1,6 +1,8 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsEmail, IsNotEmpty, Length } from "class-validator";
 
+import type { OrganizationTokenPrincipal } from "../organizations/tokens/organization-token.types";
+
 /** JWT payload structure for tokens */
 export interface JwtPayload {
   userId: string;
@@ -20,6 +22,8 @@ export class AuthenticatedUser {
   roles!: ROLE[];
   activated!: boolean;
   apiKey?: string | undefined;
+  /** Set when the request carries an Organization token; userId is then the token's id. */
+  organizationToken?: OrganizationTokenPrincipal | undefined;
 
   constructor(
     userId: string,

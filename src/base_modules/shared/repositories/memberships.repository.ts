@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { EntityManager, Repository } from "typeorm";
 
+import type { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import {
   MemberRole,
   OrganizationMemberships,
@@ -127,6 +128,28 @@ export class MembershipsRepository {
         throw new NotAuthorized();
       }
       throw err;
+    }
+  }
+
+  /**
+   * Like hasRequiredRole, for the request's actor: an Organization token counts
+   * as a plain member of its own organization and of no other.
+   * @throws {NotAuthorized}
+   */
+  async hasRequiredRoleFor(
+    organizationId: string,
+    actor: AuthenticatedUser,
+    requiredRole: MemberRole,
+  ): Promise<void> {
+    const token = actor.organizationToken;
+    if (!token) {
+      return this.hasRequiredRole(organizationId, actor.userId, requiredRole);
+    }
+    if (
+      token.organizationId !== organizationId ||
+      isMemberRoleLessThan(MemberRole.USER, requiredRole)
+    ) {
+      throw new NotAuthorized();
     }
   }
 

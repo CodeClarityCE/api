@@ -9,11 +9,30 @@ import { Socket } from "socket.io";
 
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
 import { JWTPayload } from "src/base_modules/auth/guards/jwt.types";
+import {
+  ORGANIZATION_TOKEN_PREFIX,
+  OrganizationTokenScope,
+  scopeIncludes,
+} from "src/base_modules/organizations/tokens/organization-token.types";
+import { OrganizationTokensService } from "src/base_modules/organizations/tokens/organization-tokens.service";
+import { ORGANIZATION_TOKEN_SCOPE_KEY } from "src/decorators/OrganizationTokenDecorator";
 import { SKIP_AUTH_KEY } from "src/decorators/SkipAuthDecorator";
-import { AccountNotActivated, NotAuthenticated } from "src/types/error.types";
+import {
+  AccountNotActivated,
+  NotAuthenticated,
+  NotAuthorized,
+} from "src/types/error.types";
+
+/** The parts of a Fastify request the token check reads. */
+interface RoutedRequest {
+  method: string;
+  params?: Record<string, string>;
+  routeOptions?: { url?: string };
+}
 
 /**
- * Guards every route that does not skip auth with a bearer JWT.
+ * Guards every route that does not skip auth with a bearer JWT, or with an
+ * Organization token on routes that allow one.
  */
 @Injectable()
 export class CombinedAuthGuard implements CanActivate {
@@ -23,6 +42,7 @@ export class CombinedAuthGuard implements CanActivate {
   constructor(
     private jwtService: JwtService,
     private reflector: Reflector,
+    private organizationTokens: OrganizationTokensService,
   ) {
     this.publicKey = readFileSync(
       join(process.cwd(), "jwt", "public.pem"),
@@ -58,6 +78,16 @@ export class CombinedAuthGuard implements CanActivate {
       throw new NotAuthenticated();
     }
 
+    if (jwtToken.startsWith(ORGANIZATION_TOKEN_PREFIX)) {
+      if (!request) throw new NotAuthenticated();
+      request.user = await this.authorizeOrganizationToken(
+        jwtToken,
+        context,
+        request as unknown as RoutedRequest,
+      );
+      return true;
+    }
+
     const [jwtTokenValid, userJWT] = await this.verifyJWTToken(jwtToken);
     if (!jwtTokenValid) throw new NotAuthenticated();
     if (!userJWT?.activated) throw new AccountNotActivated();
@@ -67,6 +97,37 @@ export class CombinedAuthGuard implements CanActivate {
       (socket.data as { user?: AuthenticatedUser }).user = userJWT;
     }
     return true;
+  }
+
+  /**
+   * Checks that the token may call this route in this organization, and
+   * records the call in the organization's audit log.
+   * @throws {NotAuthenticated} for an unknown or expired token
+   * @throws {NotAuthorized} for a route or organization the token may not use
+   */
+  private async authorizeOrganizationToken(
+    secret: string,
+    context: ExecutionContext,
+    request: RoutedRequest,
+  ): Promise<AuthenticatedUser> {
+    const token = await this.organizationTokens.authenticate(secret);
+    const required = this.reflector.getAllAndOverride<
+      OrganizationTokenScope | undefined
+    >(ORGANIZATION_TOKEN_SCOPE_KEY, [context.getHandler(), context.getClass()]);
+    if (!required || !scopeIncludes(token.scope, required)) {
+      throw new NotAuthorized();
+    }
+    const orgId =
+      request.params?.["org_id"] ?? request.params?.["organization_id"];
+    if (orgId !== token.organizationId) throw new NotAuthorized();
+
+    await this.organizationTokens.recordUse(
+      token,
+      `${request.method} ${request.routeOptions?.url ?? "an unknown route"}`,
+    );
+    const user = new AuthenticatedUser(token.id, [ROLE.USER], true);
+    user.organizationToken = token;
+    return user;
   }
 
   /**
