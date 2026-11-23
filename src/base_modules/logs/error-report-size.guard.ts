@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 
-export const MAX_ERROR_REPORT_BYTES = 16 * 1024;
+const MAX_ERROR_REPORT_BYTES = 16 * 1024;
 
 /** Rejects an error report whose body is over MAX_ERROR_REPORT_BYTES with 413. */
 @Injectable()

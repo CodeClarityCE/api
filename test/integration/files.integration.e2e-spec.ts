@@ -80,4 +80,41 @@ describe("Files (e2e)", () => {
       ).toBe(false);
     });
   });
+
+  describe("GET /org/:org/file/:project/:file_name", () => {
+    // Writes a file where the read endpoint looks for it.
+    async function storedFile(name: string, content: string): Promise<void> {
+      const folder = join(downloads, owner.organization.id, projectId);
+      /* eslint-disable security/detect-non-literal-fs-filename */
+      await mkdir(folder, { recursive: true });
+      await writeFile(join(folder, name), content);
+      /* eslint-enable security/detect-non-literal-fs-filename */
+    }
+
+    it("returns the file's content to a member", async () => {
+      await storedFile("notes.txt", "hello");
+
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `/org/${owner.organization.id}/file/${projectId}/notes.txt`,
+        owner.accessToken,
+      );
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().data).toBe("hello");
+    });
+
+    it("does not read outside the project's folder", async () => {
+      await storedFile("notes.txt", "hello");
+
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `/org/${owner.organization.id}/file/${projectId}/..%2F..%2F..%2Fetc%2Fpasswd`,
+        owner.accessToken,
+      );
+
+      expect(response.statusCode).not.toBe(200);
+      expect(response.statusCode).toBeLessThan(500);
+    });
+  });
 });

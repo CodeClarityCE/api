@@ -31,7 +31,6 @@ import type {
 import { type ResidenceBlock, residenceBlock } from "./experiment-residence";
 import {
   NO_LOCKFILE_YET,
-  type ProbePackage,
   type ResolvedPackage,
   type RunSummaryRow,
   type VulnerabilityInstanceRow,
@@ -120,7 +119,6 @@ export interface ResultsRunInput {
  * A probe outcome row: the packages one entry resolves at one commit.
  * Readers may pass only the packages they care about.
  */
-export type { ProbePackage };
 export type { ResultsProbeAnalysisInput, ResultsProbeIntervalInput };
 
 export interface ResultsProbeInput {
@@ -165,10 +163,8 @@ export interface ExperimentResultsInput {
   read_at?: Date;
 }
 
-export { SEVERITY_ORDER, type SeverityCounts } from "./experiment-severity";
-
 /** The scalar headline metrics, one sweep row per vulnerability subset. */
-export interface HeadlineScalars {
+interface HeadlineScalars {
   n_projects: number;
   n_affected: number;
   affected_share: number | null;
@@ -188,7 +184,7 @@ export interface HeadlineScalars {
   pkgs_clear_90: number;
 }
 
-export interface Headline extends HeadlineScalars {
+interface Headline extends HeadlineScalars {
   sev_counts: SeverityCounts;
   /** [package, projects affected], most widespread first, at most 10 */
   top_packages: [string, number][];
@@ -196,35 +192,31 @@ export interface Headline extends HeadlineScalars {
   high_critical_share_of_classed: number | null;
 }
 
-export const SWEEP_SUBSETS = [
-  "all",
-  "match_correct_only",
-  "non_withdrawn",
-] as const;
+const SWEEP_SUBSETS = ["all", "match_correct_only", "non_withdrawn"] as const;
 export type SweepSubset = (typeof SWEEP_SUBSETS)[number];
 
-export interface SweepRow extends HeadlineScalars {
+interface SweepRow extends HeadlineScalars {
   subset: SweepSubset;
 }
 
 /** 95% Wilson intervals of the shares in a sweep row. */
-export interface ScalarShareIntervals {
+interface ScalarShareIntervals {
   affected_share: ConfidenceInterval | null;
   high_critical_share: ConfidenceInterval | null;
   top10_pkg_share: ConfidenceInterval | null;
   top10_proj_share: ConfidenceInterval | null;
 }
 
-export interface HeadlineShareIntervals extends ScalarShareIntervals {
+interface HeadlineShareIntervals extends ScalarShareIntervals {
   high_critical_share_of_classed: ConfidenceInterval | null;
 }
 
-export interface SweepShareIntervals extends ScalarShareIntervals {
+interface SweepShareIntervals extends ScalarShareIntervals {
   subset: SweepSubset;
 }
 
 /** Intervals sit apart from the point estimates, which stay as they were. */
-export interface ShareIntervals {
+interface ShareIntervals {
   headline: HeadlineShareIntervals;
   sweep: SweepShareIntervals[];
   /** Each severity's share of all instances */
@@ -242,7 +234,7 @@ export interface ShareIntervals {
   };
 }
 
-export interface EpssBlock {
+interface EpssBlock {
   /** Share of instances that have an EPSS score */
   nonnull_share: number | null;
   median: number | null;
@@ -256,7 +248,7 @@ export interface EpssBlock {
 }
 
 /** RQ3: star rank against load, over runs with at least one dependency. */
-export interface RqcBlock {
+interface RqcBlock {
   spearman_rho: number | null;
   p: number | null;
   n: number;
@@ -264,7 +256,7 @@ export interface RqcBlock {
 }
 
 /** RQ4: one row per package manager, sorted by name. */
-export interface RqdRow {
+interface RqdRow {
   package_manager: string;
   projects: number;
   med_deps: number;
@@ -301,7 +293,7 @@ export interface GridCoverageRow {
 }
 
 /** A lag distribution in days. */
-export interface LagSummary {
+interface LagSummary {
   n: number;
   median: number | null;
   p25: number | null;
@@ -313,11 +305,11 @@ export interface LagSummary {
 }
 
 /** One group of a lag block: a severity class or a fix kind. */
-export interface LagGroup extends LagSummary {
+interface LagGroup extends LagSummary {
   key: string;
 }
 
-export interface FixLagPoint {
+interface FixLagPoint {
   severity: keyof SeverityCounts;
   kind: FixKind | null;
   lag_days: number;
@@ -325,7 +317,7 @@ export interface FixLagPoint {
 }
 
 /** Disclosure to fix, over fixes whose advisory has a publication date. */
-export interface FixLagBlock {
+interface FixLagBlock {
   /** Every fix, with or without a lag */
   fixes: number;
   /** Share of fixes only dated to a snapshot interval */
@@ -338,7 +330,7 @@ export interface FixLagBlock {
   points: FixLagPoint[];
 }
 
-export interface ExposuresBlock {
+interface ExposuresBlock {
   exposures: number;
   open: number;
   fixed: number;
@@ -350,14 +342,14 @@ export interface ExposuresBlock {
 }
 
 /** Events by how fix probes ended; not_probed while they have not. */
-export interface ProbeOutcomeCounts {
+interface ProbeOutcomeCounts {
   found: number;
   ambiguous: number;
   not_found: number;
   not_probed: number;
 }
 
-export interface ProbesBlock {
+interface ProbesBlock {
   fixes: ProbeOutcomeCounts;
   introductions: ProbeOutcomeCounts;
   /** Not-found events per reason, most frequent first */
@@ -366,7 +358,7 @@ export interface ProbesBlock {
 }
 
 /** The analysis budget, what was submitted against it and whether it is spent. */
-export interface ProbeBudget {
+interface ProbeBudget {
   analysis_budget: number | null;
   analyses_submitted: number | null;
   spent: boolean;
@@ -417,8 +409,6 @@ export interface ExperimentResults {
   bootstrap_intervals: ResultIntervals | null;
   provenance: ProvenanceBlock;
 }
-
-export type { LoadRow } from "./experiment-load";
 
 function nullIfNaN(value: number): number | null {
   return Number.isNaN(value) ? null : value;

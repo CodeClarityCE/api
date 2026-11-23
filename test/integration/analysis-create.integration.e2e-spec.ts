@@ -58,17 +58,18 @@ describe("AnalysesService.create against Postgres", () => {
     } as unknown as PluginAvailabilityService;
     const auditLog = {
       addAuditLog: async () => undefined,
+      addActorAuditLog: async () => undefined,
     } as unknown as OrganizationLoggerService;
     const analyzers = new AnalyzersRepository(
       dataSource.getRepository(Analyzer),
     );
-    // The plugins as they register, with js-patching reading only the JavaScript SBOM.
+    // The plugins as they register, with js-checker reading only the JavaScript SBOM.
     const plugins = {
       getAll: async () => [
         { name: "js-sbom", depends_on: [] },
         { name: "vuln-finder", depends_on: ["js-sbom", "php-sbom"] },
         { name: "license-finder", depends_on: ["js-sbom", "php-sbom"] },
-        { name: "js-patching", depends_on: ["js-sbom", "vuln-finder"] },
+        { name: "js-checker", depends_on: ["js-sbom", "vuln-finder"] },
       ],
     } as unknown as PluginsRepository;
     service = new AnalysesService(
@@ -232,17 +233,17 @@ describe("AnalysesService.create against Postgres", () => {
       version: "v1",
       config: {},
     });
-    // Saved from the JavaScript template with js-patching added, before the
+    // Saved from the JavaScript template with js-checker added, before the
     // language configuration followed the workflow.
     const analyzer = await dataSource.getRepository(Analyzer).save({
-      name: "JS + patching",
+      name: "JS + checker",
       global: false,
       description: "",
       created_on: new Date(),
       steps: [
         [step("js-sbom")],
         [step("vuln-finder"), step("license-finder")],
-        [step("js-patching")],
+        [step("js-checker")],
       ],
       supported_languages: ["javascript"],
       language_config: {
@@ -263,7 +264,7 @@ describe("AnalysesService.create against Postgres", () => {
     expect(analysis.steps.map((stage) => stage.map((s) => s.Name))).toEqual([
       ["js-sbom"],
       ["vuln-finder", "license-finder"],
-      ["js-patching"],
+      ["js-checker"],
     ]);
   });
 });

@@ -61,13 +61,7 @@ describe("Result Entity", () => {
   });
 
   it("should handle different plugin types", () => {
-    const plugins = [
-      "js-sbom",
-      "js-vuln-finder",
-      "js-license",
-      "js-patching",
-      "codeql",
-    ];
+    const plugins = ["js-sbom", "js-vuln-finder", "js-license", "codeql"];
 
     plugins.forEach((plugin) => {
       result.plugin = plugin;

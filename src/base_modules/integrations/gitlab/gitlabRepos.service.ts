@@ -14,6 +14,7 @@ import {
   MembershipsRepository,
   OrganizationsRepository,
 } from "src/base_modules/shared/repositories";
+import { CodeClarityLogger } from "src/services/logger.service";
 import { TypedPaginatedResponse } from "src/types/apiResponses.types";
 import { EntityNotFound, NotAuthorized } from "src/types/error.types";
 import {
@@ -25,6 +26,9 @@ import { SortDirection } from "src/types/sort.types";
 import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from "../github/constants";
 
 import { GitlabIntegrationService } from "./gitlab.service";
+
+// Most projects one sync reads, so a huge GitLab instance cannot stall it
+const MAX_SYNCED_PROJECTS = 2000;
 
 /** GitLab API project response structure */
 interface GitLabProject {
@@ -38,6 +42,8 @@ interface GitLabProject {
 
 @Injectable()
 export class GitlabRepositoriesService {
+  private readonly logger = CodeClarityLogger.forService("GitlabRepositories");
+
   constructor(
     private readonly gitlabIntegrationService: GitlabIntegrationService,
     private readonly membershipsRepository: MembershipsRepository,
@@ -70,32 +76,18 @@ export class GitlabRepositoriesService {
     const integration =
       await this.integrationsRepository.getIntegrationById(integrationId);
 
-    const entriesPerPage = 100;
-
     try {
-      const response = await fetch(
-        `${
-          integration.service_domain
-        }/api/v4/projects?owned=true&membership=true&per_page=${entriesPerPage}`,
-        {
-          headers: {
-            "PRIVATE-TOKEN": rawToken,
-          },
-        },
+      const projects = await this.fetchMemberProjects(
+        integrationId,
+        integration.service_domain,
+        rawToken,
       );
-
-      if (!response.ok) {
-        throw new Error(
-          `Failed to fetch repositories from GitLab. Status: ${response.status}`,
-        );
-      }
-
-      const projects = (await response.json()) as GitLabProject[];
 
       // Process the projects and save them to the repository cache
       for (const project of projects) {
         const repo = await this.repositoryCacheRepository.existsBy({
           fully_qualified_name: project.name_with_namespace,
+          integration: { id: integration.id },
         });
         if (repo) continue;
 
@@ -122,6 +114,45 @@ export class GitlabRepositoriesService {
 
     integration.last_repository_sync = new Date();
     await this.integrationsRepository.saveIntegration(integration);
+  }
+
+  /** Fetches every page of projects the token's user is a Reporter or above on. */
+  private async fetchMemberProjects(
+    integrationId: string,
+    serviceDomain: string,
+    rawToken: string,
+  ): Promise<GitLabProject[]> {
+    const baseUrl = `${serviceDomain}/api/v4/projects?membership=true&min_access_level=20&per_page=100`;
+    const projects: GitLabProject[] = [];
+    let url = baseUrl;
+
+    for (;;) {
+      const response = await fetch(url, {
+        headers: {
+          "PRIVATE-TOKEN": rawToken,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch repositories from GitLab. Status: ${response.status}`,
+        );
+      }
+
+      projects.push(...((await response.json()) as GitLabProject[]));
+
+      // GitLab sends an empty x-next-page on the last page
+      const nextPage = response.headers.get("x-next-page");
+      if (!nextPage) return projects;
+      if (projects.length >= MAX_SYNCED_PROJECTS) {
+        this.logger.warn(
+          `Stopped GitLab sync at ${MAX_SYNCED_PROJECTS} projects`,
+          { integrationId },
+        );
+        return projects;
+      }
+      url = `${baseUrl}&page=${nextPage}`;
+    }
   }
 
   /**

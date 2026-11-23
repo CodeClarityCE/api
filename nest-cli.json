@@ -8,6 +8,10 @@
       {
         "include": "base_modules/email/templates/**/*",
         "outDir": "dist"
+      },
+      {
+        "include": "migrations/*/*.sql",
+        "outDir": "dist"
       }
     ],
     "deleteOutDir": true

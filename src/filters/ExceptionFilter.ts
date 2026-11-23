@@ -5,12 +5,17 @@ import {
   HttpException,
 } from "@nestjs/common";
 import { FastifyReply } from "fastify";
+import { QueryFailedError } from "typeorm";
 
 import { Status } from "src/types/apiResponses.types";
 import { PrivateAPIError, PublicAPIError } from "src/types/error.types";
 
+// Postgres errors caused by a malformed client value, such as a non-UUID id or an out-of-range page.
+const BAD_INPUT_SQLSTATES = new Set(["22P02", "22003"]);
+
 // Error codes for HttpException statuses that have a clear meaning to clients.
 const HTTP_EXCEPTION_CODES: Partial<Record<number, string>> = {
+  400: "BadRequest",
   413: "PayloadTooLarge",
   429: "TooManyRequests",
 };
@@ -59,6 +64,10 @@ export class ErrorFilter implements ExceptionFilter {
       errorCode = HTTP_EXCEPTION_CODES[status] ?? errorCode;
       message = error.message;
       console.error("[HttpException]", error);
+    } else if (isBadInput(exception)) {
+      status = 400;
+      errorCode = "BadRequest";
+      message = "A request parameter has an invalid value.";
     } else {
       console.error("[UnhandledException]", exception);
       // Catch any other unexpected exceptions and return a generic InternalError response
@@ -87,6 +96,12 @@ export class ErrorFilter implements ExceptionFilter {
       }),
     );
   }
+}
+
+function isBadInput(exception: Error): boolean {
+  if (!(exception instanceof QueryFailedError)) return false;
+  const code = (exception.driverError as { code?: unknown } | undefined)?.code;
+  return typeof code === "string" && BAD_INPUT_SQLSTATES.has(code);
 }
 
 /**

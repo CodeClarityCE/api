@@ -71,7 +71,7 @@ export class User {
   @Column()
   social!: boolean;
 
-  @ApiProperty()
+  @ApiProperty({ enum: SocialType, nullable: true })
   @Expose()
   @Column({ nullable: true })
   social_register_type?: SocialType;
@@ -86,7 +86,7 @@ export class User {
   @Column()
   activated!: boolean;
 
-  @ApiProperty()
+  @ApiProperty({ type: String, nullable: true })
   @Expose()
   @Column({
     length: 100,
@@ -110,7 +110,7 @@ export class User {
   })
   password!: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: String, nullable: true })
   @Expose()
   @Column({ nullable: true })
   setup_temporary_conf?: string;
@@ -144,7 +144,8 @@ export class User {
   @Column({ nullable: true })
   social_id?: string;
 
-  @ApiProperty()
+  // Left out where the relation is not loaded, null when the user has none.
+  @ApiProperty({ required: false, nullable: true })
   @Expose({ name: "default_org" })
   @ManyToOne("Organization", "default")
   @JoinColumn({ name: "default_org" })

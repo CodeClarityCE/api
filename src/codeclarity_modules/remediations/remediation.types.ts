@@ -6,7 +6,7 @@ import type { ManifestEdit, PackageManager } from "./package-manager-commands";
 export enum RemediationKind {
   /** Upgrade a vulnerable package the workspace declares itself */
   UpgradeDirect = "upgrade_direct",
-  /** Upgrade the top-level dependency that installs a vulnerable package */
+  /** Upgrade the top-level dependency that installs a vulnerable package; only on tickets made while js-patching existed */
   UpgradeTopLevel = "upgrade_top_level",
   /** Make every dependent install a fixed version of a vulnerable package */
   ForceVersion = "force_version",

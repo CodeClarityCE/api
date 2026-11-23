@@ -15,7 +15,7 @@ import type {
 import { packagesToClear } from "./experiment-stats";
 
 /** Instance concentration at one snapshot of the grid. */
-export interface PackagesToClearRow {
+interface PackagesToClearRow {
   /** YYYY-MM-DD, null for HEAD */
   grid_date: string | null;
   /** Done snapshots observed at this date, empty ones included */
@@ -41,7 +41,7 @@ export interface FixKindCounts {
   snapshot_precision_share: number | null;
 }
 
-export interface FixKindRow extends FixKindCounts {
+interface FixKindRow extends FixKindCounts {
   /** The grid interval (from, to]; to is null for HEAD */
   interval_from: string | null;
   interval_to: string | null;

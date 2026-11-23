@@ -72,7 +72,10 @@ describe("ProjectService", () => {
         ProjectRowsService,
         {
           provide: OrganizationLoggerService,
-          useValue: { addAuditLog: jest.fn().mockResolvedValue(null) },
+          useValue: {
+            addAuditLog: jest.fn().mockResolvedValue(null),
+            addActorAuditLog: jest.fn().mockResolvedValue(null),
+          },
         },
         {
           provide: ProjectMemberService,
@@ -109,6 +112,15 @@ describe("ProjectService", () => {
           provide: MembershipsRepository,
           useValue: {
             hasRequiredRole: jest.fn().mockResolvedValue(undefined),
+            // A member's check, as the real method does for users.
+            hasRequiredRoleFor: jest.fn(function (
+              this: { hasRequiredRole: (...args: unknown[]) => unknown },
+              orgId: string,
+              actor: { userId: string },
+              role: unknown,
+            ) {
+              return this.hasRequiredRole(orgId, actor.userId, role);
+            }),
             getMembershipRole: jest.fn(),
           },
         },
@@ -701,7 +713,7 @@ describe("ProjectService", () => {
   describe("getMany", () => {
     it("should throw NotAuthorized when user lacks permission", async () => {
       jest
-        .spyOn(membershipsRepository, "hasRequiredRole")
+        .spyOn(membershipsRepository, "hasRequiredRoleFor")
         .mockRejectedValue(new NotAuthorized());
 
       await expect(
@@ -726,7 +738,7 @@ describe("ProjectService", () => {
       };
 
       jest
-        .spyOn(membershipsRepository, "hasRequiredRole")
+        .spyOn(membershipsRepository, "hasRequiredRoleFor")
         .mockResolvedValue(undefined);
       projectsRepository.getManyProjects.mockResolvedValue(
         mockPaginatedResponse,
@@ -742,9 +754,9 @@ describe("ProjectService", () => {
       );
 
       expect(result).toBe(mockPaginatedResponse);
-      expect(membershipsRepository.hasRequiredRole).toHaveBeenCalledWith(
+      expect(membershipsRepository.hasRequiredRoleFor).toHaveBeenCalledWith(
         mockOrgId,
-        "test-user-id",
+        mockAuthenticatedUser,
         MemberRole.USER,
       );
       expect(projectsRepository.getManyProjects).toHaveBeenCalledWith(

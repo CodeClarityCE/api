@@ -22,23 +22,3 @@ export interface AnalysisStartMessageCreate {
    */
   project_id: string;
 }
-
-/**
- * Represents a message sent by a dispatcher plugin to another entity.
- */
-export interface DispatcherPluginMessage {
-  /**
-   * Arbitrary data associated with this message (type determined at runtime).
-   */
-  Data: unknown;
-
-  /**
-   * The ID of the analysis related to this message.
-   */
-  AnalysisId: string;
-
-  /**
-   * The ID of the project related to this message.
-   */
-  ProjectId: string;
-}

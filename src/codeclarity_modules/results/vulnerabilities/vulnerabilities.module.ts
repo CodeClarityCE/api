@@ -6,7 +6,6 @@ import { KnowledgeModule } from "src/codeclarity_modules/knowledge/knowledge.mod
 import { VulnerabilityPolicyModule } from "src/codeclarity_modules/policies/vulnerability/vulnerability.module";
 import { Result } from "src/codeclarity_modules/results/result.entity";
 
-import { PatchingModule } from "../patching/patching.module";
 import { AnalysisResultsRepository } from "../results.repository";
 import { AnalysisResultsService } from "../results.service";
 import { SbomModule } from "../sbom/sbom.module";
@@ -23,7 +22,6 @@ import { VulnerabilityService } from "./vulnerability.service";
   imports: [
     OrganizationsModule,
     KnowledgeModule,
-    forwardRef(() => PatchingModule),
     forwardRef(() => SbomModule),
     forwardRef(() => VulnerabilityPolicyModule),
     TypeOrmModule.forFeature([Result], "codeclarity"),

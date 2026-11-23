@@ -1,3 +1,4 @@
+import multipart from "@fastify/multipart";
 import { ClassSerializerInterceptor, ValidationPipe } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { Reflector } from "@nestjs/core";
@@ -41,7 +42,7 @@ export interface TestUser {
   refreshToken: string;
 }
 
-export class IntegrationTestHelper {
+class IntegrationTestHelper {
   private app!: NestFastifyApplication;
   private dataSource!: DataSource;
   private usersRepository!: UsersRepository;
@@ -74,6 +75,10 @@ export class IntegrationTestHelper {
     this.app = moduleFixture.createNestApplication<NestFastifyApplication>(
       new FastifyAdapter(),
     );
+    // As main.ts does, so uploads parse the same way.
+    await this.app.register(multipart, {
+      limits: { fileSize: 25 * 1024 * 1024 },
+    });
 
     // Same global setup as main.ts, so responses match the real API.
     this.app.useGlobalPipes(

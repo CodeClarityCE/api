@@ -1,11 +1,5 @@
 /** The package managers commands are built for. */
-export const PACKAGE_MANAGERS = [
-  "npm",
-  "yarn",
-  "pnpm",
-  "bun",
-  "composer",
-] as const;
+const PACKAGE_MANAGERS = ["npm", "yarn", "pnpm", "bun", "composer"] as const;
 
 export type PackageManager = (typeof PACKAGE_MANAGERS)[number];
 

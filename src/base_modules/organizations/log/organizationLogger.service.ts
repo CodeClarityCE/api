@@ -20,7 +20,15 @@ import {
 } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
 
+import type { OrganizationTokenPrincipal } from "../tokens/organization-token.types";
+
 import { Log } from "./log.entity";
+
+/** How an audit log description names the actor. */
+export function actorLabel(actor: AuthenticatedUser): string {
+  const token = actor.organizationToken;
+  return token ? `The Organization token ${token.name}` : "The User";
+}
 
 /**
  * This service provides methods for working with organization audit logs
@@ -61,6 +69,41 @@ export class OrganizationLoggerService {
     const log_created = await this.logsRepository.saveLog(log);
 
     return log_created.id;
+  }
+
+  /** Adds an audit log entry naming whoever acted: a user or an Organization token. */
+  async addActorAuditLog(
+    action: ActionType,
+    description: string,
+    organizationId: string,
+    actor: AuthenticatedUser,
+  ): Promise<string> {
+    if (actor.organizationToken) {
+      return this.addTokenAuditLog(
+        action,
+        description,
+        actor.organizationToken,
+      );
+    }
+    return this.addAuditLog(action, description, organizationId, actor.userId);
+  }
+
+  /** Adds an audit log entry whose actor is an Organization token. */
+  async addTokenAuditLog(
+    action: ActionType,
+    description: string,
+    token: OrganizationTokenPrincipal,
+  ): Promise<string> {
+    const log = new Log();
+    log.action = action;
+    log.description = description;
+    log.blame_on_token_id = token.id;
+    log.blame_on_token_name = token.name;
+    log.created_on = new Date();
+    log.organization_id = token.organizationId;
+    log.action_class = getTypeClassOfAction(action);
+    log.action_severity = getSeverityOfAction(action);
+    return (await this.logsRepository.saveLog(log)).id;
   }
 
   /**

@@ -6,7 +6,9 @@ export interface AuditEntry {
   action_class: string;
   action_severity: number;
   description: string;
-  blame_on_email: string;
+  blame_on_email: string | null;
+  blame_on_token_id?: string | null;
+  blame_on_token_name?: string | null;
   created_on: string;
 }
 

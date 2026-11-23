@@ -8,9 +8,7 @@ import {
 import type { GithubIntegrationTokenService } from "./github/githubToken.service";
 import type { GitlabIntegrationTokenService } from "./gitlab/gitlabToken.service";
 
-export class UnkownTokenType extends Error {}
-
-export abstract class IntegrationToken {
+abstract class IntegrationToken {
   protected token: string;
   protected refreshToken?: string;
   protected expiresOn?: Date;

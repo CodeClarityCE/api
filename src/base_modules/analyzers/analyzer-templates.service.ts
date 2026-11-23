@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
+import { EntityNotFound } from "src/types/error.types";
+
 import { Stage } from "./analyzer.types";
 
 export interface AnalyzerTemplate {
@@ -38,7 +40,7 @@ export class AnalyzerTemplatesService {
       case "multilanguage":
         return this.getMultiLanguageTemplate();
       default:
-        throw new Error(`No template available for language: ${language}`);
+        throw new EntityNotFound();
     }
   }
 

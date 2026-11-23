@@ -43,12 +43,11 @@ export class Log {
   @Expose()
   description!: string;
 
-  @Column({
-    length: 100,
-  })
+  // Empty when an Organization token is the actor.
+  @Column("varchar", { length: 100, nullable: true })
   @ApiProperty()
   @Expose()
-  blame_on_email!: string;
+  blame_on_email?: string | null;
 
   @Column("timestamptz")
   @ApiProperty()
@@ -64,4 +63,15 @@ export class Log {
 
   @Column({ nullable: true })
   blame_on?: string;
+
+  // Set when an Organization token is the actor; the name is kept as it was then.
+  @Column("uuid", { nullable: true })
+  @ApiProperty({ required: false })
+  @Expose()
+  blame_on_token_id?: string | null;
+
+  @Column("varchar", { length: 100, nullable: true })
+  @ApiProperty({ required: false })
+  @Expose()
+  blame_on_token_name?: string | null;
 }

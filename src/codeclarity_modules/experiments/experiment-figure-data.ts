@@ -47,7 +47,7 @@ export interface FigureRows extends ExposuresInput {
 }
 
 /** One line of a Figure; a null value leaves a gap. */
-export interface FigureSeries {
+interface FigureSeries {
   key: string;
   label: string;
   values: (number | null)[];
@@ -59,7 +59,7 @@ export interface FigureSeries {
 }
 
 /** What a Figure's caption says about its sample, after its filters. */
-export interface FigureCaptionFacts {
+interface FigureCaptionFacts {
   n: string;
   exclusions: string[];
 }

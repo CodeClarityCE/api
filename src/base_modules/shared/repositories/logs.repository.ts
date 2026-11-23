@@ -82,8 +82,9 @@ export const AUDIT_LOG_SORT_FIELDS = [
 ] as const;
 
 /** Columns the audit log search key is matched against. */
-export const AUDIT_LOG_SEARCH_FIELDS = [
+const AUDIT_LOG_SEARCH_FIELDS = [
   "blame_on_email",
+  "blame_on_token_name",
   "description",
   "action",
   "action_class",

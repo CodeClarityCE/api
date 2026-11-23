@@ -8,10 +8,10 @@ import {
   staleAfterHours,
 } from "./staleness-thresholds";
 
-export type KnowledgeSourceHealth = "healthy" | "stale" | "failed";
-export type KnowledgeSourceOutcome = "success" | "failure";
+type KnowledgeSourceHealth = "healthy" | "stale" | "failed";
+type KnowledgeSourceOutcome = "success" | "failure";
 
-export interface KnowledgeSourceStatus {
+interface KnowledgeSourceStatus {
   source: KnowledgeSourceName;
   status: KnowledgeSourceHealth;
   watermark: string | null;

@@ -29,6 +29,20 @@ export interface MigrateOptions {
   open: (db: Database) => Promise<MigrationTarget>;
   // Role to SET before migrating, so new objects get the right owner.
   roles: Partial<Record<Database, string>>;
+  // Statements run after the migrations on every run, so a restored dump gets them too.
+  grants?: Partial<Record<Database, string[]>>;
+}
+
+// What the services' role writes beyond the init script's grants: the package follower
+// imports npm and PHP packages into the knowledge database.
+export function serviceGrants(
+  serviceRole: string,
+): Partial<Record<Database, string[]>> {
+  return {
+    knowledge: [
+      `GRANT SELECT, INSERT, UPDATE ON "package", "version" TO ${serviceRole}`,
+    ],
+  };
 }
 
 // The named databases in run order, or all of them when none is named.
@@ -54,7 +68,7 @@ function describe(error: unknown): string {
 
 export async function migrate(
   databases: Database[],
-  { open, roles }: MigrateOptions,
+  { open, roles, grants = {} }: MigrateOptions,
 ): Promise<void> {
   for (const db of databases) {
     const source = await open(db);
@@ -65,6 +79,10 @@ export async function migrate(
       const role = roles[db];
       if (role) await source.query(`SET ROLE ${role}`);
       await source.runMigrations();
+      // Granted as the admin, who may grant on tables whatever role owns them.
+      const dbGrants = grants[db] ?? [];
+      if (role && dbGrants.length > 0) await source.query("RESET ROLE");
+      for (const grant of dbGrants) await source.query(grant);
     } catch (error) {
       throw new Error(`Migrations failed for ${db}: ${describe(error)}`, {
         cause: error,
@@ -92,6 +110,10 @@ async function main(): Promise<void> {
         config: process.env["PG_CONFIG_ROLE"] ?? "cc_api",
       }
     : {};
+  // Only a production install has the per-service roles to grant to.
+  const grants = useAdmin
+    ? serviceGrants(process.env["PG_SERVICE_ROLE"] ?? "cc_service")
+    : {};
 
   // Imported late so the datasources read the admin credentials set above.
   const loaders: Record<Database, () => Promise<DataSource>> = {
@@ -113,7 +135,7 @@ async function main(): Promise<void> {
     return source;
   };
 
-  await migrate(databases, { open, roles });
+  await migrate(databases, { open, roles, grants });
   logger.log("Migrations applied", { databases, suffix });
 }
 

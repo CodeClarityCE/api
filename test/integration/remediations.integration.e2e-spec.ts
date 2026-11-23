@@ -288,7 +288,8 @@ describe("Remediations (e2e)", () => {
     expect(await remediationsOf(LODASH_CVE)).toEqual(expected);
   });
 
-  it("upgrades the top-level dependency whose upgrade removes a transitive package", async () => {
+  // Analyses from before js-patching was removed keep their patching result rows.
+  it("forces a fixed version when an old patching result upgrades a top-level dependency", async () => {
     const project = await seed.project("api");
     await seed.analysis({
       projectId: project,
@@ -315,13 +316,11 @@ describe("Remediations (e2e)", () => {
 
     expect(await remediationsOf(QS_CVE)).toEqual([
       expect.objectContaining({
-        kind: "upgrade_top_level",
-        package: "body-parser",
-        installed_versions: ["1.19.0"],
-        target_version: "1.20.2",
-        potentially_breaking: false,
+        kind: "force_version",
+        package: "qs",
+        installed_versions: ["6.5.1"],
+        target_version: "6.5.3",
         package_manager: "pnpm",
-        command: "pnpm add body-parser@^1.20.2",
         instances: [
           expect.objectContaining({
             package: "qs",
@@ -341,7 +340,7 @@ describe("Remediations (e2e)", () => {
       { file: "pnpm-workspace.yaml", text: 'overrides:\n  "qs": "6.5.3"\n' },
     ],
   ])(
-    "forces the fixed version of a transitive package no upgrade removes (%s)",
+    "forces the fixed version of a transitive package (%s)",
     async (packageManager, command, manifestEdit) => {
       const project = await seed.project("api");
       await seed.analysis({
@@ -355,17 +354,6 @@ describe("Remediations (e2e)", () => {
               "express@4.18.0": ["qs@6.5.1"],
             },
             findings: [finding(QS_CVE, "qs", "6.5.1")],
-          },
-        },
-        // It fixes one of the two dependencies that install qs.
-        patching: {
-          ".": {
-            patches: {
-              "body-parser@1.19.0": {
-                update: "1.20.2",
-                fixes: [{ id: QS_CVE, package: "qs@6.5.1" }],
-              },
-            },
           },
         },
       });
@@ -531,28 +519,15 @@ describe("Remediations (e2e)", () => {
       projectId: project,
       workspaces: {
         ".": {
-          topLevel: ["lodash@4.17.15", "body-parser@1.19.0", "left-pad@1.3.0"],
-          packages: { "body-parser@1.19.0": ["qs@6.5.1"] },
+          topLevel: ["lodash@4.17.15", "left-pad@1.3.0"],
           findings: [
             // Fixed by the knowledge ranges, though the matched source named no fix.
             finding(LODASH_CVE, "lodash", "4.17.15"),
-            // Removed by a top-level upgrade, with no fixed version anywhere.
-            finding("CVE-2099-3998", "qs", "6.5.1"),
             // The source names a fix that the knowledge ranges still cover.
             finding(NO_FIX_CVE, "left-pad", "1.3.0", {
               ranges: [{ source: "NVD", fixed: "2.0.0" }],
             }),
           ],
-        },
-      },
-      patching: {
-        ".": {
-          patches: {
-            "body-parser@1.19.0": {
-              update: "1.20.2",
-              fixes: [{ id: "CVE-2099-3998", package: "qs@6.5.1" }],
-            },
-          },
         },
       },
     });
@@ -569,7 +544,7 @@ describe("Remediations (e2e)", () => {
         .sort();
     };
 
-    expect(await ids("available")).toEqual([LODASH_CVE, "CVE-2099-3998"]);
+    expect(await ids("available")).toEqual([LODASH_CVE]);
     expect(await ids("none")).toEqual([NO_FIX_CVE]);
     const planned = await testHelper
       .getApp()
@@ -579,7 +554,7 @@ describe("Remediations (e2e)", () => {
       planned?.remediations
         .flatMap((r) => r.instances.map((i) => i.vulnerability_id))
         .sort(),
-    ).toEqual([LODASH_CVE, "CVE-2099-3998"]);
+    ).toEqual([LODASH_CVE]);
     expect(planned?.unremediated.map((i) => i.vulnerability_id)).toEqual([
       NO_FIX_CVE,
     ]);
