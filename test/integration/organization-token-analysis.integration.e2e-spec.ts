@@ -471,4 +471,122 @@ describe("Analysing an upload with an Organization token (e2e)", () => {
       createdById: null,
     });
   });
+  // A license-finder result: lodash under MIT in the root workspace.
+  async function addLicenses(analysisId: string): Promise<void> {
+    await testHelper
+      .getDataSource()
+      .query(
+        `INSERT INTO result (result, plugin, created_on, "analysisId") VALUES ($1, 'license-finder', now(), $2)`,
+        [
+          JSON.stringify({
+            workspaces: {
+              ".": {
+                LicensesDepMap: { MIT: ["lodash@4.17.20"] },
+                NonSpdxLicensesDepMap: {},
+                LicenseComplianceViolations: [],
+                DependencyInfo: { "lodash@4.17.20": ["MIT"] },
+              },
+            },
+            analysis_info: { status: "success" },
+          }),
+          analysisId,
+        ],
+      );
+  }
+
+  // The read routes the CLI and the MCP server use, relative to the organization.
+  function readRoutes(projectId: string, analysisId: string): string[] {
+    const analysis = `projects/${projectId}/analysis/${analysisId}`;
+    return [
+      `projects/${projectId}/analyses?page=0&entries_per_page=10`,
+      `${analysis}/vulnerabilities/stats?workspace=.`,
+      `${analysis}/vulnerabilities/malicious-packages?workspace=.`,
+      `${analysis}/vulnerabilities/vulnerability/TEST-0001?workspace=.&dependency=lodash&version=4.17.20`,
+      `${analysis}/sbom/stats?workspace=api`,
+      `${analysis}/sbom/dependency?workspace=api&dependency=lodash@4.17.20`,
+      `${analysis}/sbom/dependency/graph?workspace=api&dependency=lodash@4.17.20`,
+      `${analysis}/licenses?workspace=.`,
+      `remediations/fix-next?limit=10`,
+      `vulnerabilities?page=0&entries_per_page=20`,
+      `vulnerabilities/TEST-0001`,
+    ];
+  }
+
+  it("a read token reads each read route as a member does", async () => {
+    const projectId = (
+      await createUploadProject(await issueToken("analyze"))
+    ).json().id;
+    const analysisId = await finishedAnalysis(projectId);
+    await addSbom(analysisId);
+    await addLicenses(analysisId);
+    const read = await issueToken("read");
+
+    for (const route of readRoutes(projectId, analysisId)) {
+      const path = `/org/${admin.organization.id}/${route}`;
+      const asMember = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        path,
+        admin.accessToken,
+      );
+      const asToken = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        path,
+        read,
+      );
+      expect({ route, status: asToken.statusCode }).toEqual({
+        route,
+        status: asMember.statusCode,
+      });
+      expect({ route, status: asToken.statusCode < 500 }).toEqual({
+        route,
+        status: true,
+      });
+      expect({ route, body: asToken.json() }).toEqual({
+        route,
+        body: asMember.json(),
+      });
+    }
+  });
+
+  it("a read token lists a project's analyses", async () => {
+    const projectId = (
+      await createUploadProject(await issueToken("analyze"))
+    ).json().id;
+    const analysisId = await finishedAnalysis(projectId);
+
+    const response = await testHelper.makeAuthenticatedRequest(
+      "GET",
+      `/org/${admin.organization.id}/projects/${projectId}/analyses`,
+      await issueToken("read"),
+    );
+    expect(response.statusCode).toBe(200);
+    expect(response.json().data).toEqual([
+      expect.objectContaining({ id: analysisId, status: "completed" }),
+    ]);
+  });
+
+  it("a token cannot use the read routes of another organization", async () => {
+    const other = await testHelper.createTestUser({
+      email: "other-reads@token-analysis.com",
+      orgName: "Other Reads Org",
+      role: MemberRole.ADMIN,
+    });
+    const read = await issueToken("read");
+
+    for (const route of [
+      "remediations/fix-next",
+      "vulnerabilities",
+      "vulnerabilities/TEST-0001",
+    ]) {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        `/org/${other.organization.id}/${route}`,
+        read,
+      );
+      expect({ route, status: response.statusCode }).toEqual({
+        route,
+        status: 403,
+      });
+    }
+  });
 });

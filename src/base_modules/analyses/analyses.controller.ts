@@ -101,6 +101,7 @@ export class AnalysesController {
   @ApiOperation({ description: "Get the analyses of a project." })
   @APIDocTypedPaginatedResponseDecorator(Analysis)
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get("")
   async getMany(
     @AuthUser() user: AuthenticatedUser,

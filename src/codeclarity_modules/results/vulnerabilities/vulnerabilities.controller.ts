@@ -75,6 +75,7 @@ export class FindingsController {
     );
   }
 
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get(":analysis_id/vulnerabilities/stats")
   async getStats(
     @Param("org_id") org_id: string,
@@ -102,6 +103,7 @@ export class FindingsController {
     };
   }
 
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get(":analysis_id/vulnerabilities/malicious-packages")
   async getMaliciousPackageAdvisories(
     @Param("org_id") org_id: string,
@@ -139,6 +141,7 @@ export class FindingsController {
     };
   }
 
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get(":analysis_id/vulnerabilities/vulnerability/:vulnerability_id")
   async getVulnerability(
     @Param("org_id") org_id: string,
