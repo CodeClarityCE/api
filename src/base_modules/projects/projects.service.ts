@@ -65,12 +65,21 @@ function isOnInstance(url: string, instanceUrl: string): boolean {
   }
 }
 
+/** A string without leading and trailing slashes, in linear time */
+function trimSlashes(value: string): string {
+  let start = 0;
+  let end = value.length;
+  while (start < end && value[start] === "/") start++;
+  while (end > start && value[end - 1] === "/") end--;
+  return value.slice(start, end);
+}
+
 /** The project path of a url below the instance's base path */
 function projectPath(url: string, instanceUrl: string): string {
-  const base = new URL(instanceUrl).pathname.replace(/\/+$/, "");
-  let path = new URL(url).pathname;
-  if (base && path.startsWith(`${base}/`)) path = path.slice(base.length);
-  return path.replace(/^\/+|\/+$/g, "").replace(/\.git$/, "");
+  const base = trimSlashes(new URL(instanceUrl).pathname);
+  let path = trimSlashes(new URL(url).pathname);
+  if (base && path.startsWith(`${base}/`)) path = path.slice(base.length + 1);
+  return path.endsWith(".git") ? path.slice(0, -4) : path;
 }
 
 /** A GitHub repository already resolved through an integration */
