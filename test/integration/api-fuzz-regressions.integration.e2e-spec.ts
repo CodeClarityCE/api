@@ -185,6 +185,27 @@ describe("API fuzz regressions (e2e)", () => {
     });
   });
 
+  describe("ClickUp credentials that cannot be sent in a header", () => {
+    it.each(["api_key", "access_token", "refresh_token"])(
+      "POST /org/:org/tickets/integrations/clickup refuses such an %s",
+      async (field) => {
+        const response = await send(
+          "POST",
+          `/org/${owner.organization.id}/tickets/integrations/clickup`,
+          {
+            auth_method: "API_KEY",
+            api_key: "pk_test",
+            list_id: "1",
+            [field]: "\u7718x",
+          },
+        );
+
+        expect(response.statusCode).toBe(400);
+        expect(response.body.error_code).toBe("ValidationFailed");
+      },
+    );
+  });
+
   describe("GET /org/:org/file/:project/:file_name", () => {
     it("is not found for a file that does not exist", async () => {
       const projectId = await createProject(owner, "fuzz-project");

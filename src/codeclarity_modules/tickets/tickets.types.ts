@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
 } from "class-validator";
 
@@ -23,6 +24,10 @@ import { ExternalTicketProvider } from "./ticket-external-link.entity";
 // ============================================
 // Request DTOs
 // ============================================
+
+// A credential sent in an HTTP header: printable ASCII without spaces.
+const HEADER_TOKEN = /^[\x21-\x7e]+$/;
+const HEADER_TOKEN_MESSAGE = "$property must be printable ASCII";
 
 export class CreateTicketBody {
   @ApiProperty({ description: "Ticket title", maxLength: 200 })
@@ -433,16 +438,19 @@ export class ConfigureClickUpBody {
   @ApiPropertyOptional({ description: "ClickUp API key (for API_KEY auth)" })
   @IsOptional()
   @IsString()
+  @Matches(HEADER_TOKEN, { message: HEADER_TOKEN_MESSAGE })
   api_key?: string;
 
   @ApiPropertyOptional({ description: "OAuth access token (for OAUTH auth)" })
   @IsOptional()
   @IsString()
+  @Matches(HEADER_TOKEN, { message: HEADER_TOKEN_MESSAGE })
   access_token?: string;
 
   @ApiPropertyOptional({ description: "OAuth refresh token (for OAUTH auth)" })
   @IsOptional()
   @IsString()
+  @Matches(HEADER_TOKEN, { message: HEADER_TOKEN_MESSAGE })
   refresh_token?: string;
 
   @ApiPropertyOptional({ description: "ClickUp Workspace/Team ID" })
