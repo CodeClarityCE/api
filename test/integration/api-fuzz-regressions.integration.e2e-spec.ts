@@ -347,6 +347,32 @@ describe("API fuzz regressions (e2e)", () => {
     });
   });
 
+  it("the OpenAPI description defines every path parameter of every route", () => {
+    const document = SwaggerModule.createDocument(
+      testHelper.getApp(),
+      new DocumentBuilder().build(),
+    );
+    const undefinedParameters = Object.entries(document.paths).flatMap(
+      ([route, operations]) =>
+        Object.entries(operations as Record<string, unknown>).flatMap(
+          ([method, operation]) => {
+            const parameters =
+              (operation as { parameters?: { name: string; in: string }[] })
+                .parameters ?? [];
+            const defined = new Set(
+              parameters.filter((p) => p.in === "path").map((p) => p.name),
+            );
+            return [...route.matchAll(/\{(\w+)\}/g)]
+              .map((match) => match[1]!)
+              .filter((name) => !defined.has(name))
+              .map((name) => `${method.toUpperCase()} ${route} ${name}`);
+          },
+        ),
+    );
+
+    expect(undefinedParameters).toEqual([]);
+  });
+
   describe("User responses match the OpenAPI description", () => {
     interface PropertySchema {
       nullable?: boolean;

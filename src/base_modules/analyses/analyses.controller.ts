@@ -10,7 +10,12 @@ import {
   Put,
   Query,
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from "@nestjs/swagger";
 
 import { Analysis } from "src/base_modules/analyses/analysis.entity";
 import {
@@ -342,6 +347,8 @@ export class AnalysesController {
     summary:
       "Duplicate scheduled analysis for new execution - preserves historical results",
   })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "project_id", description: "Project ID" })
   @APIDocCreatedResponseDecorator()
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
   @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
