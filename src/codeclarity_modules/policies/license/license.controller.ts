@@ -16,7 +16,10 @@ import {
   LicensePolicyCreateBody,
   LicensePolicyPatchBody,
 } from "src/codeclarity_modules/policies/license/licensePolicy.types";
-import { PolicyFrontend } from "src/codeclarity_modules/policies/policy.entity";
+import {
+  PolicyFrontend,
+  toPolicyFrontend,
+} from "src/codeclarity_modules/policies/policy.entity";
 import { AuthUser } from "src/decorators/UserDecorator";
 import {
   CreatedResponse,
@@ -50,18 +53,7 @@ export class LicensePolicyController {
   ): Promise<TypedResponse<PolicyFrontend>> {
     const policy = await this.licensePolicyService.get(org_id, policy_id, user);
     // A plain object: the serializer drops every field of the bare entity
-    return {
-      data: {
-        id: policy.id,
-        name: policy.name,
-        description: policy.description,
-        default: policy.default,
-        content: policy.content,
-        created_on: policy.created_on,
-        created_by: policy.created_by?.email || "",
-        policy_type: policy.policy_type,
-      },
-    };
+    return { data: toPolicyFrontend(policy) };
   }
 
   @Get("")
