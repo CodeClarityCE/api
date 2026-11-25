@@ -1,9 +1,9 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 
+import { AnalysesRepository } from "src/base_modules/analyses/analyses.repository";
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
 import { MemberRole } from "src/base_modules/organizations/memberships/orgMembership.types";
 import {
-  AnalysesRepository,
   MembershipsRepository,
   ProjectsRepository,
 } from "src/base_modules/shared/repositories";
