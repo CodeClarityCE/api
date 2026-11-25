@@ -78,10 +78,12 @@ describe("API fuzz regressions (e2e)", () => {
     expect(response.body.error_code).toBe("EntityNotFound");
   });
 
-  it("GET /knowledge/vulnerabilities/search with an empty query is refused as a bad request", async () => {
-    const response = await get(
-      "/knowledge/vulnerabilities/search?query=&page=0&limit=0",
-    );
+  it.each([
+    "/knowledge/vulnerabilities/search?query=&page=0&limit=0",
+    "/knowledge/vulnerabilities/search?page=0&limit=0&source=NVD",
+    "/knowledge/vulnerabilities/search?query=a&query=b",
+  ])("GET %s without one query is refused as a bad request", async (path) => {
+    const response = await get(path);
 
     expect(response.statusCode).toBe(400);
     expect(response.body.error_code).toBe("BadRequest");
