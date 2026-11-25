@@ -379,6 +379,37 @@ describe("ProjectService", () => {
         expect(projectsRepository.saveProject).not.toHaveBeenCalled();
       });
 
+      it.each([
+        ["another port", "https://gitlab.com:8443/a/b"],
+        ["plain http", "http://gitlab.com/a/b"],
+        ["an unparseable url", "not a url"],
+      ])("refuses a url on %s of the integration's host", async (_l, url) => {
+        const body = arrangeGitlabFallback(
+          "https://gitlab.com/a/b",
+          ["172.65.251.78"],
+          "https://gitlab.com",
+        );
+        body.url = url;
+
+        await expect(
+          service.import(mockOrgId, body, mockAuthenticatedUser),
+        ).rejects.toThrow(ImportTargetNotAllowed);
+        expect(mockTransport).not.toHaveBeenCalled();
+      });
+
+      it("names the project below a GitLab served on a subpath", async () => {
+        const body = arrangeGitlabFallback(
+          "https://example.org/gitlab/team/app.git",
+          ["203.0.113.20"],
+          "https://example.org/gitlab",
+        );
+
+        await service.import(mockOrgId, body, mockAuthenticatedUser);
+
+        const saved = projectsRepository.saveProject.mock.calls[0]![0];
+        expect(saved.name).toBe("team/app");
+      });
+
       it("refuses a host that resolves to a loopback address", async () => {
         const body = arrangeGitlabFallback("https://evil.example/a/b", [
           "127.0.0.1",

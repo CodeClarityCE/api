@@ -1,5 +1,5 @@
 import { lookup } from "dns/promises";
-import { type IncomingMessage,request as httpRequest } from "http";
+import { type IncomingMessage, request as httpRequest } from "http";
 import { request as httpsRequest } from "https";
 import { BlockList, isIP, type LookupFunction } from "net";
 
@@ -48,7 +48,7 @@ function bareHost(hostname: string): string {
 }
 
 /** Host name of a url or bare host entry */
-export function hostOf(entry: string): string | undefined {
+function hostOf(entry: string): string | undefined {
   try {
     const url = new URL(entry.includes("://") ? entry : `https://${entry}`);
     return bareHost(url.hostname);
@@ -168,11 +168,11 @@ interface PinnedRequestInit extends OutboundPolicy {
   timeoutMs?: number;
   /** Largest response body read (default 20 MB) */
   maxBodyBytes?: number;
-  /** Extra trusted CA certificates (PEM) */
+  /** CA certificates (PEM) to trust instead of the default roots */
   ca?: string;
 }
 
-const NULL_BODY_STATUSES = new Set([101, 204, 205, 304]);
+const NULL_BODY_STATUSES = new Set([204, 205, 304]);
 
 function toHeaders(raw: IncomingMessage["headers"]): Headers {
   const headers = new Headers();
@@ -186,9 +186,8 @@ function toHeaders(raw: IncomingMessage["headers"]): Headers {
 }
 
 /**
- * Fetch a url, connecting only to the addresses `resolveOutboundUrl` vetted,
- * so a second DNS answer cannot send the request elsewhere (DNS rebinding).
- * TLS verifies the original hostname. Redirects are never followed.
+ * Fetch a url, connecting only to the addresses `resolveOutboundUrl` vetted.
+ * TLS checks the original hostname and redirects are never followed.
  * @throws {ImportTargetNotAllowed}
  */
 export async function pinnedFetch(
@@ -222,28 +221,33 @@ export async function pinnedFetch(
         res.on("data", (chunk: Buffer) => {
           size += chunk.length;
           if (size > maxBodyBytes) {
-            req.destroy(new Error("Response body too large"));
+            reject(new Error("Response body too large"));
+            req.destroy();
             return;
           }
           chunks.push(chunk);
         });
         res.on("error", reject);
         res.on("end", () => {
-          const status = res.statusCode ?? 0;
-          if (status < 200 || status > 599) {
-            reject(new Error(`Unexpected status ${status}`));
-            return;
+          if (size > maxBodyBytes) return;
+          try {
+            const status = res.statusCode ?? 0;
+            if (status < 200 || status > 599) {
+              throw new Error(`Unexpected status ${status}`);
+            }
+            const body = NULL_BODY_STATUSES.has(status)
+              ? null
+              : Buffer.concat(chunks);
+            resolve(
+              new Response(body, {
+                status,
+                statusText: res.statusMessage ?? "",
+                headers: toHeaders(res.headers),
+              }),
+            );
+          } catch (err) {
+            reject(err instanceof Error ? err : new Error(String(err)));
           }
-          const body = NULL_BODY_STATUSES.has(status)
-            ? null
-            : Buffer.concat(chunks);
-          resolve(
-            new Response(body, {
-              status,
-              statusText: res.statusMessage ?? "",
-              headers: toHeaders(res.headers),
-            }),
-          );
         });
       },
     );

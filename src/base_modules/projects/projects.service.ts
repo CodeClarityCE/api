@@ -33,11 +33,7 @@ import {
   TypedPaginatedData,
 } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
-import {
-  gitlabAllowedPrivateHosts,
-  hostOf,
-  pinnedFetch,
-} from "src/utils/outbound-url";
+import { gitlabAllowedPrivateHosts, pinnedFetch } from "src/utils/outbound-url";
 import { validateAndJoinPath } from "src/utils/path-validator";
 
 import { AnalysesRepository } from "../analyses/analyses.repository";
@@ -54,6 +50,28 @@ import {
 } from "../shared/repositories";
 
 import { ProjectRowsService } from "./project-rows.service";
+
+/** Whether a url has the instance's scheme, host and port */
+function isOnInstance(url: string, instanceUrl: string): boolean {
+  try {
+    const target = new URL(url);
+    const instance = new URL(instanceUrl);
+    return (
+      (target.protocol === "https:" || target.protocol === "http:") &&
+      target.origin === instance.origin
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** The project path of a url below the instance's base path */
+function projectPath(url: string, instanceUrl: string): string {
+  const base = new URL(instanceUrl).pathname.replace(/\/+$/, "");
+  let path = new URL(url).pathname;
+  if (base && path.startsWith(`${base}/`)) path = path.slice(base.length);
+  return path.replace(/^\/+|\/+$/g, "").replace(/\.git$/, "");
+}
 
 /** A GitHub repository already resolved through an integration */
 export interface ResolvedGithubRepo {
@@ -134,9 +152,7 @@ export class ProjectService {
 
     const repo = new RepositoryCache();
     repo.url = url;
-    repo.fully_qualified_name = new URL(url).pathname
-      .replace(/^\/+|\/+$/g, "")
-      .replace(/\.git$/, "");
+    repo.fully_qualified_name = projectPath(url, serviceDomain);
     repo.description = "Imported manually";
     repo.default_branch = "main";
     repo.service_domain = serviceDomain;
@@ -209,11 +225,7 @@ export class ProjectService {
         integration.integration_provider === IntegrationProviderEntity.GITLAB
       ) {
         // The integration's token goes to this url, so it must be its host
-        if (
-          !projectData.url ||
-          hostOf(projectData.url) !== hostOf(integration.service_domain) ||
-          !/^https?:\/\//i.test(projectData.url)
-        ) {
+        if (!isOnInstance(projectData.url, integration.service_domain)) {
           throw new ImportTargetNotAllowed();
         }
         await this.gitlabRepositoriesService.syncGitlabRepos(
