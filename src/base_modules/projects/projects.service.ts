@@ -23,6 +23,7 @@ import { RepositoryCache } from "src/base_modules/projects/repositoryCache.entit
 import { AnalysisResultsRepository } from "src/codeclarity_modules/results/results.repository";
 import {
   EntityNotFound,
+  ImportTargetNotAllowed,
   IntegrationNotSupported,
   NotAuthorized,
 } from "src/types/error.types";
@@ -32,7 +33,11 @@ import {
   TypedPaginatedData,
 } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
-import { assertPublicUrl } from "src/utils/outbound-url";
+import {
+  gitlabAllowedPrivateHosts,
+  hostOf,
+  pinnedFetch,
+} from "src/utils/outbound-url";
 import { validateAndJoinPath } from "src/utils/path-validator";
 
 import { AnalysesRepository } from "../analyses/analyses.repository";
@@ -102,10 +107,10 @@ export class ProjectService {
   }
 
   /**
-   * Check if a repository URL is publicly accessible and create a fallback RepositoryCache
-   * @param url The repository URL
-   * @param serviceDomain The domain (e.g., 'github.com', 'gitlab.com')
-   * @param integrationHost The integration's own host, allowed on a private address
+   * Check that a repository url outside the cache is public, and build a
+   * fallback RepositoryCache for it
+   * @param url The repository URL, already on the integration's host
+   * @param serviceDomain The integration's instance url (e.g. https://gitlab.com)
    * @returns RepositoryCache for the public repository
    * @throws {ImportTargetNotAllowed} If the url points at an internal address
    * @throws The original error if the repository is not public
@@ -113,12 +118,12 @@ export class ProjectService {
   private async checkPublicRepositoryAccess(
     url: string,
     serviceDomain: string,
-    integrationHost: string,
     originalError: Error,
   ): Promise<RepositoryCache> {
-    const target = await assertPublicUrl(url, [integrationHost]);
     // A redirect could lead to an internal address, so it counts as not public
-    const response = await fetch(target, { redirect: "manual" });
+    const response = await pinnedFetch(url, {
+      allowedPrivateHosts: gitlabAllowedPrivateHosts(),
+    });
     if (!response.ok) {
       throw originalError;
     }
@@ -129,7 +134,9 @@ export class ProjectService {
 
     const repo = new RepositoryCache();
     repo.url = url;
-    repo.fully_qualified_name = url.replace(`https://${serviceDomain}/`, "");
+    repo.fully_qualified_name = new URL(url).pathname
+      .replace(/^\/+|\/+$/g, "")
+      .replace(/\.git$/, "");
     repo.description = "Imported manually";
     repo.default_branch = "main";
     repo.service_domain = serviceDomain;
@@ -201,6 +208,14 @@ export class ProjectService {
       } else if (
         integration.integration_provider === IntegrationProviderEntity.GITLAB
       ) {
+        // The integration's token goes to this url, so it must be its host
+        if (
+          !projectData.url ||
+          hostOf(projectData.url) !== hostOf(integration.service_domain) ||
+          !/^https?:\/\//i.test(projectData.url)
+        ) {
+          throw new ImportTargetNotAllowed();
+        }
         await this.gitlabRepositoriesService.syncGitlabRepos(
           projectData.integration_id,
         );
@@ -215,7 +230,6 @@ export class ProjectService {
           if (!(err instanceof EntityNotFound)) throw err;
           repo = await this.checkPublicRepositoryAccess(
             projectData.url,
-            "gitlab.com",
             integration.service_domain,
             err,
           );

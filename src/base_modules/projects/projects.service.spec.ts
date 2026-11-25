@@ -46,6 +46,19 @@ jest.mock("fs/promises", () => ({
 jest.mock("dns/promises", () => ({ lookup: jest.fn() }));
 const mockedLookup = lookup as unknown as jest.Mock;
 
+// The pinned fetch keeps its real address checks; only the socket is faked.
+const mockTransport = jest.fn<Promise<Response>, [URL]>();
+jest.mock("src/utils/outbound-url", () => {
+  const actual = jest.requireActual("src/utils/outbound-url");
+  return {
+    ...actual,
+    pinnedFetch: async (url: string, init: object) => {
+      const vetted = await actual.resolveOutboundUrl(url, init);
+      return mockTransport(vetted.url);
+    },
+  };
+});
+
 describe("ProjectService", () => {
   let service: ProjectService;
   let membershipsRepository: MembershipsRepository;
@@ -280,12 +293,12 @@ describe("ProjectService", () => {
     });
 
     describe("of a GitLab url outside the repository cache", () => {
-      let fetchSpy: jest.SpyInstance;
+      const savedAllowlist = process.env["GITLAB_ALLOWED_PRIVATE_HOSTS"];
 
       function arrangeGitlabFallback(
         url: string,
         resolvesTo: string[],
-        serviceDomain = "https://gitlab.com",
+        serviceDomain = new URL(url).origin,
       ): ProjectImportBody {
         const body = { ...arrangeGithubImport(), url };
         integrationsRepository.getIntegrationByIdAndOrganizationAndUser.mockResolvedValue(
@@ -304,15 +317,18 @@ describe("ProjectService", () => {
             family: address.includes(":") ? 6 : 4,
           })),
         );
-        fetchSpy = jest
-          .spyOn(global, "fetch")
-          .mockResolvedValue(new Response("<html>octo/legacy</html>"));
+        mockTransport.mockResolvedValue(
+          new Response("<html>octo/legacy</html>"),
+        );
         return body;
       }
 
       afterEach(() => {
-        fetchSpy.mockRestore();
+        mockTransport.mockReset();
         mockedLookup.mockReset();
+        if (savedAllowlist === undefined)
+          delete process.env["GITLAB_ALLOWED_PRIVATE_HOSTS"];
+        else process.env["GITLAB_ALLOWED_PRIVATE_HOSTS"] = savedAllowlist;
       });
 
       it("keeps the typed url of a public gitlab.com repository", async () => {
@@ -325,6 +341,42 @@ describe("ProjectService", () => {
 
         const saved = projectsRepository.saveProject.mock.calls[0]![0];
         expect(saved.url).toBe("https://gitlab.com/octo/legacy");
+        expect(saved.name).toBe("octo/legacy");
+      });
+
+      it("stores the integration's service domain", async () => {
+        const body = arrangeGitlabFallback(
+          "https://gitlab.example.org/team/app",
+          ["203.0.113.20"],
+          "https://gitlab.example.org/",
+        );
+
+        await service.import(mockOrgId, body, mockAuthenticatedUser);
+
+        const saved = projectsRepository.saveProject.mock.calls[0]![0];
+        expect(saved.service_domain).toBe("https://gitlab.example.org/");
+        expect(saved.name).toBe("team/app");
+      });
+
+      it("refuses a url on another host than the integration's, before any request", async () => {
+        const body = arrangeGitlabFallback(
+          "https://elsewhere.example/a/b",
+          ["203.0.113.20"],
+          "https://gitlab.com",
+        );
+
+        await expect(
+          service.import(mockOrgId, body, mockAuthenticatedUser),
+        ).rejects.toThrow(ImportTargetNotAllowed);
+        expect(mockTransport).not.toHaveBeenCalled();
+        expect(mockedLookup).not.toHaveBeenCalled();
+        expect(
+          gitlabRepositoriesService.syncGitlabRepos,
+        ).not.toHaveBeenCalled();
+        expect(
+          gitlabRepositoriesService.getGitlabRepository,
+        ).not.toHaveBeenCalled();
+        expect(projectsRepository.saveProject).not.toHaveBeenCalled();
       });
 
       it("refuses a host that resolves to a loopback address", async () => {
@@ -335,7 +387,7 @@ describe("ProjectService", () => {
         await expect(
           service.import(mockOrgId, body, mockAuthenticatedUser),
         ).rejects.toThrow(ImportTargetNotAllowed);
-        expect(fetchSpy).not.toHaveBeenCalled();
+        expect(mockTransport).not.toHaveBeenCalled();
         expect(projectsRepository.saveProject).not.toHaveBeenCalled();
       });
 
@@ -369,16 +421,20 @@ describe("ProjectService", () => {
         await expect(
           service.import(mockOrgId, body, mockAuthenticatedUser),
         ).rejects.toThrow(ImportTargetNotAllowed);
-        expect(fetchSpy).not.toHaveBeenCalled();
+        expect(mockTransport).not.toHaveBeenCalled();
       });
 
       it("refuses a url that is not http(s)", async () => {
-        const body = arrangeGitlabFallback("file:///etc/passwd", []);
+        const body = arrangeGitlabFallback(
+          "file:///etc/passwd",
+          [],
+          "https://gitlab.com",
+        );
 
         await expect(
           service.import(mockOrgId, body, mockAuthenticatedUser),
         ).rejects.toThrow(ImportTargetNotAllowed);
-        expect(fetchSpy).not.toHaveBeenCalled();
+        expect(mockTransport).not.toHaveBeenCalled();
       });
 
       it("refuses a host that does not resolve", async () => {
@@ -388,10 +444,11 @@ describe("ProjectService", () => {
         await expect(
           service.import(mockOrgId, body, mockAuthenticatedUser),
         ).rejects.toThrow(ImportTargetNotAllowed);
-        expect(fetchSpy).not.toHaveBeenCalled();
+        expect(mockTransport).not.toHaveBeenCalled();
       });
 
-      it("allows the integration's self-hosted GitLab on a private address", async () => {
+      it("allows a self-hosted GitLab on a private address when the operator allows its host", async () => {
+        process.env["GITLAB_ALLOWED_PRIVATE_HOSTS"] = "gitlab.internal.lan";
         const body = arrangeGitlabFallback(
           "https://gitlab.internal.lan/team/app",
           ["10.0.0.7"],
@@ -400,28 +457,30 @@ describe("ProjectService", () => {
 
         await service.import(mockOrgId, body, mockAuthenticatedUser);
 
-        expect(fetchSpy).toHaveBeenCalledTimes(1);
+        expect(mockTransport).toHaveBeenCalledTimes(1);
         const saved = projectsRepository.saveProject.mock.calls[0]![0];
         expect(saved.url).toBe("https://gitlab.internal.lan/team/app");
       });
 
-      it("still refuses other private hosts when a self-hosted GitLab is configured", async () => {
+      it("refuses a self-hosted GitLab on a private address the operator did not allow", async () => {
+        delete process.env["GITLAB_ALLOWED_PRIVATE_HOSTS"];
         const body = arrangeGitlabFallback(
-          "https://other.internal.lan/team/app",
-          ["10.0.0.8"],
-          "https://gitlab.internal.lan",
+          "https://gitlab.internal.lan/team/app",
+          ["10.0.0.7"],
+          "https://gitlab.internal.lan/",
         );
 
         await expect(
           service.import(mockOrgId, body, mockAuthenticatedUser),
         ).rejects.toThrow(ImportTargetNotAllowed);
+        expect(mockTransport).not.toHaveBeenCalled();
       });
 
       it("does not follow redirects of the public check", async () => {
         const body = arrangeGitlabFallback("https://gitlab.com/octo/legacy", [
           "172.65.251.78",
         ]);
-        fetchSpy.mockResolvedValue(
+        mockTransport.mockResolvedValue(
           new Response(null, {
             status: 302,
             headers: { location: "http://169.254.169.254/" },
@@ -431,9 +490,7 @@ describe("ProjectService", () => {
         await expect(
           service.import(mockOrgId, body, mockAuthenticatedUser),
         ).rejects.toThrow(EntityNotFound);
-        expect(fetchSpy.mock.calls[0]![1]).toMatchObject({
-          redirect: "manual",
-        });
+        expect(mockTransport).toHaveBeenCalledTimes(1);
       });
     });
 
