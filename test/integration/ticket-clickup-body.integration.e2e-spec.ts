@@ -19,8 +19,9 @@ const QS_FIX =
   "https://github.com/ljharb/qs/commit/8b4cc14cda94a5c89341b77e5fe435ec6c41be2d";
 
 // True when the request goes to the ClickUp API host.
-const isClickUp = (url: string): boolean =>
-  new URL(url).origin === "https://api.clickup.com";
+const isClickUp = (input: Parameters<typeof fetch>[0]): boolean =>
+  new URL(input instanceof Request ? input.url : input.toString()).origin ===
+  "https://api.clickup.com";
 
 // Every event key is stored, unused ones as "", like the knowledge mirror does.
 const events = (...list: Record<string, string>[]) =>
@@ -124,7 +125,7 @@ describe("ClickUp task body (e2e)", () => {
       .spyOn(global, "fetch")
       .mockImplementation(async (input, init) => {
         const url = input instanceof Request ? input.url : input.toString();
-        if (!isClickUp(url)) {
+        if (!isClickUp(input)) {
           return realFetch(input, init);
         }
         return clickUpReply(url, init);
@@ -160,7 +161,7 @@ describe("ClickUp task body (e2e)", () => {
     fetchSpy.mock.calls
       .filter(
         ([input, init]) =>
-          isClickUp(String(input)) &&
+          isClickUp(input) &&
           (init as RequestInit | undefined)?.method === "POST",
       )
       .map(
