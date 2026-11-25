@@ -296,6 +296,57 @@ describe("API fuzz regressions (e2e)", () => {
     });
   });
 
+  describe("list responses match the OpenAPI description", () => {
+    interface Schema {
+      $ref?: string;
+      type?: string;
+      allOf?: Schema[];
+      properties?: Record<string, Schema>;
+    }
+
+    // The JSON types the 200 response schema of a GET route allows for data.
+    function documentedDataTypes(route: string): string[] {
+      const document = SwaggerModule.createDocument(
+        testHelper.getApp(),
+        new DocumentBuilder().build(),
+      );
+      const resolve = (schema: Schema): Schema =>
+        schema.$ref
+          ? (document.components?.schemas?.[
+              schema.$ref.replace("#/components/schemas/", "")
+            ] as Schema)
+          : schema;
+      const response = document.paths[route]?.get?.responses["200"] as {
+        content: Record<string, { schema: Schema }>;
+      };
+      const schema = response.content["application/json"]!.schema;
+      return (schema.allOf ?? [schema])
+        .map((part) => resolve(part).properties?.["data"])
+        .filter((data): data is Schema => data !== undefined)
+        .map((data) => resolve(data).type ?? "any");
+    }
+
+    it.each([
+      ["/org/{org_id}/remediations/fix-next", "/remediations/fix-next"],
+      ["/org/{org_id}/tickets/my-work", "/tickets/my-work"],
+      ["/org/{org_id}/tokens", "/tokens"],
+    ])("GET %s documents data as the array it returns", async (route, path) => {
+      const response = await get(`/org/${owner.organization.id}${path}`);
+
+      expect(response.statusCode).toBe(200);
+      expect(response.body).toMatchObject({ data: [] });
+      expect(documentedDataTypes(route)).toEqual(["array"]);
+    });
+
+    it("GET /org/{org_id}/projects/{project_id}/analyses/scheduled documents data as an array", () => {
+      expect(
+        documentedDataTypes(
+          "/org/{org_id}/projects/{project_id}/analyses/scheduled",
+        ),
+      ).toEqual(["array"]);
+    });
+  });
+
   describe("User responses match the OpenAPI description", () => {
     interface PropertySchema {
       nullable?: boolean;

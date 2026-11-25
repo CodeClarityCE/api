@@ -3,7 +3,7 @@ import { ApiTags } from "@nestjs/swagger";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
-import { APIDocTypedResponseDecorator } from "src/decorators/TypedResponse";
+import { APIDocTypedManyResponseDecorator } from "src/decorators/TypedManyResponse";
 import { AuthUser } from "src/decorators/UserDecorator";
 import { TypedResponse } from "src/types/apiResponses.types";
 import {
@@ -23,7 +23,7 @@ export class MyWorkController {
   @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
   @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
-  @APIDocTypedResponseDecorator(MyWorkEntry)
+  @APIDocTypedManyResponseDecorator(MyWorkEntry)
   @Get()
   async myWork(
     @AuthUser() user: AuthenticatedUser,

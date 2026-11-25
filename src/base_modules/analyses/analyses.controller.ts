@@ -26,6 +26,7 @@ import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocCreatedResponseDecorator } from "src/decorators/CrudResponse";
 import { APIDocNoDataResponseDecorator } from "src/decorators/NoDataResponse";
 import { AllowOrganizationToken } from "src/decorators/OrganizationTokenDecorator";
+import { APIDocTypedManyResponseDecorator } from "src/decorators/TypedManyResponse";
 import { APIDocTypedPaginatedResponseDecorator } from "src/decorators/TypedPaginatedResponse";
 import { APIDocTypedResponseDecorator } from "src/decorators/TypedResponse";
 import { AuthUser } from "src/decorators/UserDecorator";
@@ -243,7 +244,7 @@ export class AnalysesController {
     description: "Get all scheduled analyses for a project",
     summary: "Retrieve active recurring analyses (daily/weekly) for a project",
   })
-  @APIDocTypedResponseDecorator(Analysis)
+  @APIDocTypedManyResponseDecorator(Analysis)
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
   @Get("scheduled")
   async getScheduled(
