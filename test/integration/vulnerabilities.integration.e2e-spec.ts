@@ -394,7 +394,7 @@ describe("Vulnerabilities list (e2e)", () => {
         "TEST-0007",
         "TEST-0008",
       ]);
-      expect(filter_count.hide_uncorroborated).toBe(2);
+      expect(filter_count["hide_uncorroborated"]).toBe(2);
     });
   });
 
