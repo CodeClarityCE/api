@@ -1,5 +1,6 @@
 import { type ArgumentsHost, HttpException } from "@nestjs/common";
 import type { ValidationError } from "class-validator";
+import { QueryFailedError } from "typeorm";
 
 import { Status } from "src/types/apiResponses.types";
 import {
@@ -277,6 +278,34 @@ describe("ExceptionFilter", () => {
               "We encountered a problem while processing your request.",
           }),
         );
+      });
+    });
+
+    describe("Postgres errors from a malformed client value", () => {
+      it.each([
+        ["22P02", "a non-UUID id"],
+        ["22003", "an out-of-range number"],
+        ["22021", "a NUL character"],
+      ])("answers %s (%s) as a bad request", (code) => {
+        const error = new QueryFailedError("SELECT 1", [], { code } as never);
+
+        filter.catch(error, mockArgumentsHost);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(JSON.parse(mockResponse.send.mock.calls[0][0])).toMatchObject({
+          status_code: 400,
+          error_code: "BadRequest",
+        });
+      });
+
+      it("answers any other Postgres error as an internal error", () => {
+        const error = new QueryFailedError("SELECT 1", [], {
+          code: "23505",
+        } as never);
+
+        filter.catch(error, mockArgumentsHost);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(500);
       });
     });
 

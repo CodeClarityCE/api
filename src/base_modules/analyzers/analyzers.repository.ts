@@ -3,7 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 
 import { Analyzer } from "src/base_modules/analyzers/analyzer.entity";
-import { NotAuthorized } from "src/types/error.types";
+import { EntityNotFound, NotAuthorized } from "src/types/error.types";
 import { TypedPaginatedData } from "src/types/pagination.types";
 
 import type { LanguageConfig } from "./analyzer-languages";
@@ -130,7 +130,7 @@ export class AnalyzersRepository {
   ): Promise<Analyzer> {
     const analyzer = await this.findByNameAndOrganization(name, orgId);
     if (!analyzer) {
-      throw new Error("Analyzer not found");
+      throw new EntityNotFound();
     }
     return analyzer;
   }

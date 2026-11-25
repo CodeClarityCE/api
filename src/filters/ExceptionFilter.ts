@@ -10,8 +10,8 @@ import { QueryFailedError } from "typeorm";
 import { Status } from "src/types/apiResponses.types";
 import { PrivateAPIError, PublicAPIError } from "src/types/error.types";
 
-// Postgres errors caused by a malformed client value, such as a non-UUID id or an out-of-range page.
-const BAD_INPUT_SQLSTATES = new Set(["22P02", "22003"]);
+// Postgres errors caused by a malformed client value: a non-UUID id, an out-of-range page, a NUL character.
+const BAD_INPUT_SQLSTATES = new Set(["22P02", "22003", "22021"]);
 
 // Error codes for HttpException statuses that have a clear meaning to clients.
 const HTTP_EXCEPTION_CODES: Partial<Record<number, string>> = {

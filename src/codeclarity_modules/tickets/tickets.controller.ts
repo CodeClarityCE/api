@@ -61,7 +61,9 @@ import {
   BulkUpdateResult,
   BulkUpdateTicketsBody,
   CheckDuplicateBody,
+  ClickUpOAuthCallbackBody,
   ConfigureClickUpBody,
+  CreateHierarchyItemBody,
   CreateRemediationTicketBody,
   CreateRemediationTicketResult,
   CreateTicketBody,
@@ -72,6 +74,7 @@ import {
   SyncResult,
   TicketDashboardStats,
   TicketDetails,
+  TicketIdsBody,
   TicketSortField,
   TicketSummary,
   UpdateTicketBody,
@@ -524,7 +527,7 @@ export class TicketsController {
   async handleClickUpOAuthCallback(
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
-    @Body() body: { code: string; redirect_uri: string },
+    @Body() body: ClickUpOAuthCallbackBody,
   ): Promise<TypedResponse<{ access_token: string }>> {
     await this.requireAdmin(org_id, user);
     const tokens = await this.ticketIntegrationService.exchangeOAuthCode(
@@ -754,7 +757,7 @@ export class TicketsController {
     @Param("org_id") org_id: string,
     @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Param("workspace_id") workspace_id: string,
-    @Body() body: { name: string },
+    @Body() body: CreateHierarchyItemBody,
     @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem>> {
     await this.requireAdmin(org_id, user);
@@ -785,7 +788,7 @@ export class TicketsController {
     @Param("org_id") org_id: string,
     @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Param("space_id") space_id: string,
-    @Body() body: { name: string },
+    @Body() body: CreateHierarchyItemBody,
     @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem>> {
     await this.requireAdmin(org_id, user);
@@ -816,7 +819,7 @@ export class TicketsController {
     @Param("org_id") org_id: string,
     @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Param("folder_id") folder_id: string,
-    @Body() body: { name: string },
+    @Body() body: CreateHierarchyItemBody,
     @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem>> {
     await this.requireAdmin(org_id, user);
@@ -847,7 +850,7 @@ export class TicketsController {
     @Param("org_id") org_id: string,
     @Param("provider", providerPipe) provider: ExternalTicketProvider,
     @Param("space_id") space_id: string,
-    @Body() body: { name: string },
+    @Body() body: CreateHierarchyItemBody,
     @RequestCredentials() credentials?: IntegrationCredentials,
   ): Promise<TypedResponse<IntegrationHierarchyItem>> {
     await this.requireAdmin(org_id, user);
@@ -972,7 +975,7 @@ export class TicketsController {
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
     @Param("provider", providerPipe) provider: ExternalTicketProvider,
-    @Body() body: { ticket_ids: string[] },
+    @Body() body: TicketIdsBody,
   ): Promise<TypedResponse<BulkSyncResult>> {
     await this.requireMember(org_id, user);
     const result = await this.ticketIntegrationService.bulkSyncTickets(
@@ -1064,7 +1067,7 @@ export class TicketsController {
   async bulkSyncFromExternal(
     @AuthUser() user: AuthenticatedUser,
     @Param("org_id") org_id: string,
-    @Body() body: { ticket_ids: string[] },
+    @Body() body: TicketIdsBody,
   ): Promise<TypedResponse<BulkSyncFromExternalResult>> {
     await this.requireMember(org_id, user);
     const result = await this.ticketIntegrationService.bulkSyncFromExternal(

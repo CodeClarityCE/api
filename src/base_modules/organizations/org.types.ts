@@ -9,6 +9,7 @@ import {
   IsString,
   Length,
   Max,
+  MaxLength,
   Min,
   ValidateNested,
 } from "class-validator";
@@ -84,8 +85,10 @@ export class OrganizationCreateBody {
   @Length(1, 250)
   description!: string;
 
-  @ApiProperty()
+  @ApiProperty({ maxLength: 5 })
   @IsDefined()
+  @IsString()
+  @MaxLength(5)
   color_scheme!: string;
 }
 

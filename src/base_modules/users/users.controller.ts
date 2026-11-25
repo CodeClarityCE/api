@@ -7,7 +7,7 @@ import {
   Patch,
   Post,
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiParam, ApiTags } from "@nestjs/swagger";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import {
@@ -68,6 +68,7 @@ export class UsersController {
     statusCode: 500,
     errors: [InternalError, FailedToSendAccountRegistrationVerificationEmail],
   })
+  @ApiParam({ name: "email", description: "Email of the account" })
   @Post(":email")
   async reSendAccountRegVerificationEmail(
     @Body() body: ResendAccountRegEmailBody,
@@ -140,10 +141,11 @@ export class UsersController {
   @Patch(":user_id/update_personal")
   async updateAccountInfo(
     @AuthUser() user: AuthenticatedUser,
-    @Body() patch: UserPatchBody,
+    @Body() patch: UserPatchBody | undefined,
     @Param("user_id") user_id: string,
   ): Promise<NoDataResponse> {
-    await this.usersService.updatePersonalInfo(user_id, patch, user);
+    // No body means no field to change.
+    await this.usersService.updatePersonalInfo(user_id, patch ?? {}, user);
     return {};
   }
 

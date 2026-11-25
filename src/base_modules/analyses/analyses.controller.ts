@@ -10,7 +10,12 @@ import {
   Put,
   Query,
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from "@nestjs/swagger";
 
 import { Analysis } from "src/base_modules/analyses/analysis.entity";
 import {
@@ -26,6 +31,7 @@ import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocCreatedResponseDecorator } from "src/decorators/CrudResponse";
 import { APIDocNoDataResponseDecorator } from "src/decorators/NoDataResponse";
 import { AllowOrganizationToken } from "src/decorators/OrganizationTokenDecorator";
+import { APIDocTypedManyResponseDecorator } from "src/decorators/TypedManyResponse";
 import { APIDocTypedPaginatedResponseDecorator } from "src/decorators/TypedPaginatedResponse";
 import { APIDocTypedResponseDecorator } from "src/decorators/TypedResponse";
 import { AuthUser } from "src/decorators/UserDecorator";
@@ -243,7 +249,7 @@ export class AnalysesController {
     description: "Get all scheduled analyses for a project",
     summary: "Retrieve active recurring analyses (daily/weekly) for a project",
   })
-  @APIDocTypedResponseDecorator(Analysis)
+  @APIDocTypedManyResponseDecorator(Analysis)
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
   @Get("scheduled")
   async getScheduled(
@@ -341,6 +347,8 @@ export class AnalysesController {
     summary:
       "Duplicate scheduled analysis for new execution - preserves historical results",
   })
+  @ApiParam({ name: "org_id", description: "Organization ID" })
+  @ApiParam({ name: "project_id", description: "Project ID" })
   @APIDocCreatedResponseDecorator()
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
   @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
