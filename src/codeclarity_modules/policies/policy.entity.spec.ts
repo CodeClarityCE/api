@@ -2,7 +2,12 @@ import { Analysis } from "../../base_modules/analyses/analysis.entity";
 import { Organization } from "../../base_modules/organizations/organization.entity";
 import { User } from "../../base_modules/users/users.entity";
 
-import { Policy, type PolicyFrontend, PolicyType } from "./policy.entity";
+import {
+  Policy,
+  type PolicyFrontend,
+  PolicyType,
+  toPolicyFrontend,
+} from "./policy.entity";
 
 describe("Policy Entity", () => {
   let policy: Policy;
@@ -248,5 +253,37 @@ describe("PolicyType Enum", () => {
     expect(policyTypes).toHaveLength(2);
     expect(policyTypes).toContain("LICENSE_POLICY");
     expect(policyTypes).toContain("VULNERABILITY_POLICY");
+  });
+});
+
+describe("toPolicyFrontend", () => {
+  const policy = Object.assign(new Policy(), {
+    id: "p1",
+    name: "Strict",
+    description: "No GPL",
+    content: ["GPL-3.0"],
+    policy_type: PolicyType.LICENSE_POLICY,
+    default: true,
+    created_on: new Date("2026-01-01T00:00:00Z"),
+    organizations: [{ id: "org" }],
+    created_by: { email: "owner@example.com" },
+  });
+
+  it("keeps the policy fields and gives the creator's email", () => {
+    expect(toPolicyFrontend(policy)).toEqual({
+      id: "p1",
+      name: "Strict",
+      description: "No GPL",
+      content: ["GPL-3.0"],
+      policy_type: PolicyType.LICENSE_POLICY,
+      default: true,
+      created_on: new Date("2026-01-01T00:00:00Z"),
+      created_by: "owner@example.com",
+    });
+  });
+
+  it("gives an empty creator when the creator was not loaded", () => {
+    const { created_by: _, ...withoutCreator } = policy;
+    expect(toPolicyFrontend(withoutCreator as Policy).created_by).toBe("");
   });
 });

@@ -62,3 +62,17 @@ export interface PolicyFrontend {
   created_on: Date;
   content: string[];
 }
+
+/** Maps a policy to its API shape, with the creator as an email or "". */
+export function toPolicyFrontend(policy: Policy): PolicyFrontend {
+  return {
+    id: policy.id,
+    name: policy.name,
+    description: policy.description,
+    default: policy.default,
+    content: policy.content,
+    created_on: policy.created_on,
+    created_by: policy.created_by?.email || "",
+    policy_type: policy.policy_type,
+  };
+}
