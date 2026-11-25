@@ -87,6 +87,82 @@ describe("API fuzz regressions (e2e)", () => {
     expect(response.body.error_code).toBe("BadRequest");
   });
 
+  async function send(
+    method: "POST" | "PATCH",
+    path: string,
+    body?: unknown,
+  ): Promise<{ statusCode: number; body: { error_code?: string } }> {
+    const response = await testHelper.makeAuthenticatedRequest(
+      method,
+      path,
+      owner.accessToken,
+      body,
+    );
+    return {
+      statusCode: response.statusCode,
+      body: response.json() as { error_code?: string },
+    };
+  }
+
+  describe("a NUL character in a value sent to the database", () => {
+    it.each(["/projects?search_key=%00", "/tickets?status=%00"])(
+      "GET /org/:org%s is refused as a bad request",
+      async (path) => {
+        const response = await get(`/org/${owner.organization.id}${path}`);
+
+        expect(response.statusCode).toBe(400);
+        expect(response.body.error_code).toBe("BadRequest");
+      },
+    );
+
+    it.each([
+      ["/auth/confirm_registration", { token: "t", user_id_hash: "\u0000" }],
+      ["/users/confirm_registration", { token: "t", user_id_hash: "\u0000" }],
+      [
+        "/knowledge/packages/check-outdated",
+        {
+          packages: [
+            { name: "a\u0000", currentVersion: "1", ecosystem: "npm" },
+          ],
+        },
+      ],
+      [
+        "/knowledge/packages/check-vulnerabilities",
+        { packages: [{ name: "a\u0000", version: "1", ecosystem: "npm" }] },
+      ],
+    ])("POST %s is refused as a bad request", async (path, body) => {
+      const response = await send("POST", path, body);
+
+      expect(response.statusCode).toBe(400);
+      expect(response.body.error_code).toBe("BadRequest");
+    });
+
+    it("POST /org/:org/join is refused as a bad request", async () => {
+      const response = await send(
+        "POST",
+        `/org/${owner.organization.id}/join`,
+        {
+          token: "t",
+          email_digest: "\u0000",
+        },
+      );
+
+      expect(response.statusCode).toBe(400);
+      expect(response.body.error_code).toBe("BadRequest");
+    });
+
+    it("PATCH /users/:user_id/update_default_org is refused as a bad request", async () => {
+      const response = await send(
+        "PATCH",
+        `/users/${owner.user.id}/update_default_org`,
+        { default_org: "\u0000" },
+      );
+
+      expect(response.statusCode).toBe(400);
+      expect(response.body.error_code).toBe("BadRequest");
+    });
+  });
+
   describe("GET /org/:org/file/:project/:file_name", () => {
     it("is not found for a file that does not exist", async () => {
       const projectId = await createProject(owner, "fuzz-project");
