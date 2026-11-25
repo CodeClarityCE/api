@@ -49,9 +49,9 @@ export class FixNextService {
     user: AuthenticatedUser,
     limit: number,
   ): Promise<FixNextEntry[]> {
-    await this.membershipsRepository.hasRequiredRole(
+    await this.membershipsRepository.hasRequiredRoleFor(
       orgId,
-      user.userId,
+      user,
       MemberRole.USER,
     );
 

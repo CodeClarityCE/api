@@ -511,9 +511,9 @@ export class AnalysesService {
     user: AuthenticatedUser,
   ): Promise<TypedPaginatedData<Analysis>> {
     // (1) Check if the user is allowed to create an analyzer (is at least a user)
-    await this.membershipsRepository.hasRequiredRole(
+    await this.membershipsRepository.hasRequiredRoleFor(
       organizationId,
-      user.userId,
+      user,
       MemberRole.USER,
     );
 

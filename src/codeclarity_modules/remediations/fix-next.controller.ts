@@ -2,7 +2,9 @@ import { Controller, Get, Param, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import { OrganizationTokenScope } from "src/base_modules/organizations/tokens/organization-token.types";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
+import { AllowOrganizationToken } from "src/decorators/OrganizationTokenDecorator";
 import { APIDocTypedResponseDecorator } from "src/decorators/TypedResponse";
 import { AuthUser } from "src/decorators/UserDecorator";
 import { TypedResponse } from "src/types/apiResponses.types";
@@ -24,6 +26,7 @@ export class FixNextController {
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
   @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
   @APIDocTypedResponseDecorator(FixNextEntry)
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get()
   async fixNext(
     @AuthUser() user: AuthenticatedUser,

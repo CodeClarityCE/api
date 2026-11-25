@@ -8,7 +8,9 @@ import {
 } from "@nestjs/common";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import { OrganizationTokenScope } from "src/base_modules/organizations/tokens/organization-token.types";
 import { DepShortInfo } from "src/codeclarity_modules/results/licenses/licenses.types";
+import { AllowOrganizationToken } from "src/decorators/OrganizationTokenDecorator";
 import { AuthUser } from "src/decorators/UserDecorator";
 import { PaginatedResponse } from "src/types/apiResponses.types";
 
@@ -18,6 +20,7 @@ import { LicensesQueryOptions, LicensesService } from "./licenses.service";
 export class LicensesController {
   constructor(private readonly licensesService: LicensesService) {}
 
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get(":analysis_id/licenses")
   async getLicensesUsed(
     @Param("org_id") org_id: string,
@@ -53,6 +56,7 @@ export class LicensesController {
     );
   }
 
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get(":analysis_id/licenses/:license_id/dependencies")
   async getDepsInfo(
     @Param("org_id") org_id: string,
