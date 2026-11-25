@@ -15,7 +15,7 @@ jest.mock("./gitlabInstance", () => ({
   ...jest.requireActual("./gitlabInstance"),
   gitlabFetch: jest.fn(),
 }));
-const fetch = gitlabFetch as jest.Mock;
+const gitlabFetchMock = gitlabFetch as jest.Mock;
 
 describe("GitlabIntegrationTokenService", () => {
   let service: GitlabIntegrationTokenService;
@@ -50,7 +50,7 @@ describe("GitlabIntegrationTokenService", () => {
         scopes: ["read_repository", "read_user", "read_api", "self_rotate"],
       };
 
-      fetch.mockResolvedValue({
+      gitlabFetchMock.mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue(mockTokenInfo),
       });
@@ -63,7 +63,7 @@ describe("GitlabIntegrationTokenService", () => {
         ),
       ).resolves.not.toThrow();
 
-      expect(fetch).toHaveBeenCalledWith(
+      expect(gitlabFetchMock).toHaveBeenCalledWith(
         `${testGitlabInstanceUrl}/api/v4/personal_access_tokens/self`,
         {
           headers: {
@@ -84,7 +84,7 @@ describe("GitlabIntegrationTokenService", () => {
         ],
       };
 
-      fetch.mockResolvedValue({
+      gitlabFetchMock.mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue(mockTokenInfo),
       });
@@ -101,7 +101,7 @@ describe("GitlabIntegrationTokenService", () => {
     });
 
     it("should throw error when token is invalid (401)", async () => {
-      fetch.mockResolvedValue({
+      gitlabFetchMock.mockResolvedValue({
         ok: false,
         status: 401,
       });
@@ -116,7 +116,7 @@ describe("GitlabIntegrationTokenService", () => {
     });
 
     it("should throw error when API request fails with non-401 status", async () => {
-      fetch.mockResolvedValue({
+      gitlabFetchMock.mockResolvedValue({
         ok: false,
         status: 500,
       });
@@ -131,7 +131,7 @@ describe("GitlabIntegrationTokenService", () => {
     });
 
     it("should throw error when token info is null", async () => {
-      fetch.mockResolvedValue({
+      gitlabFetchMock.mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue(null),
       });
@@ -150,7 +150,7 @@ describe("GitlabIntegrationTokenService", () => {
         scopes: ["read_repository", "read_user"], // Missing read_api and self_rotate
       };
 
-      fetch.mockResolvedValue({
+      gitlabFetchMock.mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue(mockTokenInfo),
       });
@@ -170,7 +170,7 @@ describe("GitlabIntegrationTokenService", () => {
         // Missing write_repository
       };
 
-      fetch.mockResolvedValue({
+      gitlabFetchMock.mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue(mockTokenInfo),
       });
@@ -193,7 +193,7 @@ describe("GitlabIntegrationTokenService", () => {
         // Missing scopes property
       };
 
-      fetch.mockResolvedValue({
+      gitlabFetchMock.mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue(mockTokenInfo),
       });
@@ -208,7 +208,7 @@ describe("GitlabIntegrationTokenService", () => {
     });
 
     it("should handle network errors", async () => {
-      fetch.mockRejectedValue(new Error("Network error"));
+      gitlabFetchMock.mockRejectedValue(new Error("Network error"));
 
       await expect(
         service.validatePersonalAccessTokenPermissions(
@@ -220,7 +220,7 @@ describe("GitlabIntegrationTokenService", () => {
     });
 
     it("should handle JSON parsing errors", async () => {
-      fetch.mockResolvedValue({
+      gitlabFetchMock.mockResolvedValue({
         ok: true,
         json: jest.fn().mockRejectedValue(new Error("JSON parsing error")),
       });
@@ -235,7 +235,7 @@ describe("GitlabIntegrationTokenService", () => {
     });
 
     it("should handle 401 errors from fetch exceptions", async () => {
-      fetch.mockRejectedValue(
+      gitlabFetchMock.mockRejectedValue(
         Object.assign(new Error("Fetch failed"), { status: 401 }),
       );
 
@@ -259,7 +259,7 @@ describe("GitlabIntegrationTokenService", () => {
         expires_at: expiryDate,
       };
 
-      fetch.mockResolvedValue({
+      gitlabFetchMock.mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue(mockTokenData),
       });
@@ -270,14 +270,14 @@ describe("GitlabIntegrationTokenService", () => {
       );
 
       expect(result).toEqual([true, new Date(expiryDate)]);
-      expect(fetch).toHaveBeenCalledWith(
+      expect(gitlabFetchMock).toHaveBeenCalledWith(
         `${testGitlabInstanceUrl}/api/v4/personal_access_tokens/self`,
         { headers: { "PRIVATE-TOKEN": testToken } },
       );
     });
 
     it("should throw IntegrationTokenExpired for a token past its expiry", async () => {
-      fetch.mockResolvedValue({
+      gitlabFetchMock.mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue({ expires_at: "2020-01-01" }),
       });
@@ -297,7 +297,7 @@ describe("GitlabIntegrationTokenService", () => {
         // No expires_at property
       };
 
-      fetch.mockResolvedValue({
+      gitlabFetchMock.mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue(mockTokenData),
       });
@@ -311,7 +311,7 @@ describe("GitlabIntegrationTokenService", () => {
     });
 
     it("should return false when token data is null", async () => {
-      fetch.mockResolvedValue({
+      gitlabFetchMock.mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue(null),
       });
@@ -325,7 +325,7 @@ describe("GitlabIntegrationTokenService", () => {
     });
 
     it("should throw error when token is invalid (401)", async () => {
-      fetch.mockResolvedValue({
+      gitlabFetchMock.mockResolvedValue({
         ok: false,
         status: 401,
       });
@@ -339,7 +339,7 @@ describe("GitlabIntegrationTokenService", () => {
     });
 
     it("should throw error when API request fails with non-401 status", async () => {
-      fetch.mockResolvedValue({
+      gitlabFetchMock.mockResolvedValue({
         ok: false,
         status: 403,
       });
@@ -353,7 +353,7 @@ describe("GitlabIntegrationTokenService", () => {
     });
 
     it("should handle network errors", async () => {
-      fetch.mockRejectedValue(new Error("Network error"));
+      gitlabFetchMock.mockRejectedValue(new Error("Network error"));
 
       await expect(
         service.getPersonalAccessTokenExpiryRemote(
@@ -364,7 +364,7 @@ describe("GitlabIntegrationTokenService", () => {
     });
 
     it("should handle JSON parsing errors", async () => {
-      fetch.mockResolvedValue({
+      gitlabFetchMock.mockResolvedValue({
         ok: true,
         json: jest.fn().mockRejectedValue(new Error("JSON parsing error")),
       });
@@ -384,7 +384,7 @@ describe("GitlabIntegrationTokenService", () => {
         expires_at: null,
       };
 
-      fetch.mockResolvedValue({
+      gitlabFetchMock.mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue(mockTokenData),
       });

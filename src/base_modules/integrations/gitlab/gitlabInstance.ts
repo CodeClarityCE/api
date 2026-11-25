@@ -1,9 +1,11 @@
 import {
   ImportTargetNotAllowed,
+  IntegrationInstanceUnreachable,
   IntegrationInstanceUrlNotAllowed,
 } from "src/types/error.types";
 import {
   gitlabAllowedPrivateHosts,
+  HostLookupFailed,
   pinnedFetch,
   resolveOutboundUrl,
 } from "src/utils/outbound-url";
@@ -17,14 +19,17 @@ export function gitlabPolicy(): {
 }
 
 function refusal(err: unknown): unknown {
-  return err instanceof ImportTargetNotAllowed
-    ? new IntegrationInstanceUrlNotAllowed(err)
-    : err;
+  if (err instanceof HostLookupFailed)
+    return new IntegrationInstanceUnreachable(err);
+  if (err instanceof ImportTargetNotAllowed)
+    return new IntegrationInstanceUrlNotAllowed(err);
+  return err;
 }
 
 /**
  * Check that a GitLab instance url may be called.
  * @throws {IntegrationInstanceUrlNotAllowed}
+ * @throws {IntegrationInstanceUnreachable}
  */
 export async function assertGitlabInstanceAllowed(url: string): Promise<void> {
   try {
@@ -37,6 +42,7 @@ export async function assertGitlabInstanceAllowed(url: string): Promise<void> {
 /**
  * Fetch a url on a GitLab instance, connecting only to its vetted addresses.
  * @throws {IntegrationInstanceUrlNotAllowed}
+ * @throws {IntegrationInstanceUnreachable}
  */
 export async function gitlabFetch(
   url: string,
@@ -51,5 +57,8 @@ export async function gitlabFetch(
 
 /** An instance url without trailing slashes, ready for "/api/v4/..." */
 export function instanceBase(instanceUrl: string): string {
-  return instanceUrl.replace(/\/+$/, "");
+  // A loop, not /\/+$/, which is quadratic on long runs of slashes
+  let end = instanceUrl.length;
+  while (end > 0 && instanceUrl[end - 1] === "/") end--;
+  return instanceUrl.slice(0, end);
 }

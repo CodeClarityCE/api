@@ -130,6 +130,18 @@ describe("GitLab instance URL length (e2e)", () => {
       expect(await integrations()).toEqual([]);
     });
 
+    it("answers IntegrationInstanceUnreachable for a name that does not resolve", async () => {
+      mockedLookup.mockRejectedValue(
+        Object.assign(new Error("not found"), { code: "ENOTFOUND" }),
+      );
+
+      const response = await linkGitlab("https://gitlab.typo.example");
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error_code).toBe("IntegrationInstanceUnreachable");
+      expect(await integrations()).toEqual([]);
+    });
+
     it("refuses plain http on a public host", async () => {
       const response = await linkGitlab("http://gitlab.example.com");
 

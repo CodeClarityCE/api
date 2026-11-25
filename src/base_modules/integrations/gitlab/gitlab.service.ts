@@ -39,7 +39,7 @@ import {
   IntegrationType,
 } from "../integrations.entity";
 
-import { assertGitlabInstanceAllowed } from "./gitlabInstance";
+import { assertGitlabInstanceAllowed, instanceBase } from "./gitlabInstance";
 import { GitlabIntegrationTokenService } from "./gitlabToken.service";
 
 // https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#prefill-personal-access-token-name-and-scopes
@@ -270,14 +270,9 @@ export class GitlabIntegrationService {
     }
 
     // Moving an integration to another server would break its projects
-    const withoutSlash = (url: string): string => {
-      let end = url.length;
-      while (end > 0 && url[end - 1] === "/") end--;
-      return url.slice(0, end);
-    };
     if (
-      withoutSlash(linkGitlabCreate.gitlab_instance_url) !==
-      withoutSlash(integration.service_domain)
+      instanceBase(linkGitlabCreate.gitlab_instance_url) !==
+      instanceBase(integration.service_domain)
     ) {
       throw new IntegrationInstanceUrlChanged();
     }
