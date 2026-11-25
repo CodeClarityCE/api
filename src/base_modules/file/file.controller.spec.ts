@@ -1,6 +1,6 @@
+import { BadRequestException } from "@nestjs/common";
 import { Test, type TestingModule } from "@nestjs/testing";
 
-import { InternalError } from "../../types/error.types";
 import { AuthenticatedUser, ROLE } from "../auth/auth.types";
 
 import { FileController, type UploadData } from "./file.controller";
@@ -76,7 +76,7 @@ describe("FileController", () => {
       );
     });
 
-    it("should throw InternalError when no file is provided", async () => {
+    it("should throw BadRequestException when no file is provided", async () => {
       await expect(
         controller.uploadFile(
           mockUser,
@@ -85,7 +85,7 @@ describe("FileController", () => {
           mockUploadData,
           null as any,
         ),
-      ).rejects.toThrow(InternalError);
+      ).rejects.toThrow(BadRequestException);
 
       expect(fileService.uploadFile).not.toHaveBeenCalled();
     });

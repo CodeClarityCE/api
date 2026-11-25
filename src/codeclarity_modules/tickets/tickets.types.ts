@@ -4,10 +4,12 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
 } from "class-validator";
 
@@ -22,6 +24,10 @@ import { ExternalTicketProvider } from "./ticket-external-link.entity";
 // ============================================
 // Request DTOs
 // ============================================
+
+// A credential sent in an HTTP header: printable ASCII without spaces.
+const HEADER_TOKEN = /^[\x21-\x7e]+$/;
+const HEADER_TOKEN_MESSAGE = "$property must be printable ASCII";
 
 export class CreateTicketBody {
   @ApiProperty({ description: "Ticket title", maxLength: 200 })
@@ -166,6 +172,33 @@ export class BulkUpdateTicketsBody {
   @IsOptional()
   @IsUUID()
   assigned_to_id?: string;
+}
+
+export class TicketIdsBody {
+  @ApiProperty({ description: "Ticket IDs to sync" })
+  @IsArray()
+  @IsUUID("4", { each: true })
+  ticket_ids!: string[];
+}
+
+/** Names a space, folder or list to create at the provider. */
+export class CreateHierarchyItemBody {
+  @ApiProperty({ description: "Name of the item to create" })
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+}
+
+export class ClickUpOAuthCallbackBody {
+  @ApiProperty({ description: "Code ClickUp sent to the redirect URI" })
+  @IsString()
+  @IsNotEmpty()
+  code!: string;
+
+  @ApiProperty({ description: "Redirect URI used to get the code" })
+  @IsString()
+  @IsNotEmpty()
+  redirect_uri!: string;
 }
 
 /** Names one remediation of the project's current analysis to track in a ticket. */
@@ -405,16 +438,19 @@ export class ConfigureClickUpBody {
   @ApiPropertyOptional({ description: "ClickUp API key (for API_KEY auth)" })
   @IsOptional()
   @IsString()
+  @Matches(HEADER_TOKEN, { message: HEADER_TOKEN_MESSAGE })
   api_key?: string;
 
   @ApiPropertyOptional({ description: "OAuth access token (for OAUTH auth)" })
   @IsOptional()
   @IsString()
+  @Matches(HEADER_TOKEN, { message: HEADER_TOKEN_MESSAGE })
   access_token?: string;
 
   @ApiPropertyOptional({ description: "OAuth refresh token (for OAUTH auth)" })
   @IsOptional()
   @IsString()
+  @Matches(HEADER_TOKEN, { message: HEADER_TOKEN_MESSAGE })
   refresh_token?: string;
 
   @ApiPropertyOptional({ description: "ClickUp Workspace/Team ID" })

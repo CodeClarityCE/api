@@ -12,10 +12,8 @@ import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocNoDataResponseDecorator } from "src/decorators/NoDataResponse";
-import {
-  APIDocTypedManyResponseDecorator,
-  APIDocTypedResponseDecorator,
-} from "src/decorators/TypedResponse";
+import { APIDocTypedManyResponseDecorator } from "src/decorators/TypedManyResponse";
+import { APIDocTypedResponseDecorator } from "src/decorators/TypedResponse";
 import { AuthUser } from "src/decorators/UserDecorator";
 import { NoDataResponse, TypedResponse } from "src/types/apiResponses.types";
 import {
