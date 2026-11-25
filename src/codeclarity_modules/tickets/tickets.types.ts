@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
@@ -166,6 +167,33 @@ export class BulkUpdateTicketsBody {
   @IsOptional()
   @IsUUID()
   assigned_to_id?: string;
+}
+
+export class TicketIdsBody {
+  @ApiProperty({ description: "Ticket IDs to sync" })
+  @IsArray()
+  @IsUUID("4", { each: true })
+  ticket_ids!: string[];
+}
+
+/** Names a space, folder or list to create at the provider. */
+export class CreateHierarchyItemBody {
+  @ApiProperty({ description: "Name of the item to create" })
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+}
+
+export class ClickUpOAuthCallbackBody {
+  @ApiProperty({ description: "Code ClickUp sent to the redirect URI" })
+  @IsString()
+  @IsNotEmpty()
+  code!: string;
+
+  @ApiProperty({ description: "Redirect URI used to get the code" })
+  @IsString()
+  @IsNotEmpty()
+  redirect_uri!: string;
 }
 
 /** Names one remediation of the project's current analysis to track in a ticket. */

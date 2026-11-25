@@ -165,6 +165,26 @@ describe("API fuzz regressions (e2e)", () => {
     });
   });
 
+  describe("a ticket request without a body", () => {
+    it.each([
+      "/tickets/bulk-sync/JIRA",
+      "/tickets/bulk-sync-from-external",
+      "/tickets/integrations/clickup/oauth/callback",
+      "/tickets/integrations/JIRA/workspaces/0/spaces",
+      "/tickets/integrations/JIRA/spaces/0/folders",
+      "/tickets/integrations/CLICKUP/spaces/0/lists",
+      "/tickets/integrations/CLICKUP/folders/0/lists",
+    ])("POST /org/:org%s is refused as malformed", async (path) => {
+      const response = await send(
+        "POST",
+        `/org/${owner.organization.id}${path}`,
+      );
+
+      expect(response.statusCode).toBe(400);
+      expect(response.body.error_code).toBe("ValidationFailed");
+    });
+  });
+
   describe("GET /org/:org/file/:project/:file_name", () => {
     it("is not found for a file that does not exist", async () => {
       const projectId = await createProject(owner, "fuzz-project");
