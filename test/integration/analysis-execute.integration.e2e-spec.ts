@@ -4,7 +4,7 @@ import { MemberRole } from "../../src/base_modules/organizations/memberships/org
 import { createProject } from "../utils/deletion-fixtures";
 import { testHelper, type TestUser } from "../utils/integration-test-helper";
 
-// The scheduler creates scheduled runs in the database (ADR 0022), so this route is gone.
+// Checks that the removed execute route is not served or documented.
 describe("POST /org/:orgId/projects/:projectId/analyses/:analysisId/execute (e2e)", () => {
   let owner: TestUser;
   let projectId: string;
