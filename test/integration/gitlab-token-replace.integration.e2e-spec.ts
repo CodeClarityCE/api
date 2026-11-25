@@ -1,9 +1,15 @@
+import { lookup } from "dns/promises";
+
 import { Integration } from "../../src/base_modules/integrations/integrations.entity";
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import { auditEntries } from "../utils/audit-log";
+import { startFakeGitlab } from "../utils/fake-gitlab";
 import { testHelper, type TestUser } from "../utils/integration-test-helper";
 
-const GITLAB_URL = "https://gitlab.acme.io";
+// The stand-in GitLab listens on 127.0.0.1 under this operator-allowed name.
+const GITLAB_HOST = "gitlab.acme.io";
+jest.mock("dns/promises", () => ({ lookup: jest.fn() }));
+const mockedLookup = lookup as unknown as jest.Mock;
 const OLD_TOKEN = "glpat-test-token";
 const NEW_TOKEN = "glpat-test-token-new";
 const ALL_SCOPES = ["read_repository", "read_user", "read_api", "self_rotate"];
@@ -19,14 +25,25 @@ describe("Replacing a GitLab integration's token (e2e)", () => {
   let admin: TestUser;
   let tokens: Record<string, TokenAnswer>;
   let projectsSeenWith: string[];
-  let fetchSpy: jest.SpyInstance;
+  let GITLAB_URL: string;
+  let fakeGitlab: Awaited<ReturnType<typeof startFakeGitlab>>;
+  let answer: Parameters<typeof startFakeGitlab>[1];
+  const savedAllowlist = process.env["GITLAB_ALLOWED_PRIVATE_HOSTS"];
 
   beforeAll(async () => {
     await testHelper.setupTestApp();
+    fakeGitlab = await startFakeGitlab(GITLAB_HOST, (url, init) =>
+      answer(url, init),
+    );
+    GITLAB_URL = fakeGitlab.url;
   });
 
   afterAll(async () => {
+    await fakeGitlab.close();
     await testHelper.teardownTestApp();
+    if (savedAllowlist === undefined)
+      delete process.env["GITLAB_ALLOWED_PRIVATE_HOSTS"];
+    else process.env["GITLAB_ALLOWED_PRIVATE_HOSTS"] = savedAllowlist;
   });
 
   beforeEach(async () => {
@@ -43,41 +60,34 @@ describe("Replacing a GitLab integration's token (e2e)", () => {
       },
     };
     projectsSeenWith = [];
+    process.env["GITLAB_ALLOWED_PRIVATE_HOSTS"] = GITLAB_HOST;
+    mockedLookup.mockResolvedValue([{ address: "127.0.0.1", family: 4 }]);
     // Answers GitLab's API locally: token info and the project list.
-    fetchSpy = jest
-      .spyOn(global, "fetch")
-      .mockImplementation(async (input, init) => {
-        const url = input instanceof Request ? input.url : input.toString();
-        const token = (init?.headers as Record<string, string>)[
-          "PRIVATE-TOKEN"
-        ]!;
-        if (url === `${GITLAB_URL}/api/v4/personal_access_tokens/self`) {
-          const answer = tokens[token] ?? { status: 401 };
-          return new Response(JSON.stringify(answer.body ?? {}), {
-            status: answer.status,
-          });
-        }
-        if (url.startsWith(`${GITLAB_URL}/api/v4/projects`)) {
-          projectsSeenWith.push(token);
-          return new Response(
-            JSON.stringify([
-              {
-                name_with_namespace: "acme / app",
-                http_url_to_repo: `${GITLAB_URL}/acme/app.git`,
-                default_branch: "main",
-                visibility: "private",
-                created_at: "2026-01-01T00:00:00Z",
-              },
-            ]),
-            { status: 200 },
-          );
-        }
-        throw new Error(`Unexpected request to ${url}`);
-      });
-  });
-
-  afterEach(() => {
-    fetchSpy.mockRestore();
+    answer = async (url, init) => {
+      const token = init.headers["PRIVATE-TOKEN"]!;
+      if (url === `${GITLAB_URL}/api/v4/personal_access_tokens/self`) {
+        const answer = tokens[token] ?? { status: 401 };
+        return new Response(JSON.stringify(answer.body ?? {}), {
+          status: answer.status,
+        });
+      }
+      if (url.startsWith(`${GITLAB_URL}/api/v4/projects`)) {
+        projectsSeenWith.push(token);
+        return new Response(
+          JSON.stringify([
+            {
+              name_with_namespace: "acme / app",
+              http_url_to_repo: `${GITLAB_URL}/acme/app.git`,
+              default_branch: "main",
+              visibility: "private",
+              created_at: "2026-01-01T00:00:00Z",
+            },
+          ]),
+          { status: 200 },
+        );
+      }
+      throw new Error(`Unexpected request to ${url}`);
+    };
   });
 
   async function linkGitlab(user: TestUser = admin): Promise<string> {
@@ -149,6 +159,28 @@ describe("Replacing a GitLab integration's token (e2e)", () => {
     expect(projectsSeenWith).toEqual([NEW_TOKEN]);
   });
 
+  it("an integration whose private host is no longer allowed fails the sync with a clear error", async () => {
+    const id = await linkGitlab();
+    await replace(id);
+    let requests = 0;
+    const previous = answer;
+    answer = (url, init) => {
+      requests++;
+      return previous(url, init);
+    };
+    delete process.env["GITLAB_ALLOWED_PRIVATE_HOSTS"];
+
+    const repos = await testHelper.makeAuthenticatedRequest(
+      "GET",
+      `/org/${admin.organization.id}/integrations/gitlab/${id}/repositories?force_refresh=true`,
+      admin.accessToken,
+    );
+
+    expect(repos.statusCode).toBe(400);
+    expect(repos.json().error_code).toBe("IntegrationInstanceUrlNotAllowed");
+    expect(requests).toBe(0);
+  });
+
   it("accepts the stored instance URL with a trailing slash", async () => {
     const id = await linkGitlab();
 
@@ -170,7 +202,7 @@ describe("Replacing a GitLab integration's token (e2e)", () => {
       expect.objectContaining({
         blame_on_email: "admin@gitlab-replace.com",
         description: expect.stringMatching(
-          /GitLab.*https:\/\/gitlab\.acme\.io/,
+          /GitLab.*http:\/\/gitlab\.acme\.io:\d+/,
         ),
       }),
     ]);

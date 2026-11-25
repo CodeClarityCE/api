@@ -26,11 +26,16 @@ import {
 import type { GitlabIntegrationToken } from "../Token";
 
 import { GitlabIntegrationService } from "./gitlab.service";
+import { gitlabFetch } from "./gitlabInstance";
 import { GitlabTokenType } from "./gitlabIntegration.types";
 import { GitlabRepositoriesService } from "./gitlabRepos.service";
 
-// Mock fetch globally
-global.fetch = jest.fn();
+// GitLab calls go through gitlabFetch, stubbed here like fetch
+jest.mock("./gitlabInstance", () => ({
+  ...jest.requireActual("./gitlabInstance"),
+  gitlabFetch: jest.fn(),
+}));
+const fetch = gitlabFetch as jest.Mock;
 
 // Mock ms module
 jest.mock("ms", () => ({
@@ -207,7 +212,7 @@ describe("GitlabRepositoriesService", () => {
 
   describe("syncGitlabRepos", () => {
     beforeEach(() => {
-      (fetch as jest.Mock).mockClear();
+      fetch.mockClear();
     });
 
     it("syncs every project the user is a Reporter or above on", async () => {
@@ -224,7 +229,7 @@ describe("GitlabRepositoriesService", () => {
       repositoryCacheRepository.save.mockResolvedValue(mockRepositoryCache);
       integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
 
-      (fetch as jest.Mock).mockResolvedValue(gitlabPage(mockGitlabProjects));
+      fetch.mockResolvedValue(gitlabPage(mockGitlabProjects));
 
       await service.syncGitlabRepos("test-integration-id");
 
@@ -263,7 +268,7 @@ describe("GitlabRepositoriesService", () => {
       repositoryCacheRepository.existsBy.mockResolvedValue(false);
 
       const [first, second] = mockGitlabProjects;
-      (fetch as jest.Mock)
+      fetch
         .mockResolvedValueOnce(gitlabPage([first], "2"))
         .mockResolvedValueOnce(gitlabPage([second]));
 
@@ -296,7 +301,7 @@ describe("GitlabRepositoriesService", () => {
       // A full page of 100 that always points to one more page
       const fullPage = Array.from({ length: 100 }, () => mockGitlabProjects[0]);
       let page = 1;
-      (fetch as jest.Mock).mockImplementation(() =>
+      fetch.mockImplementation(() =>
         Promise.resolve(gitlabPage(fullPage, String(++page))),
       );
 
@@ -331,9 +336,7 @@ describe("GitlabRepositoriesService", () => {
           ),
         ),
       );
-      (fetch as jest.Mock).mockResolvedValue(
-        gitlabPage([mockGitlabProjects[0]]),
-      );
+      fetch.mockResolvedValue(gitlabPage([mockGitlabProjects[0]]));
 
       await service.syncGitlabRepos("test-integration-id");
 
@@ -355,7 +358,7 @@ describe("GitlabRepositoriesService", () => {
       repositoryCacheRepository.existsBy.mockResolvedValue(true);
       integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
 
-      (fetch as jest.Mock).mockResolvedValue(gitlabPage(mockGitlabProjects));
+      fetch.mockResolvedValue(gitlabPage(mockGitlabProjects));
 
       await service.syncGitlabRepos("test-integration-id");
 
@@ -371,7 +374,7 @@ describe("GitlabRepositoriesService", () => {
         mockIntegration,
       );
 
-      (fetch as jest.Mock).mockResolvedValue({
+      fetch.mockResolvedValue({
         ok: false,
         status: 401,
       });
@@ -391,7 +394,7 @@ describe("GitlabRepositoriesService", () => {
         mockIntegration,
       );
 
-      (fetch as jest.Mock).mockRejectedValue(new Error("Network error"));
+      fetch.mockRejectedValue(new Error("Network error"));
 
       await expect(
         service.syncGitlabRepos("test-integration-id"),
@@ -420,7 +423,7 @@ describe("GitlabRepositoriesService", () => {
       repositoryCacheRepository.save.mockResolvedValue(mockRepositoryCache);
       integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
 
-      (fetch as jest.Mock).mockResolvedValue(gitlabPage(incompleteProjects));
+      fetch.mockResolvedValue(gitlabPage(incompleteProjects));
 
       await service.syncGitlabRepos("test-integration-id");
 
@@ -736,7 +739,7 @@ describe("GitlabRepositoriesService", () => {
       repositoryCacheRepository.existsBy.mockResolvedValue(true);
       integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
 
-      (fetch as jest.Mock).mockResolvedValue(gitlabPage([]));
+      fetch.mockResolvedValue(gitlabPage([]));
 
       mockQueryBuilder.getCount.mockResolvedValue(0);
       mockQueryBuilder.getMany.mockResolvedValue([]);
@@ -773,7 +776,7 @@ describe("GitlabRepositoriesService", () => {
       repositoryCacheRepository.existsBy.mockResolvedValue(true);
       integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
 
-      (fetch as jest.Mock).mockResolvedValue(gitlabPage([]));
+      fetch.mockResolvedValue(gitlabPage([]));
 
       mockQueryBuilder.getCount.mockResolvedValue(0);
       mockQueryBuilder.getMany.mockResolvedValue([]);
@@ -948,7 +951,7 @@ describe("GitlabRepositoriesService", () => {
       integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
       repositoryCacheRepository.findOne.mockResolvedValue(mockRepositoryCache);
 
-      (fetch as jest.Mock).mockResolvedValue(gitlabPage([]));
+      fetch.mockResolvedValue(gitlabPage([]));
 
       const result = await service.getGitlabRepository(
         "test-org-id",
@@ -979,7 +982,7 @@ describe("GitlabRepositoriesService", () => {
       integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
       repositoryCacheRepository.findOne.mockResolvedValue(mockRepositoryCache);
 
-      (fetch as jest.Mock).mockResolvedValue(gitlabPage([]));
+      fetch.mockResolvedValue(gitlabPage([]));
 
       const result = await service.getGitlabRepository(
         "test-org-id",

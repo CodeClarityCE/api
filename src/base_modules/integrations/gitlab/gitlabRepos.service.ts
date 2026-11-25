@@ -26,6 +26,7 @@ import { SortDirection } from "src/types/sort.types";
 import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from "../github/constants";
 
 import { GitlabIntegrationService } from "./gitlab.service";
+import { gitlabFetch, instanceBase } from "./gitlabInstance";
 
 // Most projects one sync reads, so a huge GitLab instance cannot stall it
 const MAX_SYNCED_PROJECTS = 2000;
@@ -122,15 +123,13 @@ export class GitlabRepositoriesService {
     serviceDomain: string,
     rawToken: string,
   ): Promise<GitLabProject[]> {
-    const baseUrl = `${serviceDomain}/api/v4/projects?membership=true&min_access_level=20&per_page=100`;
+    const baseUrl = `${instanceBase(serviceDomain)}/api/v4/projects?membership=true&min_access_level=20&per_page=100`;
     const projects: GitLabProject[] = [];
     let url = baseUrl;
 
     for (;;) {
-      const response = await fetch(url, {
-        headers: {
-          "PRIVATE-TOKEN": rawToken,
-        },
+      const response = await gitlabFetch(url, {
+        headers: { "PRIVATE-TOKEN": rawToken },
       });
 
       if (!response.ok) {

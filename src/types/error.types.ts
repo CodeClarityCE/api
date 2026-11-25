@@ -86,6 +86,8 @@ export const errorMessages: Record<string, string> = {
     "You have an existing integration with the integration provider.",
   ProjectDoesNotExist: "The project referenced does not exist.",
   IntegrationWrongTokenType: "The token type is not supported.",
+  IntegrationInstanceUrlNotAllowed:
+    "The GitLab instance URL must use https and resolve to a public address, unless the operator allows its host in GITLAB_ALLOWED_PRIVATE_HOSTS.",
   IntegrationInstanceUrlChanged:
     "The integration's instance URL cannot be changed. Delete the integration and connect it again instead.",
   FailedToRetrieveReposFromProvider:
@@ -405,6 +407,21 @@ export class IntegrationInstanceUrlChanged extends PublicAPIError {
       IntegrationInstanceUrlChanged.errorCode,
       IntegrationInstanceUrlChanged.errorMessage,
       IntegrationInstanceUrlChanged.statusCode,
+      cause,
+    );
+  }
+}
+
+export class IntegrationInstanceUrlNotAllowed extends PublicAPIError {
+  static errorCode = "IntegrationInstanceUrlNotAllowed";
+  static errorMessage =
+    errorMessages[IntegrationInstanceUrlNotAllowed.errorCode]!;
+  static statusCode = 400;
+  constructor(cause?: unknown) {
+    super(
+      IntegrationInstanceUrlNotAllowed.errorCode,
+      IntegrationInstanceUrlNotAllowed.errorMessage,
+      IntegrationInstanceUrlNotAllowed.statusCode,
       cause,
     );
   }

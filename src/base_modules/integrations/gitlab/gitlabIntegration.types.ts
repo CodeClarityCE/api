@@ -66,7 +66,7 @@ export class LinkGitlabCreateBody {
   token_type!: GitlabTokenType;
 
   @ApiProperty({ maxLength: 255 })
-  @IsUrl({ require_protocol: true })
+  @IsUrl({ require_protocol: true, require_tld: false })
   @MaxLength(255)
   gitlab_instance_url!: string;
 }
@@ -83,7 +83,7 @@ export class LinkGitlabPatchBody {
   @IsEnum(GitlabTokenType)
   token_type!: GitlabTokenType;
 
-  @IsUrl()
+  @IsUrl({ require_protocol: true, require_tld: false })
   @MaxLength(255)
   gitlab_instance_url!: string;
 }
