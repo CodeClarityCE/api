@@ -497,7 +497,8 @@ export class GithubRepositoriesService {
       const response = (await client.rest.repos.listForAuthenticatedUser({
         per_page: entriesPerPage,
         page: page,
-        sort: "updated",
+        // A name order does not shift between pages when a repository is pushed to
+        sort: "full_name",
       })) as OctokitReposResponse;
 
       const lastPage = lastPageFromLinkHeader(response.headers.link);

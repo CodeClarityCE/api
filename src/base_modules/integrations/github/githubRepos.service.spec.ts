@@ -682,7 +682,7 @@ describe("GithubRepositoriesService", () => {
       ).toHaveBeenCalledWith({
         per_page: 100,
         page: 1,
-        sort: "updated",
+        sort: "full_name",
         since: undefined,
       });
     });
@@ -774,7 +774,7 @@ describe("GithubRepositoriesService", () => {
 
       expect(
         mockOctokit.rest.repos.listForAuthenticatedUser,
-      ).toHaveBeenCalledWith({ per_page: 100, page: 1, sort: "updated" });
+      ).toHaveBeenCalledWith({ per_page: 100, page: 1, sort: "full_name" });
     });
   });
 

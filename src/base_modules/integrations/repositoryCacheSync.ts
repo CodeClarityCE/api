@@ -19,9 +19,8 @@ export interface ProviderRepository {
 }
 
 /**
- * Make an integration's repository cache match a provider listing: update
- * rows by provider id and add new ones. When the listing is complete, also
- * delete the rows it lacks. Rows cached before provider ids are matched by url.
+ * Update and add an integration's cached repositories by provider id, and
+ * when the listing is complete, delete the rows it lacks.
  */
 export async function syncRepositoryCache(
   manager: EntityManager,
@@ -42,16 +41,17 @@ export async function syncRepositoryCache(
     const legacyByUrl = new Map<string, RepositoryCache>();
     for (const row of rows) {
       if (row.provider_id) byProviderId.set(row.provider_id, row);
+      // Rows cached before provider ids were kept match by url once
       else if (!legacyByUrl.has(row.url)) legacyByUrl.set(row.url, row);
     }
 
-    const kept = new Set<string>();
+    const keptRowIds = new Set<string>();
     const toSave: RepositoryCache[] = [];
-    const seen = new Set<string>();
+    const seenProviderIds = new Set<string>();
     for (const repo of listing) {
       // A paged listing can return a repository twice
-      if (seen.has(repo.provider_id)) continue;
-      seen.add(repo.provider_id);
+      if (seenProviderIds.has(repo.provider_id)) continue;
+      seenProviderIds.add(repo.provider_id);
 
       let row = byProviderId.get(repo.provider_id);
       if (!row) {
@@ -62,12 +62,12 @@ export async function syncRepositoryCache(
         integration: { id: integrationId },
       });
       Object.assign(row, repo);
-      if (row.id) kept.add(row.id);
+      if (row.id) keptRowIds.add(row.id);
       toSave.push(row);
     }
 
-    const stale = complete ? rows.filter((row) => !kept.has(row.id)) : [];
-    if (stale.length > 0) await tx.remove(stale);
-    if (toSave.length > 0) await tx.save(toSave);
+    const stale = complete ? rows.filter((row) => !keptRowIds.has(row.id)) : [];
+    if (stale.length > 0) await tx.remove(stale, { chunk: 500 });
+    if (toSave.length > 0) await tx.save(toSave, { chunk: 500 });
   });
 }
