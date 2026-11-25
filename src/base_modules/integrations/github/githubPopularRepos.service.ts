@@ -19,6 +19,7 @@ import {
   PaginationUserSuppliedConf,
 } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
+import { paginatedData, resolvePage } from "src/utils/pagination";
 
 import {
   CONST_POPULAR_REPOS_CACHE_TTL_MINUTES,
@@ -89,24 +90,6 @@ const PAGINATION: PaginationConfig = {
   maxEntriesPerPage: 100,
   defaultEntriesPerPage: 20,
 };
-
-/**
- * Clamp the requested page and page size. The page is sliced out of an
- * in-memory array, where a negative index counts from the end, so a
- * non-positive size falls back to the default and pages start at 0.
- */
-function resolvePagination(requested: PaginationUserSuppliedConf): {
-  currentPage: number;
-  entriesPerPage: number;
-} {
-  const requestedSize = requested.entriesPerPage ?? 0;
-  const entriesPerPage =
-    requestedSize > 0
-      ? Math.min(PAGINATION.maxEntriesPerPage, requestedSize)
-      : PAGINATION.defaultEntriesPerPage;
-  const currentPage = Math.max(0, requested.currentPage ?? 0);
-  return { currentPage, entriesPerPage };
-}
 
 type RepositoryComparator = (
   a: PopularGithubRepository,
@@ -250,8 +233,9 @@ export class GithubPopularReposService {
       throw new NotAuthorized();
     }
 
-    const { currentPage, entriesPerPage } = resolvePagination(
+    const { currentPage, entriesPerPage } = resolvePage(
       paginationUserSuppliedConf,
+      PAGINATION,
     );
 
     // The token is only needed when a language ranking must be (re)fetched;
@@ -312,16 +296,7 @@ export class GithubPopularReposService {
       (currentPage + 1) * entriesPerPage,
     );
 
-    return {
-      data: pageData,
-      page: currentPage,
-      entry_count: pageData.length,
-      entries_per_page: entriesPerPage,
-      total_entries: fullCount,
-      total_pages: Math.ceil(fullCount / entriesPerPage),
-      matching_count: fullCount,
-      filter_count: {},
-    };
+    return paginatedData(pageData, fullCount, { currentPage, entriesPerPage });
   }
 
   /**

@@ -26,6 +26,7 @@ import {
   TypedPaginatedData,
 } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
+import { paginatedData, resolvePage } from "src/utils/pagination";
 
 @Injectable()
 export class LicensePolicyService {
@@ -147,17 +148,11 @@ export class LicensePolicyService {
       defaultEntriesPerPage: 10,
     };
 
-    let entriesPerPage = paginationConfig.defaultEntriesPerPage;
-    let currentPage = 0;
-
-    if (paginationUserSuppliedConf.entriesPerPage)
-      entriesPerPage = Math.min(
-        paginationConfig.maxEntriesPerPage,
-        paginationUserSuppliedConf.entriesPerPage,
-      );
-
-    if (paginationUserSuppliedConf.currentPage)
-      currentPage = Math.max(0, paginationUserSuppliedConf.currentPage);
+    const { currentPage, entriesPerPage } = resolvePage(
+      paginationUserSuppliedConf,
+      paginationConfig,
+      "as-requested",
+    );
 
     const queryBuilder = this.policyRepository
       .createQueryBuilder("policy")
@@ -177,16 +172,10 @@ export class LicensePolicyService {
       .take(entriesPerPage)
       .getMany();
 
-    return {
-      data: policies.map(toPolicyFrontend),
-      page: currentPage,
-      entry_count: policies.length,
-      entries_per_page: entriesPerPage,
-      total_entries: fullCount,
-      total_pages: Math.ceil(fullCount / entriesPerPage),
-      matching_count: fullCount, // once you apply filters this needs to change
-      filter_count: {},
-    };
+    return paginatedData(policies.map(toPolicyFrontend), fullCount, {
+      currentPage,
+      entriesPerPage,
+    });
   }
 
   /**

@@ -5,6 +5,7 @@ import { FindOptionsRelations, Repository } from "typeorm";
 import { Integration } from "src/base_modules/integrations/integrations.entity";
 import { TypedPaginatedResponse } from "src/types/apiResponses.types";
 import { EntityNotFound, NotAuthorized } from "src/types/error.types";
+import { paginatedData } from "src/utils/pagination";
 
 /**
  * Pure repository for integration database operations.
@@ -97,16 +98,10 @@ export class IntegrationsRepository {
       where: { organizations: { id: orgId } },
     });
 
-    return {
-      data: integrations,
-      page: currentPage,
-      entry_count: integrations.length,
-      entries_per_page: entriesPerPage,
-      total_entries: fullCount,
-      total_pages: Math.ceil(fullCount / entriesPerPage),
-      matching_count: fullCount,
-      filter_count: {},
-    };
+    return paginatedData(integrations, fullCount, {
+      currentPage,
+      entriesPerPage,
+    });
   }
 
   /**

@@ -17,6 +17,7 @@ import {
   PaginationUserSuppliedConf,
   TypedPaginatedData,
 } from "src/types/pagination.types";
+import { resolvePage } from "src/utils/pagination";
 
 import { OrganizationLoggerService } from "../organizations/log/organizationLogger.service";
 import { PluginAvailabilityService } from "../plugin-availability/plugin-availability.service";
@@ -275,20 +276,11 @@ export class AnalyzersService {
       defaultEntriesPerPage: 10,
     };
 
-    // Determine the number of entries per page based on user input or default configuration
-    let entriesPerPage = paginationConfig.defaultEntriesPerPage;
-    if (paginationConfUser.entriesPerPage) {
-      entriesPerPage = Math.min(
-        paginationConfig.maxEntriesPerPage,
-        paginationConfUser.entriesPerPage,
-      );
-    }
-
-    // Determine the current page number based on user input or default to 0
-    let currentPage = 0;
-    if (paginationConfUser.currentPage !== undefined) {
-      currentPage = Math.max(0, paginationConfUser.currentPage);
-    }
+    const { currentPage, entriesPerPage } = resolvePage(
+      paginationConfUser,
+      paginationConfig,
+      "as-requested",
+    );
 
     // Retrieve the paginated list of analyzers from the specified organization
     const page = await this.analyzersRepository.getManyAnalyzers(

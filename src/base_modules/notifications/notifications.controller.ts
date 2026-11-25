@@ -18,6 +18,7 @@ import {
   NoDataResponse,
   TypedPaginatedResponse,
 } from "src/types/apiResponses.types";
+import { paginatedData } from "src/utils/pagination";
 
 import { Notification } from "./notification.entity";
 
@@ -48,16 +49,10 @@ export class NotificationsController {
       .take(entries_per_page)
       .getManyAndCount();
 
-    return {
-      data: rows,
-      page,
-      entry_count: rows.length,
-      entries_per_page,
-      total_entries: count,
-      total_pages: Math.ceil(count / entries_per_page),
-      matching_count: count,
-      filter_count: {},
-    };
+    return paginatedData(rows, count, {
+      currentPage: page,
+      entriesPerPage: entries_per_page,
+    });
   }
 
   @Delete(":notification_id")

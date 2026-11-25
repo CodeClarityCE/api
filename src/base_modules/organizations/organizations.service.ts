@@ -49,6 +49,7 @@ import {
 } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
 import { genRandomString, hash } from "src/utils/crypto";
+import { type Page, paginatedData, resolvePage } from "src/utils/pagination";
 
 import { EmailRepository } from "../email/email.repository";
 import { EmailService } from "../email/email.service";
@@ -469,16 +470,7 @@ export class OrganizationsService {
         { excludeExtraneousValues: true },
       ),
     );
-    return {
-      data,
-      page: currentPage,
-      entry_count: data.length,
-      entries_per_page: entriesPerPage,
-      total_entries: fullCount,
-      total_pages: Math.ceil(fullCount / entriesPerPage),
-      matching_count: fullCount,
-      filter_count: {},
-    };
+    return paginatedData(data, fullCount, { currentPage, entriesPerPage });
   }
 
   /**
@@ -798,18 +790,12 @@ function mergeTargetDays(
 
 const SEVERITY_KEYS = ["critical", "high", "medium", "low"] as const;
 
+const ORGANIZATION_PAGINATION: PaginationConfig = {
+  maxEntriesPerPage: 100,
+  defaultEntriesPerPage: 50,
+};
+
 /** Turns the requested page into a safe page index and size. */
-function pageOf(conf: PaginationUserSuppliedConf): {
-  currentPage: number;
-  entriesPerPage: number;
-} {
-  const config: PaginationConfig = {
-    maxEntriesPerPage: 100,
-    defaultEntriesPerPage: 50,
-  };
-  const entriesPerPage = conf.entriesPerPage
-    ? Math.min(config.maxEntriesPerPage, Math.max(1, conf.entriesPerPage))
-    : config.defaultEntriesPerPage;
-  const currentPage = Math.max(0, conf.currentPage ?? 0);
-  return { currentPage, entriesPerPage };
+function pageOf(conf: PaginationUserSuppliedConf): Page {
+  return resolvePage(conf, ORGANIZATION_PAGINATION, "one");
 }
