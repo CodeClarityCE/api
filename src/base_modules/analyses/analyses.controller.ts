@@ -333,7 +333,7 @@ export class AnalysesController {
    *
    * @example POST /org/123/projects/456/analyses/789/execute
    * @returns { id: "new-analysis-uuid" }
-   * @internal This endpoint is intended for use by the scheduler service only
+   * The caller must be a member of the organization that owns the analysis.
    */
   @ApiTags("Analyses")
   @ApiOperation({
@@ -346,10 +346,17 @@ export class AnalysesController {
   @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
   @Post(":analysis_id/execute")
   async createScheduledExecution(
+    @AuthUser() user: AuthenticatedUser,
+    @Param("org_id") org_id: string,
+    @Param("project_id") project_id: string,
     @Param("analysis_id") analysis_id: string,
   ): Promise<CreatedResponse> {
-    const newAnalysisId =
-      await this.analysesService.createScheduledExecution(analysis_id);
+    const newAnalysisId = await this.analysesService.createScheduledExecution(
+      org_id,
+      project_id,
+      analysis_id,
+      user,
+    );
     return { id: newAnalysisId };
   }
 

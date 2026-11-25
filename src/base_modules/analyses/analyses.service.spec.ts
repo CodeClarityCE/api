@@ -1015,7 +1015,12 @@ describe("AnalysesService", () => {
         .mockResolvedValue(newAnalysis);
 
       // Act
-      const result = await service.createScheduledExecution("analysis-123");
+      const result = await service.createScheduledExecution(
+        "org-123",
+        "project-123",
+        "analysis-123",
+        mockUser,
+      );
 
       // Assert
       expect(result).toBe("new-analysis-123");
@@ -1045,7 +1050,12 @@ describe("AnalysesService", () => {
 
       // Act & Assert
       await expect(
-        service.createScheduledExecution("analysis-123"),
+        service.createScheduledExecution(
+          "org-123",
+          "project-123",
+          "analysis-123",
+          mockUser,
+        ),
       ).rejects.toThrow("Database error");
     });
 
@@ -1060,7 +1070,12 @@ describe("AnalysesService", () => {
 
       // Act & Assert
       await expect(
-        service.createScheduledExecution("analysis-123"),
+        service.createScheduledExecution(
+          "org-123",
+          "project-123",
+          "analysis-123",
+          mockUser,
+        ),
       ).rejects.toThrow("Save error");
     });
   });

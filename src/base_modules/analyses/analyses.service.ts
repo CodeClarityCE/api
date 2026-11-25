@@ -862,11 +862,31 @@ export class AnalysesService {
    * This duplicates the configuration of an existing scheduled analysis to create a new execution.
    * Each scheduled run gets its own Analysis record, preserving historical results.
    *
+   * @param orgId - Organization ID that owns the project
+   * @param projectId - Project ID containing the analysis
    * @param originalAnalysisId - ID of the original scheduled analysis to duplicate
+   * @param user - Authenticated user making the request
    * @returns Promise resolving to the ID of the new analysis record
-   * @internal This method is intended for use by the scheduler service only
+   * @throws NotAuthorized if user lacks access
+   * @throws EntityNotFound if the analysis is not in that project
    */
-  async createScheduledExecution(originalAnalysisId: string): Promise<string> {
+  async createScheduledExecution(
+    orgId: string,
+    projectId: string,
+    originalAnalysisId: string,
+    user: AuthenticatedUser,
+  ): Promise<string> {
+    await this.membershipsRepository.hasRequiredRole(
+      orgId,
+      user.userId,
+      MemberRole.USER,
+    );
+    await this.projectsRepository.doesProjectBelongToOrg(projectId, orgId);
+    await this.analysesRepository.doesAnalysesBelongToProject(
+      originalAnalysisId,
+      projectId,
+    );
+
     // Get the original analysis with all relationships
     const originalAnalysis = await this.analysesRepository.getAnalysisById(
       originalAnalysisId,
