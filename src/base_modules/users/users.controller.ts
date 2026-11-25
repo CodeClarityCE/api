@@ -140,10 +140,11 @@ export class UsersController {
   @Patch(":user_id/update_personal")
   async updateAccountInfo(
     @AuthUser() user: AuthenticatedUser,
-    @Body() patch: UserPatchBody,
+    @Body() patch: UserPatchBody | undefined,
     @Param("user_id") user_id: string,
   ): Promise<NoDataResponse> {
-    await this.usersService.updatePersonalInfo(user_id, patch, user);
+    // No body means no field to change.
+    await this.usersService.updatePersonalInfo(user_id, patch ?? {}, user);
     return {};
   }
 

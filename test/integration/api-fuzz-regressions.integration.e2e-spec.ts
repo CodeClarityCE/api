@@ -206,6 +206,57 @@ describe("API fuzz regressions (e2e)", () => {
     );
   });
 
+  it.each(["", "?analyzer_name=%C2%A6C"])(
+    "GET /org/:org/analyzers/name%s for no such analyzer is not found",
+    async (query) => {
+      const response = await get(
+        `/org/${owner.organization.id}/analyzers/name${query}`,
+      );
+
+      expect(response.statusCode).toBe(404);
+      expect(response.body.error_code).toBe("EntityNotFound");
+    },
+  );
+
+  it("POST /org with a colour scheme longer than five characters is refused as malformed", async () => {
+    const response = await send("POST", "/org", {
+      name: "lodash",
+      description: "fuzz",
+      color_scheme: "\u00f7\u00e9|\u00fb.8S",
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body.error_code).toBe("ValidationFailed");
+  });
+
+  it("PATCH /users/:user_id/update_personal without a body changes nothing", async () => {
+    const response = await send(
+      "PATCH",
+      `/users/${owner.user.id}/update_personal`,
+    );
+    const user = await get(`/users/${owner.user.id}`);
+
+    expect(response.statusCode).toBe(200);
+    expect(user.body).toMatchObject({
+      data: {
+        first_name: owner.user.first_name,
+        last_name: owner.user.last_name,
+      },
+    });
+  });
+
+  it("PATCH /org/:org/file/:project/upload without a file is refused as a bad request", async () => {
+    const projectId = await createProject(owner, "fuzz-project");
+
+    const response = await send(
+      "PATCH",
+      `/org/${owner.organization.id}/file/${projectId}/upload`,
+    );
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body.error_code).toBe("BadRequest");
+  });
+
   describe("GET /org/:org/file/:project/:file_name", () => {
     it("is not found for a file that does not exist", async () => {
       const projectId = await createProject(owner, "fuzz-project");

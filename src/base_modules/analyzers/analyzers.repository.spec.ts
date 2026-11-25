@@ -2,7 +2,7 @@ import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import type { Repository } from "typeorm";
 
-import { NotAuthorized } from "src/types/error.types";
+import { EntityNotFound, NotAuthorized } from "src/types/error.types";
 
 import { Analyzer } from "./analyzer.entity";
 import { AnalyzerDoesNotExist } from "./analyzers.errors";
@@ -242,7 +242,7 @@ describe("AnalyzersRepository", () => {
 
       await expect(
         analyzersRepository.getByNameAndOrganization("Non-existent", "org-123"),
-      ).rejects.toThrow("Analyzer not found");
+      ).rejects.toThrow(EntityNotFound);
     });
   });
 
