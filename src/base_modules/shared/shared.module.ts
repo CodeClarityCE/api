@@ -11,9 +11,10 @@ import { Organization } from "src/base_modules/organizations/organization.entity
 import { Project } from "src/base_modules/projects/project.entity";
 import { User } from "src/base_modules/users/users.entity";
 
+import { AnalysesRepository } from "../analyses/analyses.repository";
+
 // Shared Repositories
 import {
-  AnalysesRepository,
   IntegrationsRepository,
   InvitationsRepository,
   LogsRepository,
