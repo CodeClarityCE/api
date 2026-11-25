@@ -1,12 +1,13 @@
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import { createProject } from "../utils/deletion-fixtures";
 import { testHelper, type TestUser } from "../utils/integration-test-helper";
 
+// The scheduler creates scheduled runs in the database (ADR 0022), so this route is gone.
 describe("POST /org/:orgId/projects/:projectId/analyses/:analysisId/execute (e2e)", () => {
   let owner: TestUser;
-  let outsider: TestUser;
   let projectId: string;
-  let otherProjectId: string;
   let analysisId: string;
 
   beforeAll(async () => {
@@ -24,13 +25,7 @@ describe("POST /org/:orgId/projects/:projectId/analyses/:analysisId/execute (e2e
       orgName: "Execute Org",
       role: MemberRole.ADMIN,
     });
-    outsider = await testHelper.createTestUser({
-      email: "outsider@execute.com",
-      orgName: "Outsider Org",
-      role: MemberRole.ADMIN,
-    });
     projectId = await createProject(owner, "Execute project");
-    otherProjectId = await createProject(owner, "Other project");
 
     const analyzer = await testHelper.makeAuthenticatedRequest(
       "POST",
@@ -61,18 +56,6 @@ describe("POST /org/:orgId/projects/:projectId/analyses/:analysisId/execute (e2e
     analysisId = analysis.json().id;
   });
 
-  function execute(
-    user: TestUser,
-    orgId: string,
-    project: string,
-  ): Promise<any> {
-    return testHelper.makeAuthenticatedRequest(
-      "POST",
-      `/org/${orgId}/projects/${project}/analyses/${analysisId}/execute`,
-      user.accessToken,
-    );
-  }
-
   // Number of analyses the owner sees in the project.
   async function analysisCount(): Promise<number> {
     const response = await testHelper.makeAuthenticatedRequest(
@@ -84,43 +67,25 @@ describe("POST /org/:orgId/projects/:projectId/analyses/:analysisId/execute (e2e
     return response.json().matching_count;
   }
 
-  it("creates a new run for a member of the organization", async () => {
-    const response = await execute(owner, owner.organization.id, projectId);
-
-    expect(response.statusCode).toBe(201);
-    expect(response.json().id).not.toBe(analysisId);
-    expect(await analysisCount()).toBe(2);
-  });
-
-  it("refuses a user of another organization and creates no run", async () => {
-    const response = await execute(outsider, owner.organization.id, projectId);
-
-    expect(response.statusCode).toBe(403);
-    expect(await analysisCount()).toBe(1);
-  });
-
-  it("refuses another organization's user calling through their own org id", async () => {
-    const outsiderProject = await createProject(outsider, "Outsider project");
-    const response = await execute(
-      outsider,
-      outsider.organization.id,
-      outsiderProject,
+  it("is not found for a member of the organization and creates no run", async () => {
+    const response = await testHelper.makeAuthenticatedRequest(
+      "POST",
+      `/org/${owner.organization.id}/projects/${projectId}/analyses/${analysisId}/execute`,
+      owner.accessToken,
     );
 
-    expect(response.statusCode).toBeGreaterThanOrEqual(400);
-    expect(response.statusCode).toBeLessThan(500);
+    expect(response.statusCode).toBe(404);
     expect(await analysisCount()).toBe(1);
   });
 
-  it("refuses a project id the analysis does not belong to", async () => {
-    const response = await execute(
-      owner,
-      owner.organization.id,
-      otherProjectId,
+  it("is absent from the OpenAPI description", () => {
+    const document = SwaggerModule.createDocument(
+      testHelper.getApp(),
+      new DocumentBuilder().build(),
     );
 
-    expect(response.statusCode).toBeGreaterThanOrEqual(400);
-    expect(response.statusCode).toBeLessThan(500);
-    expect(await analysisCount()).toBe(1);
+    expect(
+      Object.keys(document.paths).filter((route) => route.endsWith("/execute")),
+    ).toEqual([]);
   });
 });
