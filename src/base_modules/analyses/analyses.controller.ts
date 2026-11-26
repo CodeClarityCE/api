@@ -10,12 +10,7 @@ import {
   Put,
   Query,
 } from "@nestjs/common";
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiParam,
-  ApiTags,
-} from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
 import { Analysis } from "src/base_modules/analyses/analysis.entity";
 import {
@@ -327,45 +322,6 @@ export class AnalysesController {
       user,
     );
     return {};
-  }
-
-  // ===== INTERNAL SCHEDULER ENDPOINTS =====
-  // These endpoints are used by the scheduler service to manage scheduled executions
-
-  /**
-   * Create a new analysis execution for scheduled analysis
-   * This endpoint duplicates an existing scheduled analysis to create a new execution record
-   * Used internally by the scheduler service to preserve historical results
-   *
-   * @example POST /org/123/projects/456/analyses/789/execute
-   * @returns { id: "new-analysis-uuid" }
-   * The caller must be a member of the organization that owns the analysis.
-   */
-  @ApiTags("Analyses")
-  @ApiOperation({
-    description: "Create new execution for scheduled analysis (internal use)",
-    summary:
-      "Duplicate scheduled analysis for new execution - preserves historical results",
-  })
-  @ApiParam({ name: "org_id", description: "Organization ID" })
-  @ApiParam({ name: "project_id", description: "Project ID" })
-  @APIDocCreatedResponseDecorator()
-  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
-  @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
-  @Post(":analysis_id/execute")
-  async createScheduledExecution(
-    @AuthUser() user: AuthenticatedUser,
-    @Param("org_id") org_id: string,
-    @Param("project_id") project_id: string,
-    @Param("analysis_id") analysis_id: string,
-  ): Promise<CreatedResponse> {
-    const newAnalysisId = await this.analysesService.createScheduledExecution(
-      org_id,
-      project_id,
-      analysis_id,
-      user,
-    );
-    return { id: newAnalysisId };
   }
 
   // ===== ANALYSIS HISTORY ENDPOINTS =====
