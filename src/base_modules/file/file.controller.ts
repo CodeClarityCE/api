@@ -40,6 +40,7 @@ import {
   SingleFileInterceptor,
   type UploadedFilePart,
 } from "./single-file.interceptor";
+import { UPLOAD_FILE_SIZE_LIMIT } from "./upload-limits";
 
 export interface UploadData {
   type: string;
@@ -85,7 +86,11 @@ export class FileController {
     uploadError(400, "BadRequest", "The multipart body is malformed."),
   )
   @ApiResponse(
-    uploadError(413, "PayloadTooLarge", "The file is over the 25 MB limit."),
+    uploadError(
+      413,
+      "PayloadTooLarge",
+      `The file is over the ${UPLOAD_FILE_SIZE_LIMIT / 1024 / 1024} MB limit.`,
+    ),
   )
   @AllowOrganizationToken(OrganizationTokenScope.ANALYZE)
   @Patch("upload")

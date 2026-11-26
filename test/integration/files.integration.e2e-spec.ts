@@ -4,6 +4,7 @@ import { tmpdir } from "os";
 import { join } from "path";
 
 import { File } from "../../src/base_modules/file/file.entity";
+import { UPLOAD_FILE_SIZE_LIMIT } from "../../src/base_modules/file/upload-limits";
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import { type Project } from "../../src/base_modules/projects/project.entity";
 import { createProject } from "../utils/deletion-fixtures";
@@ -61,8 +62,7 @@ describe("Files (e2e)", () => {
   describe("PATCH /org/:org/file/:project/upload", () => {
     it("refuses a file over the size limit as too large", async () => {
       const boundary = "files-it-boundary";
-      // One byte over the 25 MB file size limit.
-      const file = Buffer.alloc(25 * 1024 * 1024 + 1, "a");
+      const file = Buffer.alloc(UPLOAD_FILE_SIZE_LIMIT + 1, "a");
       const payload = Buffer.concat([
         Buffer.from(
           `--${boundary}\r\n` +

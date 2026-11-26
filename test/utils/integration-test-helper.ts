@@ -16,6 +16,7 @@ import {
   AnalysisPublisher,
   InMemoryAnalysisPublisher,
 } from "../../src/base_modules/analyses/analysis-publisher";
+import { UPLOAD_FILE_SIZE_LIMIT } from "../../src/base_modules/file/upload-limits";
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import { Organization } from "../../src/base_modules/organizations/organization.entity";
 import {
@@ -77,7 +78,7 @@ class IntegrationTestHelper {
     );
     // As main.ts does, so uploads parse the same way.
     await this.app.register(multipart, {
-      limits: { fileSize: 25 * 1024 * 1024 },
+      limits: { fileSize: UPLOAD_FILE_SIZE_LIMIT },
     });
 
     // Same global setup as main.ts, so responses match the real API.

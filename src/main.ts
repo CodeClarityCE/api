@@ -10,6 +10,7 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 import { useGlobalHandlers } from "./app.globals";
 import { AppModule } from "./app.module";
+import { UPLOAD_FILE_SIZE_LIMIT } from "./base_modules/file/upload-limits";
 
 /**
  * The main entry point of the application.
@@ -21,9 +22,7 @@ async function bootstrap(): Promise<void> {
     new FastifyAdapter(),
   );
   await app.register(multipart, {
-    limits: {
-      fileSize: 25 * 1024 * 1024, //25 MB
-    },
+    limits: { fileSize: UPLOAD_FILE_SIZE_LIMIT },
   });
   /**
    * Add a polyfill to make Passport.js compatible with Fastify.
