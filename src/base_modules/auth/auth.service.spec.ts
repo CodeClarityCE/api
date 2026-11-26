@@ -18,7 +18,7 @@ import { AuthenticatedUser, ROLE } from "./auth.types";
 jest.mock("ms", () => ({
   __esModule: true,
   default: (time: string) => {
-    if (time === "90m") return 90 * 60 * 1000; // 90 minutes in ms
+    if (time === "15m") return 15 * 60 * 1000; // 15 minutes in ms
     if (time === "7d") return 7 * 24 * 60 * 60 * 1000; // 7 days in ms
     return 1000; // default 1 second
   },

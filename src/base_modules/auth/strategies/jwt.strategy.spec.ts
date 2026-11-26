@@ -8,10 +8,20 @@ jest.mock("fs", () => ({
 
 import { Test, type TestingModule } from "@nestjs/testing";
 import * as fs from "fs";
+import type { Jwt } from "jsonwebtoken";
 
 import { type JwtPayload, ROLE } from "../auth.types";
 
 import { JwtStrategy } from "./jwt.strategy";
+
+// Wraps claims as a verified token with the given typ header.
+function verified(payload: unknown, typ = "at+jwt"): Jwt {
+  return {
+    header: { alg: "ES512", typ },
+    payload: payload as Jwt["payload"],
+    signature: "",
+  };
+}
 
 describe("JwtStrategy", () => {
   let strategy: JwtStrategy;
@@ -54,6 +64,17 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
   });
 
   describe("validate", () => {
+    it.each([
+      ["refresh+jwt", "a token of the other kind"],
+      ["JWT", "an untyped token"],
+    ])("should refuse typ %s (%s)", async (typ) => {
+      await expect(
+        strategy.validate(
+          verified({ userId: "test-user-id", roles: [ROLE.USER] }, typ),
+        ),
+      ).rejects.toThrow();
+    });
+
     it("should return user object with userId and roles from payload", async () => {
       // Arrange
       const payload: JwtPayload = {
@@ -62,7 +83,7 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
       };
 
       // Act
-      const result = await strategy.validate(payload);
+      const result = await strategy.validate(verified(payload));
 
       // Assert
       expect(result).toEqual({
@@ -78,7 +99,7 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
       } as unknown as JwtPayload;
 
       // Act
-      const result = await strategy.validate(payload);
+      const result = await strategy.validate(verified(payload));
 
       // Assert
       expect(result).toEqual({
@@ -95,7 +116,7 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
       };
 
       // Act
-      const result = await strategy.validate(payload);
+      const result = await strategy.validate(verified(payload));
 
       // Assert
       expect(result).toEqual({
@@ -114,7 +135,7 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
       } as unknown as JwtPayload;
 
       // Act
-      const result = await strategy.validate(payload);
+      const result = await strategy.validate(verified(payload));
 
       // Assert
       expect(result).toEqual({
@@ -131,7 +152,7 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
       } as unknown as JwtPayload;
 
       // Act
-      const result = await strategy.validate(payload);
+      const result = await strategy.validate(verified(payload));
 
       // Assert
       expect(result).toEqual({
@@ -145,7 +166,9 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
       const payload = null as any;
 
       // Act & Assert
-      await expect(() => strategy.validate(payload)).rejects.toThrow();
+      await expect(() =>
+        strategy.validate(verified(payload)),
+      ).rejects.toThrow();
     });
 
     it("should handle undefined payload gracefully", async () => {
@@ -153,7 +176,9 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
       const payload = undefined as any;
 
       // Act & Assert
-      await expect(() => strategy.validate(payload)).rejects.toThrow();
+      await expect(() =>
+        strategy.validate(verified(payload)),
+      ).rejects.toThrow();
     });
 
     it("should handle empty object payload", async () => {
@@ -161,7 +186,7 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
       const payload = {} as unknown as JwtPayload;
 
       // Act
-      const result = await strategy.validate(payload);
+      const result = await strategy.validate(verified(payload));
 
       // Assert
       expect(result).toEqual({
@@ -182,7 +207,7 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
       } as unknown as JwtPayload;
 
       // Act
-      const result = await strategy.validate(payload);
+      const result = await strategy.validate(verified(payload));
 
       // Assert
       expect(result).toEqual({
@@ -201,7 +226,7 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
       };
 
       // Act
-      const result = await strategy.validate(payload);
+      const result = await strategy.validate(verified(payload));
 
       // Assert
       expect(result).toEqual({
@@ -219,7 +244,7 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
       };
 
       // Act
-      const result = await strategy.validate(payload);
+      const result = await strategy.validate(verified(payload));
 
       // Assert
       expect(result).toEqual({
@@ -236,8 +261,8 @@ MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgMockBaYK8lQRFl6j
       };
 
       // Act
-      const result1 = await strategy.validate(payload);
-      const result2 = await strategy.validate(payload);
+      const result1 = await strategy.validate(verified(payload));
+      const result2 = await strategy.validate(verified(payload));
 
       // Assert
       expect(result1).toEqual(result2);
