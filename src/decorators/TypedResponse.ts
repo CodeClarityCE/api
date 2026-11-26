@@ -27,23 +27,3 @@ export const APIDocTypedResponseDecorator = <DataDto extends Type<unknown>>(
       },
     }),
   );
-
-/** Documents a `{ data: DataDto[] }` response. */
-export const APIDocTypedManyResponseDecorator = <DataDto extends Type<unknown>>(
-  dataDto: DataDto,
-): ReturnType<typeof applyDecorators> =>
-  applyDecorators(
-    ApiExtraModels(TypedResponse, dataDto),
-    ApiOkResponse({
-      schema: {
-        allOf: [
-          { $ref: getSchemaPath(TypedResponse) },
-          {
-            properties: {
-              data: { type: "array", items: { $ref: getSchemaPath(dataDto) } },
-            },
-          },
-        ],
-      },
-    }),
-  );

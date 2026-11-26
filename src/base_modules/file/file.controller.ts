@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -74,7 +75,7 @@ export class FileController {
   ): Promise<void> {
     // https://medium.com/@hackntosh/how-to-handle-file-uploading-with-nestjs-fastify-swagger-81afb08767ce
     if (!file) {
-      throw new InternalError("500", "No file provided");
+      throw new BadRequestException("No file provided");
     }
 
     await this.fileService.uploadFile(

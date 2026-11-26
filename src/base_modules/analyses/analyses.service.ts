@@ -511,9 +511,9 @@ export class AnalysesService {
     user: AuthenticatedUser,
   ): Promise<TypedPaginatedData<Analysis>> {
     // (1) Check if the user is allowed to create an analyzer (is at least a user)
-    await this.membershipsRepository.hasRequiredRole(
+    await this.membershipsRepository.hasRequiredRoleFor(
       organizationId,
-      user.userId,
+      user,
       MemberRole.USER,
     );
 
@@ -854,63 +854,6 @@ export class AnalysesService {
     analysis.is_active = false;
 
     await this.analysesRepository.saveAnalysis(analysis);
-  }
-
-  /**
-   * Create a new analysis record for scheduled execution
-   *
-   * This duplicates the configuration of an existing scheduled analysis to create a new execution.
-   * Each scheduled run gets its own Analysis record, preserving historical results.
-   *
-   * @param originalAnalysisId - ID of the original scheduled analysis to duplicate
-   * @returns Promise resolving to the ID of the new analysis record
-   * @internal This method is intended for use by the scheduler service only
-   */
-  async createScheduledExecution(originalAnalysisId: string): Promise<string> {
-    // Get the original analysis with all relationships
-    const originalAnalysis = await this.analysesRepository.getAnalysisById(
-      originalAnalysisId,
-      {
-        analyzer: true,
-        project: { integration: true },
-        organization: true,
-        created_by: true,
-      },
-    );
-
-    // Create a new analysis with the same configuration
-    const newAnalysis = new Analysis();
-    newAnalysis.status = AnalysisStatus.REQUESTED;
-    newAnalysis.stage = 0;
-    newAnalysis.config = originalAnalysis.config;
-    newAnalysis.steps = originalAnalysis.steps;
-    if (originalAnalysis.tag !== undefined) {
-      newAnalysis.tag = originalAnalysis.tag;
-    }
-    newAnalysis.branch = originalAnalysis.branch;
-    if (originalAnalysis.commit_hash !== undefined) {
-      newAnalysis.commit_hash = originalAnalysis.commit_hash;
-    }
-    newAnalysis.created_on = new Date();
-
-    // Copy relationships
-    newAnalysis.created_by = originalAnalysis.created_by;
-    newAnalysis.analyzer = originalAnalysis.analyzer;
-    newAnalysis.project = originalAnalysis.project;
-    newAnalysis.organization = originalAnalysis.organization;
-    newAnalysis.integration = originalAnalysis.integration;
-
-    // Set scheduling fields to indicate this is a scheduled execution
-    newAnalysis.schedule_type = "once"; // This execution is a one-time run
-    newAnalysis.is_active = true;
-    newAnalysis.next_scheduled_run = undefined; // Not applicable for execution records
-    newAnalysis.last_scheduled_run = undefined; // Will be set by scheduler
-
-    // Save the new analysis
-    const savedAnalysis =
-      await this.analysesRepository.saveAnalysis(newAnalysis);
-
-    return savedAnalysis.id;
   }
 
   /**

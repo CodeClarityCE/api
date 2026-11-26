@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { EntityManager, In, Not, Repository } from "typeorm";
+import { EntityManager, In, LessThan, Not, Repository } from "typeorm";
 
 import {
   Analysis,
@@ -10,6 +10,7 @@ import { TERMINAL_ANALYSIS_STATUSES } from "src/base_modules/analyses/analysis-o
 import { Result } from "src/codeclarity_modules/results/result.entity";
 import { EntityNotFound } from "src/types/error.types";
 import { TypedPaginatedData } from "src/types/pagination.types";
+import { paginatedData } from "src/utils/pagination";
 
 /** Caller writes committed in the same transaction as a new analysis. */
 export type AnalysisWrites = (
@@ -231,16 +232,31 @@ export class AnalysesRepository {
       .take(entriesPerPage)
       .getMany();
 
-    return {
-      data: analyses,
-      page: currentPage,
-      entry_count: analyses.length,
-      entries_per_page: entriesPerPage,
-      total_entries: fullCount,
-      total_pages: Math.ceil(fullCount / entriesPerPage),
-      matching_count: analyses.length,
-      filter_count: {},
-    };
+    return paginatedData(
+      analyses,
+      fullCount,
+      { currentPage, entriesPerPage },
+      analyses.length,
+    );
+  }
+
+  /** Finds the latest completed analysis before the given one, on the same branch and analyzer. */
+  async getPreviousCompletedAnalysis(
+    projectId: string,
+    analysisId: string,
+  ): Promise<Analysis | null> {
+    const current = await this.getAnalysisById(analysisId, { analyzer: true });
+    if (!current.analyzer) return null;
+    return this.analysisRepository.findOne({
+      where: {
+        project: { id: projectId },
+        branch: current.branch,
+        analyzer: { id: current.analyzer.id },
+        status: In([AnalysisStatus.COMPLETED, AnalysisStatus.SUCCESS]),
+        created_on: LessThan(current.created_on),
+      },
+      order: { created_on: "DESC" },
+    });
   }
 
   async getAnalysesByProjectId(

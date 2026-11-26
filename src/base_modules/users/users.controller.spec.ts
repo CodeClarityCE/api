@@ -295,6 +295,20 @@ describe("UsersController", () => {
       expect(result).toEqual({});
     });
 
+    it("should pass an empty patch when the request has no body", async () => {
+      await controller.updateAccountInfo(
+        mockAuthenticatedUser,
+        undefined,
+        "test-user-id",
+      );
+
+      expect(usersService.updatePersonalInfo).toHaveBeenCalledWith(
+        "test-user-id",
+        {},
+        mockAuthenticatedUser,
+      );
+    });
+
     it("should throw NotAuthorized when user lacks permission", async () => {
       const patch: UserPatchBody = {
         first_name: "Updated",

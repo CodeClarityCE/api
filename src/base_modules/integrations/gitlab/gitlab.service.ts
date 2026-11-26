@@ -39,6 +39,7 @@ import {
   IntegrationType,
 } from "../integrations.entity";
 
+import { assertGitlabInstanceAllowed, instanceBase } from "./gitlabInstance";
 import { GitlabIntegrationTokenService } from "./gitlabToken.service";
 
 // https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#prefill-personal-access-token-name-and-scopes
@@ -124,6 +125,7 @@ export class GitlabIntegrationService {
    * @throws {IntegrationInvalidToken} In case the token is not valid (revoked or non-existant)
    * @throws {IntegrationTokenRetrievalFailed} In case the token could not be fetched from the provider
    * @throws {DuplicateIntegration} In case that a gitlab integration already exists on the organization
+   * @throws {IntegrationInstanceUrlNotAllowed} In case the instance url is plain http or internal and not allowed
    *
    * @param orgId The organization to which to add the integration to
    * @param linkGitlabCreate The information on the creation on the integration from the user
@@ -169,6 +171,8 @@ export class GitlabIntegrationService {
     ) {
       throw new DuplicateIntegration();
     }
+
+    await assertGitlabInstanceAllowed(linkGitlabCreate.gitlab_instance_url);
 
     // const [expires, expiresAt] =
     //     await this.gitlabIntegrationTokenService.getPersonalAccessTokenExpiryRemote(
@@ -219,6 +223,7 @@ export class GitlabIntegrationService {
    * @throws {NotAuthorized} If the authenticated user is not authorized to perform this action
    * @throws {IntegrationWrongTokenType} In case the token appears to be of the incorrect form
    * @throws {IntegrationInstanceUrlChanged} In case the instance URL differs from the stored one
+   * @throws {IntegrationInstanceUrlNotAllowed} In case the instance url is plain http or internal and not allowed
    * @throws {IntegrationTokenMissingPermissions} In case any scopes/permissions are not granted
    * @throws {IntegrationTokenExpired} In case the token is already expired
    * @throws {IntegrationInvalidToken} In case the token is not valid (revoked or non-existant)
@@ -265,17 +270,13 @@ export class GitlabIntegrationService {
     }
 
     // Moving an integration to another server would break its projects
-    const withoutSlash = (url: string): string => {
-      let end = url.length;
-      while (end > 0 && url[end - 1] === "/") end--;
-      return url.slice(0, end);
-    };
     if (
-      withoutSlash(linkGitlabCreate.gitlab_instance_url) !==
-      withoutSlash(integration.service_domain)
+      instanceBase(linkGitlabCreate.gitlab_instance_url) !==
+      instanceBase(integration.service_domain)
     ) {
       throw new IntegrationInstanceUrlChanged();
     }
+    await assertGitlabInstanceAllowed(integration.service_domain);
 
     await this.gitlabIntegrationTokenService.validatePersonalAccessTokenPermissions(
       linkGitlabCreate.token,

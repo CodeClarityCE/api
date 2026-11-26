@@ -55,6 +55,7 @@ export class SBOMController {
     );
   }
 
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get(":analysis_id/sbom/stats")
   async getStats(
     @Param("org_id") org_id: string,
@@ -95,6 +96,7 @@ export class SBOMController {
     };
   }
 
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get(":analysis_id/sbom/dependency")
   async getDependency(
     @Param("org_id") org_id: string,
@@ -117,6 +119,7 @@ export class SBOMController {
     };
   }
 
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get(":analysis_id/sbom/dependency/graph")
   async getDependencyGraph(
     @Param("org_id") org_id: string,

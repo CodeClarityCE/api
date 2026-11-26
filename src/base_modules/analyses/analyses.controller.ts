@@ -26,6 +26,7 @@ import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocCreatedResponseDecorator } from "src/decorators/CrudResponse";
 import { APIDocNoDataResponseDecorator } from "src/decorators/NoDataResponse";
 import { AllowOrganizationToken } from "src/decorators/OrganizationTokenDecorator";
+import { APIDocTypedManyResponseDecorator } from "src/decorators/TypedManyResponse";
 import { APIDocTypedPaginatedResponseDecorator } from "src/decorators/TypedPaginatedResponse";
 import { APIDocTypedResponseDecorator } from "src/decorators/TypedResponse";
 import { AuthUser } from "src/decorators/UserDecorator";
@@ -101,6 +102,7 @@ export class AnalysesController {
   @ApiOperation({ description: "Get the analyses of a project." })
   @APIDocTypedPaginatedResponseDecorator(Analysis)
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
+  @AllowOrganizationToken(OrganizationTokenScope.READ)
   @Get("")
   async getMany(
     @AuthUser() user: AuthenticatedUser,
@@ -242,7 +244,7 @@ export class AnalysesController {
     description: "Get all scheduled analyses for a project",
     summary: "Retrieve active recurring analyses (daily/weekly) for a project",
   })
-  @APIDocTypedResponseDecorator(Analysis)
+  @APIDocTypedManyResponseDecorator(Analysis)
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
   @Get("scheduled")
   async getScheduled(
@@ -320,36 +322,6 @@ export class AnalysesController {
       user,
     );
     return {};
-  }
-
-  // ===== INTERNAL SCHEDULER ENDPOINTS =====
-  // These endpoints are used by the scheduler service to manage scheduled executions
-
-  /**
-   * Create a new analysis execution for scheduled analysis
-   * This endpoint duplicates an existing scheduled analysis to create a new execution record
-   * Used internally by the scheduler service to preserve historical results
-   *
-   * @example POST /org/123/projects/456/analyses/789/execute
-   * @returns { id: "new-analysis-uuid" }
-   * @internal This endpoint is intended for use by the scheduler service only
-   */
-  @ApiTags("Analyses")
-  @ApiOperation({
-    description: "Create new execution for scheduled analysis (internal use)",
-    summary:
-      "Duplicate scheduled analysis for new execution - preserves historical results",
-  })
-  @APIDocCreatedResponseDecorator()
-  @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
-  @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
-  @Post(":analysis_id/execute")
-  async createScheduledExecution(
-    @Param("analysis_id") analysis_id: string,
-  ): Promise<CreatedResponse> {
-    const newAnalysisId =
-      await this.analysesService.createScheduledExecution(analysis_id);
-    return { id: newAnalysisId };
   }
 
   // ===== ANALYSIS HISTORY ENDPOINTS =====

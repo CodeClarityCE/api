@@ -11,6 +11,7 @@ import {
   PaginationConfig,
   PaginationUserSuppliedConf,
 } from "src/types/pagination.types";
+import { resolvePage } from "src/utils/pagination";
 
 import {
   MembershipsRepository,
@@ -55,16 +56,12 @@ export class IntegrationsService {
       defaultEntriesPerPage: 10,
     };
 
-    // Determine the number of entries per page based on user input or use the default value if not specified.
-    let entriesPerPage = paginationConfig.defaultEntriesPerPage;
-    const currentPage = 0;
-
-    if (paginationUserSuppliedConf.entriesPerPage) {
-      entriesPerPage = Math.min(
-        paginationConfig.maxEntriesPerPage,
-        paginationUserSuppliedConf.entriesPerPage,
-      );
-    }
+    // Always the first page; only the size comes from the request
+    const { currentPage, entriesPerPage } = resolvePage(
+      { entriesPerPage: paginationUserSuppliedConf.entriesPerPage },
+      paginationConfig,
+      "as-requested",
+    );
 
     // Fetch and return the VCS integrations using the specified organization ID, current page, and entries per page.
     return this.integrationRepository.getVCSIntegrations(

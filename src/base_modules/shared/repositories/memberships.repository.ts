@@ -10,6 +10,7 @@ import {
 import { isMemberRoleLessThan } from "src/base_modules/organizations/memberships/orgMembership.types";
 import { EntityNotFound, NotAuthorized } from "src/types/error.types";
 import { TypedPaginatedData } from "src/types/pagination.types";
+import { paginatedData } from "src/utils/pagination";
 
 /**
  * Pure repository for organization membership database operations.
@@ -207,7 +208,10 @@ export class MembershipsRepository {
         take: entriesPerPage,
         skip: currentPage * entriesPerPage,
       });
-    return paginated(memberships, fullCount, currentPage, entriesPerPage);
+    return paginatedData(memberships, fullCount, {
+      currentPage,
+      entriesPerPage,
+    });
   }
 
   /**
@@ -226,7 +230,10 @@ export class MembershipsRepository {
         take: entriesPerPage,
         skip: currentPage * entriesPerPage,
       });
-    return paginated(memberships, fullCount, currentPage, entriesPerPage);
+    return paginatedData(memberships, fullCount, {
+      currentPage,
+      entriesPerPage,
+    });
   }
 
   /**
@@ -237,22 +244,4 @@ export class MembershipsRepository {
       where: { organization: { id: organizationId } },
     });
   }
-}
-
-function paginated<T>(
-  data: T[],
-  fullCount: number,
-  currentPage: number,
-  entriesPerPage: number,
-): TypedPaginatedData<T> {
-  return {
-    data,
-    page: currentPage,
-    entry_count: data.length,
-    entries_per_page: entriesPerPage,
-    total_entries: fullCount,
-    total_pages: Math.ceil(fullCount / entriesPerPage),
-    matching_count: fullCount,
-    filter_count: {},
-  };
 }

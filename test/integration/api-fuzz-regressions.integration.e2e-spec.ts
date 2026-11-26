@@ -78,9 +78,179 @@ describe("API fuzz regressions (e2e)", () => {
     expect(response.body.error_code).toBe("EntityNotFound");
   });
 
-  it("GET /knowledge/vulnerabilities/search with an empty query is refused as a bad request", async () => {
-    const response = await get(
-      "/knowledge/vulnerabilities/search?query=&page=0&limit=0",
+  it.each([
+    "/knowledge/vulnerabilities/search?query=&page=0&limit=0",
+    "/knowledge/vulnerabilities/search?page=0&limit=0&source=NVD",
+    "/knowledge/vulnerabilities/search?query=a&query=b",
+  ])("GET %s without one query is refused as a bad request", async (path) => {
+    const response = await get(path);
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body.error_code).toBe("BadRequest");
+  });
+
+  async function send(
+    method: "POST" | "PATCH",
+    path: string,
+    body?: unknown,
+  ): Promise<{ statusCode: number; body: { error_code?: string } }> {
+    const response = await testHelper.makeAuthenticatedRequest(
+      method,
+      path,
+      owner.accessToken,
+      body,
+    );
+    return {
+      statusCode: response.statusCode,
+      body: response.json() as { error_code?: string },
+    };
+  }
+
+  describe("a NUL character in a value sent to the database", () => {
+    it.each(["/projects?search_key=%00", "/tickets?status=%00"])(
+      "GET /org/:org%s is refused as a bad request",
+      async (path) => {
+        const response = await get(`/org/${owner.organization.id}${path}`);
+
+        expect(response.statusCode).toBe(400);
+        expect(response.body.error_code).toBe("BadRequest");
+      },
+    );
+
+    it.each([
+      ["/auth/confirm_registration", { token: "t", user_id_hash: "\u0000" }],
+      ["/users/confirm_registration", { token: "t", user_id_hash: "\u0000" }],
+      [
+        "/knowledge/packages/check-outdated",
+        {
+          packages: [
+            { name: "a\u0000", currentVersion: "1", ecosystem: "npm" },
+          ],
+        },
+      ],
+      [
+        "/knowledge/packages/check-vulnerabilities",
+        { packages: [{ name: "a\u0000", version: "1", ecosystem: "npm" }] },
+      ],
+    ])("POST %s is refused as a bad request", async (path, body) => {
+      const response = await send("POST", path, body);
+
+      expect(response.statusCode).toBe(400);
+      expect(response.body.error_code).toBe("BadRequest");
+    });
+
+    it("POST /org/:org/join is refused as a bad request", async () => {
+      const response = await send(
+        "POST",
+        `/org/${owner.organization.id}/join`,
+        {
+          token: "t",
+          email_digest: "\u0000",
+        },
+      );
+
+      expect(response.statusCode).toBe(400);
+      expect(response.body.error_code).toBe("BadRequest");
+    });
+
+    it("PATCH /users/:user_id/update_default_org is refused as a bad request", async () => {
+      const response = await send(
+        "PATCH",
+        `/users/${owner.user.id}/update_default_org`,
+        { default_org: "\u0000" },
+      );
+
+      expect(response.statusCode).toBe(400);
+      expect(response.body.error_code).toBe("BadRequest");
+    });
+  });
+
+  describe("a ticket request without a body", () => {
+    it.each([
+      "/tickets/bulk-sync/JIRA",
+      "/tickets/bulk-sync-from-external",
+      "/tickets/integrations/clickup/oauth/callback",
+      "/tickets/integrations/JIRA/workspaces/0/spaces",
+      "/tickets/integrations/JIRA/spaces/0/folders",
+      "/tickets/integrations/CLICKUP/spaces/0/lists",
+      "/tickets/integrations/CLICKUP/folders/0/lists",
+    ])("POST /org/:org%s is refused as malformed", async (path) => {
+      const response = await send(
+        "POST",
+        `/org/${owner.organization.id}${path}`,
+      );
+
+      expect(response.statusCode).toBe(400);
+      expect(response.body.error_code).toBe("ValidationFailed");
+    });
+  });
+
+  describe("ClickUp credentials that cannot be sent in a header", () => {
+    it.each(["api_key", "access_token", "refresh_token"])(
+      "POST /org/:org/tickets/integrations/clickup refuses such an %s",
+      async (field) => {
+        const response = await send(
+          "POST",
+          `/org/${owner.organization.id}/tickets/integrations/clickup`,
+          {
+            auth_method: "API_KEY",
+            api_key: "pk_test",
+            list_id: "1",
+            [field]: "\u7718x",
+          },
+        );
+
+        expect(response.statusCode).toBe(400);
+        expect(response.body.error_code).toBe("ValidationFailed");
+      },
+    );
+  });
+
+  it.each(["", "?analyzer_name=%C2%A6C"])(
+    "GET /org/:org/analyzers/name%s for no such analyzer is not found",
+    async (query) => {
+      const response = await get(
+        `/org/${owner.organization.id}/analyzers/name${query}`,
+      );
+
+      expect(response.statusCode).toBe(404);
+      expect(response.body.error_code).toBe("EntityNotFound");
+    },
+  );
+
+  it("POST /org with a colour scheme longer than five characters is refused as malformed", async () => {
+    const response = await send("POST", "/org", {
+      name: "lodash",
+      description: "fuzz",
+      color_scheme: "\u00f7\u00e9|\u00fb.8S",
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body.error_code).toBe("ValidationFailed");
+  });
+
+  it("PATCH /users/:user_id/update_personal without a body changes nothing", async () => {
+    const response = await send(
+      "PATCH",
+      `/users/${owner.user.id}/update_personal`,
+    );
+    const user = await get(`/users/${owner.user.id}`);
+
+    expect(response.statusCode).toBe(200);
+    expect(user.body).toMatchObject({
+      data: {
+        first_name: owner.user.first_name,
+        last_name: owner.user.last_name,
+      },
+    });
+  });
+
+  it("PATCH /org/:org/file/:project/upload without a file is refused as a bad request", async () => {
+    const projectId = await createProject(owner, "fuzz-project");
+
+    const response = await send(
+      "PATCH",
+      `/org/${owner.organization.id}/file/${projectId}/upload`,
     );
 
     expect(response.statusCode).toBe(400);
@@ -124,6 +294,83 @@ describe("API fuzz regressions (e2e)", () => {
 
       expect(response.statusCode).toBe(403);
     });
+  });
+
+  describe("list responses match the OpenAPI description", () => {
+    interface Schema {
+      $ref?: string;
+      type?: string;
+      allOf?: Schema[];
+      properties?: Record<string, Schema>;
+    }
+
+    // The JSON types the 200 response schema of a GET route allows for data.
+    function documentedDataTypes(route: string): string[] {
+      const document = SwaggerModule.createDocument(
+        testHelper.getApp(),
+        new DocumentBuilder().build(),
+      );
+      const resolve = (schema: Schema): Schema =>
+        schema.$ref
+          ? (document.components?.schemas?.[
+              schema.$ref.replace("#/components/schemas/", "")
+            ] as Schema)
+          : schema;
+      const response = document.paths[route]?.get?.responses["200"] as {
+        content: Record<string, { schema: Schema }>;
+      };
+      const schema = response.content["application/json"]!.schema;
+      return (schema.allOf ?? [schema])
+        .map((part) => resolve(part).properties?.["data"])
+        .filter((data): data is Schema => data !== undefined)
+        .map((data) => resolve(data).type ?? "any");
+    }
+
+    it.each([
+      ["/org/{org_id}/remediations/fix-next", "/remediations/fix-next"],
+      ["/org/{org_id}/tickets/my-work", "/tickets/my-work"],
+      ["/org/{org_id}/tokens", "/tokens"],
+    ])("GET %s documents data as the array it returns", async (route, path) => {
+      const response = await get(`/org/${owner.organization.id}${path}`);
+
+      expect(response.statusCode).toBe(200);
+      expect(response.body).toMatchObject({ data: [] });
+      expect(documentedDataTypes(route)).toEqual(["array"]);
+    });
+
+    it("GET /org/{org_id}/projects/{project_id}/analyses/scheduled documents data as an array", () => {
+      expect(
+        documentedDataTypes(
+          "/org/{org_id}/projects/{project_id}/analyses/scheduled",
+        ),
+      ).toEqual(["array"]);
+    });
+  });
+
+  it("the OpenAPI description defines every path parameter of every route", () => {
+    const document = SwaggerModule.createDocument(
+      testHelper.getApp(),
+      new DocumentBuilder().build(),
+    );
+    const undefinedParameters = Object.entries(document.paths).flatMap(
+      ([route, operations]) =>
+        Object.entries(operations as Record<string, unknown>).flatMap(
+          ([method, operation]) => {
+            const parameters =
+              (operation as { parameters?: { name: string; in: string }[] })
+                .parameters ?? [];
+            const defined = new Set(
+              parameters.filter((p) => p.in === "path").map((p) => p.name),
+            );
+            return [...route.matchAll(/\{(\w+)\}/g)]
+              .map((match) => match[1]!)
+              .filter((name) => !defined.has(name))
+              .map((name) => `${method.toUpperCase()} ${route} ${name}`);
+          },
+        ),
+    );
+
+    expect(undefinedParameters).toEqual([]);
   });
 
   describe("User responses match the OpenAPI description", () => {

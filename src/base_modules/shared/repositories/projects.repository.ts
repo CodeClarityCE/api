@@ -7,6 +7,7 @@ import { Project } from "src/base_modules/projects/project.entity";
 import { EntityNotFound, ProjectDoesNotExist } from "src/types/error.types";
 import { TypedPaginatedData } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
+import { paginatedData } from "src/utils/pagination";
 
 export enum AllowedOrderByGetProjects {
   NAME = "name",
@@ -255,16 +256,7 @@ export class ProjectsRepository {
           .getMany()
       : [];
 
-    return {
-      data: projects,
-      page: currentPage,
-      entry_count: projects.length,
-      entries_per_page: entriesPerPage,
-      total_entries: fullCount,
-      total_pages: Math.ceil(fullCount / entriesPerPage),
-      matching_count: fullCount,
-      filter_count: {},
-    };
+    return paginatedData(projects, fullCount, { currentPage, entriesPerPage });
   }
 
   /**

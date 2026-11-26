@@ -1,7 +1,7 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 
+import { AnalysesRepository } from "src/base_modules/analyses/analyses.repository";
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
-import { AnalysesRepository } from "src/base_modules/shared/repositories";
 import { CWERepository } from "src/codeclarity_modules/knowledge/cwe/cwe.repository";
 import { EPSSRepository } from "src/codeclarity_modules/knowledge/epss/epss.repository";
 import { GCVERepository } from "src/codeclarity_modules/knowledge/gcve/gcve.repository";
