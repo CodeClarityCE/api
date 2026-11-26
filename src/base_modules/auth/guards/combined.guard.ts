@@ -167,7 +167,6 @@ export class CombinedAuthGuard implements CanActivate {
         ...verifyOptionsFor(TokenKind.ACCESS),
       });
       const payload = claimsOfKind(verified, TokenKind.ACCESS);
-      // TODO: get roles from payload
       return [
         true,
         new AuthenticatedUser(

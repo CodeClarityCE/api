@@ -5,22 +5,17 @@ import type { Jwt } from "jsonwebtoken";
 import { ExtractJwt, Strategy } from "passport-jwt";
 
 import { JwtValidationResult } from "../auth.types";
-import { claimsOfKind, TokenKind, verifyOptionsFor } from "../token-kinds";
+import { claimsOfKind, passportOptionsFor, TokenKind } from "../token-kinds";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, "jwt") {
   constructor() {
     // Only access tokens pass: the audience is checked here, the typ in validate.
-    const { algorithms, audience, ...jsonWebTokenOptions } = verifyOptionsFor(
-      TokenKind.ACCESS,
-    );
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: fs.readFileSync("./jwt/private.pem", "utf8"),
-      algorithms,
-      audience,
-      jsonWebTokenOptions,
+      ...passportOptionsFor(TokenKind.ACCESS),
     });
   }
 

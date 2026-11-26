@@ -330,24 +330,29 @@ describe("Authentication Integration (e2e)", () => {
       expect(response.json().error_code).toBe("NotAuthenticated");
     });
 
-    it("should refuse an untyped token, as issued before typing, on both", async () => {
-      // Signed with the real key the way tokens were issued before typing.
+    // Sends the token as bearer and to /auth/refresh, and expects both to refuse it.
+    async function expectRefusedOnBoth(token: string): Promise<void> {
+      const bearer = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        "/auth/user",
+        token,
+      );
+      const refresh = await testHelper.makeRequest("POST", "/auth/refresh", {
+        refresh_token: token,
+      });
+
+      expect(bearer.statusCode).toBe(401);
+      expect(refresh.statusCode).toBe(401);
+    }
+
+    it("should refuse an old token with no type or audience on both", async () => {
+      // Signed with the real key, with no typ header or audience.
       const untyped = jwt.sign(claimsOf(testUser), privateKey, {
         algorithm: "ES512",
         expiresIn: "15m",
       });
 
-      const bearer = await testHelper.makeAuthenticatedRequest(
-        "GET",
-        "/auth/user",
-        untyped,
-      );
-      const refresh = await testHelper.makeRequest("POST", "/auth/refresh", {
-        refresh_token: untyped,
-      });
-
-      expect(bearer.statusCode).toBe(401);
-      expect(refresh.statusCode).toBe(401);
+      await expectRefusedOnBoth(untyped);
     });
 
     it.each([
@@ -361,17 +366,7 @@ describe("Authentication Integration (e2e)", () => {
         audience: `codeclarity:${audience}`,
       });
 
-      const bearer = await testHelper.makeAuthenticatedRequest(
-        "GET",
-        "/auth/user",
-        mixed,
-      );
-      const refresh = await testHelper.makeRequest("POST", "/auth/refresh", {
-        refresh_token: mixed,
-      });
-
-      expect(bearer.statusCode).toBe(401);
-      expect(refresh.statusCode).toBe(401);
+      await expectRefusedOnBoth(mixed);
     });
 
     it("should sign in, call, refresh and call again", async () => {

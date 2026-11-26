@@ -21,7 +21,6 @@ import { SKIP_AUTH_KEY } from "src/decorators/SkipAuthDecorator";
 import { AccountNotActivated, NotAuthenticated } from "src/types/error.types";
 
 import { CombinedAuthGuard } from "./combined.guard";
-import type { JWTPayload } from "./jwt.types";
 
 // Wraps claims as a verified token with the given typ header.
 function verified(payload: unknown, typ = "at+jwt"): Jwt {
@@ -41,7 +40,7 @@ describe("CombinedAuthGuard", () => {
   let mockSocket: Partial<Socket>;
 
   const mockPrivateKey = "mock-private-key";
-  const mockJwtPayload: JWTPayload = {
+  const mockJwtPayload = {
     userId: "user-123",
     roles: ["USER"],
     activated: true,

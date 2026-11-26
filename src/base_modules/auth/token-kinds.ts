@@ -16,8 +16,8 @@ export enum TokenKind {
   REFRESH = "refresh",
 }
 
-/** Each kind's `typ` header and `aud` claim (RFC 8725 explicit typing, RFC 9068 for access). */
-export const TOKEN_KINDS: Record<
+/** The header type, audience and lifetime that mark each kind of token. */
+const TOKEN_KINDS: Record<
   TokenKind,
   {
     typ: string;
@@ -61,10 +61,17 @@ export function verifyOptionsFor(kind: TokenKind): {
   };
 }
 
-/**
- * Returns the claims of a verified token, or throws when its `typ` header is
- * not the kind's (tokens of the other kind, or issued before typing).
- */
+/** Options for a passport-jwt strategy that accepts only this kind. */
+export function passportOptionsFor(kind: TokenKind): {
+  algorithms: Algorithm[];
+  audience: string;
+  jsonWebTokenOptions: { complete: true };
+} {
+  const { algorithms, audience, complete } = verifyOptionsFor(kind);
+  return { algorithms, audience, jsonWebTokenOptions: { complete } };
+}
+
+/** Returns the claims of a verified token, or throws when its header type is not the kind's. */
 export function claimsOfKind(token: Jwt, kind: TokenKind): JwtPayload {
   if (
     token.header.typ !== TOKEN_KINDS[kind].typ ||
