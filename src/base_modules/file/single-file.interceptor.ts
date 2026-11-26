@@ -2,6 +2,7 @@ import {
   BadRequestException,
   CallHandler,
   ExecutionContext,
+  HttpException,
   Injectable,
   NestInterceptor,
 } from "@nestjs/common";
@@ -43,31 +44,54 @@ export class SingleFileInterceptor implements NestInterceptor {
       return next.handle();
     }
 
-    // No prototype, so a field name can never reach Object.prototype.
-    const body = Object.create(null) as Record<string, string>;
-    let uploaded: UploadedFilePart | undefined;
-
-    for await (const part of request.parts()) {
-      if (part.type !== "file") {
-        body[part.fieldname] = String(part.value);
-        continue;
-      }
-      if (part.fieldname !== FILE_FIELD || uploaded) {
-        throw new BadRequestException(`Unexpected field: ${part.fieldname}`);
-      }
-      const buffer = await part.toBuffer();
-      uploaded = {
-        fieldname: part.fieldname,
-        originalname: part.filename,
-        encoding: part.encoding,
-        mimetype: part.mimetype,
-        buffer,
-        size: buffer.length,
-      };
+    try {
+      const { body, uploaded } = await readParts(request);
+      request.body = body;
+      request.file = uploaded;
+    } catch (error) {
+      throw asUploadError(error);
     }
-
-    request.body = body;
-    request.file = uploaded;
     return next.handle();
   }
+}
+
+async function readParts(request: UploadRequest): Promise<{
+  body: Record<string, string>;
+  uploaded: UploadedFilePart | undefined;
+}> {
+  // No prototype, so a field name can never reach Object.prototype.
+  const body = Object.create(null) as Record<string, string>;
+  let uploaded: UploadedFilePart | undefined;
+
+  for await (const part of request.parts()) {
+    if (part.type !== "file") {
+      body[part.fieldname] = String(part.value);
+      continue;
+    }
+    if (part.fieldname !== FILE_FIELD || uploaded) {
+      throw new BadRequestException(`Unexpected field: ${part.fieldname}`);
+    }
+    const buffer = await part.toBuffer();
+    uploaded = {
+      fieldname: part.fieldname,
+      originalname: part.filename,
+      encoding: part.encoding,
+      mimetype: part.mimetype,
+      buffer,
+      size: buffer.length,
+    };
+  }
+  return { body, uploaded };
+}
+
+// Errors of our own or of the multipart plugin pass on unchanged; any other
+// comes from the parser reading a malformed body.
+function asUploadError(error: unknown): Error {
+  if (
+    error instanceof HttpException ||
+    (error instanceof Error && error.name === "FastifyError")
+  ) {
+    return error;
+  }
+  return new BadRequestException("The multipart request body is malformed.");
 }

@@ -451,6 +451,37 @@ describe("API fuzz regressions (e2e)", () => {
     });
   });
 
+  describe("a malformed multipart upload", () => {
+    const boundary = "a222103b9b30b1f9e8be6882ecedb1d2";
+
+    it.each([
+      ["without a boundary", "multipart/form-data", undefined],
+      [
+        "with a body that is not multipart",
+        `multipart/form-data; boundary=${boundary}`,
+        `--${boundary}\r\n[]--${boundary}--\r\n`,
+      ],
+    ])(
+      "PATCH /org/:org/file/:project/upload %s is refused as a bad request",
+      async (_case, contentType, payload) => {
+        const projectId = await createProject(owner, "fuzz-project");
+
+        const response = await testHelper.getApp().inject({
+          method: "PATCH",
+          url: `/org/${owner.organization.id}/file/${projectId}/upload`,
+          headers: {
+            authorization: `Bearer ${owner.accessToken}`,
+            "content-type": contentType,
+          },
+          ...(payload === undefined ? {} : { payload }),
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.json()).toMatchObject({ error_code: "BadRequest" });
+      },
+    );
+  });
+
   describe("a GHSA advisory rated MODERATE", () => {
     beforeAll(async () => {
       await knowledge.query(
