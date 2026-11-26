@@ -533,7 +533,7 @@ describe("ExceptionFilter", () => {
       expect(consoleError).not.toHaveBeenCalled();
     });
 
-    it("logs the route, user and organization, but no token, password or body", () => {
+    it("logs the route, user, organization and project, but no token, password or body", () => {
       filter.catch(new Error("boom"), mockArgumentsHost);
 
       const context = error.mock.calls[0][2];
@@ -543,6 +543,8 @@ describe("ExceptionFilter", () => {
         status: 500,
         userId: "user-1",
         organizationId: "org-1",
+        projectId: "project-1",
+        kind: "UnhandledException",
       });
       const logged = JSON.stringify(error.mock.calls[0]);
       expect(logged).not.toContain("secret-token");
@@ -557,7 +559,11 @@ describe("ExceptionFilter", () => {
       filter.catch(new HttpException("Not found", 404), mockArgumentsHost);
 
       const context = warn.mock.calls[0][1];
-      expect(context).toEqual({ method: "GET", status: 404 });
+      expect(context).toEqual({
+        method: "GET",
+        status: 404,
+        kind: "HttpException",
+      });
     });
   });
 });

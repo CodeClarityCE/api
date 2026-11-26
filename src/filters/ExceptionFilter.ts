@@ -66,8 +66,8 @@ export class ErrorFilter implements ExceptionFilter {
       message = error.getMessage();
       this.report(
         status,
-        `[PrivateAPIError] ${error.loggingErrorCode}: ${error.loggingErrorMessage}`,
-        error.getCause() ?? error,
+        `${error.loggingErrorCode}: ${error.loggingErrorMessage}`,
+        error,
         request,
       );
     } else if (exception instanceof HttpException) {
@@ -76,7 +76,7 @@ export class ErrorFilter implements ExceptionFilter {
       status = error.getStatus();
       errorCode = HTTP_EXCEPTION_CODES[status] ?? errorCode;
       message = error.message;
-      this.report(status, `[HttpException] ${message}`, error, request);
+      this.report(status, message, error, request);
     } else if (isBadInput(exception)) {
       status = 400;
       errorCode = "BadRequest";
@@ -97,8 +97,7 @@ export class ErrorFilter implements ExceptionFilter {
           message = fastifyException.message;
         }
       }
-      const kind = status < 500 ? "[ClientError]" : "[UnhandledException]";
-      this.report(status, `${kind} ${exception.message}`, exception, request);
+      this.report(status, exception.message, exception, request);
     }
 
     response.status(status).send(
@@ -115,23 +114,26 @@ export class ErrorFilter implements ExceptionFilter {
   private report(
     status: number,
     message: string,
-    cause: unknown,
+    exception: Error,
     request: FastifyRequest | undefined,
   ): void {
-    const context = requestContext(status, request);
+    const kind = errorKind(exception);
+    const context = { ...requestContext(status, request), kind };
+    // A PrivateAPIError's cause carries the stack worth logging.
+    const cause =
+      exception instanceof PrivateAPIError &&
+      exception.getCause() instanceof Error
+        ? (exception.getCause() as Error)
+        : exception;
     if (status >= 500) {
-      this.logger.error(
-        message,
-        cause instanceof Error ? cause : String(cause),
-        context,
-      );
+      this.logger.error(`[${kind}] ${message}`, cause, context);
     } else {
-      this.logger.warn(message, context);
+      this.logger.warn(`[${kind}] ${message}`, context);
     }
   }
 }
 
-// The route pattern, user and organization of a request, never its values or secrets.
+// The route pattern and the user, organization, project and analysis ids of a request, never its secrets.
 function requestContext(
   status: number,
   request: FastifyRequest | undefined,
@@ -144,11 +146,23 @@ function requestContext(
   const user = (request as { user?: AuthenticatedUser }).user;
   if (user?.userId) context.userId = user.userId;
   const params = request.params as Record<string, unknown> | undefined;
-  const organizationId = params?.["org_id"] ?? params?.["organization_id"];
-  if (typeof organizationId === "string") {
-    context.organizationId = organizationId;
+  const ids = {
+    organizationId: params?.["org_id"] ?? params?.["organization_id"],
+    projectId: params?.["project_id"],
+    analysisId: params?.["analysis_id"],
+  };
+  for (const [key, value] of Object.entries(ids)) {
+    if (typeof value === "string") context[key] = value;
   }
   return context;
+}
+
+// Names the kind of error a log line is about.
+function errorKind(exception: Error): string {
+  if (exception instanceof PrivateAPIError) return "PrivateAPIError";
+  if (exception instanceof HttpException) return "HttpException";
+  if (exception.name === "FastifyError") return "FastifyError";
+  return "UnhandledException";
 }
 
 function isBadInput(exception: Error): boolean {
