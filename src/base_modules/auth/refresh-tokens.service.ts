@@ -82,9 +82,7 @@ export class RefreshTokensService {
     });
     if (next) return next;
 
-    const known = await this.tokens.findOne({
-      where: { token_hash: tokenHash },
-    });
+    const known = await this.findByToken(token);
     if (known?.used_on && !known.revoked_on) {
       await this.revokeFamily(known.family_id);
       this.logger.warn("A used refresh token came back; revoked its family", {
@@ -97,11 +95,14 @@ export class RefreshTokensService {
 
   /** Revokes the family the token belongs to; an unknown token does nothing. */
   async revokeFamilyOf(token: unknown): Promise<void> {
-    if (typeof token !== "string" || token === "") return;
-    const known = await this.tokens.findOne({
-      where: { token_hash: hashToken(token) },
-    });
+    const known = await this.findByToken(token);
     if (known) await this.revokeFamily(known.family_id);
+  }
+
+  // The stored row of a token sent by a client, whatever its state.
+  private async findByToken(token: unknown): Promise<RefreshToken | null> {
+    if (typeof token !== "string" || token === "") return null;
+    return this.tokens.findOne({ where: { token_hash: hashToken(token) } });
   }
 
   async revokeFamily(familyId: string): Promise<void> {

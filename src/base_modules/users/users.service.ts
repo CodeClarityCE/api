@@ -346,8 +346,9 @@ export class UsersService {
     }
 
     mail.user.password = await this.authService.hashPassword(newPassword);
-    await this.usersRepository.saveUser(mail.user);
+    // Sign-ins end first, so a failed save never leaves old ones working.
     await this.authService.signOutEverywhere(mail.user.id);
+    await this.usersRepository.saveUser(mail.user);
   }
 
   /**
@@ -398,8 +399,9 @@ export class UsersService {
 
     user.password = newPasswordHash;
 
-    await this.usersRepository.saveUser(user);
+    // Sign-ins end first, so a failed save never leaves old ones working.
     await this.authService.signOutEverywhere(user.id);
+    await this.usersRepository.saveUser(user);
   }
 
   /**
