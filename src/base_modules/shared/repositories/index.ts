@@ -1,4 +1,3 @@
-export { AnalysesRepository } from "./analyses.repository";
 export { IntegrationsRepository } from "./integrations.repository";
 export { InvitationsRepository } from "./invitations.repository";
 export { LogsRepository } from "./logs.repository";
