@@ -3,12 +3,16 @@ import { Reflector } from "@nestjs/core";
 import { JwtService } from "@nestjs/jwt";
 import { type Request } from "express";
 import { readFileSync } from "fs";
-import { Algorithm } from "jsonwebtoken";
+import type { Jwt } from "jsonwebtoken";
 import { join } from "path";
 import { Socket } from "socket.io";
 
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
-import { JWTPayload } from "src/base_modules/auth/guards/jwt.types";
+import {
+  claimsOfKind,
+  TokenKind,
+  verifyOptionsFor,
+} from "src/base_modules/auth/token-kinds";
 import {
   ORGANIZATION_TOKEN_PREFIX,
   OrganizationTokenScope,
@@ -38,7 +42,6 @@ interface RoutedRequest {
 @Injectable()
 export class CombinedAuthGuard implements CanActivate {
   publicKey: string;
-  algorithms: Algorithm[];
 
   constructor(
     private jwtService: JwtService,
@@ -49,7 +52,6 @@ export class CombinedAuthGuard implements CanActivate {
       join(process.cwd(), "jwt", "public.pem"),
       "utf8",
     );
-    this.algorithms = ["ES512"];
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -159,17 +161,19 @@ export class CombinedAuthGuard implements CanActivate {
     token: string,
   ): Promise<[boolean, AuthenticatedUser | undefined]> {
     try {
-      const payload: JWTPayload = await this.jwtService.verifyAsync(token, {
+      // Only access tokens may be bearers; refresh and untyped tokens fail here.
+      const verified = await this.jwtService.verifyAsync<Jwt>(token, {
         secret: this.publicKey,
-        algorithms: this.algorithms,
+        ...verifyOptionsFor(TokenKind.ACCESS),
       });
+      const payload = claimsOfKind(verified, TokenKind.ACCESS);
       // TODO: get roles from payload
       return [
         true,
         new AuthenticatedUser(
           payload.userId,
-          payload.roles as ROLE[],
-          payload.activated,
+          payload.roles,
+          payload.activated ?? false,
         ),
       ];
     } catch {

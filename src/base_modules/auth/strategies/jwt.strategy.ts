@@ -1,22 +1,31 @@
 import { Injectable } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import * as fs from "fs";
+import type { Jwt } from "jsonwebtoken";
 import { ExtractJwt, Strategy } from "passport-jwt";
 
-import { JwtPayload, JwtValidationResult } from "../auth.types";
+import { JwtValidationResult } from "../auth.types";
+import { claimsOfKind, TokenKind, verifyOptionsFor } from "../token-kinds";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, "jwt") {
   constructor() {
+    // Only access tokens pass: the audience is checked here, the typ in validate.
+    const { algorithms, audience, ...jsonWebTokenOptions } = verifyOptionsFor(
+      TokenKind.ACCESS,
+    );
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: fs.readFileSync("./jwt/private.pem", "utf8"),
-      algorithms: ["ES512"],
+      algorithms,
+      audience,
+      jsonWebTokenOptions,
     });
   }
 
-  async validate(payload: JwtPayload): Promise<JwtValidationResult> {
+  async validate(token: Jwt): Promise<JwtValidationResult> {
+    const payload = claimsOfKind(token, TokenKind.ACCESS);
     return { userId: payload.userId, roles: payload.roles };
   }
 }

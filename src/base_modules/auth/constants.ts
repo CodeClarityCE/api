@@ -1,5 +1,5 @@
 /* Defines how long a JWT Token lives, after creation */
-export const CONST_JWT_TOKEN_EXPIRES_IN = "90m"; // 90 minutes
+export const CONST_JWT_TOKEN_EXPIRES_IN = "15m"; // 15 minutes
 
 /* Defines how long a JWT Refresh Token lives, after creation */
 export const CONST_REFRESH_JWT_TOKEN_EXPIRES_IN = "7d"; // 7 days

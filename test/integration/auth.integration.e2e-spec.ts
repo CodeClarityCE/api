@@ -1,5 +1,21 @@
+import { readFileSync } from "fs";
+import * as jwt from "jsonwebtoken";
+
 import { User } from "../../src/base_modules/users/users.entity";
 import { testHelper, type TestUser } from "../utils/integration-test-helper";
+
+// The key the API signs with, for tokens the API itself would not issue.
+const privateKey = readFileSync("./jwt/private.pem", "utf8");
+
+// The claims the API puts in every user token.
+function claimsOf(account: TestUser) {
+  return {
+    sub: account.user.id,
+    userId: account.user.id,
+    roles: ["ROLE_USER"],
+    activated: true,
+  };
+}
 
 // New accounts must confirm by email, which tests skip by updating the row.
 async function verifyRegistration(email: string): Promise<void> {
@@ -281,6 +297,125 @@ describe("Authentication Integration (e2e)", () => {
 
       expect(response.statusCode).toBe(401);
       expect(response.json().error_code).toBe("NotAuthenticated");
+    });
+  });
+
+  describe("Token types", () => {
+    let testUser: TestUser;
+
+    beforeEach(async () => {
+      testUser = await testHelper.createTestUser({
+        email: "types@example.com",
+        password: "TypesPassword123!",
+      });
+    });
+
+    it("should refuse a refresh token as bearer", async () => {
+      const response = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        "/auth/user",
+        testUser.refreshToken,
+      );
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().error_code).toBe("NotAuthenticated");
+    });
+
+    it("should refuse an access token at /auth/refresh", async () => {
+      const response = await testHelper.makeRequest("POST", "/auth/refresh", {
+        refresh_token: testUser.accessToken,
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().error_code).toBe("NotAuthenticated");
+    });
+
+    it("should refuse an untyped token, as issued before typing, on both", async () => {
+      // Signed with the real key the way tokens were issued before typing.
+      const untyped = jwt.sign(claimsOf(testUser), privateKey, {
+        algorithm: "ES512",
+        expiresIn: "15m",
+      });
+
+      const bearer = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        "/auth/user",
+        untyped,
+      );
+      const refresh = await testHelper.makeRequest("POST", "/auth/refresh", {
+        refresh_token: untyped,
+      });
+
+      expect(bearer.statusCode).toBe(401);
+      expect(refresh.statusCode).toBe(401);
+    });
+
+    it.each([
+      ["an access typ with the refresh audience", "at+jwt", "refresh"],
+      ["a refresh typ with the access audience", "refresh+jwt", "access"],
+    ])("should refuse %s on both", async (_name, typ, audience) => {
+      const mixed = jwt.sign(claimsOf(testUser), privateKey, {
+        algorithm: "ES512",
+        expiresIn: "15m",
+        header: { alg: "ES512", typ },
+        audience: `codeclarity:${audience}`,
+      });
+
+      const bearer = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        "/auth/user",
+        mixed,
+      );
+      const refresh = await testHelper.makeRequest("POST", "/auth/refresh", {
+        refresh_token: mixed,
+      });
+
+      expect(bearer.statusCode).toBe(401);
+      expect(refresh.statusCode).toBe(401);
+    });
+
+    it("should sign in, call, refresh and call again", async () => {
+      const login = await testHelper.makeRequest("POST", "/auth/authenticate", {
+        email: "types@example.com",
+        password: "TypesPassword123!",
+      });
+      const { token, refresh_token } = login.json().data;
+
+      const first = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        "/auth/user",
+        token,
+      );
+      const refresh = await testHelper.makeRequest("POST", "/auth/refresh", {
+        refresh_token,
+      });
+      const second = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        "/auth/user",
+        refresh.json().data.token,
+      );
+
+      expect(first.statusCode).toBe(200);
+      expect(refresh.statusCode).toBe(201);
+      expect(second.statusCode).toBe(200);
+      expect(second.json().data.email).toBe("types@example.com");
+    });
+
+    it("should issue access tokens that expire after 15 minutes", async () => {
+      const refresh = await testHelper.makeRequest("POST", "/auth/refresh", {
+        refresh_token: testUser.refreshToken,
+      });
+
+      for (const token of [testUser.accessToken, refresh.json().data.token]) {
+        const { iat, exp } = jwt.decode(token) as jwt.JwtPayload;
+        expect(exp! - iat!).toBe(15 * 60);
+      }
+    });
+
+    it("should keep refresh tokens valid for 7 days", async () => {
+      const { iat, exp } = jwt.decode(testUser.refreshToken) as jwt.JwtPayload;
+
+      expect(exp! - iat!).toBe(7 * 24 * 60 * 60);
     });
   });
 

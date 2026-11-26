@@ -21,6 +21,7 @@ import {
   CONST_REFRESH_JWT_TOKEN_EXPIRES_IN,
 } from "./constants";
 import { hashPassword } from "./password";
+import { signOptionsFor, TokenKind } from "./token-kinds";
 
 @Injectable()
 export class AuthService {
@@ -106,10 +107,14 @@ export class AuthService {
       activated: activated,
     };
     return {
-      token: await this.jwtService.signAsync(userObject),
-      refresh_token: await this.jwtService.signAsync(userObject, {
-        expiresIn: CONST_REFRESH_JWT_TOKEN_EXPIRES_IN,
-      }),
+      token: await this.jwtService.signAsync(
+        userObject,
+        signOptionsFor(TokenKind.ACCESS),
+      ),
+      refresh_token: await this.jwtService.signAsync(
+        userObject,
+        signOptionsFor(TokenKind.REFRESH),
+      ),
       token_expiry: tokenExpiry,
       refresh_token_expiry: refreshTokenExpiry,
     };
@@ -128,12 +133,15 @@ export class AuthService {
       current.getTime() + ms(CONST_JWT_TOKEN_EXPIRES_IN),
     );
     return {
-      token: await this.jwtService.signAsync({
-        sub: authenticatedUser.userId,
-        userId: authenticatedUser.userId,
-        roles: authenticatedUser.roles,
-        activated: authenticatedUser.activated,
-      }),
+      token: await this.jwtService.signAsync(
+        {
+          sub: authenticatedUser.userId,
+          userId: authenticatedUser.userId,
+          roles: authenticatedUser.roles,
+          activated: authenticatedUser.activated,
+        },
+        signOptionsFor(TokenKind.ACCESS),
+      ),
       token_expiry: tokenExpiry,
     };
   }
