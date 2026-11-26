@@ -153,6 +153,22 @@ describe("Password reset (e2e)", () => {
       );
     });
 
+    it("ends every sign-in of the account", async () => {
+      const signIn = await testHelper.makeRequest(
+        "POST",
+        "/auth/authenticate",
+        { email: "known@reset.com", password: "OldPassword123!" },
+      );
+      const { refresh_token } = signIn.json().data;
+
+      await resetPassword(await linkFor(), "NewPassword456!");
+
+      const refresh = await testHelper.makeRequest("POST", "/auth/refresh", {
+        refresh_token,
+      });
+      expect(refresh.statusCode).toBe(401);
+    });
+
     it("works once: the same link fails the second time", async () => {
       const link = await linkFor();
       expect((await resetPassword(link, "NewPassword456!")).statusCode).toBe(

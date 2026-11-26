@@ -67,6 +67,22 @@ export class TokenRefreshResponse {
 
   @ApiProperty()
   token_expiry!: Date;
+
+  @ApiProperty({
+    description: "Replaces the refresh token sent, which no longer works",
+  })
+  refresh_token!: string;
+
+  @ApiProperty({ description: "Seven days after sign-in; rotation keeps it" })
+  refresh_token_expiry!: Date;
+}
+
+/** The body of a refresh or sign-out; a missing or malformed token is refused as unauthenticated. */
+export class RefreshTokenBody {
+  @ApiProperty({
+    description: "The refresh token from sign-in or the last refresh",
+  })
+  refresh_token!: string;
 }
 
 /********************************************/

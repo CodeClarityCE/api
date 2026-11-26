@@ -160,6 +160,7 @@ describe("UsersService", () => {
           useValue: {
             hashPassword: jest.fn(),
             validateCredentials: jest.fn(),
+            signOutEverywhere: jest.fn(),
           },
         },
         {
@@ -550,6 +551,9 @@ describe("UsersService", () => {
       expect(userWithOldPassword.password).toBe("new-hashed-password");
       expect(usersRepository.saveUser).toHaveBeenCalledWith(
         userWithOldPassword,
+      );
+      expect(authService.signOutEverywhere).toHaveBeenCalledWith(
+        "test-user-id",
       );
     });
 

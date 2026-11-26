@@ -347,6 +347,7 @@ export class UsersService {
 
     mail.user.password = await this.authService.hashPassword(newPassword);
     await this.usersRepository.saveUser(mail.user);
+    await this.authService.signOutEverywhere(mail.user.id);
   }
 
   /**
@@ -398,6 +399,7 @@ export class UsersService {
     user.password = newPasswordHash;
 
     await this.usersRepository.saveUser(user);
+    await this.authService.signOutEverywhere(user.id);
   }
 
   /**
