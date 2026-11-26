@@ -859,7 +859,7 @@ describe("ProjectService", () => {
       [{ entriesPerPage: 200, currentPage: -1 }, 0, 100],
       [{}, 0, 10],
       [{ entriesPerPage: -5, currentPage: 3 }, 3, -5],
-    ])("clamps the page %j to page %d of size %d", async (conf, page, size) => {
+    ])("resolves the page %j to page %d of size %d", async (conf, page, size) => {
       jest
         .spyOn(membershipsRepository, "hasRequiredRoleFor")
         .mockResolvedValue(undefined);
