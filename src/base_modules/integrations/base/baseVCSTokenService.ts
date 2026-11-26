@@ -1,4 +1,6 @@
 import {
+  IntegrationInstanceUnreachable,
+  IntegrationInstanceUrlNotAllowed,
   IntegrationInvalidToken,
   IntegrationTokenExpired,
   IntegrationTokenMissingPermissions,
@@ -48,7 +50,9 @@ export abstract class BaseVCSTokenService {
     if (
       error instanceof IntegrationTokenMissingPermissions ||
       error instanceof IntegrationTokenExpired ||
-      error instanceof IntegrationInvalidToken
+      error instanceof IntegrationInvalidToken ||
+      error instanceof IntegrationInstanceUrlNotAllowed ||
+      error instanceof IntegrationInstanceUnreachable
     ) {
       throw error;
     }

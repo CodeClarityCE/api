@@ -6,6 +6,11 @@ import { MemberRole } from "../../src/base_modules/organizations/memberships/org
 import { auditEntries } from "../utils/audit-log";
 import { testHelper, type TestUser } from "../utils/integration-test-helper";
 
+// Instance names resolve to a public address without real DNS.
+jest.mock("dns/promises", () => ({
+  lookup: jest.fn().mockResolvedValue([{ address: "203.0.113.10", family: 4 }]),
+}));
+
 const PROVIDERS = [
   {
     name: "GitHub",

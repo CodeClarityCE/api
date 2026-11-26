@@ -4,6 +4,11 @@ import { MemberRole } from "../../src/base_modules/organizations/memberships/org
 import { auditEntries, readAuditLog } from "../utils/audit-log";
 import { testHelper, type TestUser } from "../utils/integration-test-helper";
 
+// Instance names resolve to a public address without real DNS.
+jest.mock("dns/promises", () => ({
+  lookup: jest.fn().mockResolvedValue([{ address: "203.0.113.10", family: 4 }]),
+}));
+
 const GITHUB_TOKEN = "ghp_secretGithubToken123";
 const GITHUB_NEW_TOKEN = "ghp_rotatedGithubToken456";
 const GITLAB_TOKEN = "glpat-test-token";

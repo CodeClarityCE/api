@@ -33,12 +33,13 @@ import {
   TypedPaginatedData,
 } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
-import { gitlabAllowedPrivateHosts, pinnedFetch } from "src/utils/outbound-url";
+import { pinnedFetch } from "src/utils/outbound-url";
 import { validateAndJoinPath } from "src/utils/path-validator";
 
 import { AnalysesRepository } from "../analyses/analyses.repository";
 import { FileRepository } from "../file/file.repository";
 import { GithubRepositoriesService } from "../integrations/github/githubRepos.service";
+import { gitlabPolicy } from "../integrations/gitlab/gitlabInstance";
 import { GitlabRepositoriesService } from "../integrations/gitlab/gitlabRepos.service";
 import { IntegrationsRepository } from "../integrations/integrations.repository";
 import {
@@ -139,7 +140,7 @@ export class ProjectService {
    * @param url The repository URL, already on the integration's host
    * @param serviceDomain The integration's instance url (e.g. https://gitlab.com)
    * @returns RepositoryCache for the public repository
-   * @throws {ImportTargetNotAllowed} If the url points at an internal address
+   * @throws {ImportTargetNotAllowed} If the url is plain http or internal and not allowed
    * @throws The original error if the repository is not public
    */
   private async checkPublicRepositoryAccess(
@@ -148,9 +149,7 @@ export class ProjectService {
     originalError: Error,
   ): Promise<RepositoryCache> {
     // A redirect could lead to an internal address, so it counts as not public
-    const response = await pinnedFetch(url, {
-      allowedPrivateHosts: gitlabAllowedPrivateHosts(),
-    });
+    const response = await pinnedFetch(url, gitlabPolicy());
     if (!response.ok) {
       throw originalError;
     }

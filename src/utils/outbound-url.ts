@@ -42,6 +42,9 @@ function isInternalAddress(address: string): boolean {
   return reservedRanges.check(address, family === 4 ? "ipv4" : "ipv6");
 }
 
+/** A refusal because the host name did not resolve */
+export class HostLookupFailed extends ImportTargetNotAllowed {}
+
 /** Lowercase host name without IPv6 brackets */
 function bareHost(hostname: string): string {
   return hostname.replace(/^\[(.*)\]$/, "$1").toLowerCase();
@@ -124,10 +127,10 @@ export async function resolveOutboundUrl(
       const resolved = await lookup(host, { all: true, verbatim: true });
       addresses = resolved.map(({ address, family }) => ({ address, family }));
     } catch (err) {
-      throw new ImportTargetNotAllowed(err);
+      throw new HostLookupFailed(err);
     }
   }
-  if (addresses.length === 0) throw new ImportTargetNotAllowed();
+  if (addresses.length === 0) throw new HostLookupFailed();
   if (!isAllowed && addresses.some(({ address }) => isInternalAddress(address)))
     throw new ImportTargetNotAllowed();
   return { url: target, host, addresses };
