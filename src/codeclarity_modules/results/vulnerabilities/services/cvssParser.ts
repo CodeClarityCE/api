@@ -251,11 +251,12 @@ const GHSA_CLASSES: Record<string, string> = {
   CRITICAL: "CRITICAL",
 };
 
-// GHSA's qualitative severity, with MODERATE read as MEDIUM.
-function ghsaSeverity(osvItem: OSV): string | undefined {
-  const specific = osvItem.database_specific as
-    { severity?: unknown } | null | undefined;
-  const label = specific?.severity;
+/** GHSA's qualitative severity, with MODERATE read as MEDIUM. */
+export function ghsaSeverityClass(
+  databaseSpecific: unknown,
+): string | undefined {
+  const label = (databaseSpecific as { severity?: unknown } | null | undefined)
+    ?.severity;
   return typeof label === "string"
     ? GHSA_CLASSES[label.toUpperCase()]
     : undefined;
@@ -268,7 +269,7 @@ export function hasCvssVector(info: SeverityInfo): boolean {
 
 export async function getCVSSOSVInfo(osvItem: OSV): Promise<SeverityInfo> {
   const severityInfo: SeverityInfo = {};
-  const ghsa = ghsaSeverity(osvItem);
+  const ghsa = ghsaSeverityClass(osvItem.database_specific);
   if (ghsa) severityInfo.ghsa = ghsa;
 
   const severities = (osvItem.severity ?? []) as OSVSeverity[];
