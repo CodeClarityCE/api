@@ -5,6 +5,7 @@ import { Brackets, Repository } from "typeorm";
 import { Log } from "src/base_modules/organizations/log/log.entity";
 import { TypedPaginatedData } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
+import { paginatedData } from "src/utils/pagination";
 
 /**
  * Pure repository for log database operations.
@@ -59,16 +60,7 @@ export class LogsRepository {
       .take(entriesPerPage)
       .getManyAndCount();
 
-    return {
-      data: logs,
-      page: currentPage,
-      entry_count: logs.length,
-      entries_per_page: entriesPerPage,
-      total_entries: fullCount,
-      total_pages: Math.ceil(fullCount / entriesPerPage),
-      matching_count: fullCount,
-      filter_count: {},
-    };
+    return paginatedData(logs, fullCount, { currentPage, entriesPerPage });
   }
 }
 

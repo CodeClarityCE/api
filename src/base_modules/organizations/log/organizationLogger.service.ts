@@ -19,6 +19,7 @@ import {
   TypedPaginatedData,
 } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
+import { resolvePage } from "src/utils/pagination";
 
 import type { OrganizationTokenPrincipal } from "../tokens/organization-token.types";
 
@@ -134,13 +135,10 @@ export class OrganizationLoggerService {
       maxEntriesPerPage: 100,
       defaultEntriesPerPage: 10,
     };
-    const requested = paginationUserSuppliedConf.entriesPerPage;
-    const entriesPerPage = requested
-      ? Math.min(paginationConfig.maxEntriesPerPage, Math.max(1, requested))
-      : paginationConfig.defaultEntriesPerPage;
-    const currentPage = Math.max(
-      0,
-      paginationUserSuppliedConf.currentPage ?? 0,
+    const { currentPage, entriesPerPage } = resolvePage(
+      paginationUserSuppliedConf,
+      paginationConfig,
+      "one",
     );
 
     // Unknown sort keys fall back to newest first

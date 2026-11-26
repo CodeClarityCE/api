@@ -36,6 +36,7 @@ import {
   TypedPaginatedData,
 } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
+import { paginatedData, resolvePage } from "src/utils/pagination";
 
 import { TicketIntegrationService } from "./integrations/ticket-integration.service";
 import { dueDateFor, dueSoonWindow, targetsOf } from "./service-level-targets";
@@ -525,17 +526,11 @@ export class TicketsService {
       defaultEntriesPerPage: 20,
     };
 
-    let entriesPerPage = paginationConfig.defaultEntriesPerPage;
-    let currentPage = 0;
-
-    if (paginationUserSuppliedConf.entriesPerPage)
-      entriesPerPage = Math.min(
-        paginationConfig.maxEntriesPerPage,
-        paginationUserSuppliedConf.entriesPerPage,
-      );
-
-    if (paginationUserSuppliedConf.currentPage)
-      currentPage = Math.max(0, paginationUserSuppliedConf.currentPage);
+    const { currentPage, entriesPerPage } = resolvePage(
+      paginationUserSuppliedConf,
+      paginationConfig,
+      "as-requested",
+    );
 
     const queryBuilder = this.ticketRepository
       .createQueryBuilder("ticket")
@@ -654,16 +649,7 @@ export class TicketsService {
       external_status: ticket.external_status,
     }));
 
-    return {
-      data: res,
-      page: currentPage,
-      entry_count: tickets.entities.length,
-      entries_per_page: entriesPerPage,
-      total_entries: fullCount,
-      total_pages: Math.ceil(fullCount / entriesPerPage),
-      matching_count: fullCount,
-      filter_count: {},
-    };
+    return paginatedData(res, fullCount, { currentPage, entriesPerPage });
   }
 
   /**

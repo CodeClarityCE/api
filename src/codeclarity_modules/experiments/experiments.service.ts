@@ -17,10 +17,10 @@ import {
   PaginationConfig,
   PaginationUserSuppliedConf,
 } from "src/types/pagination.types";
+import { paginatedData, resolvePage } from "src/utils/pagination";
 
 import { Dataset, DatasetStatus } from "../datasets/dataset.entity";
 import { DatasetEntry } from "../datasets/dataset-entry.entity";
-import { paginated, resolvePagination } from "../datasets/datasets.service";
 
 import { Experiment, ExperimentStatus } from "./experiment.entity";
 import { estimateAnalyses } from "./experiment-budget";
@@ -191,7 +191,7 @@ export class ExperimentsService {
       user.userId,
       MemberRole.USER,
     );
-    const { currentPage, entriesPerPage } = resolvePagination(
+    const { currentPage, entriesPerPage } = resolvePage(
       paginationUserSuppliedConf,
       EXPERIMENT_PAGINATION,
     );
@@ -206,13 +206,12 @@ export class ExperimentsService {
       });
     const counts = await this.countRuns(experiments.map((e) => e.id));
 
-    return paginated(
+    return paginatedData(
       experiments.map((experiment) =>
         this.toSummary(experiment, counts.get(experiment.id)),
       ),
       fullCount,
-      currentPage,
-      entriesPerPage,
+      { currentPage, entriesPerPage },
     );
   }
 
@@ -252,7 +251,7 @@ export class ExperimentsService {
       MemberRole.USER,
     );
     const experiment = await this.findInOrg(orgId, experimentId);
-    const { currentPage, entriesPerPage } = resolvePagination(
+    const { currentPage, entriesPerPage } = resolvePage(
       paginationUserSuppliedConf,
       RUN_PAGINATION,
     );
@@ -269,7 +268,7 @@ export class ExperimentsService {
       take: entriesPerPage,
     });
 
-    return paginated(
+    return paginatedData(
       runs.map((run) => ({
         id: run.id,
         status: run.status,
@@ -294,8 +293,7 @@ export class ExperimentsService {
         },
       })),
       fullCount,
-      currentPage,
-      entriesPerPage,
+      { currentPage, entriesPerPage },
     );
   }
 

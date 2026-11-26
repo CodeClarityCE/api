@@ -18,6 +18,7 @@ import {
   PaginationConfig,
   PaginationUserSuppliedConf,
 } from "src/types/pagination.types";
+import { paginatedData, resolvePage } from "src/utils/pagination";
 
 import { Experiment } from "../experiments/experiment.entity";
 import { assertNotUsedByExperiments } from "../experiments/experiment-in-use";
@@ -42,37 +43,6 @@ const ENTRY_PAGINATION: PaginationConfig = {
   maxEntriesPerPage: 500,
   defaultEntriesPerPage: 100,
 };
-
-export function resolvePagination(
-  requested: PaginationUserSuppliedConf,
-  config: PaginationConfig,
-): { currentPage: number; entriesPerPage: number } {
-  const requestedSize = requested.entriesPerPage ?? 0;
-  const entriesPerPage =
-    requestedSize > 0
-      ? Math.min(config.maxEntriesPerPage, requestedSize)
-      : config.defaultEntriesPerPage;
-  const currentPage = Math.max(0, requested.currentPage ?? 0);
-  return { currentPage, entriesPerPage };
-}
-
-export function paginated<T>(
-  data: T[],
-  fullCount: number,
-  currentPage: number,
-  entriesPerPage: number,
-): TypedPaginatedResponse<T> {
-  return {
-    data,
-    page: currentPage,
-    entry_count: data.length,
-    entries_per_page: entriesPerPage,
-    total_entries: fullCount,
-    total_pages: Math.ceil(fullCount / entriesPerPage),
-    matching_count: fullCount,
-    filter_count: {},
-  };
-}
 
 @Injectable()
 export class DatasetsService {
@@ -156,7 +126,7 @@ export class DatasetsService {
       user.userId,
       MemberRole.USER,
     );
-    const { currentPage, entriesPerPage } = resolvePagination(
+    const { currentPage, entriesPerPage } = resolvePage(
       paginationUserSuppliedConf,
       DATASET_PAGINATION,
     );
@@ -170,13 +140,12 @@ export class DatasetsService {
     });
     const counts = await this.countEntries(datasets.map((d) => d.id));
 
-    return paginated(
+    return paginatedData(
       datasets.map((dataset) =>
         this.toSummary(dataset, counts.get(dataset.id) ?? 0),
       ),
       fullCount,
-      currentPage,
-      entriesPerPage,
+      { currentPage, entriesPerPage },
     );
   }
 
@@ -216,7 +185,7 @@ export class DatasetsService {
       MemberRole.USER,
     );
     const dataset = await this.findInOrg(orgId, datasetId);
-    const { currentPage, entriesPerPage } = resolvePagination(
+    const { currentPage, entriesPerPage } = resolvePage(
       paginationUserSuppliedConf,
       ENTRY_PAGINATION,
     );
@@ -228,7 +197,7 @@ export class DatasetsService {
       take: entriesPerPage,
     });
 
-    return paginated(
+    return paginatedData(
       entries.map((entry) => ({
         id: entry.id,
         rank: entry.rank,
@@ -242,8 +211,7 @@ export class DatasetsService {
         lockfiles: entry.lockfiles,
       })),
       fullCount,
-      currentPage,
-      entriesPerPage,
+      { currentPage, entriesPerPage },
     );
   }
 

@@ -5,6 +5,7 @@ import { FindOptionsRelations, Repository } from "typeorm";
 import { Integration } from "src/base_modules/integrations/integrations.entity";
 import { TypedPaginatedResponse } from "src/types/apiResponses.types";
 import { EntityNotFound, NotAuthorized } from "src/types/error.types";
+import { paginatedData } from "src/utils/pagination";
 
 @Injectable()
 export class IntegrationsRepository {
@@ -141,16 +142,10 @@ export class IntegrationsRepository {
       },
     });
 
-    return {
-      data: integrations,
-      page: currentPage,
-      entry_count: integrations.length,
-      entries_per_page: entriesPerPage,
-      total_entries: fullCount,
-      total_pages: Math.ceil(fullCount / entriesPerPage),
-      matching_count: fullCount, // Adjust this once filters are applied
-      filter_count: {},
-    };
+    return paginatedData(integrations, fullCount, {
+      currentPage,
+      entriesPerPage,
+    });
   }
 
   /**

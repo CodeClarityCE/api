@@ -5,6 +5,7 @@ import { Repository } from "typeorm";
 import { Analyzer } from "src/base_modules/analyzers/analyzer.entity";
 import { EntityNotFound, NotAuthorized } from "src/types/error.types";
 import { TypedPaginatedData } from "src/types/pagination.types";
+import { paginatedData } from "src/utils/pagination";
 
 import type { LanguageConfig } from "./analyzer-languages";
 import { AnalyzerDoesNotExist } from "./analyzers.errors";
@@ -176,15 +177,6 @@ export class AnalyzersRepository {
       .take(entriesPerPage)
       .getMany();
 
-    return {
-      data: analyzers,
-      page: currentPage,
-      entry_count: analyzers.length,
-      entries_per_page: entriesPerPage,
-      total_entries: fullCount,
-      total_pages: Math.ceil(fullCount / entriesPerPage),
-      matching_count: fullCount, // once you apply filters this needs to change
-      filter_count: {},
-    };
+    return paginatedData(analyzers, fullCount, { currentPage, entriesPerPage });
   }
 }
