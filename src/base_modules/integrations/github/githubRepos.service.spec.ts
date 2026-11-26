@@ -21,6 +21,7 @@ import {
   RepositoryCache,
   RepositoryType,
 } from "../../projects/repositoryCache.entity";
+import { syncRepositoryCache } from "../repositoryCacheSync";
 import type { GithubIntegrationToken } from "../Token";
 
 import { GithubIntegrationService } from "./github.service";
@@ -39,6 +40,10 @@ jest.mock("ms", () => ({
     return 600000; // 10 minutes in ms
   }),
 }));
+
+// The cache write is covered by the repository cache sync e2e spec
+jest.mock("../repositoryCacheSync", () => ({ syncRepositoryCache: jest.fn() }));
+const syncMock = syncRepositoryCache as jest.Mock;
 
 // Mock dynamic import of octokit
 jest.mock("octokit", () => ({
@@ -122,6 +127,7 @@ describe("GithubRepositoriesService", () => {
       createQueryBuilder: jest.fn(),
       findOne: jest.fn(),
       save: jest.fn(),
+      manager: {},
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -586,65 +592,55 @@ describe("GithubRepositoriesService", () => {
       integrationsRepository.saveIntegration.mockResolvedValue(mockIntegration);
     });
 
-    it("should sync repositories from GitHub API", async () => {
+    it("syncs the cache with the full listing", async () => {
       const githubApiFetchPageSpy = jest
         .spyOn(service as any, "githubApiFetchPage")
         .mockResolvedValue([[mockGithubRepository], 1]);
-      const saveReposSpy = jest
-        .spyOn(service as any, "saveRepos")
-        .mockResolvedValue(undefined);
 
       await (service as any).forceSyncGithubRepos("test-integration-id");
 
-      expect(githubIntegrationService.getToken).toHaveBeenCalledWith(
-        "test-integration-id",
-      );
       expect(githubApiFetchPageSpy).toHaveBeenCalledWith(
         1,
         100,
-        undefined, // mockIntegration.last_repository_sync is undefined
         "ghp_test_token",
       );
-      expect(saveReposSpy).toHaveBeenCalledWith(
-        [mockGithubRepository],
+      expect(syncMock).toHaveBeenCalledWith(
+        repositoryCacheRepository.manager,
         mockIntegration.id,
+        [
+          expect.objectContaining({
+            provider_id: String(mockGithubRepository.id),
+            url: mockGithubRepository.html_url,
+          }),
+        ],
+        { complete: true },
       );
       expect(integrationsRepository.saveIntegration).toHaveBeenCalled();
     });
 
-    it("should handle multiple pages", async () => {
+    it("syncs once with every page", async () => {
       const githubApiFetchPageSpy = jest
         .spyOn(service as any, "githubApiFetchPage")
-        .mockResolvedValueOnce([[mockGithubRepository], 3])
-        .mockResolvedValueOnce([[mockGithubRepository], 3])
-        .mockResolvedValueOnce([[mockGithubRepository], 3]);
-      const saveReposSpy = jest
-        .spyOn(service as any, "saveRepos")
-        .mockResolvedValue(undefined);
+        .mockResolvedValue([[mockGithubRepository], 3]);
 
       await (service as any).forceSyncGithubRepos("test-integration-id");
 
       expect(githubApiFetchPageSpy).toHaveBeenCalledTimes(3);
-      expect(saveReposSpy).toHaveBeenCalledTimes(3);
+      expect(syncMock).toHaveBeenCalledTimes(1);
+      expect(syncMock.mock.calls[0]![2]).toHaveLength(3);
     });
-  });
 
-  describe("saveRepos", () => {
-    it("should save repositories to cache", async () => {
-      integrationsRepository.getIntegrationById.mockResolvedValue(
-        mockIntegration,
-      );
-      repositoryCacheRepository.save.mockResolvedValue(mockRepositoryCache);
+    it("deletes nothing when a page fails", async () => {
+      jest
+        .spyOn(service as any, "githubApiFetchPage")
+        .mockResolvedValueOnce([[mockGithubRepository], 2])
+        .mockRejectedValueOnce(new Error("page 2 failed"));
 
-      await (service as any).saveRepos(
-        [mockGithubRepository],
-        "test-integration-id",
-      );
-
-      expect(integrationsRepository.getIntegrationById).toHaveBeenCalledWith(
-        "test-integration-id",
-      );
-      expect(repositoryCacheRepository.save).toHaveBeenCalled();
+      await expect(
+        (service as any).forceSyncGithubRepos("test-integration-id"),
+      ).rejects.toThrow("page 2 failed");
+      expect(syncMock).not.toHaveBeenCalled();
+      expect(integrationsRepository.saveIntegration).not.toHaveBeenCalled();
     });
   });
 
@@ -677,7 +673,6 @@ describe("GithubRepositoriesService", () => {
       const result = await (service as any).githubApiFetchPage(
         1,
         100,
-        undefined,
         "ghp_test_token",
       );
 
@@ -687,7 +682,7 @@ describe("GithubRepositoriesService", () => {
       ).toHaveBeenCalledWith({
         per_page: 100,
         page: 1,
-        sort: "updated",
+        sort: "full_name",
         since: undefined,
       });
     });
@@ -718,7 +713,6 @@ describe("GithubRepositoriesService", () => {
       const result = await (service as any).githubApiFetchPage(
         1,
         100,
-        undefined,
         "ghp_test_token",
       );
 
@@ -737,7 +731,6 @@ describe("GithubRepositoriesService", () => {
       const result = await (service as any).githubApiFetchPage(
         1,
         100,
-        undefined,
         "ghp_test_token",
       );
 
@@ -749,7 +742,7 @@ describe("GithubRepositoriesService", () => {
       mockOctokit.rest.repos.listForAuthenticatedUser.mockRejectedValue(error);
 
       await expect(
-        (service as any).githubApiFetchPage(1, 100, undefined, "invalid_token"),
+        (service as any).githubApiFetchPage(1, 100, "invalid_token"),
       ).rejects.toThrow(IntegrationInvalidToken);
     });
 
@@ -758,12 +751,7 @@ describe("GithubRepositoriesService", () => {
       mockOctokit.rest.repos.listForAuthenticatedUser.mockRejectedValue(error);
 
       await expect(
-        (service as any).githubApiFetchPage(
-          1,
-          100,
-          undefined,
-          "ghp_test_token",
-        ),
+        (service as any).githubApiFetchPage(1, 100, "ghp_test_token"),
       ).rejects.toThrow(FailedToRetrieveReposFromProvider);
     });
 
@@ -772,40 +760,21 @@ describe("GithubRepositoriesService", () => {
       mockOctokit.rest.repos.listForAuthenticatedUser.mockRejectedValue(error);
 
       await expect(
-        (service as any).githubApiFetchPage(
-          1,
-          100,
-          undefined,
-          "ghp_test_token",
-        ),
+        (service as any).githubApiFetchPage(1, 100, "ghp_test_token"),
       ).rejects.toThrow(error);
     });
 
-    it("should include since parameter when last updated is provided", async () => {
-      const lastUpdated = new Date("2023-01-01");
-      const mockResponse = {
+    it("asks for every repository, not only recently updated ones", async () => {
+      mockOctokit.rest.repos.listForAuthenticatedUser.mockResolvedValue({
         data: [mockGithubRepository],
         headers: {},
-      };
-      mockOctokit.rest.repos.listForAuthenticatedUser.mockResolvedValue(
-        mockResponse,
-      );
+      });
 
-      await (service as any).githubApiFetchPage(
-        1,
-        100,
-        lastUpdated,
-        "ghp_test_token",
-      );
+      await (service as any).githubApiFetchPage(1, 100, "ghp_test_token");
 
       expect(
         mockOctokit.rest.repos.listForAuthenticatedUser,
-      ).toHaveBeenCalledWith({
-        per_page: 100,
-        page: 1,
-        sort: "updated",
-        since: lastUpdated.toISOString(),
-      });
+      ).toHaveBeenCalledWith({ per_page: 100, page: 1, sort: "full_name" });
     });
   });
 
