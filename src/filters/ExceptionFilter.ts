@@ -4,9 +4,14 @@ import {
   ExceptionFilter,
   HttpException,
 } from "@nestjs/common";
-import { FastifyReply } from "fastify";
+import { FastifyReply, FastifyRequest } from "fastify";
 import { QueryFailedError } from "typeorm";
 
+import type { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import {
+  CodeClarityLogger,
+  type LogContext,
+} from "src/services/logger.service";
 import { Status } from "src/types/apiResponses.types";
 import { PrivateAPIError, PublicAPIError } from "src/types/error.types";
 
@@ -27,6 +32,8 @@ const HTTP_EXCEPTION_CODES: Partial<Record<number, string>> = {
  */
 @Catch(Error)
 export class ErrorFilter implements ExceptionFilter {
+  private readonly logger = CodeClarityLogger.forService("ErrorFilter");
+
   /**
    * Catches and processes exceptions thrown by routes.
    *
@@ -36,6 +43,7 @@ export class ErrorFilter implements ExceptionFilter {
   catch(exception: Error, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<FastifyReply>();
+    const request = ctx.getRequest<FastifyRequest | undefined>();
     let status = 500;
 
     let errorCode = "InternalError";
@@ -56,20 +64,24 @@ export class ErrorFilter implements ExceptionFilter {
       status = error.getHttpStatusCode();
       errorCode = error.getErrorCode();
       message = error.getMessage();
-      console.error("[PrivateAPIError]", error);
+      this.report(
+        status,
+        `[PrivateAPIError] ${error.loggingErrorCode}: ${error.loggingErrorMessage}`,
+        error.getCause() ?? error,
+        request,
+      );
     } else if (exception instanceof HttpException) {
       // Check if the exception is an instance of HttpException
       const error: HttpException = exception;
       status = error.getStatus();
       errorCode = HTTP_EXCEPTION_CODES[status] ?? errorCode;
       message = error.message;
-      console.error("[HttpException]", error);
+      this.report(status, `[HttpException] ${message}`, error, request);
     } else if (isBadInput(exception)) {
       status = 400;
       errorCode = "BadRequest";
       message = "A request parameter has an invalid value.";
     } else {
-      console.error("[UnhandledException]", exception);
       // A client error from Fastify keeps its status; anything else is a generic InternalError.
       if ("name" in exception && exception.name === "FastifyError") {
         const fastifyException = exception as unknown as {
@@ -85,6 +97,8 @@ export class ErrorFilter implements ExceptionFilter {
           message = fastifyException.message;
         }
       }
+      const kind = status < 500 ? "[ClientError]" : "[UnhandledException]";
+      this.report(status, `${kind} ${exception.message}`, exception, request);
     }
 
     response.status(status).send(
@@ -96,6 +110,45 @@ export class ErrorFilter implements ExceptionFilter {
       }),
     );
   }
+
+  // Logs a 5xx answer at error and a 4xx answer at warn, without the request body or headers.
+  private report(
+    status: number,
+    message: string,
+    cause: unknown,
+    request: FastifyRequest | undefined,
+  ): void {
+    const context = requestContext(status, request);
+    if (status >= 500) {
+      this.logger.error(
+        message,
+        cause instanceof Error ? cause : String(cause),
+        context,
+      );
+    } else {
+      this.logger.warn(message, context);
+    }
+  }
+}
+
+// The route pattern, user and organization of a request, never its values or secrets.
+function requestContext(
+  status: number,
+  request: FastifyRequest | undefined,
+): LogContext {
+  const context: LogContext = { status };
+  if (!request) return context;
+  context["method"] = request.method;
+  const route = request.routeOptions?.url;
+  if (route) context["route"] = route;
+  const user = (request as { user?: AuthenticatedUser }).user;
+  if (user?.userId) context.userId = user.userId;
+  const params = request.params as Record<string, unknown> | undefined;
+  const organizationId = params?.["org_id"] ?? params?.["organization_id"];
+  if (typeof organizationId === "string") {
+    context.organizationId = organizationId;
+  }
+  return context;
 }
 
 function isBadInput(exception: Error): boolean {
