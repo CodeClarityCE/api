@@ -12,6 +12,9 @@ import { Analysis } from "../../base_modules/analyses/analysis.entity";
 import { Organization } from "../../base_modules/organizations/organization.entity";
 import { User } from "../../base_modules/users/users.entity";
 
+// The join table between policies and the analyses they apply to.
+export const POLICY_ANALYSES_TABLE = "policy_analyses_analysis";
+
 export enum PolicyType {
   LICENSE_POLICY = "LICENSE_POLICY",
   VULNERABILITY_POLICY = "VULNERABILITY_POLICY",
@@ -48,7 +51,7 @@ export class Policy {
   created_by!: Relation<User>;
 
   @ManyToMany(() => Analysis, (analysis) => analysis.policies)
-  @JoinTable()
+  @JoinTable({ name: POLICY_ANALYSES_TABLE })
   analyses?: Relation<Analysis[]>;
 }
 

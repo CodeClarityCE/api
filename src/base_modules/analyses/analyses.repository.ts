@@ -7,6 +7,7 @@ import {
   AnalysisStatus,
 } from "src/base_modules/analyses/analysis.entity";
 import { TERMINAL_ANALYSIS_STATUSES } from "src/base_modules/analyses/analysis-outcome";
+import { POLICY_ANALYSES_TABLE } from "src/codeclarity_modules/policies/policy.entity";
 import { Result } from "src/codeclarity_modules/results/result.entity";
 import { EntityNotFound } from "src/types/error.types";
 import { TypedPaginatedData } from "src/types/pagination.types";
@@ -86,7 +87,7 @@ export class AnalysesRepository {
     await manager
       .createQueryBuilder()
       .delete()
-      .from("policy_analyses_analysis")
+      .from(POLICY_ANALYSES_TABLE)
       .where('"analysisId" IN (:...ids)', { ids })
       .execute();
     await manager

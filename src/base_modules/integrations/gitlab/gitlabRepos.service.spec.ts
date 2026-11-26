@@ -828,6 +828,47 @@ describe("GitlabRepositoriesService", () => {
 
       expect(mockQueryBuilder.take).toHaveBeenCalledWith(100);
     });
+
+    it.each([
+      [{}, 0, 20, 3],
+      [{ entriesPerPage: -5, currentPage: -2 }, 0, -5, -9],
+      [{ entriesPerPage: 7, currentPage: 3 }, 3, 7, 7],
+    ])(
+      "answers the page %j as page %d of size %d",
+      async (conf: PaginationUserSuppliedConf, page, size, totalPages) => {
+        jest
+          .spyOn(membershipsRepository, "hasRequiredRole")
+          .mockResolvedValue(undefined);
+        organizationsRepository.doesIntegrationBelongToOrg.mockResolvedValue(
+          true,
+        );
+        integrationsRepository.getIntegrationById.mockResolvedValue({
+          ...mockIntegration,
+          last_repository_sync: new Date(),
+        });
+        mockQueryBuilder.getCount.mockResolvedValue(45);
+        mockQueryBuilder.getMany.mockResolvedValue([mockRepositoryCache]);
+
+        const result = await service.getGitlabRepositories(
+          "test-org-id",
+          "test-integration-id",
+          conf,
+          mockAuthenticatedUser,
+        );
+
+        expect(mockQueryBuilder.take).toHaveBeenCalledWith(size);
+        expect(result).toEqual({
+          data: [mockRepositoryCache],
+          page,
+          entry_count: 1,
+          entries_per_page: size,
+          total_entries: 45,
+          total_pages: totalPages,
+          matching_count: 45,
+          filter_count: {},
+        });
+      },
+    );
   });
 
   describe("areGitlabReposSynced", () => {
