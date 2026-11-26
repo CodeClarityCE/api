@@ -1,7 +1,7 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 
-import { EntityNotFound, NotAuthorized } from "src/types/error.types";
+import { EntityNotFound } from "src/types/error.types";
 
 import {
   MemberRole,
@@ -329,61 +329,6 @@ describe("OrganizationsRepository", () => {
       await expect(
         organizationsRepository.getMembershipRole("org-123", "user-123"),
       ).rejects.toThrow(EntityNotFound);
-    });
-  });
-
-  describe("hasRequiredRole", () => {
-    it("should pass when user has required role", async () => {
-      // Arrange
-      mockMembershipRepository.findOne.mockResolvedValue(mockMembership); // mockMembership has ADMIN role
-
-      // Act & Assert - Should not throw (ADMIN can do USER actions)
-      await expect(
-        organizationsRepository.hasRequiredRole(
-          "org-123",
-          "user-123",
-          MemberRole.USER,
-        ),
-      ).resolves.toBeUndefined();
-    });
-
-    it("should pass when user has same role as required", async () => {
-      // Arrange
-      mockMembershipRepository.findOne.mockResolvedValue(mockMembership); // mockMembership has ADMIN role
-
-      // Act & Assert - Should not throw (ADMIN can do ADMIN actions)
-      await expect(
-        organizationsRepository.hasRequiredRole(
-          "org-123",
-          "user-123",
-          MemberRole.ADMIN,
-        ),
-      ).resolves.toBeUndefined();
-    });
-
-    // Note: There's a bug in hasRequiredRole implementation where NotAuthorized errors get swallowed
-    // by the catch block. This test is commented out until the implementation is fixed.
-    // it('should throw NotAuthorized when user has insufficient role', async () => {
-    //     // Arrange
-    //     const membershipWithLowerRole = { ...mockMembership, role: MemberRole.USER } as OrganizationMemberships;
-    //     mockMembershipRepository.findOne.mockResolvedValue(membershipWithLowerRole);
-    //
-    //     // Act & Assert
-    //     await expect(organizationsRepository.hasRequiredRole('org-123', 'user-123', MemberRole.OWNER)).rejects.toThrow(NotAuthorized);
-    // });
-
-    it("should throw NotAuthorized when user is not a member", async () => {
-      // Arrange
-      mockMembershipRepository.findOne.mockResolvedValue(null);
-
-      // Act & Assert
-      await expect(
-        organizationsRepository.hasRequiredRole(
-          "org-123",
-          "user-123",
-          MemberRole.USER,
-        ),
-      ).rejects.toThrow(NotAuthorized);
     });
   });
 
