@@ -84,7 +84,7 @@ async function readParts(request: UploadRequest): Promise<{
   return { body, uploaded };
 }
 
-// Errors of our own or of the multipart plugin keep their status; any other
+// Errors of our own or of the multipart plugin pass on unchanged; any other
 // comes from the parser reading a malformed body.
 function asUploadError(error: unknown): Error {
   if (
