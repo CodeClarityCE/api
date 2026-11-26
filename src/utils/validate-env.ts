@@ -125,6 +125,14 @@ class EnvironmentVariables {
   MAIL_AUTH_PASSWORD?: string;
 
   /**
+   * Comma-separated GitLab hosts allowed on internal addresses and plain http
+   * (self-hosted instances on a private network). Empty by default.
+   */
+  @IsOptional()
+  @IsString()
+  GITLAB_ALLOWED_PRIVATE_HOSTS?: string;
+
+  /**
    * The default "from" email address.
    */
   @IsNotEmpty()

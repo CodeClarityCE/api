@@ -24,14 +24,17 @@ import {
 import { SortDirection } from "src/types/sort.types";
 
 import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from "../github/constants";
+import { syncRepositoryCache } from "../repositoryCacheSync";
 
 import { GitlabIntegrationService } from "./gitlab.service";
+import { gitlabFetch, instanceBase } from "./gitlabInstance";
 
 // Most projects one sync reads, so a huge GitLab instance cannot stall it
 const MAX_SYNCED_PROJECTS = 2000;
 
 /** GitLab API project response structure */
 interface GitLabProject {
+  id: number;
   name_with_namespace: string;
   http_url_to_repo: string;
   default_branch: string;
@@ -54,7 +57,7 @@ export class GitlabRepositoriesService {
   ) {}
 
   /**
-   * Sync updated and new repos from the integration
+   * Make the integration's repository cache match the projects GitLab lists
    * @throws {NotAuthorized} If the authenticated user is not authorized to perform this action
    * @throws {EntityNotFound} In case the integration could not be found or the integration is of the wrong type
    * @throws {IntegrationInvalidToken} If the token could not be used to authenticate the request to gitlab
@@ -64,6 +67,8 @@ export class GitlabRepositoriesService {
    * @throws {IntegrationTokenRetrievalFailed} In case the token could not be fetched from the provider
    * @throws {FailedToRetrieveReposFromProvider} If authentication to gitlab succeeded, but a different error with the request was encountered
    * @throws {IntegrationWrongTokenType} In case the token type is not supported
+   * @throws {IntegrationInstanceUrlNotAllowed} In case the instance is plain http or internal and not allowed
+   * @throws {IntegrationInstanceUnreachable} In case the instance's host name does not resolve
    * @param integrationId The id of the integration
    * @returns
    */
@@ -77,36 +82,35 @@ export class GitlabRepositoriesService {
       await this.integrationsRepository.getIntegrationById(integrationId);
 
     try {
-      const projects = await this.fetchMemberProjects(
+      const { projects, complete } = await this.fetchMemberProjects(
         integrationId,
         integration.service_domain,
         rawToken,
       );
 
-      // Process the projects and save them to the repository cache
-      for (const project of projects) {
-        const repo = await this.repositoryCacheRepository.existsBy({
+      await syncRepositoryCache(
+        this.repositoryCacheRepository.manager,
+        integration.id,
+        projects.map((project) => ({
+          provider_id: String(project.id),
+          repository_type: RepositoryType.GITLAB,
+          url: project.http_url_to_repo,
           fully_qualified_name: project.name_with_namespace,
-          integration: { id: integration.id },
-        });
-        if (repo) continue;
-
-        const repository = new RepositoryCache();
-        repository.repository_type = RepositoryType.GITLAB;
-        repository.url = project.http_url_to_repo;
-        repository.default_branch = project.default_branch;
-        repository.visibility = project.visibility ?? "public";
-        repository.fully_qualified_name = project.name_with_namespace;
-        repository.description = project.description ?? "";
-        repository.created_at = project.created_at
-          ? new Date(project.created_at)
-          : new Date();
-        repository.integration = integration;
-
-        await this.repositoryCacheRepository.save(repository);
-      }
+          description: project.description ?? "",
+          visibility: project.visibility ?? "public",
+          default_branch: project.default_branch,
+          created_at: project.created_at
+            ? new Date(project.created_at)
+            : new Date(),
+        })),
+        { complete },
+      );
     } catch (error) {
-      console.error("Error syncing GitLab repositories:", error);
+      this.logger.error(
+        "Failed to sync GitLab repositories",
+        error instanceof Error ? error : String(error),
+        { integrationId },
+      );
       throw error;
     }
 
@@ -121,16 +125,14 @@ export class GitlabRepositoriesService {
     integrationId: string,
     serviceDomain: string,
     rawToken: string,
-  ): Promise<GitLabProject[]> {
-    const baseUrl = `${serviceDomain}/api/v4/projects?membership=true&min_access_level=20&per_page=100`;
+  ): Promise<{ projects: GitLabProject[]; complete: boolean }> {
+    const baseUrl = `${instanceBase(serviceDomain)}/api/v4/projects?membership=true&min_access_level=20&per_page=100`;
     const projects: GitLabProject[] = [];
     let url = baseUrl;
 
     for (;;) {
-      const response = await fetch(url, {
-        headers: {
-          "PRIVATE-TOKEN": rawToken,
-        },
+      const response = await gitlabFetch(url, {
+        headers: { "PRIVATE-TOKEN": rawToken },
       });
 
       if (!response.ok) {
@@ -143,13 +145,13 @@ export class GitlabRepositoriesService {
 
       // GitLab sends an empty x-next-page on the last page
       const nextPage = response.headers.get("x-next-page");
-      if (!nextPage) return projects;
+      if (!nextPage) return { projects, complete: true };
       if (projects.length >= MAX_SYNCED_PROJECTS) {
         this.logger.warn(
           `Stopped GitLab sync at ${MAX_SYNCED_PROJECTS} projects`,
           { integrationId },
         );
-        return projects;
+        return { projects, complete: false };
       }
       url = `${baseUrl}&page=${nextPage}`;
     }

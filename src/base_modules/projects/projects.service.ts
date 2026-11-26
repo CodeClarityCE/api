@@ -23,6 +23,7 @@ import { RepositoryCache } from "src/base_modules/projects/repositoryCache.entit
 import { AnalysisResultsRepository } from "src/codeclarity_modules/results/results.repository";
 import {
   EntityNotFound,
+  ImportTargetNotAllowed,
   IntegrationNotSupported,
   NotAuthorized,
 } from "src/types/error.types";
@@ -32,12 +33,13 @@ import {
   TypedPaginatedData,
 } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
-import { assertPublicUrl } from "src/utils/outbound-url";
+import { pinnedFetch } from "src/utils/outbound-url";
 import { validateAndJoinPath } from "src/utils/path-validator";
 
 import { AnalysesRepository } from "../analyses/analyses.repository";
 import { FileRepository } from "../file/file.repository";
 import { GithubRepositoriesService } from "../integrations/github/githubRepos.service";
+import { gitlabPolicy } from "../integrations/gitlab/gitlabInstance";
 import { GitlabRepositoriesService } from "../integrations/gitlab/gitlabRepos.service";
 import { IntegrationsRepository } from "../integrations/integrations.repository";
 import {
@@ -49,6 +51,37 @@ import {
 } from "../shared/repositories";
 
 import { ProjectRowsService } from "./project-rows.service";
+
+/** Whether a url has the instance's scheme, host and port */
+function isOnInstance(url: string, instanceUrl: string): boolean {
+  try {
+    const target = new URL(url);
+    const instance = new URL(instanceUrl);
+    return (
+      (target.protocol === "https:" || target.protocol === "http:") &&
+      target.origin === instance.origin
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** A string without leading and trailing slashes, in linear time */
+function trimSlashes(value: string): string {
+  let start = 0;
+  let end = value.length;
+  while (start < end && value[start] === "/") start++;
+  while (end > start && value[end - 1] === "/") end--;
+  return value.slice(start, end);
+}
+
+/** The project path of a url below the instance's base path */
+function projectPath(url: string, instanceUrl: string): string {
+  const base = trimSlashes(new URL(instanceUrl).pathname);
+  let path = trimSlashes(new URL(url).pathname);
+  if (base && path.startsWith(`${base}/`)) path = path.slice(base.length + 1);
+  return path.endsWith(".git") ? path.slice(0, -4) : path;
+}
 
 /** A GitHub repository already resolved through an integration */
 export interface ResolvedGithubRepo {
@@ -102,23 +135,21 @@ export class ProjectService {
   }
 
   /**
-   * Check if a repository URL is publicly accessible and create a fallback RepositoryCache
-   * @param url The repository URL
-   * @param serviceDomain The domain (e.g., 'github.com', 'gitlab.com')
-   * @param integrationHost The integration's own host, allowed on a private address
+   * Check that a repository url outside the cache is public, and build a
+   * fallback RepositoryCache for it
+   * @param url The repository URL, already on the integration's host
+   * @param serviceDomain The integration's instance url (e.g. https://gitlab.com)
    * @returns RepositoryCache for the public repository
-   * @throws {ImportTargetNotAllowed} If the url points at an internal address
+   * @throws {ImportTargetNotAllowed} If the url is plain http or internal and not allowed
    * @throws The original error if the repository is not public
    */
   private async checkPublicRepositoryAccess(
     url: string,
     serviceDomain: string,
-    integrationHost: string,
     originalError: Error,
   ): Promise<RepositoryCache> {
-    const target = await assertPublicUrl(url, [integrationHost]);
     // A redirect could lead to an internal address, so it counts as not public
-    const response = await fetch(target, { redirect: "manual" });
+    const response = await pinnedFetch(url, gitlabPolicy());
     if (!response.ok) {
       throw originalError;
     }
@@ -129,7 +160,7 @@ export class ProjectService {
 
     const repo = new RepositoryCache();
     repo.url = url;
-    repo.fully_qualified_name = url.replace(`https://${serviceDomain}/`, "");
+    repo.fully_qualified_name = projectPath(url, serviceDomain);
     repo.description = "Imported manually";
     repo.default_branch = "main";
     repo.service_domain = serviceDomain;
@@ -201,6 +232,10 @@ export class ProjectService {
       } else if (
         integration.integration_provider === IntegrationProviderEntity.GITLAB
       ) {
+        // The integration's token goes to this url, so it must be its host
+        if (!isOnInstance(projectData.url, integration.service_domain)) {
+          throw new ImportTargetNotAllowed();
+        }
         await this.gitlabRepositoriesService.syncGitlabRepos(
           projectData.integration_id,
         );
@@ -215,7 +250,6 @@ export class ProjectService {
           if (!(err instanceof EntityNotFound)) throw err;
           repo = await this.checkPublicRepositoryAccess(
             projectData.url,
-            "gitlab.com",
             integration.service_domain,
             err,
           );

@@ -35,6 +35,17 @@ import {
   OAuthTokenResponse,
 } from "./integration-provider.interface";
 
+/** A provider known to implement the optional method K. */
+type Supporting<K extends keyof ITicketIntegrationProvider> =
+  ITicketIntegrationProvider & Required<Pick<ITicketIntegrationProvider, K>>;
+
+function supports<K extends keyof ITicketIntegrationProvider>(
+  provider: ITicketIntegrationProvider,
+  capability: K,
+): provider is Supporting<K> {
+  return Boolean(provider[capability]);
+}
+
 /**
  * Service for managing external ticket integrations.
  * Handles provider registration, configuration, and sync operations.
@@ -297,6 +308,32 @@ export class TicketIntegrationService {
     return saved.config;
   }
 
+  /**
+   * Resolves the config, then runs one optional provider method.
+   * @throws {BadRequestException} If the provider lacks the method
+   */
+  private async callProvider<K extends keyof ITicketIntegrationProvider, T>(
+    organizationId: string,
+    provider: ExternalTicketProvider,
+    credentials: IntegrationCredentials | undefined,
+    capability: K,
+    unsupported: string,
+    call: (instance: Supporting<K>, config: IntegrationConfig) => Promise<T>,
+  ): Promise<T> {
+    const config = await this.resolveConfig(
+      organizationId,
+      provider,
+      credentials,
+    );
+    const instance = this.getProvider(provider);
+    if (!supports(instance, capability)) {
+      throw new BadRequestException(
+        `Provider ${provider} does not support ${unsupported}`,
+      );
+    }
+    return call(instance, config);
+  }
+
   // ============================================
   // OAuth Flow
   // ============================================
@@ -395,20 +432,14 @@ export class TicketIntegrationService {
     provider: ExternalTicketProvider,
     credentials?: IntegrationCredentials,
   ): Promise<ExternalWorkspace[]> {
-    const config = await this.resolveConfig(
+    return this.callProvider(
       organizationId,
       provider,
       credentials,
+      "getWorkspaces",
+      "workspaces",
+      (p, config) => p.getWorkspaces(config),
     );
-
-    const providerInstance = this.getProvider(provider);
-    if (!providerInstance.getWorkspaces) {
-      throw new BadRequestException(
-        `Provider ${provider} does not support workspaces`,
-      );
-    }
-
-    return providerInstance.getWorkspaces(config);
   }
 
   /**
@@ -420,20 +451,14 @@ export class TicketIntegrationService {
     workspaceId: string,
     credentials?: IntegrationCredentials,
   ): Promise<ExternalSpace[]> {
-    const config = await this.resolveConfig(
+    return this.callProvider(
       organizationId,
       provider,
       credentials,
+      "getSpaces",
+      "spaces",
+      (p, config) => p.getSpaces(workspaceId, config),
     );
-
-    const providerInstance = this.getProvider(provider);
-    if (!providerInstance.getSpaces) {
-      throw new BadRequestException(
-        `Provider ${provider} does not support spaces`,
-      );
-    }
-
-    return providerInstance.getSpaces(workspaceId, config);
   }
 
   /**
@@ -445,20 +470,14 @@ export class TicketIntegrationService {
     spaceId: string,
     credentials?: IntegrationCredentials,
   ): Promise<ExternalFolder[]> {
-    const config = await this.resolveConfig(
+    return this.callProvider(
       organizationId,
       provider,
       credentials,
+      "getFolders",
+      "folders",
+      (p, config) => p.getFolders(spaceId, config),
     );
-
-    const providerInstance = this.getProvider(provider);
-    if (!providerInstance.getFolders) {
-      throw new BadRequestException(
-        `Provider ${provider} does not support folders`,
-      );
-    }
-
-    return providerInstance.getFolders(spaceId, config);
   }
 
   /**
@@ -470,20 +489,14 @@ export class TicketIntegrationService {
     parentId: string,
     credentials?: IntegrationCredentials,
   ): Promise<ExternalList[]> {
-    const config = await this.resolveConfig(
+    return this.callProvider(
       organizationId,
       provider,
       credentials,
+      "getLists",
+      "lists",
+      (p, config) => p.getLists(parentId, config),
     );
-
-    const providerInstance = this.getProvider(provider);
-    if (!providerInstance.getLists) {
-      throw new BadRequestException(
-        `Provider ${provider} does not support lists`,
-      );
-    }
-
-    return providerInstance.getLists(parentId, config);
   }
 
   // ============================================
@@ -500,20 +513,14 @@ export class TicketIntegrationService {
     name: string,
     credentials?: IntegrationCredentials,
   ): Promise<ExternalSpace> {
-    const config = await this.resolveConfig(
+    return this.callProvider(
       organizationId,
       provider,
       credentials,
+      "createSpace",
+      "creating spaces",
+      (p, config) => p.createSpace(name, workspaceId, config),
     );
-
-    const providerInstance = this.getProvider(provider);
-    if (!providerInstance.createSpace) {
-      throw new BadRequestException(
-        `Provider ${provider} does not support creating spaces`,
-      );
-    }
-
-    return providerInstance.createSpace(name, workspaceId, config);
   }
 
   /**
@@ -526,20 +533,14 @@ export class TicketIntegrationService {
     name: string,
     credentials?: IntegrationCredentials,
   ): Promise<ExternalFolder> {
-    const config = await this.resolveConfig(
+    return this.callProvider(
       organizationId,
       provider,
       credentials,
+      "createFolder",
+      "creating folders",
+      (p, config) => p.createFolder(name, spaceId, config),
     );
-
-    const providerInstance = this.getProvider(provider);
-    if (!providerInstance.createFolder) {
-      throw new BadRequestException(
-        `Provider ${provider} does not support creating folders`,
-      );
-    }
-
-    return providerInstance.createFolder(name, spaceId, config);
   }
 
   /**
@@ -552,20 +553,14 @@ export class TicketIntegrationService {
     name: string,
     credentials?: IntegrationCredentials,
   ): Promise<ExternalList> {
-    const config = await this.resolveConfig(
+    return this.callProvider(
       organizationId,
       provider,
       credentials,
+      "createList",
+      "creating lists",
+      (p, config) => p.createList(name, folderId, config),
     );
-
-    const providerInstance = this.getProvider(provider);
-    if (!providerInstance.createList) {
-      throw new BadRequestException(
-        `Provider ${provider} does not support creating lists`,
-      );
-    }
-
-    return providerInstance.createList(name, folderId, config);
   }
 
   /**
@@ -578,20 +573,14 @@ export class TicketIntegrationService {
     name: string,
     credentials?: IntegrationCredentials,
   ): Promise<ExternalList> {
-    const config = await this.resolveConfig(
+    return this.callProvider(
       organizationId,
       provider,
       credentials,
+      "createFolderlessList",
+      "creating folderless lists",
+      (p, config) => p.createFolderlessList(name, spaceId, config),
     );
-
-    const providerInstance = this.getProvider(provider);
-    if (!providerInstance.createFolderlessList) {
-      throw new BadRequestException(
-        `Provider ${provider} does not support creating folderless lists`,
-      );
-    }
-
-    return providerInstance.createFolderlessList(name, spaceId, config);
   }
 
   // ============================================

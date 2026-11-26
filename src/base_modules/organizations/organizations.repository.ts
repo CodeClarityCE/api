@@ -2,13 +2,9 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 
-import {
-  MemberRole,
-  OrganizationMemberships,
-} from "src/base_modules/organizations/memberships/organization.memberships.entity";
-import { isMemberRoleLessThan } from "src/base_modules/organizations/memberships/orgMembership.types";
+import { OrganizationMemberships } from "src/base_modules/organizations/memberships/organization.memberships.entity";
 import { Organization } from "src/base_modules/organizations/organization.entity";
-import { EntityNotFound, NotAuthorized } from "src/types/error.types";
+import { EntityNotFound } from "src/types/error.types";
 import { TypedPaginatedData } from "src/types/pagination.types";
 
 /**
@@ -161,33 +157,6 @@ export class OrganizationsRepository {
     }
 
     return membership;
-  }
-
-  /**
-   * Check if a user has the required role in an organization.
-   *
-   * @param organizationId - The ID of the organization.
-   * @param userId - The ID of the user.
-   * @param requiredRole - The minimum required role for the user.
-   * @throws {NotAuthorized} If the user does not have the required role or is not a member.
-   */
-  async hasRequiredRole(
-    organizationId: string,
-    userId: string,
-    requiredRole: MemberRole,
-  ): Promise<void> {
-    try {
-      const memberRole = (await this.getMembershipRole(organizationId, userId))
-        .role;
-
-      if (isMemberRoleLessThan(memberRole, requiredRole)) {
-        throw new NotAuthorized();
-      }
-    } catch (err) {
-      if (err instanceof EntityNotFound) {
-        throw new NotAuthorized();
-      }
-    }
   }
 
   /**

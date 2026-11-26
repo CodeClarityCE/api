@@ -29,6 +29,8 @@ import {
 import { SortDirection } from "src/types/sort.types";
 import { paginatedData, resolvePage } from "src/utils/pagination";
 
+import { syncRepositoryCache } from "../repositoryCacheSync";
+
 import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from "./constants";
 import { GithubIntegrationService } from "./github.service";
 
@@ -423,57 +425,40 @@ export class GithubRepositoriesService {
 
     const entriesPerPage = 100;
 
-    // Fetch 1st page
-    const [_repos, lastPage] = await this.githubApiFetchPage(
+    // Every page first, so a failed page leaves the cache as it was
+    const [firstPage, lastPage] = await this.githubApiFetchPage(
       1,
       entriesPerPage,
-      integration.last_repository_sync,
       rawToken,
     );
-    await this.saveRepos(_repos, integration.id);
-
-    // Fetch the remaining pages
-    if (lastPage > 1) {
-      for (let i = 2; i <= lastPage; i++) {
-        const [_repos] = await this.githubApiFetchPage(
-          i,
-          entriesPerPage,
-          integration.last_repository_sync,
-          rawToken,
-        );
-        await this.saveRepos(_repos, integration.id);
-      }
+    const repos = [...firstPage];
+    for (let page = 2; page <= lastPage; page++) {
+      const [more] = await this.githubApiFetchPage(
+        page,
+        entriesPerPage,
+        rawToken,
+      );
+      repos.push(...more);
     }
+
+    await syncRepositoryCache(
+      this.repositoryCacheRepository.manager,
+      integration.id,
+      repos.map((repo) => ({
+        provider_id: String(repo.id),
+        repository_type: RepositoryType.GITHUB,
+        url: repo.html_url,
+        fully_qualified_name: repo.full_name,
+        description: repo.description ?? "",
+        visibility: repo.visibility ?? "public",
+        default_branch: repo.default_branch,
+        created_at: repo.created_at ? new Date(repo.created_at) : new Date(),
+      })),
+      { complete: true },
+    );
 
     integration.last_repository_sync = new Date();
     await this.integrationsRepository.saveIntegration(integration);
-  }
-
-  /**
-   * Save or update the repositories
-   * @param db A results databse instance
-   * @param repos An array of github repositories
-   * @param transaction A db transaction instance
-   */
-  private async saveRepos(
-    repos: GithubRepositorySchema[],
-    integrationId: string,
-  ): Promise<void> {
-    const integration =
-      await this.integrationsRepository.getIntegrationById(integrationId);
-    for (const rawRepo of repos) {
-      const repository = new RepositoryCache();
-      repository.repository_type = RepositoryType.GITHUB;
-      repository.url = rawRepo.html_url;
-      repository.default_branch = rawRepo.default_branch;
-      repository.visibility = rawRepo.visibility ?? "public";
-      repository.fully_qualified_name = rawRepo.full_name;
-      repository.description = rawRepo.description ?? "";
-      repository.created_at = rawRepo.created_at ?? new Date();
-      repository.integration = integration;
-
-      await this.repositoryCacheRepository.save(repository);
-    }
   }
 
   /**
@@ -481,15 +466,13 @@ export class GithubRepositoriesService {
    * @throws {IntegrationInvalidToken} If the token could not be used to authenticate the request to gitlab
    * @throws {FailedToRetrieveReposFromProvider} If authentication to github succeeded, but a different error with the request was encountered
    * @param page The page to fetch
-   * @param entriesPerPage Entries per page (must stay the same in one transaction)
-   * @param lastUpdated The date time on which the repos where last update
+   * @param entriesPerPage Entries per page (must stay the same in one sync)
    * @param token The github api token
    * @returns
    */
   private async githubApiFetchPage(
     page: number,
     entriesPerPage: number,
-    lastUpdated: Date | undefined,
     token: string,
   ): Promise<[GithubRepositorySchema[], number]> {
     try {
@@ -503,8 +486,8 @@ export class GithubRepositoriesService {
       const response = (await client.rest.repos.listForAuthenticatedUser({
         per_page: entriesPerPage,
         page: page,
-        sort: "updated",
-        since: lastUpdated ? lastUpdated.toISOString() : undefined,
+        // A name order does not shift between pages when a repository is pushed to
+        sort: "full_name",
       })) as OctokitReposResponse;
 
       const lastPage = lastPageFromLinkHeader(response.headers.link);

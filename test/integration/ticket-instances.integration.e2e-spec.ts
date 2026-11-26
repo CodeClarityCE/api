@@ -107,7 +107,11 @@ describe("Ticket instances follow the current analysis (e2e)", () => {
     finding(LODASH_CVE, "lodash", "4.17.15", "4.17.21"),
   ];
 
-  const request = (method: string, path: string, body?: object) =>
+  const request = (
+    method: Parameters<typeof testHelper.makeAuthenticatedRequest>[0],
+    path: string,
+    body?: object,
+  ) =>
     testHelper.makeAuthenticatedRequest(
       method,
       `/org/${user.organization.id}${path}`,

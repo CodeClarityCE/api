@@ -1,6 +1,12 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Expose } from "class-transformer";
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import {
+  Column,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  Unique,
+} from "typeorm";
 
 import { Integration } from "../integrations/integrations.entity";
 
@@ -10,6 +16,10 @@ export enum RepositoryType {
 }
 
 @Entity()
+@Unique("UQ_repository_cache_integration_provider_id", [
+  "integration",
+  "provider_id",
+])
 export class RepositoryCache {
   @PrimaryGeneratedColumn("uuid")
   @ApiProperty()
@@ -43,6 +53,10 @@ export class RepositoryCache {
     nullable: true,
   })
   service_domain!: string;
+
+  /** The provider's stable repository id; null on rows cached before it was kept */
+  @Column({ type: "varchar", nullable: true })
+  provider_id?: string | null;
 
   @Column()
   @ApiProperty()

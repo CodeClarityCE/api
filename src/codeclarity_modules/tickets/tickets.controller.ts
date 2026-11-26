@@ -1,4 +1,5 @@
 import {
+  applyDecorators,
   Body,
   Controller,
   DefaultValuePipe,
@@ -80,6 +81,13 @@ import {
   UpdateTicketBody,
   VerifyCredentialsBody,
 } from "./tickets.types";
+
+/** The two optional headers that carry unsaved provider credentials. */
+const ApiCredentialHeaders = (): MethodDecorator =>
+  applyDecorators(
+    ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false }),
+    ApiHeader({ name: API_KEY_HEADER, required: false }),
+  );
 
 // Helper to normalize query arrays
 function normalizeQueryArray<T>(value: T | T[] | undefined): T[] | undefined {
@@ -628,8 +636,7 @@ export class TicketsController {
     description: "Integration provider",
     enum: ExternalTicketProvider,
   })
-  @ApiHeader({ name: API_KEY_HEADER, required: false })
-  @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
+  @ApiCredentialHeaders()
   @ApiResponse({
     status: 200,
     description: "Workspaces retrieved successfully",
@@ -658,8 +665,7 @@ export class TicketsController {
     enum: ExternalTicketProvider,
   })
   @ApiParam({ name: "workspace_id", description: "Workspace ID" })
-  @ApiHeader({ name: API_KEY_HEADER, required: false })
-  @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
+  @ApiCredentialHeaders()
   @ApiResponse({ status: 200, description: "Spaces retrieved successfully" })
   async getSpaces(
     @AuthUser() user: AuthenticatedUser,
@@ -687,8 +693,7 @@ export class TicketsController {
     enum: ExternalTicketProvider,
   })
   @ApiParam({ name: "space_id", description: "Space ID" })
-  @ApiHeader({ name: API_KEY_HEADER, required: false })
-  @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
+  @ApiCredentialHeaders()
   @ApiResponse({ status: 200, description: "Folders retrieved successfully" })
   async getFolders(
     @AuthUser() user: AuthenticatedUser,
@@ -716,8 +721,7 @@ export class TicketsController {
     enum: ExternalTicketProvider,
   })
   @ApiParam({ name: "parent_id", description: "Parent (Folder or Space) ID" })
-  @ApiHeader({ name: API_KEY_HEADER, required: false })
-  @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
+  @ApiCredentialHeaders()
   @ApiResponse({ status: 200, description: "Lists retrieved successfully" })
   async getLists(
     @AuthUser() user: AuthenticatedUser,
@@ -749,8 +753,7 @@ export class TicketsController {
     enum: ExternalTicketProvider,
   })
   @ApiParam({ name: "workspace_id", description: "Workspace ID" })
-  @ApiHeader({ name: API_KEY_HEADER, required: false })
-  @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
+  @ApiCredentialHeaders()
   @ApiResponse({ status: 201, description: "Space created successfully" })
   async createSpace(
     @AuthUser() user: AuthenticatedUser,
@@ -780,8 +783,7 @@ export class TicketsController {
     enum: ExternalTicketProvider,
   })
   @ApiParam({ name: "space_id", description: "Space ID" })
-  @ApiHeader({ name: API_KEY_HEADER, required: false })
-  @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
+  @ApiCredentialHeaders()
   @ApiResponse({ status: 201, description: "Folder created successfully" })
   async createFolder(
     @AuthUser() user: AuthenticatedUser,
@@ -811,8 +813,7 @@ export class TicketsController {
     enum: ExternalTicketProvider,
   })
   @ApiParam({ name: "folder_id", description: "Folder ID" })
-  @ApiHeader({ name: API_KEY_HEADER, required: false })
-  @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
+  @ApiCredentialHeaders()
   @ApiResponse({ status: 201, description: "List created successfully" })
   async createList(
     @AuthUser() user: AuthenticatedUser,
@@ -842,8 +843,7 @@ export class TicketsController {
     enum: ExternalTicketProvider,
   })
   @ApiParam({ name: "space_id", description: "Space ID" })
-  @ApiHeader({ name: API_KEY_HEADER, required: false })
-  @ApiHeader({ name: ACCESS_TOKEN_HEADER, required: false })
+  @ApiCredentialHeaders()
   @ApiResponse({ status: 201, description: "List created successfully" })
   async createFolderlessList(
     @AuthUser() user: AuthenticatedUser,

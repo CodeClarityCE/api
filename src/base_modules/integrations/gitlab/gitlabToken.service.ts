@@ -9,6 +9,8 @@ import {
   validateNotExpired,
 } from "../utils/tokenValidation.utils";
 
+import { gitlabFetch, instanceBase } from "./gitlabInstance";
+
 @Injectable()
 export class GitlabIntegrationTokenService extends BaseVCSTokenService {
   protected getDefaultScopes(): string[] {
@@ -27,11 +29,9 @@ export class GitlabIntegrationTokenService extends BaseVCSTokenService {
       );
     }
 
-    const response = await fetch(
-      `${gitlabInstanceUrl}/api/v4/personal_access_tokens/self`,
-      {
-        headers: { "PRIVATE-TOKEN": token },
-      },
+    const response = await gitlabFetch(
+      `${instanceBase(gitlabInstanceUrl)}/api/v4/personal_access_tokens/self`,
+      { headers: { "PRIVATE-TOKEN": token } },
     );
 
     if (!response.ok) {
@@ -65,11 +65,9 @@ export class GitlabIntegrationTokenService extends BaseVCSTokenService {
     }
 
     // Any token may read its own details; the admin token API needs an admin.
-    const response = await fetch(
-      `${gitlabInstanceUrl}/api/v4/personal_access_tokens/self`,
-      {
-        headers: { "PRIVATE-TOKEN": token },
-      },
+    const response = await gitlabFetch(
+      `${instanceBase(gitlabInstanceUrl)}/api/v4/personal_access_tokens/self`,
+      { headers: { "PRIVATE-TOKEN": token } },
     );
 
     if (!response.ok) {

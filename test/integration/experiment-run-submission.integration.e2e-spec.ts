@@ -11,6 +11,7 @@ import {
 } from "../../src/base_modules/analyses/analysis.entity";
 import { InMemoryAnalysisPublisher } from "../../src/base_modules/analyses/analysis-publisher";
 import { Analyzer } from "../../src/base_modules/analyzers/analyzer.entity";
+import { AnalyzerLanguagesService } from "../../src/base_modules/analyzers/analyzer-languages.service";
 import { AnalyzersRepository } from "../../src/base_modules/analyzers/analyzers.repository";
 import {
   AuthenticatedUser,
@@ -23,6 +24,8 @@ import { OrganizationLoggerService } from "../../src/base_modules/organizations/
 import { OrganizationMemberships } from "../../src/base_modules/organizations/memberships/organization.memberships.entity";
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import { Organization } from "../../src/base_modules/organizations/organization.entity";
+import { type PluginAvailabilityService } from "../../src/base_modules/plugin-availability/plugin-availability.service";
+import type { PluginsRepository } from "../../src/base_modules/plugins/plugin.repository";
 import { Project } from "../../src/base_modules/projects/project.entity";
 import { ProjectService } from "../../src/base_modules/projects/projects.service";
 import {
@@ -36,6 +39,8 @@ import { User } from "../../src/base_modules/users/users.entity";
 import { Dataset } from "../../src/codeclarity_modules/datasets/dataset.entity";
 import { DatasetEntry } from "../../src/codeclarity_modules/datasets/dataset-entry.entity";
 import { Experiment } from "../../src/codeclarity_modules/experiments/experiment.entity";
+import { ExperimentProbe } from "../../src/codeclarity_modules/experiments/experiment-probe.entity";
+import { ExperimentProbeOutcome } from "../../src/codeclarity_modules/experiments/experiment-probe-outcome.entity";
 import { mapRunRows } from "../../src/codeclarity_modules/experiments/experiment-row-copy";
 import {
   ExperimentRun,
@@ -92,29 +97,44 @@ describe("ExperimentRunSubmission against Postgres", () => {
     const organizations = new OrganizationsRepository(repo(Organization));
     const projects = new ProjectsRepository(repo(Project));
     const analyses = new AnalysesRepository(repo(Analysis));
+    const analyzers = new AnalyzersRepository(repo(Analyzer));
+    const organizationLogger = new OrganizationLoggerService(
+      users,
+      memberships,
+      new LogsRepository(repo(Log)),
+    );
     const unused = undefined as never;
+    // Every plugin counts as available.
+    const pluginAvailability = {
+      assertAvailable: async () => undefined,
+    } as unknown as PluginAvailabilityService;
+    const plugins = {
+      getAll: async () => [
+        { name: "js-sbom", depends_on: [] },
+        { name: "vuln-finder", depends_on: ["js-sbom"] },
+      ],
+    } as unknown as PluginsRepository;
 
     publisher = new InMemoryAnalysisPublisher();
     const analysesService = new AnalysesService(
       publisher,
+      pluginAvailability,
       memberships,
       users,
       organizations,
       projects,
-      new AnalyzersRepository(repo(Analyzer)),
+      analyzers,
       unused,
       unused,
       unused,
       unused,
       analyses,
       repo(Policy),
+      organizationLogger,
+      new AnalyzerLanguagesService(analyzers, plugins),
     );
     const projectService = new ProjectService(
-      new OrganizationLoggerService(
-        users,
-        memberships,
-        new LogsRepository(repo(Log)),
-      ),
+      organizationLogger,
       unused,
       unused,
       unused,
@@ -131,12 +151,16 @@ describe("ExperimentRunSubmission against Postgres", () => {
       repo(Experiment),
       repo(ExperimentRun),
       repo(Result),
+      repo(ExperimentProbeOutcome),
+      repo(ExperimentProbe),
+      repo(DatasetEntry),
     );
     submission = new ExperimentRunSubmission(
       projectService,
       analysesService,
       analyses,
       store,
+      analyzers,
     );
 
     const user = await repo(User).save({
