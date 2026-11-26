@@ -16,6 +16,7 @@ import {
 import {
   Policy,
   PolicyFrontend,
+  toPolicyFrontend,
 } from "src/codeclarity_modules/policies/policy.entity";
 import { PolicyType } from "src/codeclarity_modules/policies/policy.types";
 import { EntityNotFound } from "src/types/error.types";
@@ -176,21 +177,8 @@ export class LicensePolicyService {
       .take(entriesPerPage)
       .getMany();
 
-    const res: PolicyFrontend[] = [];
-    res.push(
-      ...policies.map((policy) => ({
-        id: policy.id,
-        name: policy.name,
-        description: policy.description,
-        default: policy.default,
-        content: policy.content,
-        created_on: policy.created_on,
-        created_by: policy.created_by?.email || "",
-        policy_type: policy.policy_type,
-      })),
-    );
     return {
-      data: res,
+      data: policies.map(toPolicyFrontend),
       page: currentPage,
       entry_count: policies.length,
       entries_per_page: entriesPerPage,
