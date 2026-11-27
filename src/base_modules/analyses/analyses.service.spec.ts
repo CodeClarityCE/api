@@ -882,6 +882,29 @@ describe("AnalysesService", () => {
         10,
       ); // defaults
     });
+
+    it("passes a negative page size on as requested", async () => {
+      jest.spyOn(membershipsRepository, "hasRequiredRole").mockResolvedValue();
+      jest
+        .spyOn(projectsRepository, "doesProjectBelongToOrg")
+        .mockResolvedValue();
+      jest
+        .spyOn(analysesRepository, "getAnalysisByProjectId")
+        .mockResolvedValue({} as never);
+
+      await service.getMany(
+        "org-123",
+        "project-123",
+        { entriesPerPage: -5, currentPage: 2 },
+        mockUser,
+      );
+
+      expect(analysesRepository.getAnalysisByProjectId).toHaveBeenCalledWith(
+        "project-123",
+        2,
+        -5,
+      );
+    });
   });
 
   describe("delete", () => {

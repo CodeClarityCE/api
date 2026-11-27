@@ -15,6 +15,7 @@ import {
 } from "src/codeclarity_modules/policies/license/licensePolicy.types";
 import {
   Policy,
+  POLICY_ANALYSES_TABLE,
   PolicyFrontend,
   toPolicyFrontend,
 } from "src/codeclarity_modules/policies/policy.entity";
@@ -263,7 +264,7 @@ export class LicensePolicyService {
       await manager
         .createQueryBuilder()
         .delete()
-        .from("policy_analyses_analysis")
+        .from(POLICY_ANALYSES_TABLE)
         .where('"policyId" = :id', { id: policy.id })
         .execute();
       await manager

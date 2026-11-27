@@ -24,7 +24,10 @@ import {
   BatchItemResult,
   BatchResponse,
 } from "src/base_modules/projects/project.types";
-import { Policy } from "src/codeclarity_modules/policies/policy.entity";
+import {
+  Policy,
+  POLICY_ANALYSES_TABLE,
+} from "src/codeclarity_modules/policies/policy.entity";
 import { LicensesRepository } from "src/codeclarity_modules/results/licenses/licenses.repository";
 import { Output as LicensesOutput } from "src/codeclarity_modules/results/licenses/licenses.types";
 import { AnalysisResultsRepository } from "src/codeclarity_modules/results/results.repository";
@@ -40,6 +43,7 @@ import {
   TypedPaginatedData,
 } from "src/types/pagination.types";
 import { AnalysisStartMessageCreate } from "src/types/rabbitMqMessages.types";
+import { resolvePage } from "src/utils/pagination";
 
 import {
   AnalyzerDoesNotExist,
@@ -528,17 +532,11 @@ export class AnalysesService {
       defaultEntriesPerPage: 10,
     };
 
-    let entriesPerPage = paginationConfig.defaultEntriesPerPage;
-    let currentPage = 0;
-
-    if (paginationUserSuppliedConf.entriesPerPage)
-      entriesPerPage = Math.min(
-        paginationConfig.maxEntriesPerPage,
-        paginationUserSuppliedConf.entriesPerPage,
-      );
-
-    if (paginationUserSuppliedConf.currentPage)
-      currentPage = Math.max(0, paginationUserSuppliedConf.currentPage);
+    const { currentPage, entriesPerPage } = resolvePage(
+      paginationUserSuppliedConf,
+      paginationConfig,
+      "as-requested",
+    );
 
     return this.analysesRepository.getAnalysisByProjectId(
       projectId,
@@ -1061,7 +1059,7 @@ export class AnalysesService {
       if (policy?.organizations.some((org) => org.id === orgId)) {
         // Create the policy-analysis relationship directly
         await this.policyRepository.manager.query(
-          'INSERT INTO policy_analyses_analysis ("policyId", "analysisId") VALUES ($1, $2)',
+          `INSERT INTO ${POLICY_ANALYSES_TABLE} ("policyId", "analysisId") VALUES ($1, $2)`,
           [policyId, analysisId],
         );
       }

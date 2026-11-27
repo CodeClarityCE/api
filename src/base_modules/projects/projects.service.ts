@@ -34,6 +34,7 @@ import {
 } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
 import { pinnedFetch } from "src/utils/outbound-url";
+import { resolvePage } from "src/utils/pagination";
 import { validateAndJoinPath } from "src/utils/path-validator";
 
 import { AnalysesRepository } from "../analyses/analyses.repository";
@@ -449,17 +450,11 @@ export class ProjectService {
       defaultEntriesPerPage: 10,
     };
 
-    let entriesPerPage = paginationConfig.defaultEntriesPerPage;
-    let currentPage = 0;
-
-    if (paginationUserSuppliedConf.entriesPerPage)
-      entriesPerPage = Math.min(
-        paginationConfig.maxEntriesPerPage,
-        paginationUserSuppliedConf.entriesPerPage,
-      );
-
-    if (paginationUserSuppliedConf.currentPage)
-      currentPage = Math.max(0, paginationUserSuppliedConf.currentPage);
+    const { currentPage, entriesPerPage } = resolvePage(
+      paginationUserSuppliedConf,
+      paginationConfig,
+      "as-requested",
+    );
 
     return this.repos.projects.getManyProjects(
       orgId,
