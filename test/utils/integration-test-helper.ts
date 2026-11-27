@@ -133,10 +133,15 @@ class IntegrationTestHelper {
     // Get all entity metadata
     const entities = this.dataSource.entityMetadatas;
 
-    // One statement empties every table at once, so it cannot deadlock itself.
     const tables = [...new Set(entities.map((e) => `"${e.tableName}"`))];
     if (tables.length === 0) return;
-    await this.dataSource.query(`TRUNCATE TABLE ${tables.join(", ")} CASCADE;`);
+    // DELETE, not TRUNCATE: TRUNCATE's exclusive locks deadlock with any query that
+    // reads several of these tables in another order. Replica mode skips the foreign
+    // key checks, so the tables can be emptied in any order.
+    await this.dataSource.transaction(async (manager) => {
+      await manager.query("SET LOCAL session_replication_role = replica");
+      await manager.query(tables.map((t) => `DELETE FROM ${t};`).join(" "));
+    });
   }
 
   async createTestUser(
