@@ -1,6 +1,6 @@
 import { PublicAPIError } from "src/types/error.types";
 
-const errorMessages: Record<string, string> = {
+const errorMessages = {
   AnalyzerDoesNotExist: "The analyzer referenced does not exist.",
   AnaylzerMissingConfigAttribute:
     "A required configuration attribute to run an analyzer is missing.",
@@ -8,10 +8,10 @@ const errorMessages: Record<string, string> = {
   AnalyzerDependencyMissing:
     "A plugin in the analyzer is missing a plugin it depends on.",
   AnalyzerHasAnalyses: "This analyzer has analyses, so it cannot be deleted.",
-};
+} satisfies Record<string, string>;
 export class AnalyzerDoesNotExist extends PublicAPIError {
-  static errorCode = "AnalyzerDoesNotExist";
-  static errorMessage = errorMessages[AnalyzerDoesNotExist.errorCode]!;
+  static readonly errorCode = "AnalyzerDoesNotExist";
+  static errorMessage = errorMessages[AnalyzerDoesNotExist.errorCode];
   static statusCode = 400;
   constructor(cause?: unknown) {
     super(
@@ -24,9 +24,8 @@ export class AnalyzerDoesNotExist extends PublicAPIError {
 }
 
 export class AnaylzerMissingConfigAttribute extends PublicAPIError {
-  static errorCode = "AnaylzerMissingConfigAttribute";
-  static errorMessage =
-    errorMessages[AnaylzerMissingConfigAttribute.errorCode]!;
+  static readonly errorCode = "AnaylzerMissingConfigAttribute";
+  static errorMessage = errorMessages[AnaylzerMissingConfigAttribute.errorCode];
   static statusCode = 400;
   constructor(missing?: { plugin: string; option: string }, cause?: unknown) {
     super(
@@ -41,8 +40,8 @@ export class AnaylzerMissingConfigAttribute extends PublicAPIError {
 }
 
 export class AnalyzerHasNoPlugins extends PublicAPIError {
-  static errorCode = "AnalyzerHasNoPlugins";
-  static errorMessage = errorMessages[AnalyzerHasNoPlugins.errorCode]!;
+  static readonly errorCode = "AnalyzerHasNoPlugins";
+  static errorMessage = errorMessages[AnalyzerHasNoPlugins.errorCode];
   static statusCode = 400;
   constructor(cause?: unknown) {
     super(
@@ -56,8 +55,8 @@ export class AnalyzerHasNoPlugins extends PublicAPIError {
 
 /** Names the plugin and what it is missing, e.g. "license-finder needs js-sbom". */
 export class AnalyzerDependencyMissing extends PublicAPIError {
-  static errorCode = "AnalyzerDependencyMissing";
-  static errorMessage = errorMessages[AnalyzerDependencyMissing.errorCode]!;
+  static readonly errorCode = "AnalyzerDependencyMissing";
+  static errorMessage = errorMessages[AnalyzerDependencyMissing.errorCode];
   static statusCode = 400;
   constructor(plugin: string, missing: string[], cause?: unknown) {
     super(
@@ -70,8 +69,8 @@ export class AnalyzerDependencyMissing extends PublicAPIError {
 }
 
 export class AnalyzerHasAnalyses extends PublicAPIError {
-  static errorCode = "AnalyzerHasAnalyses";
-  static errorMessage = errorMessages[AnalyzerHasAnalyses.errorCode]!;
+  static readonly errorCode = "AnalyzerHasAnalyses";
+  static errorMessage = errorMessages[AnalyzerHasAnalyses.errorCode];
   static statusCode = 409;
   constructor(cause?: unknown) {
     super(
