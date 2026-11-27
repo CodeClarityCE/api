@@ -31,6 +31,7 @@ jobs:
       extra-test-command: pnpm test:e2e test/integration/*contract*.e2e-spec.ts
 
   # Database-backed e2e specs under test/ against a real Postgres, in the toolchain image.
+  # Here, not in node-image.yml, since only api needs a database; it mirrors that job's steps.
   integration:
     name: integration specs
     runs-on: ubuntu-24.04
