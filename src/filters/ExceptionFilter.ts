@@ -4,9 +4,14 @@ import {
   ExceptionFilter,
   HttpException,
 } from "@nestjs/common";
-import { FastifyReply } from "fastify";
+import { FastifyReply, FastifyRequest } from "fastify";
 import { QueryFailedError } from "typeorm";
 
+import type { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import {
+  CodeClarityLogger,
+  type LogContext,
+} from "src/services/logger.service";
 import { Status } from "src/types/apiResponses.types";
 import { PrivateAPIError, PublicAPIError } from "src/types/error.types";
 
@@ -27,6 +32,8 @@ const HTTP_EXCEPTION_CODES: Partial<Record<number, string>> = {
  */
 @Catch(Error)
 export class ErrorFilter implements ExceptionFilter {
+  private readonly logger = CodeClarityLogger.forService("ErrorFilter");
+
   /**
    * Catches and processes exceptions thrown by routes.
    *
@@ -36,6 +43,7 @@ export class ErrorFilter implements ExceptionFilter {
   catch(exception: Error, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<FastifyReply>();
+    const request = ctx.getRequest<FastifyRequest | undefined>();
     let status = 500;
 
     let errorCode = "InternalError";
@@ -56,20 +64,24 @@ export class ErrorFilter implements ExceptionFilter {
       status = error.getHttpStatusCode();
       errorCode = error.getErrorCode();
       message = error.getMessage();
-      console.error("[PrivateAPIError]", error);
+      this.report(
+        status,
+        `${error.loggingErrorCode}: ${error.loggingErrorMessage}`,
+        error,
+        request,
+      );
     } else if (exception instanceof HttpException) {
       // Check if the exception is an instance of HttpException
       const error: HttpException = exception;
       status = error.getStatus();
       errorCode = HTTP_EXCEPTION_CODES[status] ?? errorCode;
       message = error.message;
-      console.error("[HttpException]", error);
+      this.report(status, message, error, request);
     } else if (isBadInput(exception)) {
       status = 400;
       errorCode = "BadRequest";
       message = "A request parameter has an invalid value.";
     } else {
-      console.error("[UnhandledException]", exception);
       // A client error from Fastify keeps its status; anything else is a generic InternalError.
       if ("name" in exception && exception.name === "FastifyError") {
         const fastifyException = exception as unknown as {
@@ -85,6 +97,7 @@ export class ErrorFilter implements ExceptionFilter {
           message = fastifyException.message;
         }
       }
+      this.report(status, exception.message, exception, request);
     }
 
     response.status(status).send(
@@ -96,6 +109,60 @@ export class ErrorFilter implements ExceptionFilter {
       }),
     );
   }
+
+  // Logs a 5xx answer at error and a 4xx answer at warn, without the request body or headers.
+  private report(
+    status: number,
+    message: string,
+    exception: Error,
+    request: FastifyRequest | undefined,
+  ): void {
+    const kind = errorKind(exception);
+    const context = { ...requestContext(status, request), kind };
+    // A PrivateAPIError's cause carries the stack worth logging.
+    const cause =
+      exception instanceof PrivateAPIError &&
+      exception.getCause() instanceof Error
+        ? (exception.getCause() as Error)
+        : exception;
+    if (status >= 500) {
+      this.logger.error(`[${kind}] ${message}`, cause, context);
+    } else {
+      this.logger.warn(`[${kind}] ${message}`, context);
+    }
+  }
+}
+
+// The route pattern and the user, organization, project and analysis ids of a request, never its secrets.
+function requestContext(
+  status: number,
+  request: FastifyRequest | undefined,
+): LogContext {
+  const context: LogContext = { status };
+  if (!request) return context;
+  context["method"] = request.method;
+  const route = request.routeOptions?.url;
+  if (route) context["route"] = route;
+  const user = (request as { user?: AuthenticatedUser }).user;
+  if (user?.userId) context.userId = user.userId;
+  const params = request.params as Record<string, unknown> | undefined;
+  const ids = {
+    organizationId: params?.["org_id"] ?? params?.["organization_id"],
+    projectId: params?.["project_id"],
+    analysisId: params?.["analysis_id"],
+  };
+  for (const [key, value] of Object.entries(ids)) {
+    if (typeof value === "string") context[key] = value;
+  }
+  return context;
+}
+
+// Names the kind of error a log line is about.
+function errorKind(exception: Error): string {
+  if (exception instanceof PrivateAPIError) return "PrivateAPIError";
+  if (exception instanceof HttpException) return "HttpException";
+  if (exception.name === "FastifyError") return "FastifyError";
+  return "UnhandledException";
 }
 
 function isBadInput(exception: Error): boolean {
