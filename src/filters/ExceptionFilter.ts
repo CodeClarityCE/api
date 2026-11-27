@@ -13,7 +13,7 @@ import { PrivateAPIError, PublicAPIError } from "src/types/error.types";
 // Postgres errors caused by a malformed client value: a non-UUID id, an out-of-range page, a NUL character.
 const BAD_INPUT_SQLSTATES = new Set(["22P02", "22003", "22021"]);
 
-// Error codes for HttpException statuses that have a clear meaning to clients.
+// Error codes for HttpException and FastifyError statuses that have a clear meaning to clients.
 const HTTP_EXCEPTION_CODES: Partial<Record<number, string>> = {
   400: "BadRequest",
   413: "PayloadTooLarge",
@@ -70,7 +70,7 @@ export class ErrorFilter implements ExceptionFilter {
       message = "A request parameter has an invalid value.";
     } else {
       console.error("[UnhandledException]", exception);
-      // Catch any other unexpected exceptions and return a generic InternalError response
+      // A client error from Fastify keeps its status; anything else is a generic InternalError.
       if ("name" in exception && exception.name === "FastifyError") {
         const fastifyException = exception as unknown as {
           statusCode: number;
@@ -80,8 +80,8 @@ export class ErrorFilter implements ExceptionFilter {
           fastifyException.statusCode >= 400 &&
           fastifyException.statusCode < 500
         ) {
-          errorCode = "BadRequest";
-          status = 400;
+          status = fastifyException.statusCode;
+          errorCode = HTTP_EXCEPTION_CODES[status] ?? "BadRequest";
           message = fastifyException.message;
         }
       }

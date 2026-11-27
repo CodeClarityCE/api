@@ -221,21 +221,38 @@ describe("ExceptionFilter", () => {
     });
 
     describe("FastifyError handling", () => {
-      it("should handle FastifyError with 4xx status code", () => {
-        const fastifyError = new Error("Request entity too large");
+      it("keeps the status of a 4xx FastifyError with its mapped error code", () => {
+        const fastifyError = new Error("request file too large");
         (fastifyError as any).name = "FastifyError";
         (fastifyError as any).statusCode = 413;
-        (fastifyError as any).message = "Request entity too large";
 
         filter.catch(fastifyError, mockArgumentsHost);
 
-        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.status).toHaveBeenCalledWith(413);
         expect(mockResponse.send).toHaveBeenCalledWith(
           JSON.stringify({
-            status_code: 400,
+            status_code: 413,
+            status: Status.Failure,
+            error_code: "PayloadTooLarge",
+            error_message: "request file too large",
+          }),
+        );
+      });
+
+      it("answers a 4xx FastifyError outside the code map as BadRequest with its own status", () => {
+        const fastifyError = new Error("Unsupported Media Type: text/xml");
+        (fastifyError as any).name = "FastifyError";
+        (fastifyError as any).statusCode = 415;
+
+        filter.catch(fastifyError, mockArgumentsHost);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(415);
+        expect(mockResponse.send).toHaveBeenCalledWith(
+          JSON.stringify({
+            status_code: 415,
             status: Status.Failure,
             error_code: "BadRequest",
-            error_message: "Request entity too large",
+            error_message: "Unsupported Media Type: text/xml",
           }),
         );
       });

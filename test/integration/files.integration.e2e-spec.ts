@@ -4,6 +4,7 @@ import { tmpdir } from "os";
 import { join } from "path";
 
 import { File } from "../../src/base_modules/file/file.entity";
+import { UPLOAD_FILE_SIZE_LIMIT } from "../../src/base_modules/file/upload-limits";
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import { type Project } from "../../src/base_modules/projects/project.entity";
 import { createProject } from "../utils/deletion-fixtures";
@@ -57,6 +58,38 @@ describe("Files (e2e)", () => {
       }),
     );
   }
+
+  describe("PATCH /org/:org/file/:project/upload", () => {
+    it("refuses a file over the size limit as too large", async () => {
+      const boundary = "files-it-boundary";
+      const file = Buffer.alloc(UPLOAD_FILE_SIZE_LIMIT + 1, "a");
+      const payload = Buffer.concat([
+        Buffer.from(
+          `--${boundary}\r\n` +
+            'Content-Disposition: form-data; name="file"; filename="sbom.json"\r\n' +
+            "Content-Type: application/json\r\n\r\n",
+        ),
+        file,
+        Buffer.from(`\r\n--${boundary}--\r\n`),
+      ]);
+
+      const response = await testHelper.getApp().inject({
+        method: "PATCH",
+        url: `/org/${owner.organization.id}/file/${projectId}/upload`,
+        headers: {
+          authorization: `Bearer ${owner.accessToken}`,
+          "content-type": `multipart/form-data; boundary=${boundary}`,
+        },
+        payload,
+      });
+
+      expect(response.statusCode).toBe(413);
+      expect(response.json()).toMatchObject({
+        status_code: 413,
+        error_code: "PayloadTooLarge",
+      });
+    });
+  });
 
   describe("DELETE /org/:org/file/:project/:file", () => {
     it("deletes the uploader's file from the database and disk", async () => {
