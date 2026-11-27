@@ -350,11 +350,11 @@ describe("Audit log of organization actions (e2e)", () => {
   });
 
   describe("revoking an invitation", () => {
-    // Invites the invitee and returns the invitation id from their invitation list.
+    // Invites the invitee and returns the invitation id from the owner's list.
     async function openInvitation(): Promise<string> {
       await inviteInvitee();
       const list = await request(
-        invitee,
+        owner,
         "GET",
         `/org/${owner.organization.id}/invitations`,
       );

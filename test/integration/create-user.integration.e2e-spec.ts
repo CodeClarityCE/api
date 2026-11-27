@@ -155,7 +155,8 @@ describe("create-user (e2e)", () => {
     await createUser(testHelper.getDataSource(), {
       ...account,
       email: "al@example.com",
-      name: "Al",
+      // Too short for a handle, so create-user pads it.
+      name: "Al Bo",
     });
 
     for (const email of [
