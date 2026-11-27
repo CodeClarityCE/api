@@ -1,12 +1,23 @@
-import * as analyzerErrors from "src/base_modules/analyzers/analyzers.errors";
-import * as authErrors from "src/base_modules/auth/auth.errors";
-import * as organizationErrors from "src/base_modules/organizations/organizations.errors";
-import * as pluginAvailabilityErrors from "src/base_modules/plugin-availability/plugin-availability.errors";
-import * as userErrors from "src/base_modules/users/users.errors";
-import * as experimentErrors from "src/codeclarity_modules/experiments/experiments.errors";
+/* eslint-disable security/detect-non-literal-fs-filename -- walks the src tree for error modules */
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
-import * as errorTypes from "./error.types";
-import { PublicAPIError } from "./error.types";
+import { PluginFailed, PublicAPIError } from "./error.types";
+
+const SRC = join(__dirname, "..");
+
+// Every source file under src that declares a PublicAPIError subclass.
+function errorModuleFiles(dir: string = SRC): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) return errorModuleFiles(path);
+    if (!entry.name.endsWith(".ts") || entry.name.endsWith(".spec.ts"))
+      return [];
+    return readFileSync(path, "utf8").includes("extends PublicAPIError")
+      ? [path]
+      : [];
+  });
+}
 
 // Every exported PublicAPIError subclass of the given modules, with its name.
 function publicErrorClasses(
@@ -22,19 +33,21 @@ function publicErrorClasses(
 }
 
 describe("PublicAPIError subclasses", () => {
-  const classes = publicErrorClasses([
-    errorTypes,
-    analyzerErrors,
-    authErrors,
-    organizationErrors,
-    pluginAvailabilityErrors,
-    userErrors,
-    experimentErrors,
-  ]);
+  const classes = publicErrorClasses(
+    errorModuleFiles().map((file) =>
+      jest.requireActual<Record<string, unknown>>(file),
+    ),
+  );
 
   it("finds the error classes", () => {
     expect(classes.map(([name]) => name)).toEqual(
-      expect.arrayContaining(["PluginFailed", "AccountNotActivated"]),
+      expect.arrayContaining([
+        "PluginFailed",
+        "AccountNotActivated",
+        "AnalyzerHasAnalyses",
+        "IncorrectCurrentPassword",
+        "InvalidFigureDefinition",
+      ]),
     );
   });
 
@@ -44,7 +57,7 @@ describe("PublicAPIError subclasses", () => {
   });
 
   it("PluginFailed answers with the plugin failure message", () => {
-    const error = new errorTypes.PluginFailed();
+    const error = new PluginFailed();
     expect(error.error_code).toBe("PluginResultFailed");
     expect(error.error_message).toBe("The plugin failed to run.");
   });
