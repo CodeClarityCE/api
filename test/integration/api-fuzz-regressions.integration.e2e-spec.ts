@@ -211,6 +211,37 @@ describe("API fuzz regressions (e2e)", () => {
     });
   });
 
+  describe("a body that is null, missing or not an object", () => {
+    it.each([
+      ["POST", "/tickets/integrations/JIRA/verify", "null"],
+      ["PATCH", "/settings", "null"],
+      ["POST", "/tickets/integrations/JIRA/verify", undefined],
+      ["PATCH", "/settings", undefined],
+      ["POST", "/tickets/integrations/JIRA/verify", "1"],
+      ["PATCH", "/settings", '"x"'],
+    ] as const)(
+      "%s /org/:org%s with body %s is refused as malformed",
+      async (method, path, payload) => {
+        const response = await testHelper.getApp().inject({
+          method,
+          url: `/org/${owner.organization.id}${path}`,
+          headers: {
+            authorization: `Bearer ${owner.accessToken}`,
+            ...(payload === undefined
+              ? {}
+              : { "content-type": "application/json" }),
+          },
+          ...(payload === undefined ? {} : { payload }),
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.json()).toMatchObject({
+          error_code: "ValidationFailed",
+        });
+      },
+    );
+  });
+
   describe("ClickUp credentials that cannot be sent in a header", () => {
     it.each(["api_key", "access_token", "refresh_token"])(
       "POST /org/:org/tickets/integrations/clickup refuses such an %s",

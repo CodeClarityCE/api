@@ -1,18 +1,18 @@
 import {
   ClassSerializerInterceptor,
   type INestApplication,
-  ValidationPipe,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 
 import { ErrorFilter } from "./filters/ExceptionFilter";
 import { ResponseBodyInterceptor } from "./interceptors/ResponseBodyInterceptor";
+import { BodyValidationPipe } from "./pipes/body-validation.pipe";
 import { ValidationFailed } from "./types/error.types";
 
 /** Applies the validation, error and response handling every request goes through. */
 export function useGlobalHandlers(app: INestApplication): void {
   app.useGlobalPipes(
-    new ValidationPipe({
+    new BodyValidationPipe({
       exceptionFactory: (errors) => new ValidationFailed(errors),
       // Stop at the first error and don't continue validating other fields
       stopAtFirstError: true,

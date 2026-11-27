@@ -1,7 +1,5 @@
 import multipart from "@fastify/multipart";
-import { ClassSerializerInterceptor, ValidationPipe } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { Reflector } from "@nestjs/core";
 import {
   FastifyAdapter,
   type NestFastifyApplication,
@@ -11,6 +9,7 @@ import { getDataSourceToken } from "@nestjs/typeorm";
 import * as bcrypt from "bcrypt";
 import { type DataSource } from "typeorm";
 
+import { useGlobalHandlers } from "../../src/app.globals";
 import { AppModule } from "../../src/app.module";
 import {
   AnalysisPublisher,
@@ -25,9 +24,6 @@ import {
   UsersRepository,
 } from "../../src/base_modules/shared/repositories";
 import { User } from "../../src/base_modules/users/users.entity";
-import { ErrorFilter } from "../../src/filters/ExceptionFilter";
-import { ResponseBodyInterceptor } from "../../src/interceptors/ResponseBodyInterceptor";
-import { ValidationFailed } from "../../src/types/error.types";
 import { validate } from "../../src/utils/validate-env";
 
 import {
@@ -82,19 +78,7 @@ class IntegrationTestHelper {
     });
 
     // Same global setup as main.ts, so responses match the real API.
-    this.app.useGlobalPipes(
-      new ValidationPipe({
-        exceptionFactory: (errors) => new ValidationFailed(errors),
-        stopAtFirstError: true,
-      }),
-    );
-    this.app.useGlobalFilters(new ErrorFilter());
-    this.app.useGlobalInterceptors(new ResponseBodyInterceptor());
-    this.app.useGlobalInterceptors(
-      new ClassSerializerInterceptor(this.app.get(Reflector), {
-        excludeExtraneousValues: true,
-      }),
-    );
+    useGlobalHandlers(this.app);
 
     // Get services for test data creation
     this.dataSource = moduleFixture.get<DataSource>(
