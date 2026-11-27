@@ -184,7 +184,7 @@ export class NotAuthenticated extends PublicAPIError {
   }
 }
 
-/** A request on a web sign-in that may come from another site (ADR 0024). */
+/** A request on a web sign-in that may come from another site (ADR 0025). */
 export class CrossSiteRequestRefused extends PublicAPIError {
   static readonly errorCode = "CrossSiteRequestRefused";
   static errorMessage = errorMessages[CrossSiteRequestRefused.errorCode];

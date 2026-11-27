@@ -67,7 +67,7 @@ async function bootstrap(): Promise<void> {
       done();
     });
 
-  // No CORS: the app is same-origin, and other origins must fail the preflight (ADR 0024).
+  // No CORS: the app is same-origin, and other origins must fail the preflight (ADR 0025).
 
   useGlobalHandlers(app);
 

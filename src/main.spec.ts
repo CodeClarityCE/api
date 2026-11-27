@@ -685,12 +685,6 @@ describe("Main.ts Bootstrap Configuration and Testing", () => {
 
       expect(multipartConfig.limits.fileSize).toBe(26214400);
 
-      const corsConfig = {
-        origin: ["*"],
-      };
-
-      expect(corsConfig.origin).toEqual(["*"]);
-
       const compressionConfig = {
         encodings: ["gzip", "deflate"],
       };

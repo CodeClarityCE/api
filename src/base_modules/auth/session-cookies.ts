@@ -1,9 +1,9 @@
 import { CrossSiteRequestRefused } from "src/types/error.types";
 
-/** The cookie holding a web sign-in's access token (ADR 0024). */
+/** The cookie holding a web sign-in's access token (ADR 0025). */
 export const ACCESS_COOKIE = "__Host-Http-cc_access";
 
-/** The cookie holding a web sign-in's refresh token (ADR 0024). */
+/** The cookie holding a web sign-in's refresh token (ADR 0025). */
 export const REFRESH_COOKIE = "__Host-Http-cc_refresh";
 
 /** The header every request on a web sign-in must carry, so a cross-origin page needs a preflight. */
@@ -111,7 +111,7 @@ function hostOf(origin: string): string | undefined {
 /**
  * Refuses a request on a web sign-in that a page on another origin could
  * have sent: it must carry the custom header, and a browser's Fetch Metadata
- * or Origin must name this origin (ADR 0024).
+ * or Origin must name this origin (ADR 0025).
  * @throws {CrossSiteRequestRefused}
  */
 export function assertSameOrigin(headers: RequestHeaders): void {

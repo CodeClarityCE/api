@@ -325,7 +325,7 @@ describe("Authentication Integration (e2e)", () => {
       const bearer = await testHelper.makeAuthenticatedRequest(
         "GET",
         "/auth/user",
-        token!,
+        token,
       );
       const refresh = await testHelper.refresh(token);
 

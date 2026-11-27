@@ -86,7 +86,7 @@ export class CombinedAuthGuard implements CanActivate {
       headers = request?.headers ?? {};
     }
 
-    // A bearer is judged alone, and only Organization tokens are bearers (ADR 0024).
+    // A bearer is judged alone, and only Organization tokens are bearers (ADR 0025).
     const authHeader = headers["authorization"];
     if (authHeader !== undefined) {
       const bearer = this.extractBearer(authHeader);

@@ -10,13 +10,6 @@ export interface JwtPayload {
   activated?: boolean | undefined;
 }
 
-/** User object returned from JWT validation */
-export interface JwtValidationResult {
-  userId: string;
-  roles: ROLE[];
-  activated?: boolean | undefined;
-}
-
 export class AuthenticatedUser {
   userId!: string;
   roles!: ROLE[];
@@ -47,7 +40,7 @@ export enum ROLE {
   ADMIN = "ROLE_ADMIN",
 }
 
-/** The tokens of a sign-in, which the API hands out only as cookies (ADR 0024). */
+/** The tokens of a sign-in, which the API hands out only as cookies (ADR 0025). */
 export interface SignInTokens {
   accessToken: string;
   accessExpiry: Date;
