@@ -29,6 +29,7 @@ import { DocumentBuilder } from "@nestjs/swagger";
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 
+import { UPLOAD_FILE_SIZE_LIMIT } from "./base_modules/file/upload-limits";
 import { ErrorFilter } from "./filters/ExceptionFilter";
 import { ResponseBodyInterceptor } from "./interceptors/ResponseBodyInterceptor";
 import * as mainModule from "./main";
@@ -167,7 +168,8 @@ describe("Main.ts Bootstrap Configuration and Testing", () => {
     it("should have correct multipart file size limit", () => {
       const mainContent = readFileSync(join(__dirname, "main.ts"), "utf8");
 
-      expect(mainContent).toContain("fileSize: 25 * 1024 * 1024");
+      expect(mainContent).toContain("fileSize: UPLOAD_FILE_SIZE_LIMIT");
+      expect(UPLOAD_FILE_SIZE_LIMIT).toBe(25 * 1024 * 1024);
     });
 
     it("should configure CORS for all origins", () => {

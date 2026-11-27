@@ -2,8 +2,10 @@ import { type ArgumentsHost, HttpException } from "@nestjs/common";
 import type { ValidationError } from "class-validator";
 import { QueryFailedError } from "typeorm";
 
+import { CodeClarityLogger } from "src/services/logger.service";
 import { Status } from "src/types/apiResponses.types";
 import {
+  InternalError,
   NotAuthenticated,
   PrivateAPIError,
   PublicAPIError,
@@ -19,6 +21,15 @@ describe("ExceptionFilter", () => {
     status: jest.Mock;
     send: jest.Mock;
   };
+  const mockRequest = {
+    method: "PATCH",
+    url: "/org/org-1/file/project-1/upload?token=secret-token",
+    routeOptions: { url: "/org/:organization_id/file/:project_id/upload" },
+    params: { organization_id: "org-1", project_id: "project-1" },
+    headers: { authorization: "Bearer secret-token" },
+    body: { password: "secret-password" },
+    user: { userId: "user-1" },
+  };
 
   beforeEach(() => {
     filter = new ErrorFilter();
@@ -31,6 +42,7 @@ describe("ExceptionFilter", () => {
     mockArgumentsHost = {
       switchToHttp: jest.fn().mockReturnValue({
         getResponse: jest.fn().mockReturnValue(mockResponse),
+        getRequest: jest.fn().mockReturnValue(mockRequest),
       }),
     } as any;
   });
@@ -221,21 +233,38 @@ describe("ExceptionFilter", () => {
     });
 
     describe("FastifyError handling", () => {
-      it("should handle FastifyError with 4xx status code", () => {
-        const fastifyError = new Error("Request entity too large");
+      it("keeps the status of a 4xx FastifyError with its mapped error code", () => {
+        const fastifyError = new Error("request file too large");
         (fastifyError as any).name = "FastifyError";
         (fastifyError as any).statusCode = 413;
-        (fastifyError as any).message = "Request entity too large";
 
         filter.catch(fastifyError, mockArgumentsHost);
 
-        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.status).toHaveBeenCalledWith(413);
         expect(mockResponse.send).toHaveBeenCalledWith(
           JSON.stringify({
-            status_code: 400,
+            status_code: 413,
+            status: Status.Failure,
+            error_code: "PayloadTooLarge",
+            error_message: "request file too large",
+          }),
+        );
+      });
+
+      it("answers a 4xx FastifyError outside the code map as BadRequest with its own status", () => {
+        const fastifyError = new Error("Unsupported Media Type: text/xml");
+        (fastifyError as any).name = "FastifyError";
+        (fastifyError as any).statusCode = 415;
+
+        filter.catch(fastifyError, mockArgumentsHost);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(415);
+        expect(mockResponse.send).toHaveBeenCalledWith(
+          JSON.stringify({
+            status_code: 415,
             status: Status.Failure,
             error_code: "BadRequest",
-            error_message: "Request entity too large",
+            error_message: "Unsupported Media Type: text/xml",
           }),
         );
       });
@@ -451,6 +480,90 @@ describe("ExceptionFilter", () => {
       const sentData = JSON.parse(mockResponse.send.mock.calls[0][0]);
       expect(sentData.already_snake_case).toBe("preserved");
       expect(sentData.mixed_camel_case).toBe("converted");
+    });
+  });
+  describe("logging", () => {
+    let error: jest.SpyInstance;
+    let warn: jest.SpyInstance;
+    let consoleError: jest.SpyInstance;
+
+    beforeEach(() => {
+      error = jest
+        .spyOn(CodeClarityLogger.prototype, "error")
+        .mockImplementation();
+      warn = jest
+        .spyOn(CodeClarityLogger.prototype, "warn")
+        .mockImplementation();
+      consoleError = jest.spyOn(console, "error").mockImplementation();
+    });
+
+    afterEach(() => {
+      error.mockRestore();
+      warn.mockRestore();
+      consoleError.mockRestore();
+    });
+
+    function fastifyError(statusCode: number): Error {
+      const exception = new Error("request file too large");
+      exception.name = "FastifyError";
+      (exception as any).statusCode = statusCode;
+      return exception;
+    }
+
+    it.each([
+      ["a 4xx FastifyError", fastifyError(413)],
+      ["a 4xx HttpException", new HttpException("Too many requests", 429)],
+    ])("logs %s at warn, not error", (_case, exception) => {
+      filter.catch(exception, mockArgumentsHost);
+
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(error).not.toHaveBeenCalled();
+      expect(consoleError).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["an unhandled error", new Error("boom")],
+      ["a 5xx FastifyError", fastifyError(500)],
+      ["an InternalError", new InternalError("DbDown", "database is down")],
+    ])("logs %s at error", (_case, exception) => {
+      filter.catch(exception, mockArgumentsHost);
+
+      expect(error).toHaveBeenCalledTimes(1);
+      expect(warn).not.toHaveBeenCalled();
+      expect(consoleError).not.toHaveBeenCalled();
+    });
+
+    it("logs the route, user, organization and project, but no token, password or body", () => {
+      filter.catch(new Error("boom"), mockArgumentsHost);
+
+      const context = error.mock.calls[0][2];
+      expect(context).toMatchObject({
+        method: "PATCH",
+        route: "/org/:organization_id/file/:project_id/upload",
+        status: 500,
+        userId: "user-1",
+        organizationId: "org-1",
+        projectId: "project-1",
+        kind: "UnhandledException",
+      });
+      const logged = JSON.stringify(error.mock.calls[0]);
+      expect(logged).not.toContain("secret-token");
+      expect(logged).not.toContain("secret-password");
+    });
+
+    it("leaves out the user and organization when the request has none", () => {
+      (
+        mockArgumentsHost.switchToHttp().getRequest as jest.Mock
+      ).mockReturnValueOnce({ method: "GET", url: "/health" });
+
+      filter.catch(new HttpException("Not found", 404), mockArgumentsHost);
+
+      const context = warn.mock.calls[0][1];
+      expect(context).toEqual({
+        method: "GET",
+        status: 404,
+        kind: "HttpException",
+      });
     });
   });
 });

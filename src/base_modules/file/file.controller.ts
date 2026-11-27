@@ -9,19 +9,30 @@ import {
   UploadedFile,
   UseInterceptors,
 } from "@nestjs/common";
-import { ApiBody, ApiConsumes, ApiTags } from "@nestjs/swagger";
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiResponse,
+  ApiTags,
+  getSchemaPath,
+} from "@nestjs/swagger";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { OrganizationTokenScope } from "src/base_modules/organizations/tokens/organization-token.types";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { AllowOrganizationToken } from "src/decorators/OrganizationTokenDecorator";
 import { AuthUser } from "src/decorators/UserDecorator";
-import { NoDataResponse, TypedResponse } from "src/types/apiResponses.types";
+import {
+  NoDataResponse,
+  Status,
+  TypedResponse,
+} from "src/types/apiResponses.types";
 import {
   EntityNotFound,
   InternalError,
   NotAuthenticated,
   NotAuthorized,
+  PublicAPIError,
 } from "src/types/error.types";
 
 import { FileService } from "./file.service";
@@ -29,6 +40,7 @@ import {
   SingleFileInterceptor,
   type UploadedFilePart,
 } from "./single-file.interceptor";
+import { UPLOAD_FILE_SIZE_LIMIT } from "./upload-limits";
 
 export interface UploadData {
   type: string;
@@ -39,6 +51,29 @@ export interface UploadData {
   hash: string;
 }
 
+// Documents an upload refusal that the multipart plugin raises before the handler runs.
+function uploadError(
+  status: number,
+  errorCode: string,
+  description: string,
+): Parameters<typeof ApiResponse>[0] {
+  return {
+    status,
+    description: `Throws error: ${errorCode}. ${description}`,
+    content: {
+      "application/json": {
+        schema: { $ref: getSchemaPath(PublicAPIError) },
+        example: {
+          status_code: status,
+          status: Status.Failure,
+          error_code: errorCode,
+          error_message: description,
+        },
+      },
+    },
+  };
+}
+
 @Controller("/org/:organization_id/file/:project_id")
 export class FileController {
   constructor(private readonly fileService: FileService) {}
@@ -47,6 +82,16 @@ export class FileController {
   @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
   @ApiErrorDecorator({ statusCode: 403, errors: [NotAuthorized] })
   @ApiErrorDecorator({ statusCode: 500, errors: [InternalError] })
+  @ApiResponse(
+    uploadError(400, "BadRequest", "The multipart body is malformed."),
+  )
+  @ApiResponse(
+    uploadError(
+      413,
+      "PayloadTooLarge",
+      `The file is over the ${UPLOAD_FILE_SIZE_LIMIT / 1024 / 1024} MB limit.`,
+    ),
+  )
   @AllowOrganizationToken(OrganizationTokenScope.ANALYZE)
   @Patch("upload")
   @ApiConsumes("multipart/form-data")

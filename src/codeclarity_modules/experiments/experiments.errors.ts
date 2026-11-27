@@ -1,6 +1,6 @@
 import { PublicAPIError } from "src/types/error.types";
 
-const errorMessages: Record<string, string> = {
+const errorMessages = {
   DatasetNotReady: "Only a READY dataset can be used in an experiment.",
   AnalyzerMissingRequiredPlugins:
     "The analyzer of an experiment must run js-sbom and vuln-finder.",
@@ -12,11 +12,11 @@ const errorMessages: Record<string, string> = {
   InvalidFigureDefinition: "The catalog does not allow this Figure definition.",
   FigureVersionNotCurrent:
     "This Published results version came from older metric code, so this Figure cannot be computed for it.",
-};
+} satisfies Record<string, string>;
 
 export class DatasetNotReady extends PublicAPIError {
-  static errorCode = "DatasetNotReady";
-  static errorMessage = errorMessages[DatasetNotReady.errorCode]!;
+  static readonly errorCode = "DatasetNotReady";
+  static errorMessage = errorMessages[DatasetNotReady.errorCode];
   static statusCode = 400;
   constructor(cause?: unknown) {
     super(
@@ -29,9 +29,8 @@ export class DatasetNotReady extends PublicAPIError {
 }
 
 export class AnalyzerMissingRequiredPlugins extends PublicAPIError {
-  static errorCode = "AnalyzerMissingRequiredPlugins";
-  static errorMessage =
-    errorMessages[AnalyzerMissingRequiredPlugins.errorCode]!;
+  static readonly errorCode = "AnalyzerMissingRequiredPlugins";
+  static errorMessage = errorMessages[AnalyzerMissingRequiredPlugins.errorCode];
   static statusCode = 400;
   constructor(cause?: unknown) {
     super(
@@ -44,8 +43,8 @@ export class AnalyzerMissingRequiredPlugins extends PublicAPIError {
 }
 
 export class ExperimentNotCancellable extends PublicAPIError {
-  static errorCode = "ExperimentNotCancellable";
-  static errorMessage = errorMessages[ExperimentNotCancellable.errorCode]!;
+  static readonly errorCode = "ExperimentNotCancellable";
+  static errorMessage = errorMessages[ExperimentNotCancellable.errorCode];
   static statusCode = 409;
   constructor(cause?: unknown) {
     super(
@@ -58,8 +57,8 @@ export class ExperimentNotCancellable extends PublicAPIError {
 }
 
 export class InvalidFigureDefinition extends PublicAPIError {
-  static errorCode = "InvalidFigureDefinition";
-  static errorMessage = errorMessages[InvalidFigureDefinition.errorCode]!;
+  static readonly errorCode = "InvalidFigureDefinition";
+  static errorMessage = errorMessages[InvalidFigureDefinition.errorCode];
   static statusCode = 400;
   constructor(cause?: unknown) {
     super(
@@ -72,8 +71,8 @@ export class InvalidFigureDefinition extends PublicAPIError {
 }
 
 export class FigureVersionNotCurrent extends PublicAPIError {
-  static errorCode = "FigureVersionNotCurrent";
-  static errorMessage = errorMessages[FigureVersionNotCurrent.errorCode]!;
+  static readonly errorCode = "FigureVersionNotCurrent";
+  static errorMessage = errorMessages[FigureVersionNotCurrent.errorCode];
   static statusCode = 409;
   constructor(cause?: unknown) {
     super(
@@ -86,8 +85,8 @@ export class FigureVersionNotCurrent extends PublicAPIError {
 }
 
 export class ExperimentNotPublishable extends PublicAPIError {
-  static errorCode = "ExperimentNotPublishable";
-  static errorMessage = errorMessages[ExperimentNotPublishable.errorCode]!;
+  static readonly errorCode = "ExperimentNotPublishable";
+  static errorMessage = errorMessages[ExperimentNotPublishable.errorCode];
   static statusCode = 409;
   constructor(cause?: unknown) {
     super(
@@ -100,8 +99,8 @@ export class ExperimentNotPublishable extends PublicAPIError {
 }
 
 export class ExperimentAlreadyPublished extends PublicAPIError {
-  static errorCode = "ExperimentAlreadyPublished";
-  static errorMessage = errorMessages[ExperimentAlreadyPublished.errorCode]!;
+  static readonly errorCode = "ExperimentAlreadyPublished";
+  static errorMessage = errorMessages[ExperimentAlreadyPublished.errorCode];
   static statusCode = 409;
   constructor(cause?: unknown) {
     super(
