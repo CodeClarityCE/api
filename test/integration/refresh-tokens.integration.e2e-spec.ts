@@ -209,6 +209,60 @@ describe("Rotating refresh tokens (e2e)", () => {
       expect((await refresh(other.refresh_token)).statusCode).toBe(401);
     });
 
+    it("gives the caller a fresh sign-in when the password changes", async () => {
+      const used = await refreshed(account.refreshToken);
+
+      const change = await testHelper.makeAuthenticatedRequest(
+        "PATCH",
+        `/users/${account.user.id}/update_password`,
+        used.token,
+        {
+          old_password: PASSWORD,
+          password: "BrandNewPassword123!",
+          password_confirmation: "BrandNewPassword123!",
+        },
+      );
+      expect(change.statusCode).toBe(200);
+      const fresh: Tokens = change.json().data;
+      expect(fresh).toEqual({
+        token: expect.any(String),
+        token_expiry: expect.any(String),
+        refresh_token: expect.any(String),
+        refresh_token_expiry: expect.any(String),
+      });
+
+      const profile = await testHelper.makeAuthenticatedRequest(
+        "GET",
+        "/auth/user",
+        fresh.token,
+      );
+      expect(profile.statusCode).toBe(200);
+      for (const old of [account.refreshToken, used.refresh_token]) {
+        expect((await refresh(old)).statusCode).toBe(401);
+      }
+      expect((await refresh(fresh.refresh_token)).statusCode).toBe(201);
+    });
+
+    it("starts the fresh sign-in in a new family, so reusing an old token leaves it alone", async () => {
+      await refreshed(account.refreshToken);
+      const change = await testHelper.makeAuthenticatedRequest(
+        "PATCH",
+        `/users/${account.user.id}/update_password`,
+        account.accessToken,
+        {
+          old_password: PASSWORD,
+          password: "BrandNewPassword123!",
+          password_confirmation: "BrandNewPassword123!",
+        },
+      );
+      const fresh: Tokens = change.json().data;
+
+      // A spent token of the old sign-in comes back.
+      expect((await refresh(account.refreshToken)).statusCode).toBe(401);
+
+      expect((await refresh(fresh.refresh_token)).statusCode).toBe(201);
+    });
+
     it("leaves other users' families alone when a password changes", async () => {
       const someoneElse = await testHelper.createTestUser({
         email: "else@example.com",

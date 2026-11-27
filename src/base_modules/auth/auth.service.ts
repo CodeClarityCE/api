@@ -78,9 +78,14 @@ export class AuthService {
     );
 
     if (!isValid) throw new WrongCredentials();
-    const refresh = await this.refreshTokens.issue(authenticatedUser!.id);
+    return this.startSignIn(authenticatedUser!);
+  }
+
+  /** Starts a new sign-in for the user: an access token and a refresh token in a new family. */
+  async startSignIn(user: User): Promise<TokenResponse> {
+    const refresh = await this.refreshTokens.issue(user.id);
     return {
-      ...(await this.signAccessToken(authenticatedUser!)),
+      ...(await this.signAccessToken(user)),
       refresh_token: refresh.token,
       refresh_token_expiry: refresh.expiresOn,
     };

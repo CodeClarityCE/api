@@ -161,6 +161,7 @@ describe("UsersService", () => {
             hashPassword: jest.fn(),
             validateCredentials: jest.fn(),
             signOutEverywhere: jest.fn(),
+            startSignIn: jest.fn().mockResolvedValue({ token: "fresh" }),
           },
         },
         {
@@ -536,11 +537,14 @@ describe("UsersService", () => {
         .spyOn(usersRepository, "saveUser")
         .mockResolvedValue(userWithOldPassword);
 
-      await service.updatePassword(
+      const signIn = await service.updatePassword(
         "test-user-id",
         mockUserPasswordPatchBody,
         mockAuthenticatedUser,
       );
+
+      expect(signIn).toEqual({ token: "fresh" });
+      expect(authService.startSignIn).toHaveBeenCalledWith(userWithOldPassword);
 
       expect(usersRepository.getUserById).toHaveBeenCalledWith("test-user-id");
       expect(authService.validateCredentials).toHaveBeenCalledWith(
