@@ -7,9 +7,17 @@ import {
   Patch,
   Post,
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiParam, ApiTags } from "@nestjs/swagger";
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from "@nestjs/swagger";
 
-import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import {
+  AuthenticatedUser,
+  TokenResponse,
+} from "src/base_modules/auth/auth.types";
 import {
   DefaultOrgPatchBody,
   DeleteAccountBody,
@@ -111,7 +119,11 @@ export class UsersController {
   }
 
   @ApiTags("Users")
-  @APIDocNoDataResponseDecorator()
+  @ApiOperation({
+    description:
+      "Change the password. Every sign-in of the user ends, and the caller gets a fresh one.",
+  })
+  @APIDocTypedResponseDecorator(TokenResponse)
   @ApiErrorDecorator({
     statusCode: 400,
     errors: [
@@ -128,9 +140,10 @@ export class UsersController {
     @AuthUser() user: AuthenticatedUser,
     @Body() patch: UserPasswordPatchBody,
     @Param("user_id") user_id: string,
-  ): Promise<NoDataResponse> {
-    await this.usersService.updatePassword(user_id, patch, user);
-    return {};
+  ): Promise<TypedResponse<TokenResponse>> {
+    return {
+      data: await this.usersService.updatePassword(user_id, patch, user),
+    };
   }
 
   @ApiTags("Users")

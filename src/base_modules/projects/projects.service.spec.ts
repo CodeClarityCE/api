@@ -854,6 +854,29 @@ describe("ProjectService", () => {
         "search",
       );
     });
+
+    it.each([
+      [{ entriesPerPage: 200, currentPage: -1 }, 0, 100],
+      [{}, 0, 10],
+      [{ entriesPerPage: -5, currentPage: 3 }, 3, -5],
+    ])(
+      "resolves the page %j to page %d of size %d",
+      async (conf, page, size) => {
+        jest
+          .spyOn(membershipsRepository, "hasRequiredRoleFor")
+          .mockResolvedValue(undefined);
+        projectsRepository.getManyProjects.mockResolvedValue({} as never);
+
+        await service.getMany(mockOrgId, conf, mockAuthenticatedUser);
+
+        expect(projectsRepository.getManyProjects).toHaveBeenCalledWith(
+          mockOrgId,
+          page,
+          size,
+          undefined,
+        );
+      },
+    );
   });
 
   describe("delete", () => {

@@ -12,6 +12,7 @@ import { JwtService } from "@nestjs/jwt";
 import { Test, type TestingModule } from "@nestjs/testing";
 import type { Request } from "express";
 import * as fs from "fs";
+import type { Jwt } from "jsonwebtoken";
 import type { Socket } from "socket.io";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
@@ -20,7 +21,15 @@ import { SKIP_AUTH_KEY } from "src/decorators/SkipAuthDecorator";
 import { AccountNotActivated, NotAuthenticated } from "src/types/error.types";
 
 import { CombinedAuthGuard } from "./combined.guard";
-import type { JWTPayload } from "./jwt.types";
+
+// Wraps claims as a verified token with the given typ header.
+function verified(payload: unknown, typ = "at+jwt"): Jwt {
+  return {
+    header: { alg: "ES512", typ },
+    payload: payload as Jwt["payload"],
+    signature: "",
+  };
+}
 
 describe("CombinedAuthGuard", () => {
   let guard: CombinedAuthGuard;
@@ -31,7 +40,7 @@ describe("CombinedAuthGuard", () => {
   let mockSocket: Partial<Socket>;
 
   const mockPrivateKey = "mock-private-key";
-  const mockJwtPayload: JWTPayload = {
+  const mockJwtPayload = {
     userId: "user-123",
     roles: ["USER"],
     activated: true,
@@ -107,10 +116,6 @@ describe("CombinedAuthGuard", () => {
       expect(fs.readFileSync).toHaveBeenCalled();
       expect(guard.publicKey).toBe(mockPrivateKey);
     });
-
-    it("should set ES512 algorithm", () => {
-      expect(guard.algorithms).toEqual(["ES512"]);
-    });
   });
 
   describe("canActivate", () => {
@@ -143,7 +148,7 @@ describe("CombinedAuthGuard", () => {
       it("should authenticate with valid JWT token", async () => {
         const token = "valid-jwt-token";
         mockRequest.headers!.authorization = `Bearer ${token}`;
-        jwtService.verifyAsync.mockResolvedValue(mockJwtPayload);
+        jwtService.verifyAsync.mockResolvedValue(verified(mockJwtPayload));
 
         const result = await guard.canActivate(mockExecutionContext);
 
@@ -151,6 +156,8 @@ describe("CombinedAuthGuard", () => {
         expect(jwtService.verifyAsync).toHaveBeenCalledWith(token, {
           secret: mockPrivateKey,
           algorithms: ["ES512"],
+          audience: "codeclarity:access",
+          complete: true,
         });
         expect(mockRequest.user).toBeInstanceOf(AuthenticatedUser);
         expect((mockRequest.user as AuthenticatedUser).userId).toBe("user-123");
@@ -160,7 +167,7 @@ describe("CombinedAuthGuard", () => {
         const token = "valid-jwt-token";
         const inactivePayload = { ...mockJwtPayload, activated: false };
         mockRequest.headers!.authorization = `Bearer ${token}`;
-        jwtService.verifyAsync.mockResolvedValue(inactivePayload);
+        jwtService.verifyAsync.mockResolvedValue(verified(inactivePayload));
 
         await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
           AccountNotActivated,
@@ -219,7 +226,7 @@ describe("CombinedAuthGuard", () => {
       it("should authenticate WebSocket with valid JWT token", async () => {
         const token = "valid-jwt-token";
         mockSocket.handshake!.headers.authorization = `Bearer ${token}`;
-        jwtService.verifyAsync.mockResolvedValue(mockJwtPayload);
+        jwtService.verifyAsync.mockResolvedValue(verified(mockJwtPayload));
 
         const result = await guard.canActivate(mockExecutionContext);
 
@@ -240,7 +247,7 @@ describe("CombinedAuthGuard", () => {
         const token = "valid-jwt-token";
         const inactivePayload = { ...mockJwtPayload, activated: false };
         mockSocket.handshake!.headers.authorization = `Bearer ${token}`;
-        jwtService.verifyAsync.mockResolvedValue(inactivePayload);
+        jwtService.verifyAsync.mockResolvedValue(verified(inactivePayload));
 
         await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
           AccountNotActivated,
@@ -277,7 +284,7 @@ describe("CombinedAuthGuard", () => {
   describe("verifyJWTToken", () => {
     it("should return valid result for correct token", async () => {
       const token = "valid-token";
-      jwtService.verifyAsync.mockResolvedValue(mockJwtPayload);
+      jwtService.verifyAsync.mockResolvedValue(verified(mockJwtPayload));
 
       const [isValid, user] = await (guard as any).verifyJWTToken(token);
 
@@ -286,6 +293,18 @@ describe("CombinedAuthGuard", () => {
       expect(user.userId).toBe("user-123");
       expect(user.roles).toEqual(["USER"]);
       expect(user.activated).toBe(true);
+    });
+
+    it.each([
+      ["refresh+jwt", "a refresh token"],
+      ["JWT", "an untyped token"],
+    ])("should refuse typ %s (%s)", async (typ) => {
+      jwtService.verifyAsync.mockResolvedValue(verified(mockJwtPayload, typ));
+
+      const [isValid, user] = await (guard as any).verifyJWTToken("token");
+
+      expect(isValid).toBe(false);
+      expect(user).toBeUndefined();
     });
 
     it("should return invalid result for malformed token", async () => {
@@ -304,7 +323,9 @@ describe("CombinedAuthGuard", () => {
         ...mockJwtPayload,
         roles: ["USER", "ADMIN"],
       };
-      jwtService.verifyAsync.mockResolvedValue(payloadWithMultipleRoles);
+      jwtService.verifyAsync.mockResolvedValue(
+        verified(payloadWithMultipleRoles),
+      );
 
       const [isValid, user] = await (guard as any).verifyJWTToken(token);
 

@@ -26,7 +26,6 @@ import {
   type TokenResponse,
 } from "./auth.types";
 import { CombinedAuthGuard } from "./guards/combined.guard";
-import { RefreshJwtAuthGuard } from "./guards/refresh-token.guard";
 
 describe("AuthController", () => {
   let controller: AuthController;
@@ -65,6 +64,7 @@ describe("AuthController", () => {
       authenticate: jest.fn(),
       getAuthenticatedUser: jest.fn(),
       refresh: jest.fn(),
+      signOut: jest.fn(),
     };
 
     const mockUsersService = {
@@ -75,10 +75,6 @@ describe("AuthController", () => {
     };
 
     const mockCombinedAuthGuard = {
-      canActivate: jest.fn().mockReturnValue(true),
-    };
-
-    const mockRefreshJwtAuthGuard = {
       canActivate: jest.fn().mockReturnValue(true),
     };
 
@@ -93,8 +89,6 @@ describe("AuthController", () => {
     })
       .overrideGuard(CombinedAuthGuard)
       .useValue(mockCombinedAuthGuard)
-      .overrideGuard(RefreshJwtAuthGuard)
-      .useValue(mockRefreshJwtAuthGuard)
       .compile();
 
     controller = module.get<AuthController>(AuthController);
@@ -325,14 +319,25 @@ describe("AuthController", () => {
       const mockRefreshResponse: TokenRefreshResponse = {
         token: "new-access-token",
         token_expiry: new Date(),
+        refresh_token: "new-refresh-token",
+        refresh_token_expiry: new Date(),
       };
 
       authService.refresh.mockResolvedValue(mockRefreshResponse);
 
-      const result = await controller.refresh(mockAuthenticatedUser);
+      const result = await controller.refresh({ refresh_token: "old" });
 
-      expect(authService.refresh).toHaveBeenCalledWith(mockAuthenticatedUser);
+      expect(authService.refresh).toHaveBeenCalledWith("old");
       expect(result).toEqual({ data: mockRefreshResponse });
+    });
+  });
+
+  describe("signOut", () => {
+    it("should end the sign-in of the refresh token", async () => {
+      const result = await controller.signOut({ refresh_token: "current" });
+
+      expect(authService.signOut).toHaveBeenCalledWith("current");
+      expect(result).toEqual({});
     });
   });
 });

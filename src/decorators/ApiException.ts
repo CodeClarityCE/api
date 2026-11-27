@@ -21,6 +21,9 @@ interface ErrorResponseExample {
   error_message: string;
 }
 
+// Error messages looked up by class name, which may have no entry.
+const messageByName: Record<string, string | undefined> = errorMessages;
+
 /** OpenAPI example wrapper with value property */
 interface SwaggerExample {
   value: ErrorResponseExample;
@@ -49,7 +52,7 @@ export function ApiErrorDecorator({
           status_code: statusCode,
           status_message: Status.Failure,
           error_code: err.name,
-          error_message: errorMessages[err.name] ?? err.name,
+          error_message: messageByName[err.name] ?? err.name,
         },
       };
     }
@@ -62,7 +65,7 @@ export function ApiErrorDecorator({
       status_code: statusCode,
       status_message: Status.Failure,
       error_code: err.name,
-      error_message: errorMessages[err.name] ?? err.name,
+      error_message: messageByName[err.name] ?? err.name,
     };
   }
 

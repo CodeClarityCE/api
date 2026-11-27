@@ -1,20 +1,46 @@
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { DataSource } from "typeorm";
 
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import { createProject } from "../utils/deletion-fixtures";
 import { testHelper, type TestUser } from "../utils/integration-test-helper";
+import {
+  createRunDatabase,
+  dropRunDatabase,
+  runDatabaseName,
+} from "../utils/run-database";
 
 // Requests the nightly API fuzz run (scripts/api-fuzz) found answering 5xx or breaking the
 // OpenAPI schema, replayed once fixed.
 describe("API fuzz regressions (e2e)", () => {
   let owner: TestUser;
+  // A knowledge database of this run's own, so cases can seed advisories.
+  let knowledge: DataSource;
+  const knowledgeDb = runDatabaseName("knowledge");
 
   beforeAll(async () => {
+    await createRunDatabase(knowledgeDb);
+    knowledge = new DataSource({
+      type: "postgres",
+      host: process.env["PG_DB_HOST"] ?? "localhost",
+      port: Number(process.env["PG_DB_PORT"] ?? 5432),
+      username: process.env["PG_DB_USER"] ?? "postgres",
+      password: process.env["PG_DB_PASSWORD"] ?? "",
+      database: knowledgeDb,
+      entities: ["src/codeclarity_modules/knowledge/**/*.entity.ts"],
+      synchronize: true,
+      extra: { max: 2 },
+    });
+    await knowledge.initialize();
+    process.env["KNOWLEDGE_TEST_DB_NAME"] = knowledgeDb;
     await testHelper.setupTestApp();
   });
 
   afterAll(async () => {
     await testHelper.teardownTestApp();
+    delete process.env["KNOWLEDGE_TEST_DB_NAME"];
+    if (knowledge?.isInitialized) await knowledge.destroy();
+    await dropRunDatabase(knowledgeDb);
   });
 
   beforeEach(async () => {
@@ -422,6 +448,66 @@ describe("API fuzz regressions (e2e)", () => {
 
       expect(response.statusCode).toBe(200);
       expect(schemaProblems("User", response.json().data)).toEqual([]);
+    });
+  });
+
+  describe("a malformed multipart upload", () => {
+    const boundary = "a222103b9b30b1f9e8be6882ecedb1d2";
+
+    it.each([
+      ["without a boundary", "multipart/form-data", undefined],
+      [
+        "with a body that is not multipart",
+        `multipart/form-data; boundary=${boundary}`,
+        `--${boundary}\r\n[]--${boundary}--\r\n`,
+      ],
+    ])(
+      "PATCH /org/:org/file/:project/upload %s is refused as a bad request",
+      async (_case, contentType, payload) => {
+        const projectId = await createProject(owner, "fuzz-project");
+
+        const response = await testHelper.getApp().inject({
+          method: "PATCH",
+          url: `/org/${owner.organization.id}/file/${projectId}/upload`,
+          headers: {
+            authorization: `Bearer ${owner.accessToken}`,
+            "content-type": contentType,
+          },
+          ...(payload === undefined ? {} : { payload }),
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.json()).toMatchObject({ error_code: "BadRequest" });
+      },
+    );
+  });
+
+  describe("a GHSA advisory rated MODERATE", () => {
+    beforeAll(async () => {
+      await knowledge.query(
+        `INSERT INTO osv (osv_id, aliases, cve_aliases, summary, database_specific, published, modified)
+         VALUES ('GHSA-w9mr-4mfr-499f', $1, $1, 'Vercel ms Inefficient Regular Expression Complexity vulnerability', $2, '2023-01-05T12:30:27Z', '2023-01-06T00:00:00Z')`,
+        [
+          JSON.stringify(["CVE-2017-20162"]),
+          JSON.stringify({ severity: "MODERATE" }),
+        ],
+      );
+    });
+
+    afterAll(async () => {
+      await knowledge.query("DELETE FROM osv");
+    });
+
+    it("GET /knowledge/vulnerabilities/search reports it as MEDIUM", async () => {
+      const response = await testHelper.makeRequest(
+        "GET",
+        "/knowledge/vulnerabilities/search?query=GHSA-w9mr-4mfr-499f&source=OSV",
+      );
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({
+        data: [{ id: "GHSA-w9mr-4mfr-499f", severity: "MEDIUM" }],
+      });
     });
   });
 });

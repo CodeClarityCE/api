@@ -107,4 +107,20 @@ describe("SingleFileInterceptor", () => {
 
     expect(response.statusCode).toBe(413);
   });
+
+  it("rejects a multipart content type without a boundary", async () => {
+    const response = await app.inject({
+      method: "PATCH",
+      url: "/upload",
+      headers: { "content-type": "multipart/form-data" },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it("rejects a body that is not multipart", async () => {
+    const response = await upload(`--${BOUNDARY}\r\n[]`);
+
+    expect(response.statusCode).toBe(400);
+  });
 });

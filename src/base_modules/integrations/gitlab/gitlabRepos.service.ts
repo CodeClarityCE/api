@@ -22,6 +22,7 @@ import {
   PaginationUserSuppliedConf,
 } from "src/types/pagination.types";
 import { SortDirection } from "src/types/sort.types";
+import { paginatedData, resolvePage } from "src/utils/pagination";
 
 import { CONST_VCS_INTEGRATION_CACHE_INVALIDATION_MINUTES } from "../github/constants";
 import { syncRepositoryCache } from "../repositoryCacheSync";
@@ -218,17 +219,11 @@ export class GitlabRepositoriesService {
       defaultEntriesPerPage: 20,
     };
 
-    let entriesPerPage = paginationConfig.defaultEntriesPerPage;
-    let currentPage = 0;
-
-    if (paginationUserSuppliedConf.entriesPerPage)
-      entriesPerPage = Math.min(
-        paginationConfig.maxEntriesPerPage,
-        paginationUserSuppliedConf.entriesPerPage,
-      );
-
-    if (paginationUserSuppliedConf.currentPage)
-      currentPage = Math.max(0, paginationUserSuppliedConf.currentPage);
+    const { currentPage, entriesPerPage } = resolvePage(
+      paginationUserSuppliedConf,
+      paginationConfig,
+      "as-requested",
+    );
 
     const isSynced = await this.areGitlabReposSynced(integrationId);
 
@@ -292,17 +287,11 @@ export class GitlabRepositoriesService {
 
     const repositories = await repositoryQB.getMany();
 
-    // Return the paginated list of github repos for the integration
-    return {
-      data: repositories,
-      page: currentPage,
-      entry_count: repositories.length,
-      entries_per_page: entriesPerPage,
-      total_entries: fullCount,
-      total_pages: Math.ceil(fullCount / entriesPerPage),
-      matching_count: fullCount, // once you apply filters this needs to change
-      filter_count: {},
-    };
+    // Return the paginated list of repos for the integration
+    return paginatedData(repositories, fullCount, {
+      currentPage,
+      entriesPerPage,
+    });
   }
 
   /**

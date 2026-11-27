@@ -1,6 +1,6 @@
 import { PublicAPIError } from "src/types/error.types";
 
-const errorMessages: Record<string, string> = {
+const errorMessages = {
   AccountRegistrationVerificationTokenInvalidOrExpired:
     "The account registration verification token does not exist or has expired.",
   HandleAlreadyExists:
@@ -12,14 +12,15 @@ const errorMessages: Record<string, string> = {
     "The password reset token does not exist or has expired.",
   PasswordsDoNotMatch: "The passwords do not match.",
   IncorrectCurrentPassword: "The current password is incorrect.",
-};
+} satisfies Record<string, string>;
 
 export class AccountRegistrationVerificationTokenInvalidOrExpired extends PublicAPIError {
-  static errorCode = "AccountRegistrationVerificationTokenInvalidOrExpired";
+  static readonly errorCode =
+    "AccountRegistrationVerificationTokenInvalidOrExpired";
   static errorMessage =
     errorMessages[
       AccountRegistrationVerificationTokenInvalidOrExpired.errorCode
-    ]!;
+    ];
   static statusCode = 400;
   constructor(cause?: unknown) {
     super(
@@ -32,8 +33,8 @@ export class AccountRegistrationVerificationTokenInvalidOrExpired extends Public
 }
 
 export class HandleAlreadyExists extends PublicAPIError {
-  static errorCode = "HandleAlreadyExists";
-  static errorMessage = errorMessages[HandleAlreadyExists.errorCode]!;
+  static readonly errorCode = "HandleAlreadyExists";
+  static errorMessage = errorMessages[HandleAlreadyExists.errorCode];
   static statusCode = 409;
   constructor(cause?: unknown) {
     super(
@@ -46,8 +47,8 @@ export class HandleAlreadyExists extends PublicAPIError {
 }
 
 export class RegistrationNotVerified extends PublicAPIError {
-  static errorCode = "RegistrationNotVerified";
-  static errorMessage = errorMessages[RegistrationNotVerified.errorCode]!;
+  static readonly errorCode = "RegistrationNotVerified";
+  static errorMessage = errorMessages[RegistrationNotVerified.errorCode];
   static statusCode = 400;
   constructor(cause?: unknown) {
     super(
@@ -60,8 +61,8 @@ export class RegistrationNotVerified extends PublicAPIError {
 }
 
 export class WrongCredentials extends PublicAPIError {
-  static errorCode = "WrongCredentials";
-  static errorMessage = errorMessages[WrongCredentials.errorCode]!;
+  static readonly errorCode = "WrongCredentials";
+  static errorMessage = errorMessages[WrongCredentials.errorCode];
   static statusCode = 400;
   constructor(cause?: unknown) {
     super(
@@ -74,9 +75,9 @@ export class WrongCredentials extends PublicAPIError {
 }
 
 export class PasswordResetTokenInvalidOrExpired extends PublicAPIError {
-  static errorCode = "PasswordResetTokenInvalidOrExpired";
+  static readonly errorCode = "PasswordResetTokenInvalidOrExpired";
   static errorMessage =
-    errorMessages[PasswordResetTokenInvalidOrExpired.errorCode]!;
+    errorMessages[PasswordResetTokenInvalidOrExpired.errorCode];
   static statusCode = 400;
   constructor(cause?: unknown) {
     super(
@@ -89,8 +90,8 @@ export class PasswordResetTokenInvalidOrExpired extends PublicAPIError {
 }
 
 export class PasswordsDoNotMatch extends PublicAPIError {
-  static errorCode = "PasswordsDoNotMatch";
-  static errorMessage = errorMessages[PasswordsDoNotMatch.errorCode]!;
+  static readonly errorCode = "PasswordsDoNotMatch";
+  static errorMessage = errorMessages[PasswordsDoNotMatch.errorCode];
   static statusCode = 400;
   constructor(cause?: unknown) {
     super(
@@ -103,8 +104,8 @@ export class PasswordsDoNotMatch extends PublicAPIError {
 }
 
 export class IncorrectCurrentPassword extends PublicAPIError {
-  static errorCode = "IncorrectCurrentPassword";
-  static errorMessage = errorMessages[IncorrectCurrentPassword.errorCode]!;
+  static readonly errorCode = "IncorrectCurrentPassword";
+  static errorMessage = errorMessages[IncorrectCurrentPassword.errorCode];
   static statusCode = 400;
   constructor(cause?: unknown) {
     super(

@@ -5,22 +5,26 @@ import ms from "ms";
 
 import {
   AuthenticatedUser,
+  ROLE,
   TokenRefreshResponse,
   TokenResponse,
 } from "src/base_modules/auth/auth.types";
 import { UsersRepository } from "src/base_modules/shared/repositories";
 import { User } from "src/base_modules/users/users.entity";
 import { UsersService } from "src/base_modules/users/users.service";
-import { EntityNotFound, UserDoesNotExist } from "src/types/error.types";
+import {
+  EntityNotFound,
+  NotAuthenticated,
+  UserDoesNotExist,
+} from "src/types/error.types";
 
 import { CannotPerformActionOnSocialAccount } from "../users/users.errors";
 
 import { RegistrationNotVerified, WrongCredentials } from "./auth.errors";
-import {
-  CONST_JWT_TOKEN_EXPIRES_IN,
-  CONST_REFRESH_JWT_TOKEN_EXPIRES_IN,
-} from "./constants";
+import { CONST_JWT_TOKEN_EXPIRES_IN } from "./constants";
 import { hashPassword } from "./password";
+import { RefreshTokensService } from "./refresh-tokens.service";
+import { signOptionsFor, TokenKind } from "./token-kinds";
 
 @Injectable()
 export class AuthService {
@@ -29,6 +33,7 @@ export class AuthService {
     @Inject(forwardRef(() => UsersService))
     private userService: UsersService,
     private readonly usersRepository: UsersRepository,
+    private readonly refreshTokens: RefreshTokensService,
   ) {}
 
   /**
@@ -73,69 +78,70 @@ export class AuthService {
     );
 
     if (!isValid) throw new WrongCredentials();
-    const tokenResponse = this.signJWT(
-      authenticatedUser!.id,
-      ["ROLE_USER"],
-      authenticatedUser!.activated,
-    );
-    return tokenResponse;
+    return this.startSignIn(authenticatedUser!);
   }
 
-  /**
-   * Create a JWT token
-   * @param userId The user's id
-   * @returns a signed JWT token and refresh token
-   */
-  private async signJWT(
-    userId: string,
-    roles: string[],
-    activated: boolean,
-  ): Promise<TokenResponse> {
-    const current = new Date();
-    const tokenExpiry = new Date(
-      current.getTime() + ms(CONST_JWT_TOKEN_EXPIRES_IN),
-    );
-    const refreshTokenExpiry = new Date(
-      current.getTime() + ms(CONST_REFRESH_JWT_TOKEN_EXPIRES_IN),
-    );
-    // TODO: select roles
-    const userObject = {
-      sub: userId,
-      userId: userId,
-      roles: roles,
-      activated: activated,
-    };
+  /** Starts a new sign-in for the user: an access token and a refresh token in a new family. */
+  async startSignIn(user: User): Promise<TokenResponse> {
+    const refresh = await this.refreshTokens.issue(user.id);
     return {
-      token: await this.jwtService.signAsync(userObject),
-      refresh_token: await this.jwtService.signAsync(userObject, {
-        expiresIn: CONST_REFRESH_JWT_TOKEN_EXPIRES_IN,
-      }),
+      ...(await this.signAccessToken(user)),
+      refresh_token: refresh.token,
+      refresh_token_expiry: refresh.expiresOn,
+    };
+  }
+
+  /** Signs a 15 minute access token from the user's current row. */
+  private async signAccessToken(
+    user: User,
+  ): Promise<{ token: string; token_expiry: Date }> {
+    const tokenExpiry = new Date(Date.now() + ms(CONST_JWT_TOKEN_EXPIRES_IN));
+    return {
+      token: await this.jwtService.signAsync(
+        {
+          sub: user.id,
+          userId: user.id,
+          roles: [ROLE.USER],
+          activated: user.activated,
+        },
+        signOptionsFor(TokenKind.ACCESS),
+      ),
       token_expiry: tokenExpiry,
-      refresh_token_expiry: refreshTokenExpiry,
     };
   }
 
   /**
-   * Refresh a JWT token
-   * @param authenticatedUser The authenticatd user
-   * @returns a signed JWT token but no refresh token
+   * Rotates a refresh token: the old one is spent, and a new access and
+   * refresh token are returned. The user must still be allowed to sign in.
+   * @throws {NotAuthenticated} for a token that cannot be used, or a user who may no longer sign in
    */
-  async refresh(
-    authenticatedUser: AuthenticatedUser,
-  ): Promise<TokenRefreshResponse> {
-    const current = new Date();
-    const tokenExpiry = new Date(
-      current.getTime() + ms(CONST_JWT_TOKEN_EXPIRES_IN),
-    );
+  async refresh(refreshToken: unknown): Promise<TokenRefreshResponse> {
+    const next = await this.refreshTokens.rotate(refreshToken);
+    const user = await this.usersRepository
+      .getUserById(next.userId)
+      .catch((err: unknown) => {
+        if (err instanceof EntityNotFound) return undefined;
+        throw err;
+      });
+    if (!user || user.social || !user.registration_verified) {
+      await this.refreshTokens.revokeFamily(next.familyId);
+      throw new NotAuthenticated();
+    }
     return {
-      token: await this.jwtService.signAsync({
-        sub: authenticatedUser.userId,
-        userId: authenticatedUser.userId,
-        roles: authenticatedUser.roles,
-        activated: authenticatedUser.activated,
-      }),
-      token_expiry: tokenExpiry,
+      ...(await this.signAccessToken(user)),
+      refresh_token: next.token,
+      refresh_token_expiry: next.expiresOn,
     };
+  }
+
+  /** Ends the sign-in the refresh token belongs to; an unknown token does nothing. */
+  async signOut(refreshToken: unknown): Promise<void> {
+    await this.refreshTokens.revokeFamilyOf(refreshToken);
+  }
+
+  /** Ends every sign-in of the user, such as after a password change. */
+  async signOutEverywhere(userId: string): Promise<void> {
+    await this.refreshTokens.revokeAllOf(userId);
   }
 
   /**
