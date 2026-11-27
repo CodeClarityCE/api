@@ -308,7 +308,9 @@ describe("Main.ts Bootstrap Configuration and Testing", () => {
         'import { Reflector } from "@nestjs/core"',
       );
       expect(globalsContent).toContain("ClassSerializerInterceptor,");
-      expect(globalsContent).toContain("ValidationPipe,");
+      expect(globalsContent).toContain(
+        'import { BodyValidationPipe } from "./pipes/body-validation.pipe"',
+      );
       expect(globalsContent).toContain('} from "@nestjs/common"');
       expect(mainContent).toContain(
         'import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger"',
