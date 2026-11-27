@@ -407,10 +407,16 @@ describe("Authentication Integration (e2e)", () => {
       }
     });
 
-    it("should keep refresh tokens valid for 7 days", async () => {
-      const { iat, exp } = jwt.decode(testUser.refreshToken) as jwt.JwtPayload;
+    it("should refuse an old refresh JWT at /auth/refresh", async () => {
+      // The refresh tokens issued before rotation were JWTs like this one.
+      const oldRefresh = jwt.sign(claimsOf(testUser), privateKey, {
+        algorithm: "ES512",
+        expiresIn: "7d",
+        header: { alg: "ES512", typ: "refresh+jwt" },
+        audience: "codeclarity:refresh",
+      });
 
-      expect(exp! - iat!).toBe(7 * 24 * 60 * 60);
+      await expectRefusedOnBoth(oldRefresh);
     });
   });
 

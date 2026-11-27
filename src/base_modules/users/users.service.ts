@@ -1,6 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import {
+  AuthenticatedUser,
+  TokenResponse,
+} from "src/base_modules/auth/auth.types";
 import { Email, EmailType } from "src/base_modules/email/email.entity";
 import {
   MemberRole,
@@ -346,6 +349,8 @@ export class UsersService {
     }
 
     mail.user.password = await this.authService.hashPassword(newPassword);
+    // Sign-ins end first, so a failed save never leaves old ones working.
+    await this.authService.signOutEverywhere(mail.user.id);
     await this.usersRepository.saveUser(mail.user);
   }
 
@@ -360,12 +365,13 @@ export class UsersService {
    * @param userId The id of the user to update
    * @param passwordPatchBody The password update data
    * @param authenticatedUser The authenticated user
+   * @returns a fresh sign-in for the caller; every other sign-in of the user ends
    */
   async updatePassword(
     userId: string,
     passwordPatchBody: UserPasswordPatchBody,
     authenticatedUser: AuthenticatedUser,
-  ): Promise<void> {
+  ): Promise<TokenResponse> {
     if (userId !== authenticatedUser.userId) {
       throw new NotAuthorized();
     }
@@ -397,7 +403,10 @@ export class UsersService {
 
     user.password = newPasswordHash;
 
+    // Sign-ins end first, so a failed save never leaves old ones working.
+    await this.authService.signOutEverywhere(user.id);
     await this.usersRepository.saveUser(user);
+    return this.authService.startSignIn(user);
   }
 
   /**

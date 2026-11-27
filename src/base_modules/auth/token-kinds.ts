@@ -4,16 +4,11 @@ import type { Algorithm, Jwt, JwtPayload as SignedClaims } from "jsonwebtoken";
 import { NotAuthenticated } from "src/types/error.types";
 
 import type { JwtPayload } from "./auth.types";
-import {
-  CONST_JWT_ALGORITHM,
-  CONST_JWT_TOKEN_EXPIRES_IN,
-  CONST_REFRESH_JWT_TOKEN_EXPIRES_IN,
-} from "./constants";
+import { CONST_JWT_ALGORITHM, CONST_JWT_TOKEN_EXPIRES_IN } from "./constants";
 
-/** The two kinds of user JWT; each is accepted only where it belongs. */
+/** The kinds of user JWT; each is accepted only where it belongs. Refresh tokens are opaque, not JWTs. */
 export enum TokenKind {
   ACCESS = "access",
-  REFRESH = "refresh",
 }
 
 /** The header type, audience and lifetime that mark each kind of token. */
@@ -29,11 +24,6 @@ const TOKEN_KINDS: Record<
     typ: "at+jwt",
     audience: "codeclarity:access",
     expiresIn: CONST_JWT_TOKEN_EXPIRES_IN,
-  },
-  [TokenKind.REFRESH]: {
-    typ: "refresh+jwt",
-    audience: "codeclarity:refresh",
-    expiresIn: CONST_REFRESH_JWT_TOKEN_EXPIRES_IN,
   },
 };
 

@@ -217,7 +217,13 @@ describe("UsersController", () => {
         password_confirmation: "new123",
       };
 
-      usersService.updatePassword.mockResolvedValue(undefined);
+      const signIn = {
+        token: "access",
+        token_expiry: new Date(),
+        refresh_token: "refresh",
+        refresh_token_expiry: new Date(),
+      };
+      usersService.updatePassword.mockResolvedValue(signIn);
 
       const result = await controller.updateAccountPassword(
         mockAuthenticatedUser,
@@ -230,7 +236,7 @@ describe("UsersController", () => {
         patch,
         mockAuthenticatedUser,
       );
-      expect(result).toEqual({});
+      expect(result).toEqual({ data: signIn });
     });
 
     it("should throw error for social account", async () => {

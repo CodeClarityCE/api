@@ -2,7 +2,7 @@ import { JwtService } from "@nestjs/jwt";
 import { Test, type TestingModule } from "@nestjs/testing";
 import * as bcrypt from "bcrypt";
 
-import { EntityNotFound } from "src/types/error.types";
+import { EntityNotFound, NotAuthenticated } from "src/types/error.types";
 
 import { UsersRepository } from "../shared/repositories";
 import { SocialType } from "../users/user.types";
@@ -13,6 +13,7 @@ import { UsersService } from "../users/users.service";
 import { RegistrationNotVerified, WrongCredentials } from "./auth.errors";
 import { AuthService } from "./auth.service";
 import { AuthenticatedUser, ROLE } from "./auth.types";
+import { RefreshTokensService } from "./refresh-tokens.service";
 
 // Mock the ms module before importing the service
 jest.mock("ms", () => ({
@@ -29,6 +30,8 @@ describe("AuthService", () => {
   let jwtService: JwtService;
   let usersService: UsersService;
   let usersRepository: UsersRepository;
+  let refreshTokens: jest.Mocked<RefreshTokensService>;
+  const refreshExpiry = new Date("2026-12-01T00:00:00Z");
 
   // Test data fixtures
   const mockUser = {
@@ -81,6 +84,22 @@ describe("AuthService", () => {
       verify: jest.fn(),
     };
 
+    const mockRefreshTokens = {
+      issue: jest.fn().mockResolvedValue({
+        userId: mockUser.id,
+        familyId: "family",
+        token: "opaque-refresh",
+        expiresOn: refreshExpiry,
+      }),
+      rotate: jest.fn().mockResolvedValue({
+        userId: mockUser.id,
+        familyId: "family",
+        token: "next-refresh",
+        expiresOn: refreshExpiry,
+      }),
+      revokeFamily: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         {
@@ -89,9 +108,16 @@ describe("AuthService", () => {
             jwt: JwtService,
             users: UsersService,
             usersRepo: UsersRepository,
-          ) => new AuthService(jwt, users, usersRepo),
-          inject: [JwtService, UsersService, UsersRepository],
+            tokens: RefreshTokensService,
+          ) => new AuthService(jwt, users, usersRepo, tokens),
+          inject: [
+            JwtService,
+            UsersService,
+            UsersRepository,
+            RefreshTokensService,
+          ],
         },
+        { provide: RefreshTokensService, useValue: mockRefreshTokens },
         {
           provide: JwtService,
           useValue: mockJwtService,
@@ -111,6 +137,7 @@ describe("AuthService", () => {
     jwtService = module.get<JwtService>(JwtService);
     usersService = module.get<UsersService>(UsersService);
     usersRepository = module.get<UsersRepository>(UsersRepository);
+    refreshTokens = module.get(RefreshTokensService);
   });
 
   afterEach(() => {
@@ -136,9 +163,9 @@ describe("AuthService", () => {
       // Assert
       expect(result).toEqual({
         token: "jwt-token",
-        refresh_token: "jwt-token",
+        refresh_token: "opaque-refresh",
         token_expiry: expect.any(Date),
-        refresh_token_expiry: expect.any(Date),
+        refresh_token_expiry: refreshExpiry,
       });
       expect(usersRepository.getUserByEmail).toHaveBeenCalledWith(email);
     });
@@ -203,18 +230,42 @@ describe("AuthService", () => {
   });
 
   describe("refresh", () => {
-    it("should generate new access token for authenticated user", async () => {
-      // Arrange
+    it("returns a new access token and the rotated refresh token", async () => {
+      jest.spyOn(usersRepository, "getUserById").mockResolvedValue(mockUser);
       jest.spyOn(jwtService, "signAsync").mockResolvedValue("new-jwt-token");
 
-      // Act
-      const result = await service.refresh(mockAuthenticatedUser);
+      const result = await service.refresh("old-refresh");
 
-      // Assert
+      expect(refreshTokens.rotate).toHaveBeenCalledWith("old-refresh");
       expect(result).toEqual({
         token: "new-jwt-token",
         token_expiry: expect.any(Date),
+        refresh_token: "next-refresh",
+        refresh_token_expiry: refreshExpiry,
       });
+    });
+
+    it.each([
+      ["social", { ...mockUser, social: true }],
+      ["unverified", { ...mockUser, registration_verified: false }],
+    ])("revokes the family and refuses a %s user", async (_name, user) => {
+      jest.spyOn(usersRepository, "getUserById").mockResolvedValue(user);
+
+      await expect(service.refresh("old-refresh")).rejects.toThrow(
+        NotAuthenticated,
+      );
+      expect(refreshTokens.revokeFamily).toHaveBeenCalledWith("family");
+    });
+
+    it("revokes the family and refuses a user who no longer exists", async () => {
+      jest
+        .spyOn(usersRepository, "getUserById")
+        .mockRejectedValue(new EntityNotFound());
+
+      await expect(service.refresh("old-refresh")).rejects.toThrow(
+        NotAuthenticated,
+      );
+      expect(refreshTokens.revokeFamily).toHaveBeenCalledWith("family");
     });
   });
 

@@ -4,6 +4,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import {
   AuthenticateBody,
   AuthenticatedUser,
+  RefreshTokenBody,
   TokenRefreshResponse,
   TokenResponse,
   UserPasswordResetBody,
@@ -25,7 +26,11 @@ import {
   NoDataResponse,
   TypedResponse,
 } from "src/types/apiResponses.types";
-import { EmailAlreadyExists, EntityNotFound } from "src/types/error.types";
+import {
+  EmailAlreadyExists,
+  EntityNotFound,
+  NotAuthenticated,
+} from "src/types/error.types";
 
 import { CannotPerformActionOnSocialAccount } from "../users/users.errors";
 import { UsersService } from "../users/users.service";
@@ -40,7 +45,6 @@ import {
 } from "./auth.errors";
 import { AuthService } from "./auth.service";
 import { CombinedAuthGuard } from "./guards/combined.guard";
-import { RefreshJwtAuthGuard } from "./guards/refresh-token.guard";
 
 @Controller("auth")
 export class AuthController {
@@ -158,14 +162,30 @@ export class AuthController {
   }
 
   @ApiTags("Auth")
-  @ApiOperation({ description: "Refresh your jwt token." })
+  @ApiOperation({
+    description:
+      "Trade a refresh token for a new access token and a new refresh token. A refresh token works once; using it again ends its sign-in.",
+  })
   @APIDocTypedResponseDecorator(TokenRefreshResponse)
-  @UseGuards(RefreshJwtAuthGuard)
+  @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
   @NonAuthEndpoint()
   @Post("/refresh")
   async refresh(
-    @AuthUser() user: AuthenticatedUser,
+    @Body() body: RefreshTokenBody,
   ): Promise<TypedResponse<TokenRefreshResponse>> {
-    return { data: await this.authService.refresh(user) };
+    return { data: await this.authService.refresh(body?.refresh_token) };
+  }
+
+  @ApiTags("Auth")
+  @ApiOperation({
+    description:
+      "Sign out: the refresh token's sign-in stops working. An unknown token is accepted too.",
+  })
+  @APIDocNoDataResponseDecorator(201)
+  @NonAuthEndpoint()
+  @Post("/sign_out")
+  async signOut(@Body() body: RefreshTokenBody): Promise<NoDataResponse> {
+    await this.authService.signOut(body?.refresh_token);
+    return {};
   }
 }
