@@ -19,7 +19,9 @@ const pipe = new BodyValidationPipe({
   exceptionFactory: (errors) => new ValidationFailed(errors),
 });
 
-function body(metatype: ArgumentMetadata["metatype"]): ArgumentMetadata {
+function bodyMetadata(
+  metatype: ArgumentMetadata["metatype"],
+): ArgumentMetadata {
   return { type: "body", metatype };
 }
 
@@ -28,20 +30,20 @@ describe("BodyValidationPipe", () => {
     "refuses a body of %s where a validated object is expected",
     async (value) => {
       await expect(
-        pipe.transform(value, body(OptionalFieldsBody)),
+        pipe.transform(value, bodyMetadata(OptionalFieldsBody)),
       ).rejects.toBeInstanceOf(ValidationFailed);
     },
   );
 
   it("passes an empty object through", async () => {
-    await expect(pipe.transform({}, body(OptionalFieldsBody))).resolves.toEqual(
-      {},
-    );
+    await expect(
+      pipe.transform({}, bodyMetadata(OptionalFieldsBody)),
+    ).resolves.toEqual({});
   });
 
   it("leaves a missing body alone when the class has no validation rules", async () => {
     await expect(
-      pipe.transform(undefined, body(UnvalidatedBody)),
+      pipe.transform(undefined, bodyMetadata(UnvalidatedBody)),
     ).resolves.toBeUndefined();
   });
 

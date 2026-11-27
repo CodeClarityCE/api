@@ -211,12 +211,14 @@ describe("API fuzz regressions (e2e)", () => {
     });
   });
 
-  describe("a body that is null or missing", () => {
+  describe("a body that is null, missing or not an object", () => {
     it.each([
       ["POST", "/tickets/integrations/JIRA/verify", "null"],
       ["PATCH", "/settings", "null"],
       ["POST", "/tickets/integrations/JIRA/verify", undefined],
       ["PATCH", "/settings", undefined],
+      ["POST", "/tickets/integrations/JIRA/verify", "1"],
+      ["PATCH", "/settings", '"x"'],
     ] as const)(
       "%s /org/:org%s with body %s is refused as malformed",
       async (method, path, payload) => {

@@ -4,11 +4,7 @@ import {
   ValidationPipe,
 } from "@nestjs/common";
 
-/**
- * The global ValidationPipe, also refusing a missing or `null` body where a
- * validated object is expected. The stock pipe validates an empty stand-in
- * and then hands the handler the `null` or `undefined` it came with.
- */
+/** ValidationPipe that also refuses a missing or null body for a class with validation rules. */
 export class BodyValidationPipe extends ValidationPipe {
   override async transform(
     value: unknown,
