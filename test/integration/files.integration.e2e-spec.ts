@@ -8,7 +8,11 @@ import { UPLOAD_FILE_SIZE_LIMIT } from "../../src/base_modules/file/upload-limit
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import { type Project } from "../../src/base_modules/projects/project.entity";
 import { createProject } from "../utils/deletion-fixtures";
-import { testHelper, type TestUser } from "../utils/integration-test-helper";
+import {
+  sessionHeaders,
+  testHelper,
+  type TestUser,
+} from "../utils/integration-test-helper";
 
 describe("Files (e2e)", () => {
   let owner: TestUser;
@@ -77,7 +81,7 @@ describe("Files (e2e)", () => {
         method: "PATCH",
         url: `/org/${owner.organization.id}/file/${projectId}/upload`,
         headers: {
-          authorization: `Bearer ${owner.accessToken}`,
+          ...sessionHeaders({ accessToken: owner.accessToken }),
           "content-type": `multipart/form-data; boundary=${boundary}`,
         },
         payload,

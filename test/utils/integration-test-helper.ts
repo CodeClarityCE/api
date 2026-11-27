@@ -15,9 +15,15 @@ import {
   AnalysisPublisher,
   InMemoryAnalysisPublisher,
 } from "../../src/base_modules/analyses/analysis-publisher";
+import {
+  ACCESS_COOKIE,
+  CSRF_HEADER,
+  REFRESH_COOKIE,
+} from "../../src/base_modules/auth/session-cookies";
 import { UPLOAD_FILE_SIZE_LIMIT } from "../../src/base_modules/file/upload-limits";
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import { Organization } from "../../src/base_modules/organizations/organization.entity";
+import { ORGANIZATION_TOKEN_PREFIX } from "../../src/base_modules/organizations/tokens/organization-token.types";
 import {
   MembershipsRepository,
   OrganizationsRepository,
@@ -31,6 +37,43 @@ import {
   dropRunDatabase,
   runDatabaseName,
 } from "./run-database";
+
+/** The session tokens a response set as cookies; a cleared cookie reads as "". */
+export function sessionOf(response: { headers: Record<string, unknown> }): {
+  accessToken: string | undefined;
+  refreshToken: string | undefined;
+} {
+  const lines = [response.headers["set-cookie"] ?? []].flat();
+  const valueOf = (name: string): string | undefined => {
+    const line = (lines as string[]).find((l) => l.startsWith(`${name}=`));
+    return line?.slice(name.length + 1).split(";")[0];
+  };
+  return {
+    accessToken: valueOf(ACCESS_COOKIE),
+    refreshToken: valueOf(REFRESH_COOKIE),
+  };
+}
+
+/** The headers the web app sends on a sign-in: its cookies and the CSRF header. */
+export function sessionHeaders(
+  tokens: {
+    accessToken?: string | undefined;
+    refreshToken?: string | undefined;
+  },
+  extra: Record<string, string> = {},
+): Record<string, string> {
+  const cookies = [
+    tokens.accessToken !== undefined &&
+      `${ACCESS_COOKIE}=${tokens.accessToken}`,
+    tokens.refreshToken !== undefined &&
+      `${REFRESH_COOKIE}=${tokens.refreshToken}`,
+  ].filter(Boolean);
+  return {
+    ...(cookies.length > 0 && { cookie: cookies.join("; ") }),
+    [CSRF_HEADER]: "1",
+    ...extra,
+  };
+}
 
 export interface TestUser {
   user: User;
@@ -212,16 +255,13 @@ class IntegrationTestHelper {
     if (login.statusCode !== 201) {
       throw new Error(`Test user login failed: ${login.payload}`);
     }
-    const tokens = JSON.parse(login.payload).data as {
-      token: string;
-      refresh_token: string;
-    };
+    const tokens = sessionOf(login);
 
     return {
       user: savedUser,
       organization: savedOrganization,
-      accessToken: tokens.token,
-      refreshToken: tokens.refresh_token,
+      accessToken: tokens.accessToken!,
+      refreshToken: tokens.refreshToken!,
     };
   }
 
@@ -249,10 +289,11 @@ class IntegrationTestHelper {
     const requestOptions: any = {
       method,
       url,
-      headers: {
-        ...headers,
-        Authorization: `Bearer ${accessToken}`,
-      },
+      // An Organization token goes as a bearer, as the CLI sends it; a user
+      // access token as the web app sends it, a cookie with the CSRF header.
+      headers: accessToken.startsWith(ORGANIZATION_TOKEN_PREFIX)
+        ? { ...headers, Authorization: `Bearer ${accessToken}` }
+        : sessionHeaders({ accessToken }, headers),
     };
 
     if (body) {
@@ -270,11 +311,12 @@ class IntegrationTestHelper {
     method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
     url: string,
     body?: any,
+    headers: Record<string, string> = {},
   ): Promise<any> {
     const requestOptions: any = {
       method,
       url,
-      headers: {},
+      headers: { ...headers },
     };
 
     if (body) {
@@ -286,6 +328,26 @@ class IntegrationTestHelper {
     const request = this.app.inject(requestOptions);
 
     return request;
+  }
+
+  /** Refreshes as the web app does: the refresh cookie and the CSRF header. */
+  async refresh(refreshToken: string | undefined): Promise<any> {
+    return this.makeRequest(
+      "POST",
+      "/auth/refresh",
+      undefined,
+      sessionHeaders({ refreshToken }),
+    );
+  }
+
+  /** Signs out as the web app does: the refresh cookie and the CSRF header. */
+  async signOut(refreshToken: string | undefined): Promise<any> {
+    return this.makeRequest(
+      "POST",
+      "/auth/sign_out",
+      undefined,
+      sessionHeaders({ refreshToken }),
+    );
   }
 
   getApp(): NestFastifyApplication {

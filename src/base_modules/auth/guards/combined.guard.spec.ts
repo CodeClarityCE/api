@@ -10,7 +10,6 @@ import type { ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { JwtService } from "@nestjs/jwt";
 import { Test, type TestingModule } from "@nestjs/testing";
-import type { Request } from "express";
 import * as fs from "fs";
 import type { Jwt } from "jsonwebtoken";
 import type { Socket } from "socket.io";
@@ -18,7 +17,11 @@ import type { Socket } from "socket.io";
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { OrganizationTokensService } from "src/base_modules/organizations/tokens/organization-tokens.service";
 import { SKIP_AUTH_KEY } from "src/decorators/SkipAuthDecorator";
-import { AccountNotActivated, NotAuthenticated } from "src/types/error.types";
+import {
+  AccountNotActivated,
+  CrossSiteRequestRefused,
+  NotAuthenticated,
+} from "src/types/error.types";
 
 import { CombinedAuthGuard } from "./combined.guard";
 
@@ -31,12 +34,20 @@ function verified(payload: unknown, typ = "at+jwt"): Jwt {
   };
 }
 
+// The headers the app sends on a web sign-in.
+function webSignIn(accessToken: string): Record<string, string> {
+  return {
+    cookie: `__Host-Http-cc_access=${accessToken}`,
+    "x-codeclarity-csrf": "1",
+  };
+}
+
 describe("CombinedAuthGuard", () => {
   let guard: CombinedAuthGuard;
   let jwtService: jest.Mocked<JwtService>;
   let reflector: jest.Mocked<Reflector>;
   let mockExecutionContext: jest.Mocked<ExecutionContext>;
-  let mockRequest: Partial<Request>;
+  let mockRequest: { headers: Record<string, string>; user?: unknown };
   let mockSocket: Partial<Socket>;
 
   const mockPrivateKey = "mock-private-key";
@@ -145,9 +156,9 @@ describe("CombinedAuthGuard", () => {
         );
       });
 
-      it("should authenticate with valid JWT token", async () => {
+      it("should authenticate with a valid access cookie", async () => {
         const token = "valid-jwt-token";
-        mockRequest.headers!.authorization = `Bearer ${token}`;
+        mockRequest.headers = webSignIn(token);
         jwtService.verifyAsync.mockResolvedValue(verified(mockJwtPayload));
 
         const result = await guard.canActivate(mockExecutionContext);
@@ -163,10 +174,52 @@ describe("CombinedAuthGuard", () => {
         expect((mockRequest.user as AuthenticatedUser).userId).toBe("user-123");
       });
 
+      it("should refuse an access cookie without the CSRF header", async () => {
+        mockRequest.headers = { cookie: "__Host-Http-cc_access=valid" };
+        jwtService.verifyAsync.mockResolvedValue(verified(mockJwtPayload));
+
+        await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
+          CrossSiteRequestRefused,
+        );
+      });
+
+      it("should refuse an access cookie sent cross-site", async () => {
+        mockRequest.headers = {
+          ...webSignIn("valid"),
+          "sec-fetch-site": "cross-site",
+        };
+        jwtService.verifyAsync.mockResolvedValue(verified(mockJwtPayload));
+
+        await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
+          CrossSiteRequestRefused,
+        );
+      });
+
+      it("should refuse a user access token sent as a bearer", async () => {
+        mockRequest.headers = { authorization: "Bearer valid-jwt-token" };
+        jwtService.verifyAsync.mockResolvedValue(verified(mockJwtPayload));
+
+        await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
+          NotAuthenticated,
+        );
+        expect(jwtService.verifyAsync).not.toHaveBeenCalled();
+      });
+
+      it("should judge a bearer alone, even next to a valid cookie", async () => {
+        mockRequest.headers = {
+          ...webSignIn("valid"),
+          authorization: "Bearer not-an-organization-token",
+        };
+        jwtService.verifyAsync.mockResolvedValue(verified(mockJwtPayload));
+
+        await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
+          NotAuthenticated,
+        );
+      });
+
       it("should throw AccountNotActivated for unactivated users", async () => {
-        const token = "valid-jwt-token";
         const inactivePayload = { ...mockJwtPayload, activated: false };
-        mockRequest.headers!.authorization = `Bearer ${token}`;
+        mockRequest.headers = webSignIn("valid-jwt-token");
         jwtService.verifyAsync.mockResolvedValue(verified(inactivePayload));
 
         await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
@@ -175,8 +228,7 @@ describe("CombinedAuthGuard", () => {
       });
 
       it("should throw error for invalid JWT token", async () => {
-        const token = "invalid-jwt-token";
-        mockRequest.headers!.authorization = `Bearer ${token}`;
+        mockRequest.headers = webSignIn("invalid-jwt-token");
         jwtService.verifyAsync.mockRejectedValue(new Error("Invalid token"));
 
         await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
@@ -185,15 +237,7 @@ describe("CombinedAuthGuard", () => {
       });
 
       it("should handle malformed authorization header", async () => {
-        mockRequest.headers!.authorization = "InvalidFormat";
-
-        await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
-          NotAuthenticated,
-        );
-      });
-
-      it("should handle missing Bearer prefix", async () => {
-        mockRequest.headers!.authorization = "NotBearer token";
+        mockRequest.headers["authorization"] = "InvalidFormat";
 
         await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
           NotAuthenticated,
@@ -201,15 +245,7 @@ describe("CombinedAuthGuard", () => {
       });
 
       it("should reject an API key header without a bearer token", async () => {
-        mockRequest.headers!["x-api-key"] = "api-key-123";
-
-        await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
-          NotAuthenticated,
-        );
-      });
-
-      it("should reject an uppercase API key header without a bearer token", async () => {
-        mockRequest.headers!["X-API-KEY"] = "api-key-123";
+        mockRequest.headers["x-api-key"] = "api-key-123";
 
         await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
           NotAuthenticated,
@@ -223,9 +259,8 @@ describe("CombinedAuthGuard", () => {
         reflector.getAllAndOverride.mockReturnValue(false);
       });
 
-      it("should authenticate WebSocket with valid JWT token", async () => {
-        const token = "valid-jwt-token";
-        mockSocket.handshake!.headers.authorization = `Bearer ${token}`;
+      it("should authenticate WebSocket with a valid access cookie", async () => {
+        mockSocket.handshake!.headers = webSignIn("valid-jwt-token");
         jwtService.verifyAsync.mockResolvedValue(verified(mockJwtPayload));
 
         const result = await guard.canActivate(mockExecutionContext);
@@ -243,41 +278,28 @@ describe("CombinedAuthGuard", () => {
         );
       });
 
+      it("should refuse a WebSocket opened from another origin", async () => {
+        mockSocket.handshake!.headers = {
+          ...webSignIn("valid-jwt-token"),
+          host: "localhost",
+          origin: "https://evil.example",
+        };
+        jwtService.verifyAsync.mockResolvedValue(verified(mockJwtPayload));
+
+        await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
+          CrossSiteRequestRefused,
+        );
+      });
+
       it("should throw AccountNotActivated for WebSocket with unactivated user", async () => {
-        const token = "valid-jwt-token";
         const inactivePayload = { ...mockJwtPayload, activated: false };
-        mockSocket.handshake!.headers.authorization = `Bearer ${token}`;
+        mockSocket.handshake!.headers = webSignIn("valid-jwt-token");
         jwtService.verifyAsync.mockResolvedValue(verified(inactivePayload));
 
         await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
           AccountNotActivated,
         );
       });
-    });
-  });
-
-  describe("extractJWTTokenFromHeader", () => {
-    it("should extract token from valid Bearer header", () => {
-      const token = "jwt-token-123";
-      const result = (guard as any).extractJWTTokenFromHeader(
-        `Bearer ${token}`,
-      );
-      expect(result).toBe(token);
-    });
-
-    it("should return undefined for invalid header format", () => {
-      const result = (guard as any).extractJWTTokenFromHeader("InvalidFormat");
-      expect(result).toBeUndefined();
-    });
-
-    it("should return undefined for undefined header", () => {
-      const result = (guard as any).extractJWTTokenFromHeader(undefined);
-      expect(result).toBeUndefined();
-    });
-
-    it("should return undefined for empty header", () => {
-      const result = (guard as any).extractJWTTokenFromHeader("");
-      expect(result).toBeUndefined();
     });
   });
 

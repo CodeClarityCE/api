@@ -2,7 +2,11 @@ import { Reflector } from "@nestjs/core";
 import { JwtService } from "@nestjs/jwt";
 import { Test, type TestingModule } from "@nestjs/testing";
 
-import { EmailAlreadyExists } from "../../types/error.types";
+import {
+  CrossSiteRequestRefused,
+  EmailAlreadyExists,
+  NotAuthenticated,
+} from "../../types/error.types";
 import type {
   RegistrationConfirmationBody,
   UserCreateBody,
@@ -19,12 +23,7 @@ import {
   WrongCredentials,
 } from "./auth.errors";
 import { AuthService } from "./auth.service";
-import {
-  AuthenticatedUser,
-  ROLE,
-  type TokenRefreshResponse,
-  type TokenResponse,
-} from "./auth.types";
+import { AuthenticatedUser, ROLE, type SignInTokens } from "./auth.types";
 import { CombinedAuthGuard } from "./guards/combined.guard";
 
 describe("AuthController", () => {
@@ -52,12 +51,34 @@ describe("AuthController", () => {
     true,
   );
 
-  const mockTokenResponse: TokenResponse = {
-    token: "mock-access-token",
-    refresh_token: "mock-refresh-token",
-    token_expiry: new Date(),
-    refresh_token_expiry: new Date(),
+  const mockTokens: SignInTokens = {
+    accessToken: "mock-access-token",
+    accessExpiry: new Date("2026-11-27T10:15:00Z"),
+    refreshToken: "mock-refresh-token",
+    refreshExpiry: new Date("2026-12-04T10:00:00Z"),
   };
+
+  // A reply that records the cookies it was asked to set.
+  function fakeReply(): { header: jest.Mock; cookies: () => string[] } {
+    const header = jest.fn();
+    return {
+      header,
+      cookies: () =>
+        header.mock.calls.flatMap(([, value]) => value as string[]),
+    };
+  }
+
+  // A request as the app sends it, with the refresh cookie and the CSRF header.
+  function appRequest(refreshToken?: string): any {
+    return {
+      headers: {
+        "x-codeclarity-csrf": "1",
+        ...(refreshToken && {
+          cookie: `__Host-Http-cc_refresh=${refreshToken}`,
+        }),
+      },
+    };
+  }
 
   beforeEach(async () => {
     const mockAuthService = {
@@ -172,15 +193,28 @@ describe("AuthController", () => {
         password: "password123",
       };
 
-      authService.authenticate.mockResolvedValue(mockTokenResponse);
+      authService.authenticate.mockResolvedValue(mockTokens);
+      const reply = fakeReply();
 
-      const result = await controller.authenticate(authenticateBody);
+      const result = await controller.authenticate(
+        authenticateBody,
+        reply as any,
+      );
 
       expect(authService.authenticate).toHaveBeenCalledWith(
         authenticateBody.email,
         authenticateBody.password,
       );
-      expect(result).toEqual({ data: mockTokenResponse });
+      expect(result).toEqual({
+        data: {
+          token_expiry: mockTokens.accessExpiry,
+          refresh_token_expiry: mockTokens.refreshExpiry,
+        },
+      });
+      expect(reply.cookies()).toEqual([
+        expect.stringMatching(/^__Host-Http-cc_access=mock-access-token; /),
+        expect.stringMatching(/^__Host-Http-cc_refresh=mock-refresh-token; /),
+      ]);
     });
 
     it("should throw WrongCredentials for invalid credentials", async () => {
@@ -191,9 +225,9 @@ describe("AuthController", () => {
 
       authService.authenticate.mockRejectedValue(new WrongCredentials());
 
-      await expect(controller.authenticate(authenticateBody)).rejects.toThrow(
-        WrongCredentials,
-      );
+      await expect(
+        controller.authenticate(authenticateBody, fakeReply() as any),
+      ).rejects.toThrow(WrongCredentials);
     });
 
     it("should throw RegistrationNotVerified for unverified account", async () => {
@@ -204,9 +238,9 @@ describe("AuthController", () => {
 
       authService.authenticate.mockRejectedValue(new RegistrationNotVerified());
 
-      await expect(controller.authenticate(authenticateBody)).rejects.toThrow(
-        RegistrationNotVerified,
-      );
+      await expect(
+        controller.authenticate(authenticateBody, fakeReply() as any),
+      ).rejects.toThrow(RegistrationNotVerified);
     });
   });
 
@@ -315,29 +349,58 @@ describe("AuthController", () => {
   });
 
   describe("refresh", () => {
-    it("should refresh token successfully", async () => {
-      const mockRefreshResponse: TokenRefreshResponse = {
-        token: "new-access-token",
-        token_expiry: new Date(),
-        refresh_token: "new-refresh-token",
-        refresh_token_expiry: new Date(),
-      };
+    it("rotates the refresh cookie into new cookies", async () => {
+      authService.refresh.mockResolvedValue(mockTokens);
+      const reply = fakeReply();
 
-      authService.refresh.mockResolvedValue(mockRefreshResponse);
-
-      const result = await controller.refresh({ refresh_token: "old" });
+      const result = await controller.refresh(appRequest("old"), reply as any);
 
       expect(authService.refresh).toHaveBeenCalledWith("old");
-      expect(result).toEqual({ data: mockRefreshResponse });
+      expect(result).toEqual({
+        data: {
+          token_expiry: mockTokens.accessExpiry,
+          refresh_token_expiry: mockTokens.refreshExpiry,
+        },
+      });
+      expect(reply.cookies()).toHaveLength(2);
+    });
+
+    it("clears the cookies when the refresh is refused", async () => {
+      authService.refresh.mockRejectedValue(new NotAuthenticated());
+      const reply = fakeReply();
+
+      await expect(
+        controller.refresh(appRequest("spent"), reply as any),
+      ).rejects.toThrow(NotAuthenticated);
+      expect(reply.cookies()).toEqual([
+        expect.stringMatching(/^__Host-Http-cc_access=; Max-Age=0;/),
+        expect.stringMatching(/^__Host-Http-cc_refresh=; Max-Age=0;/),
+      ]);
+    });
+
+    it("refuses a request without the CSRF header before spending the token", async () => {
+      await expect(
+        controller.refresh(
+          { headers: { cookie: "__Host-Http-cc_refresh=old" } } as any,
+          fakeReply() as any,
+        ),
+      ).rejects.toThrow(CrossSiteRequestRefused);
+      expect(authService.refresh).not.toHaveBeenCalled();
     });
   });
 
   describe("signOut", () => {
-    it("should end the sign-in of the refresh token", async () => {
-      const result = await controller.signOut({ refresh_token: "current" });
+    it("ends the sign-in of the refresh cookie and clears both cookies", async () => {
+      const reply = fakeReply();
+
+      const result = await controller.signOut(
+        appRequest("current"),
+        reply as any,
+      );
 
       expect(authService.signOut).toHaveBeenCalledWith("current");
       expect(result).toEqual({});
+      expect(reply.cookies()).toHaveLength(2);
     });
   });
 });

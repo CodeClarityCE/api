@@ -162,10 +162,10 @@ describe("AuthService", () => {
 
       // Assert
       expect(result).toEqual({
-        token: "jwt-token",
-        refresh_token: "opaque-refresh",
-        token_expiry: expect.any(Date),
-        refresh_token_expiry: refreshExpiry,
+        accessToken: "jwt-token",
+        refreshToken: "opaque-refresh",
+        accessExpiry: expect.any(Date),
+        refreshExpiry,
       });
       expect(usersRepository.getUserByEmail).toHaveBeenCalledWith(email);
     });
@@ -238,10 +238,10 @@ describe("AuthService", () => {
 
       expect(refreshTokens.rotate).toHaveBeenCalledWith("old-refresh");
       expect(result).toEqual({
-        token: "new-jwt-token",
-        token_expiry: expect.any(Date),
-        refresh_token: "next-refresh",
-        refresh_token_expiry: refreshExpiry,
+        accessToken: "new-jwt-token",
+        accessExpiry: expect.any(Date),
+        refreshToken: "next-refresh",
+        refreshExpiry,
       });
     });
 
@@ -450,7 +450,7 @@ describe("AuthService", () => {
 
       // Assert
       expect(result).toBeDefined();
-      expect(result.token).toBe("jwt-token");
+      expect(result.accessToken).toBe("jwt-token");
     });
   });
 });

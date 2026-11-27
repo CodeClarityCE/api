@@ -1,7 +1,6 @@
 import { forwardRef, Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { JwtModule } from "@nestjs/jwt";
-import { PassportModule } from "@nestjs/passport";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import * as fs from "fs";
 
@@ -16,14 +15,12 @@ import { CombinedAuthGuard } from "./guards/combined.guard";
 import { RefreshToken } from "./refresh-token.entity";
 import { RefreshTokenSweep } from "./refresh-token-sweep";
 import { RefreshTokensService } from "./refresh-tokens.service";
-import { JwtStrategy } from "./strategies/jwt.strategy";
 
 /**
  * Authentication module, that secures the endpoints of the API
  */
 @Module({
   imports: [
-    PassportModule,
     EmailModule,
     TypeOrmModule.forFeature([RefreshToken], "codeclarity"),
     forwardRef(() => UsersModule), // Service-level circular dep: AuthService <-> UsersService
@@ -40,7 +37,6 @@ import { JwtStrategy } from "./strategies/jwt.strategy";
   providers: [
     AuthService,
     { provide: AUTH_SERVICE, useExisting: AuthService },
-    JwtStrategy,
     RefreshTokensService,
     RefreshTokenSweep,
 

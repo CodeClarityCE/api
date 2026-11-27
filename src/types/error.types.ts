@@ -60,6 +60,8 @@ export const errorMessages = {
   ValidationFailed: "Malformed request",
   NotAuthenticated: "You are not authenticated.",
   NotAuthorized: "You are not authorized to perform this action.",
+  CrossSiteRequestRefused:
+    "This request did not come from the CodeClarity app, so it was refused.",
   AccountNotActivated:
     "Your account is not activated yet. Follow the link in the activation email first.",
   OrganizationTokenScopeTooNarrow:
@@ -177,6 +179,21 @@ export class NotAuthenticated extends PublicAPIError {
       NotAuthenticated.errorCode,
       NotAuthenticated.errorMessage,
       NotAuthenticated.statusCode,
+      cause,
+    );
+  }
+}
+
+/** A request on a web sign-in that may come from another site (ADR 0024). */
+export class CrossSiteRequestRefused extends PublicAPIError {
+  static readonly errorCode = "CrossSiteRequestRefused";
+  static errorMessage = errorMessages[CrossSiteRequestRefused.errorCode];
+  static statusCode = 403;
+  constructor(cause?: unknown) {
+    super(
+      CrossSiteRequestRefused.errorCode,
+      CrossSiteRequestRefused.errorMessage,
+      CrossSiteRequestRefused.statusCode,
       cause,
     );
   }

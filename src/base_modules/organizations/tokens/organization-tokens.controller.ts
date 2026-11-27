@@ -7,9 +7,10 @@ import {
   ParseUUIDPipe,
   Post,
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { ApiTags } from "@nestjs/swagger";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
+import { ApiAuthentication } from "src/decorators/ApiAuthDecorator";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocNoDataResponseDecorator } from "src/decorators/NoDataResponse";
 import { APIDocTypedManyResponseDecorator } from "src/decorators/TypedManyResponse";
@@ -30,7 +31,7 @@ import {
 } from "./organization-token.types";
 import { OrganizationTokensService } from "./organization-tokens.service";
 
-@ApiBearerAuth()
+@ApiAuthentication()
 @Controller("org/:org_id/tokens")
 export class OrganizationTokensController {
   constructor(private readonly tokensService: OrganizationTokensService) {}

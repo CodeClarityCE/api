@@ -2,7 +2,11 @@ import { readFileSync } from "fs";
 import * as jwt from "jsonwebtoken";
 
 import { User } from "../../src/base_modules/users/users.entity";
-import { testHelper, type TestUser } from "../utils/integration-test-helper";
+import {
+  sessionOf,
+  testHelper,
+  type TestUser,
+} from "../utils/integration-test-helper";
 
 // The key the API signs with, for tokens the API itself would not issue.
 const privateKey = readFileSync("./jwt/private.pem", "utf8");
@@ -134,12 +138,10 @@ describe("Authentication Integration (e2e)", () => {
       );
 
       expect(response.statusCode).toBe(201);
-      expect(response.json().data).toEqual(
-        expect.objectContaining({
-          token: expect.any(String),
-          refresh_token: expect.any(String),
-        }),
-      );
+      expect(sessionOf(response)).toEqual({
+        accessToken: expect.any(String),
+        refreshToken: expect.any(String),
+      });
     });
     it("should reject login with invalid email", async () => {
       const response = await testHelper.makeRequest(
@@ -258,42 +260,32 @@ describe("Authentication Integration (e2e)", () => {
     });
 
     it("should issue an access token from a refresh token", async () => {
-      const response = await testHelper.makeRequest("POST", "/auth/refresh", {
-        refresh_token: testUser.refreshToken,
-      });
+      const response = await testHelper.refresh(testUser.refreshToken);
 
       expect(response.statusCode).toBe(201);
-      expect(response.json().data.token).toEqual(expect.any(String));
+      expect(sessionOf(response).accessToken!).toEqual(expect.any(String));
     });
 
     it("should issue a token that works on protected routes", async () => {
-      const response = await testHelper.makeRequest("POST", "/auth/refresh", {
-        refresh_token: testUser.refreshToken,
-      });
+      const response = await testHelper.refresh(testUser.refreshToken);
 
       const profile = await testHelper.makeAuthenticatedRequest(
         "GET",
         "/auth/user",
-        response.json().data.token,
+        sessionOf(response).accessToken!,
       );
       expect(profile.statusCode).toBe(200);
     });
 
     it("should reject refresh with invalid refresh token", async () => {
-      const response = await testHelper.makeRequest("POST", "/auth/refresh", {
-        refresh_token: "invalid-refresh-token",
-      });
+      const response = await testHelper.refresh("invalid-refresh-token");
 
       expect(response.statusCode).toBe(401);
       expect(response.json().error_code).toBe("NotAuthenticated");
     });
 
     it("should reject refresh without refresh token", async () => {
-      const response = await testHelper.makeRequest(
-        "POST",
-        "/auth/refresh",
-        {},
-      );
+      const response = await testHelper.refresh(undefined);
 
       expect(response.statusCode).toBe(401);
       expect(response.json().error_code).toBe("NotAuthenticated");
@@ -310,7 +302,7 @@ describe("Authentication Integration (e2e)", () => {
       });
     });
 
-    it("should refuse a refresh token as bearer", async () => {
+    it("should refuse a refresh token as the access cookie", async () => {
       const response = await testHelper.makeAuthenticatedRequest(
         "GET",
         "/auth/user",
@@ -322,24 +314,20 @@ describe("Authentication Integration (e2e)", () => {
     });
 
     it("should refuse an access token at /auth/refresh", async () => {
-      const response = await testHelper.makeRequest("POST", "/auth/refresh", {
-        refresh_token: testUser.accessToken,
-      });
+      const response = await testHelper.refresh(testUser.accessToken);
 
       expect(response.statusCode).toBe(401);
       expect(response.json().error_code).toBe("NotAuthenticated");
     });
 
-    // Sends the token as bearer and to /auth/refresh, and expects both to refuse it.
+    // Sends the token as the access cookie and as the refresh cookie, and expects both to refuse it.
     async function expectRefusedOnBoth(token: string): Promise<void> {
       const bearer = await testHelper.makeAuthenticatedRequest(
         "GET",
         "/auth/user",
-        token,
+        token!,
       );
-      const refresh = await testHelper.makeRequest("POST", "/auth/refresh", {
-        refresh_token: token,
-      });
+      const refresh = await testHelper.refresh(token);
 
       expect(bearer.statusCode).toBe(401);
       expect(refresh.statusCode).toBe(401);
@@ -374,20 +362,19 @@ describe("Authentication Integration (e2e)", () => {
         email: "types@example.com",
         password: "TypesPassword123!",
       });
-      const { token, refresh_token } = login.json().data;
+      const { accessToken: token, refreshToken: refresh_token } =
+        sessionOf(login);
 
       const first = await testHelper.makeAuthenticatedRequest(
         "GET",
         "/auth/user",
-        token,
+        token!,
       );
-      const refresh = await testHelper.makeRequest("POST", "/auth/refresh", {
-        refresh_token,
-      });
+      const refresh = await testHelper.refresh(refresh_token);
       const second = await testHelper.makeAuthenticatedRequest(
         "GET",
         "/auth/user",
-        refresh.json().data.token,
+        sessionOf(refresh).accessToken!,
       );
 
       expect(first.statusCode).toBe(200);
@@ -397,11 +384,12 @@ describe("Authentication Integration (e2e)", () => {
     });
 
     it("should issue access tokens that expire after 15 minutes", async () => {
-      const refresh = await testHelper.makeRequest("POST", "/auth/refresh", {
-        refresh_token: testUser.refreshToken,
-      });
+      const refresh = await testHelper.refresh(testUser.refreshToken);
 
-      for (const token of [testUser.accessToken, refresh.json().data.token]) {
+      for (const token of [
+        testUser.accessToken,
+        sessionOf(refresh).accessToken!,
+      ]) {
         const { iat, exp } = jwt.decode(token) as jwt.JwtPayload;
         expect(exp! - iat!).toBe(15 * 60);
       }
@@ -508,21 +496,20 @@ describe("Authentication Integration (e2e)", () => {
         password,
       });
       expect(login.statusCode).toBe(201);
-      const { token, refresh_token } = login.json().data;
+      const { accessToken: token, refreshToken: refresh_token } =
+        sessionOf(login);
 
       // 4. Access a protected resource
       const profile = await testHelper.makeAuthenticatedRequest(
         "GET",
         "/auth/user",
-        token,
+        token!,
       );
       expect(profile.statusCode).toBe(200);
       expect(profile.json().data.email).toBe(email);
 
       // 5. Refresh (using the new token is covered by its own test)
-      const refresh = await testHelper.makeRequest("POST", "/auth/refresh", {
-        refresh_token,
-      });
+      const refresh = await testHelper.refresh(refresh_token);
       expect(refresh.statusCode).toBe(201);
     });
 

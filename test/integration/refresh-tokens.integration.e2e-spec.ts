@@ -1,6 +1,10 @@
 import { RefreshTokensService } from "../../src/base_modules/auth/refresh-tokens.service";
 import { User } from "../../src/base_modules/users/users.entity";
-import { testHelper, type TestUser } from "../utils/integration-test-helper";
+import {
+  sessionOf,
+  testHelper,
+  type TestUser,
+} from "../utils/integration-test-helper";
 
 const EMAIL = "rotate@example.com";
 const PASSWORD = "RotatePassword123!";
@@ -13,16 +17,24 @@ interface Tokens {
   refresh_token_expiry: string;
 }
 
-function refresh(refreshToken: unknown): Promise<any> {
-  return testHelper.makeRequest("POST", "/auth/refresh", {
-    refresh_token: refreshToken,
-  });
+function refresh(refreshToken: string | undefined): Promise<any> {
+  return testHelper.refresh(refreshToken);
+}
+
+// The tokens a response set as cookies, with the expiry times in its body.
+function tokensOf(response: any): Tokens {
+  const { accessToken, refreshToken } = sessionOf(response);
+  return {
+    token: accessToken!,
+    refresh_token: refreshToken!,
+    ...response.json().data,
+  };
 }
 
 async function refreshed(refreshToken: string): Promise<Tokens> {
   const response = await refresh(refreshToken);
   expect(response.statusCode).toBe(201);
-  return response.json().data;
+  return tokensOf(response);
 }
 
 async function signIn(): Promise<Tokens> {
@@ -31,7 +43,7 @@ async function signIn(): Promise<Tokens> {
     password: PASSWORD,
   });
   expect(response.statusCode).toBe(201);
-  return response.json().data;
+  return tokensOf(response);
 }
 
 describe("Rotating refresh tokens (e2e)", () => {
@@ -110,8 +122,8 @@ describe("Rotating refresh tokens (e2e)", () => {
       expect(response.statusCode).toBe(401);
     });
 
-    it.each([[123], [{ token: "x" }], [""], [null]])(
-      "refuses a refresh token of %p",
+    it.each([["not-a-token"], ["a b"], [""], [undefined]])(
+      "refuses a refresh cookie of %p",
       async (value) => {
         const response = await refresh(value);
         expect(response.statusCode).toBe(401);
@@ -151,7 +163,7 @@ describe("Rotating refresh tokens (e2e)", () => {
       expect(statuses).toEqual([201, 401]);
 
       const winner = a.statusCode === 201 ? a : b;
-      const followUp = await refresh(winner.json().data.refresh_token);
+      const followUp = await refresh(sessionOf(winner).refreshToken);
       expect(followUp.statusCode).toBe(401);
     });
   });
@@ -159,9 +171,7 @@ describe("Rotating refresh tokens (e2e)", () => {
   describe("revocation", () => {
     it("revokes the family on sign-out", async () => {
       const other = await signIn();
-      const signOut = await testHelper.makeRequest("POST", "/auth/sign_out", {
-        refresh_token: account.refreshToken,
-      });
+      const signOut = await testHelper.signOut(account.refreshToken);
       expect(signOut.statusCode).toBe(201);
 
       expect((await refresh(account.refreshToken)).statusCode).toBe(401);
@@ -171,21 +181,15 @@ describe("Rotating refresh tokens (e2e)", () => {
     it("revokes the newest token of a family signed out with an older one", async () => {
       const second = await refreshed(account.refreshToken);
 
-      await testHelper.makeRequest("POST", "/auth/sign_out", {
-        refresh_token: account.refreshToken,
-      });
+      await testHelper.signOut(account.refreshToken);
 
       expect((await refresh(second.refresh_token)).statusCode).toBe(401);
     });
 
-    it.each([["not-a-token"], [123], [undefined]])(
-      "accepts a sign-out with a refresh token of %p",
+    it.each([["not-a-token"], [undefined]])(
+      "accepts a sign-out with a refresh cookie of %p",
       async (value) => {
-        const response = await testHelper.makeRequest(
-          "POST",
-          "/auth/sign_out",
-          { refresh_token: value },
-        );
+        const response = await testHelper.signOut(value);
         expect(response.statusCode).toBe(201);
       },
     );
@@ -223,7 +227,7 @@ describe("Rotating refresh tokens (e2e)", () => {
         },
       );
       expect(change.statusCode).toBe(200);
-      const fresh: Tokens = change.json().data;
+      const fresh: Tokens = tokensOf(change);
       expect(fresh).toEqual({
         token: expect.any(String),
         token_expiry: expect.any(String),
@@ -255,7 +259,7 @@ describe("Rotating refresh tokens (e2e)", () => {
           password_confirmation: "BrandNewPassword123!",
         },
       );
-      const fresh: Tokens = change.json().data;
+      const fresh: Tokens = tokensOf(change);
 
       // A spent token of the old sign-in comes back.
       expect((await refresh(account.refreshToken)).statusCode).toBe(401);
@@ -341,9 +345,7 @@ describe("Rotating refresh tokens (e2e)", () => {
       const used = await signIn();
       await refreshed(used.refresh_token);
       const revoked = await signIn();
-      await testHelper.makeRequest("POST", "/auth/sign_out", {
-        refresh_token: revoked.refresh_token,
-      });
+      await testHelper.signOut(revoked.refresh_token);
       const expired = await signIn();
       const source = testHelper.getDataSource();
       const [{ family_id: expiredFamily }] = await source.query(

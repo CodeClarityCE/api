@@ -10,7 +10,7 @@ import {
   Put,
   Query,
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiOperation, ApiTags } from "@nestjs/swagger";
 
 import { Analysis } from "src/base_modules/analyses/analysis.entity";
 import {
@@ -22,6 +22,7 @@ import {
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { OrganizationTokenScope } from "src/base_modules/organizations/tokens/organization-token.types";
 import { BatchResponse } from "src/base_modules/projects/project.types";
+import { ApiAuthentication } from "src/decorators/ApiAuthDecorator";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocCreatedResponseDecorator } from "src/decorators/CrudResponse";
 import { APIDocNoDataResponseDecorator } from "src/decorators/NoDataResponse";
@@ -49,7 +50,7 @@ import {
 
 import { AnalysesService } from "./analyses.service";
 
-@ApiBearerAuth()
+@ApiAuthentication()
 @Controller("/org/:org_id/projects/:project_id/analyses")
 export class AnalysesController {
   constructor(private readonly analysesService: AnalysesService) {}

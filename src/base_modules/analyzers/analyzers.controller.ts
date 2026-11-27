@@ -10,12 +10,12 @@ import {
   Put,
   Query,
 } from "@nestjs/common";
-import { ApiBearerAuth } from "@nestjs/swagger";
 
 import { Analyzer } from "src/base_modules/analyzers/analyzer.entity";
 import { AnalyzerCreateBody } from "src/base_modules/analyzers/analyzer.types";
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { OrganizationTokenScope } from "src/base_modules/organizations/tokens/organization-token.types";
+import { ApiAuthentication } from "src/decorators/ApiAuthDecorator";
 import { AllowOrganizationToken } from "src/decorators/OrganizationTokenDecorator";
 import { AuthUser } from "src/decorators/UserDecorator";
 import {
@@ -31,7 +31,7 @@ import {
 } from "./analyzer-templates.service";
 import { AnalyzersService } from "./analyzers.service";
 
-@ApiBearerAuth()
+@ApiAuthentication()
 @Controller("/org/:org_id/analyzers")
 export class AnalyzersController {
   constructor(private readonly analyzersService: AnalyzersService) {}
@@ -104,7 +104,7 @@ export class AnalyzersController {
 }
 
 // Templates controller (not organization-specific)
-@ApiBearerAuth()
+@ApiAuthentication()
 @Controller("/analyzer-templates")
 export class AnalyzerTemplatesController {
   constructor(
@@ -127,7 +127,7 @@ export class AnalyzerTemplatesController {
 }
 
 // Languages controller (not organization-specific)
-@ApiBearerAuth()
+@ApiAuthentication()
 @Controller("/languages")
 export class LanguagesController {
   constructor(

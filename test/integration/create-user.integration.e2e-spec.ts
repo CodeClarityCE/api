@@ -1,6 +1,6 @@
 import { User } from "../../src/base_modules/users/users.entity";
 import { createUser } from "../../src/scripts/create-user";
-import { testHelper } from "../utils/integration-test-helper";
+import { sessionOf, testHelper } from "../utils/integration-test-helper";
 
 const account = {
   email: "jane.roe@example.com",
@@ -17,7 +17,7 @@ async function logIn(email: string, password: string): Promise<any> {
 
 // The organizations a user sees, as the shape that matters for ownership.
 async function organizationsOf(email: string, password: string) {
-  const token = (await logIn(email, password)).json().data.token as string;
+  const token = sessionOf(await logIn(email, password)).accessToken!;
   const user = (
     await testHelper.makeAuthenticatedRequest("GET", "/auth/user", token)
   ).json();
@@ -55,7 +55,7 @@ describe("create-user (e2e)", () => {
     const login = await logIn(account.email, account.password);
 
     expect(login.statusCode).toBe(201);
-    expect(login.json().data.token).toEqual(expect.any(String));
+    expect(sessionOf(login).accessToken).toEqual(expect.any(String));
   });
 
   it("gives the user a personal organization they own, like a confirmed signup", async () => {

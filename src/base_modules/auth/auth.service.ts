@@ -6,8 +6,7 @@ import ms from "ms";
 import {
   AuthenticatedUser,
   ROLE,
-  TokenRefreshResponse,
-  TokenResponse,
+  type SignInTokens,
 } from "src/base_modules/auth/auth.types";
 import { UsersRepository } from "src/base_modules/shared/repositories";
 import { User } from "src/base_modules/users/users.entity";
@@ -46,7 +45,7 @@ export class AuthService {
    * @param password The account's password
    * @returns A JWT and Refresh token
    */
-  async authenticate(email: string, password: string): Promise<TokenResponse> {
+  async authenticate(email: string, password: string): Promise<SignInTokens> {
     // An unknown email gets the same error as a wrong password.
     const user = await this.usersRepository
       .getUserByEmail(email)
@@ -82,22 +81,22 @@ export class AuthService {
   }
 
   /** Starts a new sign-in for the user: an access token and a refresh token in a new family. */
-  async startSignIn(user: User): Promise<TokenResponse> {
+  async startSignIn(user: User): Promise<SignInTokens> {
     const refresh = await this.refreshTokens.issue(user.id);
     return {
       ...(await this.signAccessToken(user)),
-      refresh_token: refresh.token,
-      refresh_token_expiry: refresh.expiresOn,
+      refreshToken: refresh.token,
+      refreshExpiry: refresh.expiresOn,
     };
   }
 
   /** Signs a 15 minute access token from the user's current row. */
   private async signAccessToken(
     user: User,
-  ): Promise<{ token: string; token_expiry: Date }> {
-    const tokenExpiry = new Date(Date.now() + ms(CONST_JWT_TOKEN_EXPIRES_IN));
+  ): Promise<{ accessToken: string; accessExpiry: Date }> {
+    const accessExpiry = new Date(Date.now() + ms(CONST_JWT_TOKEN_EXPIRES_IN));
     return {
-      token: await this.jwtService.signAsync(
+      accessToken: await this.jwtService.signAsync(
         {
           sub: user.id,
           userId: user.id,
@@ -106,7 +105,7 @@ export class AuthService {
         },
         signOptionsFor(TokenKind.ACCESS),
       ),
-      token_expiry: tokenExpiry,
+      accessExpiry,
     };
   }
 
@@ -115,7 +114,7 @@ export class AuthService {
    * refresh token are returned. The user must still be allowed to sign in.
    * @throws {NotAuthenticated} for a token that cannot be used, or a user who may no longer sign in
    */
-  async refresh(refreshToken: unknown): Promise<TokenRefreshResponse> {
+  async refresh(refreshToken: unknown): Promise<SignInTokens> {
     const next = await this.refreshTokens.rotate(refreshToken);
     const user = await this.usersRepository
       .getUserById(next.userId)
@@ -129,8 +128,8 @@ export class AuthService {
     }
     return {
       ...(await this.signAccessToken(user)),
-      refresh_token: next.token,
-      refresh_token_expiry: next.expiresOn,
+      refreshToken: next.token,
+      refreshExpiry: next.expiresOn,
     };
   }
 

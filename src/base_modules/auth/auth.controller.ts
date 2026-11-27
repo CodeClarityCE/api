@@ -1,12 +1,20 @@
-import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
-import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from "@nestjs/common";
+import { ApiOperation, ApiSecurity, ApiTags } from "@nestjs/swagger";
+import type { FastifyReply, FastifyRequest } from "fastify";
 
 import {
   AuthenticateBody,
   AuthenticatedUser,
-  RefreshTokenBody,
-  TokenRefreshResponse,
-  TokenResponse,
+  sessionExpiryOf,
+  SessionExpiryResponse,
   UserPasswordResetBody,
   UserPasswordResetRequestBody,
 } from "src/base_modules/auth/auth.types";
@@ -15,6 +23,7 @@ import {
   UserCreateBody,
 } from "src/base_modules/users/user.types";
 import { User } from "src/base_modules/users/users.entity";
+import { ApiAuthentication } from "src/decorators/ApiAuthDecorator";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocCreatedResponseDecorator } from "src/decorators/CrudResponse";
 import { APIDocNoDataResponseDecorator } from "src/decorators/NoDataResponse";
@@ -27,6 +36,7 @@ import {
   TypedResponse,
 } from "src/types/apiResponses.types";
 import {
+  CrossSiteRequestRefused,
   EmailAlreadyExists,
   EntityNotFound,
   NotAuthenticated,
@@ -45,6 +55,13 @@ import {
 } from "./auth.errors";
 import { AuthService } from "./auth.service";
 import { CombinedAuthGuard } from "./guards/combined.guard";
+import {
+  assertSameOrigin,
+  clearSessionCookies,
+  readCookie,
+  REFRESH_COOKIE,
+  setSessionCookies,
+} from "./session-cookies";
 
 @Controller("auth")
 export class AuthController {
@@ -74,7 +91,7 @@ export class AuthController {
   @APIDocTypedResponseDecorator(User)
   @ApiErrorDecorator({ statusCode: 404, errors: [EntityNotFound] })
   @UseGuards(CombinedAuthGuard)
-  @ApiBearerAuth()
+  @ApiAuthentication()
   @Get("/user")
   async getAuthenticatedAccount(
     @AuthUser() user: AuthenticatedUser,
@@ -83,8 +100,11 @@ export class AuthController {
   }
 
   @ApiTags("Auth")
-  @ApiOperation({ description: "Authenticate." })
-  @APIDocTypedResponseDecorator(TokenResponse)
+  @ApiOperation({
+    description:
+      "Sign in. The access and refresh tokens are set as HttpOnly cookies, never returned in the body; later requests send the cookies with the x-codeclarity-csrf: 1 header.",
+  })
+  @APIDocTypedResponseDecorator(SessionExpiryResponse)
   @ApiErrorDecorator({
     statusCode: 400,
     errors: [
@@ -97,10 +117,14 @@ export class AuthController {
   @Post("/authenticate")
   async authenticate(
     @Body() body: AuthenticateBody,
-  ): Promise<TypedResponse<TokenResponse>> {
-    return {
-      data: await this.authService.authenticate(body.email, body.password),
-    };
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<TypedResponse<SessionExpiryResponse>> {
+    const tokens = await this.authService.authenticate(
+      body.email,
+      body.password,
+    );
+    setSessionCookies(reply, tokens);
+    return { data: sessionExpiryOf(tokens) };
   }
 
   @ApiTags("Auth")
@@ -164,28 +188,49 @@ export class AuthController {
   @ApiTags("Auth")
   @ApiOperation({
     description:
-      "Trade a refresh token for a new access token and a new refresh token. A refresh token works once; using it again ends its sign-in.",
+      "Trade the refresh cookie for new access and refresh cookies. A refresh token works once; using it again ends its sign-in. A refused refresh clears both cookies.",
   })
-  @APIDocTypedResponseDecorator(TokenRefreshResponse)
+  @APIDocTypedResponseDecorator(SessionExpiryResponse)
   @ApiErrorDecorator({ statusCode: 401, errors: [NotAuthenticated] })
+  @ApiErrorDecorator({ statusCode: 403, errors: [CrossSiteRequestRefused] })
+  @ApiSecurity({ cookie: [], "csrf-header": [] })
   @NonAuthEndpoint()
   @Post("/refresh")
   async refresh(
-    @Body() body: RefreshTokenBody,
-  ): Promise<TypedResponse<TokenRefreshResponse>> {
-    return { data: await this.authService.refresh(body?.refresh_token) };
+    @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<TypedResponse<SessionExpiryResponse>> {
+    // Checked first, so a cross-site request cannot spend the token.
+    assertSameOrigin(request.headers);
+    try {
+      const tokens = await this.authService.refresh(
+        readCookie(request.headers, REFRESH_COOKIE),
+      );
+      setSessionCookies(reply, tokens);
+      return { data: sessionExpiryOf(tokens) };
+    } catch (error) {
+      if (error instanceof NotAuthenticated) clearSessionCookies(reply);
+      throw error;
+    }
   }
 
   @ApiTags("Auth")
   @ApiOperation({
     description:
-      "Sign out: the refresh token's sign-in stops working. An unknown token is accepted too.",
+      "Sign out: the refresh cookie's sign-in stops working and both cookies are cleared. A missing or unknown token is accepted too.",
   })
   @APIDocNoDataResponseDecorator(201)
+  @ApiErrorDecorator({ statusCode: 403, errors: [CrossSiteRequestRefused] })
+  @ApiSecurity({ cookie: [], "csrf-header": [] })
   @NonAuthEndpoint()
   @Post("/sign_out")
-  async signOut(@Body() body: RefreshTokenBody): Promise<NoDataResponse> {
-    await this.authService.signOut(body?.refresh_token);
+  async signOut(
+    @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<NoDataResponse> {
+    assertSameOrigin(request.headers);
+    await this.authService.signOut(readCookie(request.headers, REFRESH_COOKIE));
+    clearSessionCookies(reply);
     return {};
   }
 }

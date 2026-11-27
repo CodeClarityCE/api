@@ -3,7 +3,11 @@ import { DataSource } from "typeorm";
 
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
 import { createProject } from "../utils/deletion-fixtures";
-import { testHelper, type TestUser } from "../utils/integration-test-helper";
+import {
+  sessionHeaders,
+  testHelper,
+  type TestUser,
+} from "../utils/integration-test-helper";
 import {
   createRunDatabase,
   dropRunDatabase,
@@ -226,7 +230,7 @@ describe("API fuzz regressions (e2e)", () => {
           method,
           url: `/org/${owner.organization.id}${path}`,
           headers: {
-            authorization: `Bearer ${owner.accessToken}`,
+            ...sessionHeaders({ accessToken: owner.accessToken }),
             ...(payload === undefined
               ? {}
               : { "content-type": "application/json" }),
@@ -501,7 +505,7 @@ describe("API fuzz regressions (e2e)", () => {
           method: "PATCH",
           url: `/org/${owner.organization.id}/file/${projectId}/upload`,
           headers: {
-            authorization: `Bearer ${owner.accessToken}`,
+            ...sessionHeaders({ accessToken: owner.accessToken }),
             "content-type": contentType,
           },
           ...(payload === undefined ? {} : { payload }),
