@@ -30,6 +30,83 @@ jobs:
       # Contract e2e tests need no database or services.
       extra-test-command: pnpm test:e2e test/integration/*contract*.e2e-spec.ts
 
+  # Database-backed e2e specs under test/ against a real Postgres, in the toolchain image.
+  integration:
+    name: integration specs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    services:
+      postgres:
+        # Same image as the dev stack's db service.
+        image: postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+        env:
+          # The password env/.env.test connects with.
+          POSTGRES_PASSWORD: "!ChangeMe!"
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U postgres"
+          --health-interval 2s --health-timeout 5s --health-retries 60
+    env:
+      TOOLCHAIN: node-toolchain:ci
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # pnpm reads minimumReleaseAge and allowBuilds from pnpm-workspace.yaml at the package root.
+      - name: Stage pnpm config
+        run: cp .cloud/docker/pnpm-workspace.yaml pnpm-workspace.yaml
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      # Reads the cache the node checks job writes, without writing it too.
+      - name: Build toolchain image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: .cloud/docker/Dockerfile
+          target: toolchain
+          load: true
+          tags: ${{ env.TOOLCHAIN }}
+          cache-from: type=gha,scope=toolchain
+      # Main pushes, which may release, do not read the cache; zizmor can't see that.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          lookup-only: ${{ github.ref == 'refs/heads/main' }} # zizmor: ignore[cache-poisoning]
+          path: ${{ runner.temp }}/pnpm-store
+          key: pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-
+      # On the host network, so localhost:5432 reaches the Postgres service.
+      - name: Set up toolchain runner
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin" "$RUNNER_TEMP/ci-home" "$RUNNER_TEMP/pnpm-store"
+          cat >"$RUNNER_TEMP/bin/toolchain-run" <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          exec docker run --rm --network host -u "$(id -u):$(id -g)" \
+            -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -v "$RUNNER_TEMP:$RUNNER_TEMP" \
+            -w "$GITHUB_WORKSPACE" -e HOME="$RUNNER_TEMP/ci-home" -e CI=true -e ENV=test \
+            "$TOOLCHAIN" sh -ec "$1"
+          EOF
+          chmod +x "$RUNNER_TEMP/bin/toolchain-run"
+          echo "$RUNNER_TEMP/bin" >>"$GITHUB_PATH"
+      - name: pnpm install
+        run: toolchain-run "pnpm install --frozen-lockfile --store-dir $RUNNER_TEMP/pnpm-store"
+      # The API reaches these four by name in tests; specs create their own _test databases.
+      - name: Create and migrate the databases
+        env:
+          PG: ${{ job.services.postgres.id }}
+        run: |
+          for db in codeclarity knowledge plugins config; do
+            docker exec "$PG" createdb -U postgres "$db"
+          done
+          toolchain-run 'pnpm migrate'
+      - name: Integration specs
+        run: toolchain-run 'pnpm test:e2e --runInBand test'
+
   # The required check, kept here because called jobs show as "node / <job>".
   # Fails if any needed job failed or was cancelled; skipped counts as success.
   # CodeQL on every PR and push; outside ci's needs, so findings never fail ci.
@@ -42,7 +119,7 @@ jobs:
       javascript: true
 
   ci:
-    needs: [node]
+    needs: [node, integration]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 5
