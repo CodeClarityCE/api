@@ -102,7 +102,7 @@ describe("The package follower's role", () => {
         `CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; REVOKE ALL ON SCHEMA public FROM PUBLIC`,
       );
     }
-    // The services' role as api#211 left it: allowed to write the package tables.
+    // The services' role on an upgraded install, still allowed to write the package tables.
     await query(
       "postgres",
       `CREATE ROLE ${service} LOGIN PASSWORD '${password}'`,

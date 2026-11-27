@@ -93,7 +93,7 @@ export function followerAccess({
       connect,
       usage,
       `GRANT SELECT, INSERT, UPDATE ON "package", "version" TO ${follower}`,
-      // Granted to the services' role before the follower had its own.
+      // Only the follower writes package metadata.
       `DO $$ BEGIN IF EXISTS (SELECT FROM pg_roles WHERE rolname = '${service}') THEN REVOKE INSERT, UPDATE ON "package", "version" FROM ${service}; END IF; END $$`,
     ],
     plugins: [ensureRole, connect],
@@ -169,7 +169,7 @@ async function main(): Promise<void> {
   // Applied on every install, admin or not, so a migrate that cannot apply them fails.
   const followerPassword = process.env["PG_FOLLOWER_PASSWORD"];
   const grants = followerAccess({
-    role: process.env["PG_FOLLOWER_ROLE"] ?? "cc_follower",
+    role: "cc_follower",
     serviceRole: process.env["PG_SERVICE_ROLE"] ?? "cc_service",
     ...(followerPassword ? { password: followerPassword } : {}),
   });
