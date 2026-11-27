@@ -14,7 +14,7 @@ console.log = originalLog;
 process.env["ENV"] = "test";
 process.env["NODE_ENV"] = "test";
 
-// No spec uses these pollers, and their reads race cleanDatabase's TRUNCATE.
+// No spec uses these pollers; off, they never touch the tables between tests.
 process.env["EXPERIMENT_RUNNER_ENABLED"] = "false";
 process.env["DATASET_BUILDER_ENABLED"] = "false";
 

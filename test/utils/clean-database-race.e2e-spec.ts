@@ -20,10 +20,18 @@ describe("cleanDatabase", () => {
     await testHelper.createTestUser();
     const dataSource = testHelper.getDataSource();
     let stop = false;
+    let reads = 0;
     const reader = (async () => {
       while (!stop) {
-        // Postgres may pick the reader as the deadlock's victim instead.
-        await dataSource.query(WATCH_SQL).catch(() => undefined);
+        try {
+          await dataSource.query(WATCH_SQL);
+          reads++;
+        } catch (err) {
+          // Postgres may pick the reader as a deadlock's victim instead.
+          const code = (err as { driverError?: { code?: string } }).driverError
+            ?.code;
+          if (code !== "40P01") throw err;
+        }
       }
     })();
 
@@ -37,5 +45,6 @@ describe("cleanDatabase", () => {
       `SELECT count(*)::int AS n FROM "user"`,
     );
     expect(users.n).toBe(0);
+    expect(reads).toBeGreaterThan(0);
   }, 120_000);
 });

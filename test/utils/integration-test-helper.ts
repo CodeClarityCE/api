@@ -107,7 +107,7 @@ class IntegrationTestHelper {
     const database = this.dataSource.options.database ?? "";
     if (typeof database !== "string" || !database.endsWith("_test")) {
       throw new Error(
-        `Refusing to truncate "${String(database)}": not a test database`,
+        `Refusing to empty "${String(database)}": not a test database`,
       );
     }
   }
@@ -135,9 +135,8 @@ class IntegrationTestHelper {
 
     const tables = [...new Set(entities.map((e) => `"${e.tableName}"`))];
     if (tables.length === 0) return;
-    // DELETE, not TRUNCATE: TRUNCATE's exclusive locks deadlock with any query that
-    // reads several of these tables in another order. Replica mode skips the foreign
-    // key checks, so the tables can be emptied in any order.
+    // DELETE takes no lock that blocks readers; replica mode skips foreign key
+    // checks, so the tables empty in any order (needs a superuser, as tests use).
     await this.dataSource.transaction(async (manager) => {
       await manager.query("SET LOCAL session_replication_role = replica");
       await manager.query(tables.map((t) => `DELETE FROM ${t};`).join(" "));
