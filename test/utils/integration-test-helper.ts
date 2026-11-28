@@ -150,7 +150,7 @@ class IntegrationTestHelper {
     const database = this.dataSource.options.database ?? "";
     if (typeof database !== "string" || !database.endsWith("_test")) {
       throw new Error(
-        `Refusing to truncate "${String(database)}": not a test database`,
+        `Refusing to empty "${String(database)}": not a test database`,
       );
     }
   }
@@ -176,10 +176,14 @@ class IntegrationTestHelper {
     // Get all entity metadata
     const entities = this.dataSource.entityMetadatas;
 
-    // One statement empties every table at once, so it cannot deadlock itself.
     const tables = [...new Set(entities.map((e) => `"${e.tableName}"`))];
     if (tables.length === 0) return;
-    await this.dataSource.query(`TRUNCATE TABLE ${tables.join(", ")} CASCADE;`);
+    // DELETE takes no lock that blocks readers; replica mode skips foreign key
+    // checks, so the tables empty in any order (needs a superuser, as tests use).
+    await this.dataSource.transaction(async (manager) => {
+      await manager.query("SET LOCAL session_replication_role = replica");
+      await manager.query(tables.map((t) => `DELETE FROM ${t};`).join(" "));
+    });
   }
 
   async createTestUser(
