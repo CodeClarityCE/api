@@ -198,6 +198,7 @@ describe("AuthController", () => {
 
       const result = await controller.authenticate(
         authenticateBody,
+        appRequest(),
         reply as any,
       );
 
@@ -226,7 +227,11 @@ describe("AuthController", () => {
       authService.authenticate.mockRejectedValue(new WrongCredentials());
 
       await expect(
-        controller.authenticate(authenticateBody, fakeReply() as any),
+        controller.authenticate(
+          authenticateBody,
+          appRequest(),
+          fakeReply() as any,
+        ),
       ).rejects.toThrow(WrongCredentials);
     });
 
@@ -239,7 +244,11 @@ describe("AuthController", () => {
       authService.authenticate.mockRejectedValue(new RegistrationNotVerified());
 
       await expect(
-        controller.authenticate(authenticateBody, fakeReply() as any),
+        controller.authenticate(
+          authenticateBody,
+          appRequest(),
+          fakeReply() as any,
+        ),
       ).rejects.toThrow(RegistrationNotVerified);
     });
   });

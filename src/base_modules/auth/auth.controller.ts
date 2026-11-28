@@ -56,6 +56,7 @@ import {
 import { AuthService } from "./auth.service";
 import { CombinedAuthGuard } from "./guards/combined.guard";
 import {
+  assertNotFromAnotherSite,
   assertSameOrigin,
   clearSessionCookies,
   readCookie,
@@ -113,12 +114,16 @@ export class AuthController {
       CannotPerformActionOnSocialAccount,
     ],
   })
+  @ApiErrorDecorator({ statusCode: 403, errors: [CrossSiteRequestRefused] })
   @NonAuthEndpoint()
   @Post("/authenticate")
   async authenticate(
     @Body() body: AuthenticateBody,
+    @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<TypedResponse<SessionExpiryResponse>> {
+    // Another site's page must not sign this browser into an account it chose.
+    assertNotFromAnotherSite(request.headers);
     const tokens = await this.authService.authenticate(
       body.email,
       body.password,

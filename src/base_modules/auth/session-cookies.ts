@@ -1,5 +1,7 @@
 import { CrossSiteRequestRefused } from "src/types/error.types";
 
+import type { SignInTokens } from "./auth.types";
+
 /** The cookie holding a web sign-in's access token (ADR 0025). */
 export const ACCESS_COOKIE = "__Host-Http-cc_access";
 
@@ -11,14 +13,6 @@ export const CSRF_HEADER = "x-codeclarity-csrf";
 
 /** The request headers the checks read; Fastify and socket.io both give this shape. */
 export type RequestHeaders = Record<string, string | string[] | undefined>;
-
-/** The tokens of a sign-in and when each one ends. */
-export interface SessionTokens {
-  accessToken: string;
-  accessExpiry: Date;
-  refreshToken: string;
-  refreshExpiry: Date;
-}
 
 // The cookie attributes RFC 10017 section 6.1.3.2 asks for; a __Host- name needs Path=/ and no Domain.
 const ATTRIBUTES = "Path=/; HttpOnly; Secure; SameSite=Strict";
@@ -36,7 +30,7 @@ function secondsUntil(end: Date, now: Date): number {
 
 /** The Set-Cookie values that hand a sign-in's tokens to the browser. */
 export function sessionCookies(
-  session: SessionTokens,
+  session: SignInTokens,
   now: Date = new Date(),
 ): string[] {
   return [
@@ -66,7 +60,7 @@ export interface CookieReply {
 /** Hands a sign-in's tokens to the browser as cookies. */
 export function setSessionCookies(
   reply: CookieReply,
-  session: SessionTokens,
+  session: SignInTokens,
 ): void {
   reply.header("set-cookie", sessionCookies(session));
 }
@@ -118,6 +112,15 @@ export function assertSameOrigin(headers: RequestHeaders): void {
   if (header(headers, CSRF_HEADER) !== "1") {
     throw new CrossSiteRequestRefused();
   }
+  assertNotFromAnotherSite(headers);
+}
+
+/**
+ * Refuses a request whose browser says another origin's page sent it.
+ * Scripts send neither header, so they pass (ADR 0025).
+ * @throws {CrossSiteRequestRefused}
+ */
+export function assertNotFromAnotherSite(headers: RequestHeaders): void {
   const site = header(headers, "sec-fetch-site");
   if (site !== undefined) {
     if (site !== "same-origin") throw new CrossSiteRequestRefused();

@@ -34,12 +34,12 @@ import {
   OrganizationTokenScopeTooNarrow,
 } from "src/types/error.types";
 
-/** The parts of a Fastify request the token check reads. */
 /** A request the guard records its user on. */
 interface GuardedRequest extends FastifyRequest {
   user?: AuthenticatedUser;
 }
 
+/** The parts of a Fastify request the token check reads. */
 interface RoutedRequest {
   method: string;
   params?: Record<string, string>;

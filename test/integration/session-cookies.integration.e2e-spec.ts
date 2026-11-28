@@ -69,6 +69,34 @@ describe("Web sign-ins in cookies (e2e)", () => {
       expect(response.statusCode).toBe(400);
       expect(response.headers["set-cookie"]).toBeUndefined();
     });
+
+    it("refuses a sign-in another site's page sends, so it cannot sign the browser into another account", async () => {
+      for (const headers of [
+        { "sec-fetch-site": "cross-site" },
+        { origin: "https://evil.example", host: "localhost" },
+      ]) {
+        const response = await testHelper.makeRequest(
+          "POST",
+          "/auth/authenticate",
+          { email: EMAIL, password: PASSWORD },
+          headers,
+        );
+        expect(response.statusCode).toBe(403);
+        expect(response.json().error_code).toBe("CrossSiteRequestRefused");
+        expect(response.headers["set-cookie"]).toBeUndefined();
+      }
+    });
+
+    it("accepts the app's own sign-in and a script's, which sends no browser headers", async () => {
+      const own = await testHelper.makeRequest(
+        "POST",
+        "/auth/authenticate",
+        { email: EMAIL, password: PASSWORD },
+        { "sec-fetch-site": "same-origin" },
+      );
+      expect(own.statusCode).toBe(201);
+      expect((await signIn()).statusCode).toBe(201);
+    });
   });
 
   describe("requests on a web sign-in", () => {
