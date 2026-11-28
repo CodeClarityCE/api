@@ -1,8 +1,8 @@
 import {
+  followerAccess,
   migrate,
   type MigrationTarget,
   selectDatabases,
-  serviceGrants,
 } from "./migrate";
 
 // A database that records what the migrate entry did to it.
@@ -103,12 +103,23 @@ describe("migrate", () => {
     ]);
   });
 
-  it("lets the services' role write the packages the package follower imports", () => {
-    expect(serviceGrants("cc_service")).toEqual({
-      knowledge: [
-        'GRANT SELECT, INSERT, UPDATE ON "package", "version" TO cc_service',
-      ],
-    });
+  it("never puts the follower's password in the SQL it sends", () => {
+    const statements = Object.values(
+      followerAccess({
+        role: "cc_follower",
+        serviceRole: "cc_service",
+        password: "plain-follower-password",
+      }),
+    ).flat();
+
+    expect(statements.join("\n")).not.toContain("plain-follower-password");
+    expect(statements.join("\n")).toContain("SCRAM-SHA-256$4096:");
+  });
+
+  it("refuses a role name that is not a plain identifier", () => {
+    expect(() =>
+      followerAccess({ role: "cc_follower; DROP", serviceRole: "cc_service" }),
+    ).toThrow("Invalid role name cc_follower; DROP");
   });
 
   it("stops at the first database that fails and names it", async () => {

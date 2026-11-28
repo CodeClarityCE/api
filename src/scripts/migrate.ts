@@ -1,3 +1,4 @@
+import { createHash, createHmac, pbkdf2Sync, randomBytes } from "crypto";
 import type { DataSource } from "typeorm";
 
 import { CodeClarityLogger } from "../services/logger.service";
@@ -33,15 +34,70 @@ export interface MigrateOptions {
   grants?: Partial<Record<Database, string[]>>;
 }
 
-// What the services' role writes beyond the init script's grants: the package follower
-// imports npm and PHP packages into the knowledge database.
-export function serviceGrants(
-  serviceRole: string,
-): Partial<Record<Database, string[]>> {
+// A plain lower-case role name, so it is safe to put in SQL as is.
+function roleName(name: string): string {
+  if (!/^[a-z_][a-z0-9_]*$/.test(name)) {
+    throw new Error(`Invalid role name ${name}`);
+  }
+  return name;
+}
+
+// The SCRAM-SHA-256 secret Postgres stores for a password, so the password itself never
+// reaches the server or its statement log.
+function scramVerifier(
+  password: string,
+  salt: Buffer = randomBytes(16),
+  iterations = 4096,
+): string {
+  const salted = pbkdf2Sync(password, salt, iterations, 32, "sha256");
+  const hmac = (key: string): Buffer =>
+    createHmac("sha256", salted).update(key).digest();
+  const storedKey = createHash("sha256").update(hmac("Client Key")).digest();
+  return `SCRAM-SHA-256$${iterations}:${salt.toString("base64")}$${storedKey.toString("base64")}:${hmac("Server Key").toString("base64")}`;
+}
+
+interface FollowerAccessOptions {
+  // The package follower's own role.
+  role: string;
+  // The role the other Go services share, which loses the package writes.
+  serviceRole: string;
+  // Needed only to create the role when it is missing.
+  password?: string;
+}
+
+// The package follower's role and the least it needs: connect to every database (the service
+// base pings them all), import packages into knowledge, and record the import on the analysis.
+export function followerAccess({
+  role,
+  serviceRole,
+  password,
+}: FollowerAccessOptions): Partial<Record<Database, string[]>> {
+  const follower = roleName(role);
+  const service = roleName(serviceRole);
+  const create =
+    password === undefined
+      ? `RAISE EXCEPTION 'role ${follower} does not exist: set PG_FOLLOWER_PASSWORD so migrate can create it'`
+      : `CREATE ROLE ${follower} LOGIN PASSWORD '${scramVerifier(password)}'`;
+  const ensureRole = `DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${follower}') THEN ${create}; END IF; END $$`;
+  const connect = `DO $$ BEGIN EXECUTE format('GRANT CONNECT ON DATABASE %I TO ${follower}', current_database()); END $$`;
+  const usage = `GRANT USAGE ON SCHEMA public TO ${follower}`;
   return {
-    knowledge: [
-      `GRANT SELECT, INSERT, UPDATE ON "package", "version" TO ${serviceRole}`,
+    codeclarity: [
+      ensureRole,
+      connect,
+      usage,
+      `GRANT SELECT (id, status, config), UPDATE (status, config) ON "analysis" TO ${follower}`,
     ],
+    knowledge: [
+      ensureRole,
+      connect,
+      usage,
+      `GRANT SELECT, INSERT, UPDATE ON "package", "version" TO ${follower}`,
+      // Only the follower writes package metadata.
+      `DO $$ BEGIN IF EXISTS (SELECT FROM pg_roles WHERE rolname = '${service}') THEN REVOKE INSERT, UPDATE ON "package", "version" FROM ${service}; END IF; END $$`,
+    ],
+    plugins: [ensureRole, connect],
+    config: [ensureRole, connect],
   };
 }
 
@@ -110,10 +166,13 @@ async function main(): Promise<void> {
         config: process.env["PG_CONFIG_ROLE"] ?? "cc_api",
       }
     : {};
-  // Only a production install has the per-service roles to grant to.
-  const grants = useAdmin
-    ? serviceGrants(process.env["PG_SERVICE_ROLE"] ?? "cc_service")
-    : {};
+  // Applied on every install, admin or not, so a migrate that cannot apply them fails.
+  const followerPassword = process.env["PG_FOLLOWER_PASSWORD"];
+  const grants = followerAccess({
+    role: "cc_follower",
+    serviceRole: process.env["PG_SERVICE_ROLE"] ?? "cc_service",
+    ...(followerPassword ? { password: followerPassword } : {}),
+  });
 
   // Imported late so the datasources read the admin credentials set above.
   const loaders: Record<Database, () => Promise<DataSource>> = {
