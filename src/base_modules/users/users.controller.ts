@@ -6,18 +6,17 @@ import {
   Param,
   Patch,
   Post,
+  Res,
 } from "@nestjs/common";
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiParam,
-  ApiTags,
-} from "@nestjs/swagger";
+import { ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
+import type { FastifyReply } from "fastify";
 
 import {
   AuthenticatedUser,
-  TokenResponse,
+  sessionExpiryOf,
+  SessionExpiryResponse,
 } from "src/base_modules/auth/auth.types";
+import { setSessionCookies } from "src/base_modules/auth/session-cookies";
 import {
   DefaultOrgPatchBody,
   DeleteAccountBody,
@@ -27,6 +26,7 @@ import {
   UserPatchBody,
 } from "src/base_modules/users/user.types";
 import { User } from "src/base_modules/users/users.entity";
+import { ApiAuthentication } from "src/decorators/ApiAuthDecorator";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocNoDataResponseDecorator } from "src/decorators/NoDataResponse";
 import { NonAuthEndpoint } from "src/decorators/SkipAuthDecorator";
@@ -51,7 +51,7 @@ import {
 } from "./users.errors";
 import { UsersService } from "./users.service";
 
-@ApiBearerAuth()
+@ApiAuthentication()
 @Controller("users")
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -121,9 +121,9 @@ export class UsersController {
   @ApiTags("Users")
   @ApiOperation({
     description:
-      "Change the password. Every sign-in of the user ends, and the caller gets a fresh one.",
+      "Change the password. Every sign-in of the user ends, and the caller gets a fresh one in new cookies.",
   })
-  @APIDocTypedResponseDecorator(TokenResponse)
+  @APIDocTypedResponseDecorator(SessionExpiryResponse)
   @ApiErrorDecorator({
     statusCode: 400,
     errors: [
@@ -140,10 +140,11 @@ export class UsersController {
     @AuthUser() user: AuthenticatedUser,
     @Body() patch: UserPasswordPatchBody,
     @Param("user_id") user_id: string,
-  ): Promise<TypedResponse<TokenResponse>> {
-    return {
-      data: await this.usersService.updatePassword(user_id, patch, user),
-    };
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<TypedResponse<SessionExpiryResponse>> {
+    const tokens = await this.usersService.updatePassword(user_id, patch, user);
+    setSessionCookies(reply, tokens);
+    return { data: sessionExpiryOf(tokens) };
   }
 
   @ApiTags("Users")

@@ -1,5 +1,9 @@
 import { MemberRole } from "../../src/base_modules/organizations/memberships/orgMembership.types";
-import { testHelper, type TestUser } from "../utils/integration-test-helper";
+import {
+  sessionOf,
+  testHelper,
+  type TestUser,
+} from "../utils/integration-test-helper";
 
 describe("GitHub and GitLab sign-in routes (e2e)", () => {
   let user: TestUser;
@@ -58,6 +62,6 @@ describe("GitHub and GitLab sign-in routes (e2e)", () => {
     );
 
     expect(response.statusCode).toBe(201);
-    expect(response.json().data.token).toEqual(expect.any(String));
+    expect(sessionOf(response).accessToken).toEqual(expect.any(String));
   });
 });

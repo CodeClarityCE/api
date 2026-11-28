@@ -10,7 +10,7 @@ import {
   Post,
   Query,
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiQuery, ApiTags } from "@nestjs/swagger";
+import { ApiQuery, ApiTags } from "@nestjs/swagger";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import {
@@ -29,6 +29,7 @@ import {
   OrganizationSettingsUpdateBody,
 } from "src/base_modules/organizations/org.types";
 import { Organization } from "src/base_modules/organizations/organization.entity";
+import { ApiAuthentication } from "src/decorators/ApiAuthDecorator";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocCreatedResponseDecorator } from "src/decorators/CrudResponse";
 import { APIDocNoDataResponseDecorator } from "src/decorators/NoDataResponse";
@@ -61,7 +62,7 @@ import { OrganizationMemberships } from "./memberships/organization.memberships.
 import { InvitationOrgAlreadyExists } from "./organizations.errors";
 import { OrganizationsService } from "./organizations.service";
 
-@ApiBearerAuth()
+@ApiAuthentication()
 @Controller("org")
 export class OrganizationsController {
   constructor(

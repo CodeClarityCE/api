@@ -218,17 +218,19 @@ describe("UsersController", () => {
       };
 
       const signIn = {
-        token: "access",
-        token_expiry: new Date(),
-        refresh_token: "refresh",
-        refresh_token_expiry: new Date(),
+        accessToken: "access",
+        accessExpiry: new Date(),
+        refreshToken: "refresh",
+        refreshExpiry: new Date(),
       };
       usersService.updatePassword.mockResolvedValue(signIn);
+      const reply = { header: jest.fn() };
 
       const result = await controller.updateAccountPassword(
         mockAuthenticatedUser,
         patch,
         "test-user-id",
+        reply as any,
       );
 
       expect(usersService.updatePassword).toHaveBeenCalledWith(
@@ -236,7 +238,16 @@ describe("UsersController", () => {
         patch,
         mockAuthenticatedUser,
       );
-      expect(result).toEqual({ data: signIn });
+      expect(result).toEqual({
+        data: {
+          token_expiry: signIn.accessExpiry,
+          refresh_token_expiry: signIn.refreshExpiry,
+        },
+      });
+      expect(reply.header).toHaveBeenCalledWith("set-cookie", [
+        expect.stringMatching(/^__Host-Http-cc_access=access; /),
+        expect.stringMatching(/^__Host-Http-cc_refresh=refresh; /),
+      ]);
     });
 
     it("should throw error for social account", async () => {
@@ -255,6 +266,7 @@ describe("UsersController", () => {
           mockAuthenticatedUser,
           patch,
           "test-user-id",
+          { header: jest.fn() } as any,
         ),
       ).rejects.toThrow(CannotPerformActionOnSocialAccount);
     });
@@ -273,6 +285,7 @@ describe("UsersController", () => {
           mockAuthenticatedUser,
           patch,
           "test-user-id",
+          { header: jest.fn() } as any,
         ),
       ).rejects.toThrow(PasswordsDoNotMatch);
     });

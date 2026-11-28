@@ -51,16 +51,6 @@ export function verifyOptionsFor(kind: TokenKind): {
   };
 }
 
-/** Options for a passport-jwt strategy that accepts only this kind. */
-export function passportOptionsFor(kind: TokenKind): {
-  algorithms: Algorithm[];
-  audience: string;
-  jsonWebTokenOptions: { complete: true };
-} {
-  const { algorithms, audience, complete } = verifyOptionsFor(kind);
-  return { algorithms, audience, jsonWebTokenOptions: { complete } };
-}
-
 /** Returns the claims of a verified token, or throws when its header type is not the kind's. */
 export function claimsOfKind(token: Jwt, kind: TokenKind): JwtPayload {
   if (

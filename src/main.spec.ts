@@ -58,6 +58,8 @@ jest.mock("@nestjs/swagger", () => ({
     setVersion: jest.fn().mockReturnThis(),
     addTag: jest.fn().mockReturnThis(),
     addBearerAuth: jest.fn().mockReturnThis(),
+    addCookieAuth: jest.fn().mockReturnThis(),
+    addApiKey: jest.fn().mockReturnThis(),
     addServer: jest.fn().mockReturnThis(),
     build: jest.fn().mockReturnValue({}),
   })),
@@ -172,17 +174,18 @@ describe("Main.ts Bootstrap Configuration and Testing", () => {
       expect(UPLOAD_FILE_SIZE_LIMIT).toBe(25 * 1024 * 1024);
     });
 
-    it("should configure CORS for all origins", () => {
+    it("should not enable CORS, so no other origin passes a preflight", () => {
       const mainContent = readFileSync(join(__dirname, "main.ts"), "utf8");
 
-      expect(mainContent).toContain('origin: ["*"]');
+      expect(mainContent).not.toContain("enableCors");
     });
 
     it("should set up Swagger documentation", () => {
       const mainContent = readFileSync(join(__dirname, "main.ts"), "utf8");
 
       expect(mainContent).toContain("API Documentation");
-      expect(mainContent).toContain("addBearerAuth()");
+      expect(mainContent).toContain("addBearerAuth(");
+      expect(mainContent).toContain("addCookieAuth(ACCESS_COOKIE");
       expect(mainContent).toContain('addServer("/api")');
       expect(mainContent).toContain('SwaggerModule.setup("api_doc"');
     });
@@ -681,12 +684,6 @@ describe("Main.ts Bootstrap Configuration and Testing", () => {
       };
 
       expect(multipartConfig.limits.fileSize).toBe(26214400);
-
-      const corsConfig = {
-        origin: ["*"],
-      };
-
-      expect(corsConfig.origin).toEqual(["*"]);
 
       const compressionConfig = {
         encodings: ["gzip", "deflate"],

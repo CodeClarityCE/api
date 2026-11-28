@@ -9,7 +9,7 @@ import {
   Post,
   Query,
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiQuery, ApiTags } from "@nestjs/swagger";
+import { ApiQuery, ApiTags } from "@nestjs/swagger";
 
 import { AuthenticatedUser } from "src/base_modules/auth/auth.types";
 import { OrganizationTokenScope } from "src/base_modules/organizations/tokens/organization-token.types";
@@ -20,6 +20,7 @@ import {
   ProjectImportBody,
 } from "src/base_modules/projects/project.types";
 import { AllowedOrderByGetProjects } from "src/base_modules/shared/repositories";
+import { ApiAuthentication } from "src/decorators/ApiAuthDecorator";
 import { ApiErrorDecorator } from "src/decorators/ApiException";
 import { APIDocCreatedResponseDecorator } from "src/decorators/CrudResponse";
 import { APIDocNoDataResponseDecorator } from "src/decorators/NoDataResponse";
@@ -44,7 +45,7 @@ import { SortDirection } from "src/types/sort.types";
 
 import { ProjectService } from "./projects.service";
 
-@ApiBearerAuth()
+@ApiAuthentication()
 @Controller("org/:org_id/projects")
 export class ProjectController {
   constructor(private readonly projectsService: ProjectService) {}

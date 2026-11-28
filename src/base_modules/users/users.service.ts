@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 
 import {
   AuthenticatedUser,
-  TokenResponse,
+  type SignInTokens,
 } from "src/base_modules/auth/auth.types";
 import { Email, EmailType } from "src/base_modules/email/email.entity";
 import {
@@ -371,7 +371,7 @@ export class UsersService {
     userId: string,
     passwordPatchBody: UserPasswordPatchBody,
     authenticatedUser: AuthenticatedUser,
-  ): Promise<TokenResponse> {
+  ): Promise<SignInTokens> {
     if (userId !== authenticatedUser.userId) {
       throw new NotAuthorized();
     }

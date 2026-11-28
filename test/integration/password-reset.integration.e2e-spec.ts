@@ -1,7 +1,11 @@
 import { Email, EmailType } from "../../src/base_modules/email/email.entity";
 import { EmailService } from "../../src/base_modules/email/email.service";
 import { User } from "../../src/base_modules/users/users.entity";
-import { testHelper } from "../utils/integration-test-helper";
+import {
+  sessionHeaders,
+  sessionOf,
+  testHelper,
+} from "../utils/integration-test-helper";
 
 interface SentReset {
   email: string;
@@ -159,13 +163,16 @@ describe("Password reset (e2e)", () => {
         "/auth/authenticate",
         { email: "known@reset.com", password: "OldPassword123!" },
       );
-      const { refresh_token } = signIn.json().data;
+      const { refreshToken } = sessionOf(signIn);
 
       await resetPassword(await linkFor(), "NewPassword456!");
 
-      const refresh = await testHelper.makeRequest("POST", "/auth/refresh", {
-        refresh_token,
-      });
+      const refresh = await testHelper.makeRequest(
+        "POST",
+        "/auth/refresh",
+        undefined,
+        sessionHeaders({ refreshToken }),
+      );
       expect(refresh.statusCode).toBe(401);
     });
 

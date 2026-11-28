@@ -10,6 +10,10 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 import { useGlobalHandlers } from "./app.globals";
 import { AppModule } from "./app.module";
+import {
+  ACCESS_COOKIE,
+  CSRF_HEADER,
+} from "./base_modules/auth/session-cookies";
 import { UPLOAD_FILE_SIZE_LIMIT } from "./base_modules/file/upload-limits";
 
 /**
@@ -63,10 +67,7 @@ async function bootstrap(): Promise<void> {
       done();
     });
 
-  // Enable CORS for all origins
-  app.enableCors({
-    origin: ["*"],
-  });
+  // No CORS: the app is same-origin, and other origins must fail the preflight (ADR 0025).
 
   useGlobalHandlers(app);
 
@@ -78,7 +79,26 @@ async function bootstrap(): Promise<void> {
     .setDescription("")
     .setVersion("1.0")
     .addTag("")
-    .addBearerAuth()
+    .addBearerAuth({
+      type: "http",
+      scheme: "bearer",
+      description:
+        "An Organization token, on routes that allow one. User access tokens are refused as bearers.",
+    })
+    .addCookieAuth(ACCESS_COOKIE, {
+      type: "apiKey",
+      in: "cookie",
+      description: "A web sign-in, set by POST /auth/authenticate",
+    })
+    .addApiKey(
+      {
+        type: "apiKey",
+        in: "header",
+        name: CSRF_HEADER,
+        description: "Must be 1 on every request a web sign-in authenticates",
+      },
+      "csrf-header",
+    )
     .addServer("/api")
     .build();
   const document = SwaggerModule.createDocument(app, config);

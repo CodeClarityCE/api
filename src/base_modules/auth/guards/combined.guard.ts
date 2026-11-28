@@ -1,13 +1,19 @@
 import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { JwtService } from "@nestjs/jwt";
-import { type Request } from "express";
+import type { FastifyRequest } from "fastify";
 import { readFileSync } from "fs";
 import type { Jwt } from "jsonwebtoken";
 import { join } from "path";
 import { Socket } from "socket.io";
 
 import { AuthenticatedUser, ROLE } from "src/base_modules/auth/auth.types";
+import {
+  ACCESS_COOKIE,
+  assertSameOrigin,
+  readCookie,
+  type RequestHeaders,
+} from "src/base_modules/auth/session-cookies";
 import {
   claimsOfKind,
   TokenKind,
@@ -28,6 +34,11 @@ import {
   OrganizationTokenScopeTooNarrow,
 } from "src/types/error.types";
 
+/** A request the guard records its user on. */
+interface GuardedRequest extends FastifyRequest {
+  user?: AuthenticatedUser;
+}
+
 /** The parts of a Fastify request the token check reads. */
 interface RoutedRequest {
   method: string;
@@ -36,8 +47,8 @@ interface RoutedRequest {
 }
 
 /**
- * Guards every route that does not skip auth with a bearer JWT, or with an
- * Organization token on routes that allow one.
+ * Guards every route that does not skip auth: a web sign-in's access cookie,
+ * or an Organization token as a bearer on routes that allow one.
  */
 @Injectable()
 export class CombinedAuthGuard implements CanActivate {
@@ -64,34 +75,38 @@ export class CombinedAuthGuard implements CanActivate {
       return true;
     }
 
-    let authHeader: string | undefined;
-    let request: Request | undefined = undefined;
+    let headers: RequestHeaders;
+    let request: GuardedRequest | undefined = undefined;
     let socket: Socket | undefined = undefined;
     if (context.getType() === "ws") {
-      // console.log(context.switchToWs().getClient());
       socket = context.switchToWs().getClient();
-      authHeader = socket?.handshake.headers.authorization;
+      headers = socket?.handshake.headers ?? {};
     } else {
-      request = context.switchToHttp().getRequest();
-      authHeader = request?.headers.authorization;
+      request = context.switchToHttp().getRequest<GuardedRequest>();
+      headers = request?.headers ?? {};
     }
 
-    const jwtToken = this.extractJWTTokenFromHeader(authHeader);
-    if (!jwtToken) {
-      throw new NotAuthenticated();
-    }
-
-    if (jwtToken.startsWith(ORGANIZATION_TOKEN_PREFIX)) {
-      if (!request) throw new NotAuthenticated();
+    // A bearer is judged alone, and only Organization tokens are bearers (ADR 0025).
+    const authHeader = headers["authorization"];
+    if (authHeader !== undefined) {
+      const bearer = this.extractBearer(authHeader);
+      if (!bearer?.startsWith(ORGANIZATION_TOKEN_PREFIX) || !request) {
+        throw new NotAuthenticated();
+      }
       request.user = await this.authorizeOrganizationToken(
-        jwtToken,
+        bearer,
         context,
         request as unknown as RoutedRequest,
       );
       return true;
     }
 
-    const [jwtTokenValid, userJWT] = await this.verifyJWTToken(jwtToken);
+    // Otherwise a web sign-in: the access cookie, sent by the app itself.
+    const accessToken = readCookie(headers, ACCESS_COOKIE);
+    if (!accessToken) throw new NotAuthenticated();
+    assertSameOrigin(headers);
+
+    const [jwtTokenValid, userJWT] = await this.verifyJWTToken(accessToken);
     if (!jwtTokenValid) throw new NotAuthenticated();
     if (!userJWT?.activated) throw new AccountNotActivated();
     if (request) {
@@ -135,21 +150,11 @@ export class CombinedAuthGuard implements CanActivate {
     return user;
   }
 
-  /**
-   * Extracts the JWT token from the HTTP headers
-   * @param request Request object
-   * @returns {Promise<string | undefined>} the bearer token, if present, otherwise undefined.
-   */
-  private extractJWTTokenFromHeader(
-    authHeader: string | undefined,
-  ): string | undefined {
-    if (authHeader) {
-      const [type, token] = authHeader.split(" ") ?? [];
-      if (type === "Bearer") {
-        return token;
-      }
-    }
-    return undefined;
+  /** The token of a `Bearer <token>` header, or undefined for any other value. */
+  private extractBearer(authHeader: string | string[]): string | undefined {
+    if (typeof authHeader !== "string") return undefined;
+    const [type, token] = authHeader.split(" ");
+    return type === "Bearer" ? token : undefined;
   }
 
   /**
@@ -161,7 +166,7 @@ export class CombinedAuthGuard implements CanActivate {
     token: string,
   ): Promise<[boolean, AuthenticatedUser | undefined]> {
     try {
-      // Only access tokens may be bearers; refresh and untyped tokens fail here.
+      // Only access tokens pass; refresh and untyped tokens fail here.
       const verified = await this.jwtService.verifyAsync<Jwt>(token, {
         secret: this.publicKey,
         ...verifyOptionsFor(TokenKind.ACCESS),

@@ -10,13 +10,6 @@ export interface JwtPayload {
   activated?: boolean | undefined;
 }
 
-/** User object returned from JWT validation */
-export interface JwtValidationResult {
-  userId: string;
-  roles: ROLE[];
-  activated?: boolean | undefined;
-}
-
 export class AuthenticatedUser {
   userId!: string;
   roles!: ROLE[];
@@ -47,42 +40,29 @@ export enum ROLE {
   ADMIN = "ROLE_ADMIN",
 }
 
-export class TokenResponse {
-  @ApiProperty()
-  token!: string;
-
-  @ApiProperty()
-  refresh_token!: string;
-
-  @ApiProperty()
-  token_expiry!: Date;
-
-  @ApiProperty()
-  refresh_token_expiry!: Date;
+/** The tokens of a sign-in, which the API hands out only as cookies (ADR 0025). */
+export interface SignInTokens {
+  accessToken: string;
+  accessExpiry: Date;
+  refreshToken: string;
+  refreshExpiry: Date;
 }
 
-export class TokenRefreshResponse {
-  @ApiProperty()
-  token!: string;
-
-  @ApiProperty()
+/** What a sign-in, refresh or password change tells the app; the tokens themselves are in cookies. */
+export class SessionExpiryResponse {
+  @ApiProperty({ description: "When the access token in the cookie ends" })
   token_expiry!: Date;
-
-  @ApiProperty({
-    description: "Replaces the refresh token sent, which no longer works",
-  })
-  refresh_token!: string;
 
   @ApiProperty({ description: "Seven days after sign-in; rotation keeps it" })
   refresh_token_expiry!: Date;
 }
 
-/** The body of a refresh or sign-out; a missing or malformed token is refused as unauthenticated. */
-export class RefreshTokenBody {
-  @ApiProperty({
-    description: "The refresh token from sign-in or the last refresh",
-  })
-  refresh_token!: string;
+/** The answer the app gets for a sign-in's tokens. */
+export function sessionExpiryOf(tokens: SignInTokens): SessionExpiryResponse {
+  return {
+    token_expiry: tokens.accessExpiry,
+    refresh_token_expiry: tokens.refreshExpiry,
+  };
 }
 
 /********************************************/
